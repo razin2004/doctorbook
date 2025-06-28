@@ -1,0 +1,220 @@
+/* ========== BASE STYLES ========== */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+/* Container for pages with centered content */
+.container {
+  margin: 2rem auto;
+  max-width: 700px;
+  padding: 0 1rem;
+}
+
+/* Typography */
+
+h1, h2 {
+  color: #2c3e50;
+}
+
+p {
+  line-height: 1.5;
+}
+
+/* Buttons */
+
+button, .back-btn, .nav-btn, #logoutBtn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 0.7rem 1.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-top: 1rem;
+  text-decoration: none;
+  display: inline-block;
+  transition: background-color 0.3s ease;
+}
+
+button:hover,
+.back-btn:hover,
+.nav-btn:hover,
+#logoutBtn:hover {
+  background-color: #2980b9;
+}
+
+#logoutBtn {
+  background-color: #e74c3c;
+}
+
+#logoutBtn:hover {
+  background-color: #c0392b;
+}
+
+.nav-btn.active {
+  background-color: #4CAF50;
+}
+
+#adminOptions button.active {
+  background-color: #28a745;
+  color: white;
+}
+
+/* Forms */
+
+input, select {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.3rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+label {
+  font-weight: 600;
+  margin-top: 1rem;
+  display: block;
+}
+
+.error {
+  color: #e74c3c;
+  margin-top: 0.5rem;
+}
+
+/* Layout Blocks */
+
+section {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+}
+
+/* Day Checkboxes */
+
+.day-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.day-checkboxes label {
+  display: flex;
+  align-items: center;
+  font-weight: normal;
+}
+
+/* ========== CONFIRMATION PAGE ========== */
+
+.confirmation-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f0f4f8;
+  min-height: 100vh;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.confirmation-box {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem 3rem;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  margin: 1rem auto;
+  box-sizing: border-box;
+}
+
+.confirmation-box h1 {
+  color: #0077b6;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.confirmation-box .checkmark {
+  font-size: 3rem;
+  color: #2ecc71;
+  margin-bottom: 1rem;
+}
+
+.confirmation-box p {
+  font-size: 1.05rem;
+  color: #333;
+  margin: 0.4rem 0;
+}
+
+.confirmation-box p strong {
+  color: #0077b6;
+}
+
+.back-btn {
+  background-color: #0077b6;
+}
+
+.back-btn:hover {
+  background-color: #023e8a;
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 600px) {
+  body {
+    margin: 1rem;
+    max-width: 100%;
+    font-size: 0.95rem;
+  }
+
+  section {
+    padding: 1rem;
+  }
+
+  button, .nav-btn, #logoutBtn, .back-btn {
+    width: 100%;
+    font-size: 1.1rem;
+    padding: 0.8rem;
+    margin-top: 0.5rem;
+    margin-right: 0;
+  }
+
+  .day-checkboxes {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  input, select {
+    font-size: 1rem;
+    padding: 0.7rem;
+  }
+
+  .confirmation-box {
+    max-width: 100%;
+    width: 100%;
+    padding: 1.5rem;
+  }
+
+  .confirmation-box h1 {
+    font-size: 1.5rem;
+  }
+
+  .confirmation-box p {
+    font-size: 0.95rem;
+  }
+}

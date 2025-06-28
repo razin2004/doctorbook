@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Appointment - PrimeCare Clinic</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+<h1>PrimeCare Clinic</h1>
+
+<nav>
+  <button class="nav-btn" onclick="showSection('bookDoctor', this)">Book by Doctor</button>
+  <button class="nav-btn" onclick="showSection('bookDept', this)">Book by Department</button>
+  <button class="nav-btn" onclick="showSection('admin', this)">Admin</button>
+</nav>
+
+
+
+
+<!-- Book by Doctor -->
+<section id="bookDoctor" style="display: none;">
+  <h2>Book by Doctor</h2>
+  <label for="doctorSelect">Select Doctor</label>
+  <select id="doctorSelect"></select>
+
+  <label for="doctorDate">Select Date</label>
+  <input type="date" id="doctorDate" />
+<div id="doctorMsg" style="color: red; margin-top: 10px;"></div>
+
+  <form id="doctorBookingForm">
+    <label for="docName">Name</label>
+<input id="docName" required placeholder="Enter your full name" />
+    <label for="docAge">Age</label>
+<input id="docAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+
+    <label for="docNumber">Phone Number</label>
+<input 
+    id="docNumber" 
+    name="phone"          
+    type="tel"             
+    pattern="[0-9]{10}"  
+    maxlength="10"         
+    inputmode="numeric"    
+    required
+    placeholder="Enter 10-digit phone number"
+/>
+
+
+    <button type="submit">Book Appointment</button>
+  </form>
+  <div id="doctorBookingResult"></div>
+</section>
+
+<!-- Book by Department -->
+<section id="bookDept" style="display: none;">
+    
+
+  <h2>Book by Specialization</h2>
+  <label for="specSelect">Select Specialization</label>
+  <select id="specSelect"></select>
+
+  <label for="specDate">Select Date</label>
+  <input type="date" id="specDate" />
+ <div id="noDoctorMsg" style="color: red; margin-top: 10px;"></div>
+  <form id="departmentBookingForm">
+    <label for="depName">Name</label>
+<input id="depName" required placeholder="Enter your full name" />
+    <label for="depAge">Age</label>
+<input id="depAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+   <label for="depNumber">Phone Number</label>
+<input 
+    id="depNumber" 
+    name="phone"          
+    type="tel"             
+    pattern="[0-9]{10}"  
+    maxlength="10"         
+    inputmode="numeric"    
+    required
+    placeholder="Enter 10-digit phone number"
+/>
+
+    <button type="submit">Book Appointment</button>
+  </form>
+  <div id="departmentBookingResult"></div>
+</section>
+
+<!-- Admin Section -->
+<section id="admin" style="display: none;">
+  <!-- Login Form -->
+  <div id="adminLoginDiv">
+    <h2>Admin Login</h2>
+    <form id="adminLoginForm">
+  <label for="adminEmail">Email</label>
+  <input id="adminEmail" type="email" required />
+  
+  <button type="button" id="sendOtpBtn">Send OTP</button>
+  
+  <div id="otpSection" style="display:none;">
+    <label for="adminOtp">Enter OTP</label>
+    <input id="adminOtp" type="text" required />
+    <button type="submit">Login</button>
+  </div>
+</form>
+    <div id="adminLoginResult" class="error"></div>
+  </div>
+
+  <!-- After login -->
+  <div id="adminOptions" style="display: none;">
+    <h2>Admin Options</h2>
+    <button onclick="showAdminPanel('add', this)">Add Doctor</button>
+<button onclick="showAdminPanel('edit', this)">Edit Doctor</button>
+<button onclick="showAdminPanel('delete', this)">Delete Doctor</button>
+<button id="logoutBtn">Logout</button>
+
+  </div>
+
+  <!-- Panels -->
+  <div id="addDoctorPanel" class="adminPanel" style="display: none;">
+    <h3>Add Doctor</h3>
+    <form id="adminAddDoctorForm">
+      <label for="addDocName">Name</label>
+<input id="addDocName" required placeholder="Enter doctor's name" />
+      <label for="addDocSpec">Specialization</label>
+<input id="addDocSpec" required placeholder="Enter doctor's specialization" />
+      <label>Working Days</label>
+<div id="editDocDays" class="day-checkboxes">
+  <label><input type="checkbox" name="editWorkDays" value="Monday"> Monday</label>
+  <label><input type="checkbox" name="editWorkDays" value="Tuesday"> Tuesday</label>
+  <label><input type="checkbox" name="editWorkDays" value="Wednesday"> Wednesday</label>
+  <label><input type="checkbox" name="editWorkDays" value="Thursday"> Thursday</label>
+  <label><input type="checkbox" name="editWorkDays" value="Friday"> Friday</label>
+  <label><input type="checkbox" name="editWorkDays" value="Saturday"> Saturday</label>
+  <label><input type="checkbox" name="editWorkDays" value="Sunday"> Sunday</label>
+</div>
+
+      <label>Time Slot</label>
+<div style="display: flex; gap: 10px;">
+  <div>
+    <label for="addStartTime">Start</label>
+    <input type="time" id="addStartTime" required />
+  </div>
+  <div>
+    <label for="addEndTime">End</label>
+    <input type="time" id="addEndTime" required />
+  </div>
+</div>
+  <div>
+
+   <label for="addDocImage">Profile Image</label>
+<input 
+  type="file" 
+  id="addDocImage" 
+  name="image" 
+  accept="image/*"
+  title="Upload doctor profile image"
+  required
+/>
+</div>
+
+
+
+
+      <button type="submit">Add Doctor</button>
+    </form>
+  </div>
+
+<!-- Fix the Edit Doctor Panel -->
+<div id="editDoctorPanel" class="adminPanel" style="display: none;">
+  <h3>Edit Doctor</h3>
+  <form id="adminEditDoctorForm">
+    <label for="editDoctorSelect">Select Doctor</label>
+    <select id="editDoctorSelect" required>
+      <option value="">-- Select Doctor --</option>
+    </select>
+
+    <!-- Specialization is hidden but preserved in dataset -->
+    <!-- You can skip displaying it if it's not editable -->
+
+    <label>Working Days</label>
+    <div class="day-checkboxes">
+      <label><input type="checkbox" name="editDays" value="Monday"> Monday</label>
+      <label><input type="checkbox" name="editDays" value="Tuesday"> Tuesday</label>
+      <label><input type="checkbox" name="editDays" value="Wednesday"> Wednesday</label>
+      <label><input type="checkbox" name="editDays" value="Thursday"> Thursday</label>
+      <label><input type="checkbox" name="editDays" value="Friday"> Friday</label>
+      <label><input type="checkbox" name="editDays" value="Saturday"> Saturday</label>
+      <label><input type="checkbox" name="editDays" value="Sunday"> Sunday</label>
+    </div>
+
+    <label>Time Slot</label>
+    <div style="display: flex; gap: 10px;">
+      <div>
+        <label for="editStartTime">Start</label>
+        <input type="time" id="editStartTime" required />
+      </div>
+      <div>
+        <label for="editEndTime">End</label>
+        <input type="time" id="editEndTime" required />
+      </div>
+    </div>
+
+    <button type="submit">Update Doctor</button>
+  </form>
+</div>
+
+
+<div id="deleteDoctorPanel" class="adminPanel" style="display: none;">
+  <h3>Delete Doctor</h3>
+  <form id="adminDeleteDoctorForm">
+    <label for="deleteDoctorSelect">Select Doctor</label>
+    <select id="deleteDoctorSelect" required>
+      <option value="">-- Select Doctor --</option>
+    </select>
+    <button type="submit">Delete</button>
+  </form>
+</div>
+
+</section>
+
+<script>
+  function showMessage(divId, msg, color = "red", timeout = 4000) {
+  const div = document.getElementById(divId);
+  if (!div) return;
+
+  div.textContent = msg;
+  div.style.color = color;
+  div.style.display = "block";
+
+  if (timeout > 0) {
+    setTimeout(() => {
+      div.style.display = "none";
+    }, timeout);
+  }
+}
+
+
+    const dayMap = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6
+};
+let doctorsBySpecialization = {};
+
+let workingDays = []; // stores allowed day numbers for selected doctor
+
+    // Format Specialization
+document.getElementById("addDocSpec").addEventListener("blur", e => {
+  e.target.value = e.target.value
+    .replace(/[^a-zA-Z ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+});
+    document.getElementById("addDocName").addEventListener("blur", e => {
+  e.target.value = e.target.value
+    .replace(/[^a-zA-Z ]/g, "")             // Remove non-letters
+    .replace(/\s+/g, " ")                   // Collapse spaces
+    .trim()                                 // Trim ends
+    .split(" ")                             // Split words
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) // Capitalize
+    .join(" ");                             // Rejoin
+});
+
+    // Clean age inputs before submitting forms
+function cleanAgeInput(id) {
+  const ageField = document.getElementById(id);
+  if (ageField) {
+    ageField.value = ageField.value.trim().replace(/^0+/, '');
+    if (ageField.value === '') ageField.value = '0';  // fallback if only 0s
+  }
+}
+
+// Doctor Booking Form
+document.getElementById("doctorBookingForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  cleanAgeInput("docAge");
+
+  // (continue with booking logic)
+  const sheetname = document.getElementById("doctorSelect").value;
+  const name = document.getElementById("docName").value.trim();
+  const age = document.getElementById("docAge").value.trim();
+  const phone_number = document.getElementById("docNumber").value.trim();
+const dateInput = document.getElementById("doctorDate");
+const date = dateInput.value;
+if (!date) {
+  showMessage("doctorMsg", "⚠️ Please select a date");
+  return;
+}
+
+  const res = await fetch("/book_doctor", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sheetname, name, age, phone_number, date })
+  });
+
+  const data = await res.json();
+  if (data.redirect) {
+    window.location.href = data.redirect;
+  } else if (data.success) {
+showMessage("doctorMsg", `✅ Token ${data.token} booked successfully`, "green");
+  } else {
+showMessage("doctorMsg", `❌ ${data.msg}`);
+  }
+});
+
+// Department Booking Form
+document.getElementById("departmentBookingForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  cleanAgeInput("depAge");
+
+  const specialization = document.getElementById("specSelect").value;
+  const name = document.getElementById("depName").value.trim();
+  const age = document.getElementById("depAge").value.trim();
+  const phone_number = document.getElementById("depNumber").value.trim();
+
+  const specDateInput = document.getElementById("specDate");
+  const date = specDateInput.value;
+  const messageDiv = document.getElementById("noDoctorMsg");
+
+  if (!date) {
+    messageDiv.textContent = "⚠️ Please select a date";
+    messageDiv.style.display = "block";
+    return;
+  }
+
+  messageDiv.textContent = "";
+  messageDiv.style.display = "none";
+
+  const res = await fetch("/book_department", {
+    method: "POST",
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ specialization, name, age, phone_number, date })
+  });
+
+  const data = await res.json();
+  if (data.redirect) {
+    window.location.href = data.redirect;
+  } else if (data.success) {
+    alert("Booked successfully");
+  } else {
+    messageDiv.textContent = "❌ " + (data.msg || "Something went wrong");
+    messageDiv.style.display = "block";
+  }
+});
+
+
+document.getElementById("addDocName").addEventListener("blur", e => {
+  let name = e.target.value
+    .replace(/^Dr\.?\s*/i, "")              // Remove existing "Dr." prefix if any
+    .replace(/[^a-zA-Z ]/g, "")             // Remove non-letter characters
+    .replace(/\s+/g, " ")                   // Collapse multiple spaces
+    .trim()                                 // Trim leading/trailing spaces
+    .split(" ")                             // Split into words
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) // Capitalize
+    .join(" ");                             // Join back
+
+  e.target.value = `Dr ${name}`;           // Add Dr. prefix
+});
+    document.getElementById("depName").addEventListener("blur", e => e.target.value = e.target.value.replace(/[^a-zA-Z ]/g, "").replace(/\s+/g, " ").trim().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
+    document.getElementById("docName").addEventListener("blur", e => e.target.value = e.target.value.replace(/[^a-zA-Z ]/g, "").replace(/\s+/g, " ").trim().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
+
+function showSection(id, btn) {
+  document.querySelectorAll("section").forEach(s => s.style.display = "none");
+  document.getElementById(id).style.display = "block";
+
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+
+  if (id === "admin") {
+    document.getElementById("adminLoginDiv").style.display = "block";
+    document.getElementById("adminOptions").style.display = "none";
+    document.querySelectorAll(".adminPanel").forEach(p => p.style.display = "none");
+  }
+}
+
+
+function showAdminPanel(type, btn) {
+  // Hide all panels first
+  document.querySelectorAll(".adminPanel").forEach(p => {
+    p.style.display = "none";
+  });
+
+  // Remove highlight from all admin buttons
+  document.querySelectorAll("#adminOptions button").forEach(b => {
+    b.classList.remove("active");
+  });
+
+  if (type === "add") {
+    document.getElementById("addDoctorPanel").style.display = "block";
+  } else if (type === "edit") {
+    document.getElementById("editDoctorPanel").style.display = "block";
+  } else if (type === "delete") {
+    document.getElementById("deleteDoctorPanel").style.display = "block";
+  }
+
+  if (btn) {
+    btn.classList.add("active");
+  }
+}
+
+async function loadDoctors() {
+  const res = await fetch("/get_doctors");
+  const doctors = await res.json();
+
+  const doctorSelect = document.getElementById("doctorSelect");
+  const specSelect = document.getElementById("specSelect");
+
+  doctorSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
+  specSelect.innerHTML = "<option value=''>-- Select Specialization --</option>";
+
+  // Reset doctorsBySpecialization
+  doctorsBySpecialization = {};
+
+  if (!doctors || doctors.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No doctors available";
+    doctorSelect.appendChild(opt);
+    specSelect.appendChild(opt.cloneNode(true));
+    return;
+  }
+
+  const specializations = new Set();
+
+  doctors.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.SheetURL || "";
+    opt.textContent = `${d.Name} (${d.Specialization})`;
+    opt.dataset.days = d.Days || "";
+    doctorSelect.appendChild(opt);
+
+    specializations.add(d.Specialization);
+
+    if (!doctorsBySpecialization[d.Specialization]) {
+      doctorsBySpecialization[d.Specialization] = [];
+    }
+    doctorsBySpecialization[d.Specialization].push(d);
+  });
+
+  [...specializations].sort().forEach(spec => {
+    const opt = document.createElement("option");
+    opt.value = spec;
+    opt.textContent = spec;
+    specSelect.appendChild(opt);
+  });
+}
+
+document.getElementById("doctorSelect").addEventListener("change", function () {
+  const selectedOption = this.selectedOptions[0];
+  if (!selectedOption) return;
+
+  const doctorMsgDiv = document.getElementById("doctorMsg");
+  doctorMsgDiv.style.display = "none"; // ✅ Hide warning when doctor is selected
+  doctorMsgDiv.textContent = "";
+
+  const daysStr = selectedOption.dataset.days;
+  if (daysStr) {
+    workingDays = daysStr.split(",").map(day => dayMap[day.trim()]);
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("doctorDate").setAttribute("min", today);
+  document.getElementById("doctorDate").value = "";
+});
+
+document.getElementById("doctorDate").addEventListener("input", function () {
+  const doctorMsgDiv = document.getElementById("doctorMsg");
+  doctorMsgDiv.style.display = "none";
+  doctorMsgDiv.textContent = "";
+
+  const selectedDoctor = document.getElementById("doctorSelect").value;
+  if (!selectedDoctor) {
+    doctorMsgDiv.textContent = "⚠️ Please select a doctor before choosing a date.";
+    doctorMsgDiv.style.display = "block";
+    this.value = "";  // clear date selection
+    return;
+  }
+
+  const selectedDate = new Date(this.value);
+  const selectedDay = selectedDate.getDay();  // 0 = Sunday, 1 = Monday, ...
+
+  if (!workingDays.includes(selectedDay)) {
+    doctorMsgDiv.textContent = "❌ Doctor is not available on this day.";
+    doctorMsgDiv.style.display = "block";
+    this.value = "";  // Clear invalid selection
+  } else {
+    doctorMsgDiv.style.display = "none";
+  }
+});
+
+
+// Load doctor name + specialization pairs for delete dropdown
+async function loadDoctorPairs() {
+  const res = await fetch("/get_doctor_pairs");
+  const pairs = await res.json();
+
+  const select = document.getElementById("deleteDoctorSelect");
+  select.innerHTML = "<option value=''>-- Select Doctor --</option>";
+
+  if (!pairs || pairs.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No doctors available";
+    select.appendChild(opt);
+    return;
+  }
+
+  pairs.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p;
+    opt.textContent = p;
+    select.appendChild(opt);
+  });
+}
+
+// Load doctors into the edit dropdown
+async function loadDoctorsForEdit() {
+  const res = await fetch("/get_doctors");
+  const doctors = await res.json();
+
+  const select = document.getElementById("editDoctorSelect");
+  select.innerHTML = "<option value=''>-- Select Doctor --</option>";
+
+  if (!doctors || doctors.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No doctors available";
+    select.appendChild(opt);
+    return;
+  }
+
+  doctors.forEach(d => {
+    const value = `${d.Name} - ${d.Specialization}`;
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = value;
+    opt.dataset.time = d.Time || "";
+    opt.dataset.days = d.Days || "";
+    select.appendChild(opt);
+  });
+}
+
+document.getElementById("adminAddDoctorForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const name = document.getElementById("addDocName").value.trim();
+  const specialization = document.getElementById("addDocSpec").value.trim();
+  const days = Array.from(document.querySelectorAll('input[name="editWorkDays"]:checked')).map(cb => cb.value);
+  const startTime = document.getElementById("addStartTime").value;
+  const endTime = document.getElementById("addEndTime").value;
+  const time = `${startTime} - ${endTime}`;
+  const imageFile = document.getElementById("addDocImage").files[0];
+
+  if (!name || !specialization || days.length === 0 || !startTime || !endTime) {
+    showMessage("doctorMsg", "⚠️ Please fill all fields");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("specialization", specialization);
+  formData.append("days", days.join(","));
+  formData.append("time", time);
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
+  const res = await fetch("/admin_add_doctor", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  alert(data.msg);
+ if (data.success) {
+  document.getElementById("adminAddDoctorForm").reset();
+  loadDoctors();
+  loadDoctorPairs();
+  loadDoctorsForEdit();
+}
+
+});
+
+// Auto-fill fields when doctor is selected
+document.getElementById("editDoctorSelect").addEventListener("change", function () {
+  const selected = this.selectedOptions[0];
+  if (!selected) return;
+
+  // Fill time
+  const [start, end] = selected.dataset.time.split(" - ");
+  document.getElementById("editStartTime").value = start;
+  document.getElementById("editEndTime").value = end;
+
+  // Fill days
+  const selectedDays = selected.dataset.days.split(",").map(d => d.trim());
+  document.querySelectorAll('input[name="editDays"]').forEach(cb => {
+    cb.checked = selectedDays.includes(cb.value);
+  });
+});
+
+// Admin login
+document.getElementById("sendOtpBtn").addEventListener("click", async () => {
+  const email = document.getElementById("adminEmail").value.trim();
+
+  if (!email) {
+    showMessage("adminLoginResult", "Please enter your email.");
+    return;
+  }
+
+  const res = await fetch("/send_admin_otp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: `admin_email=${encodeURIComponent(email)}`
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    showMessage("adminLoginResult", "OTP sent to your email.", "green");
+    document.getElementById("otpSection").style.display = "block";
+    document.getElementById("sendOtpBtn").style.display = "none";
+  } else {
+    showMessage("adminLoginResult", data.msg || "Error sending OTP.");
+  }
+});
+
+// Handle OTP verification
+document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const otp = document.getElementById("adminOtp").value.trim();
+
+  const res = await fetch("/verify_admin_otp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: `otp=${encodeURIComponent(otp)}`
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    showMessage("adminLoginResult", "Admin logged in successfully.", "green");
+    document.getElementById("adminLoginDiv").style.display = "none";
+    document.getElementById("adminOptions").style.display = "block";
+    loadDoctorPairs();
+  } else {
+    showMessage("adminLoginResult", data.msg || "OTP invalid.");
+  }
+});
+
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await fetch("/admin_logout", { method: "POST" });
+
+  // ✅ show login panel
+  document.getElementById("adminLoginDiv").style.display = "block";
+
+  // ✅ hide admin options panel
+  document.getElementById("adminOptions").style.display = "none";
+
+  // ✅ hide all admin panels
+  document.querySelectorAll(".adminPanel").forEach(p => p.style.display = "none");
+  document.querySelectorAll("section").forEach(s => s.style.display = "none");
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+
+  // ✅ clear email field
+  document.getElementById("adminEmail").value = "";
+
+  // ✅ hide OTP section
+  document.getElementById("otpSection").style.display = "none";
+
+  // ✅ ensure Send OTP button is visible
+  document.getElementById("sendOtpBtn").style.display = "inline-block";
+
+  // ✅ clear OTP field if exists
+  const otpField = document.getElementById("adminOtp");
+  if (otpField) otpField.value = "";
+
+  // ✅ clear login messages
+  document.getElementById("adminLoginResult").textContent = "";
+
+  alert("Logged out");
+});
+
+
+
+
+
+
+// Delete doctor handler
+document.getElementById("adminDeleteDoctorForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const combined = document.getElementById("deleteDoctorSelect").value;
+  if (!combined) {
+    alert("Please select a doctor to delete.");
+    return;
+  }
+
+  const confirmed = confirm("Are you sure you want to delete this doctor?");
+  if (!confirmed) return;
+
+  const res = await fetch("/admin_delete_doctor", {
+    method: "POST",
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ combined })
+  });
+
+  const data = await res.json();
+  alert(data.msg);
+  if (data.success) {
+    loadDoctors();      // refresh booking dropdowns
+    loadDoctorPairs();  // refresh delete list
+  }
+});
+document.getElementById("adminEditDoctorForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const combined = document.getElementById("editDoctorSelect").value;
+  const startTime = document.getElementById("editStartTime").value;
+  const endTime = document.getElementById("editEndTime").value;
+  const time = `${startTime} - ${endTime}`;
+  const days = Array.from(document.querySelectorAll('input[name="editDays"]:checked')).map(cb => cb.value);
+
+  if (!combined || !startTime || !endTime || days.length === 0) {
+    showMessage("doctorMsg", "⚠️ Please fill all fields");
+    return;
+  }
+
+  const res = await fetch("/admin_edit_doctor", {
+    method: "POST",
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ combined, days, time })
+  });
+
+  const data = await res.json();
+  alert(data.msg);
+  if (data.success) {
+  document.getElementById("adminEditDoctorForm").reset();
+  loadDoctors();
+  loadDoctorPairs();
+  loadDoctorsForEdit();
+}
+
+});
+
+document.getElementById("specDate").addEventListener("input", function () {
+  const spec = document.getElementById("specSelect").value;
+  const selectedDate = new Date(this.value);
+  const selectedDay = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, ...
+
+  const messageDiv = document.getElementById("noDoctorMsg");
+
+  // Clear old message
+  messageDiv.style.display = "none";
+  messageDiv.textContent = "";
+
+  if (!spec || !doctorsBySpecialization[spec]) {
+    messageDiv.textContent = "⚠️ Please select a specialization before choosing a date.";
+    messageDiv.style.display = "block";
+    this.value = "";
+    return;
+  }
+
+  const availableDoctors = doctorsBySpecialization[spec].filter(doc => {
+    const days = doc.Days.split(",").map(d => d.trim());
+    return days.includes(Object.keys(dayMap).find(key => dayMap[key] === selectedDay));
+  });
+
+  if (availableDoctors.length === 0) {
+    messageDiv.textContent = "❌ No doctors available on this day.";
+    messageDiv.style.display = "block";
+    this.value = "";  // Clear the invalid date
+  } else {
+    messageDiv.style.display = "none";  // Hide message if doctors are available
+  }
+});
+
+
+window.onload = () => {
+  loadDoctors();
+  loadDoctorPairs();
+  loadDoctorsForEdit();
+
+  // 🔽 INSERT THIS BLOCK HERE
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("specDate").setAttribute("min", today);
+
+  document.getElementById("specSelect").addEventListener("change", () => {
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("specDate").setAttribute("min", today);
+  document.getElementById("specDate").value = "";
+
+  // Clear any previous "no doctor" message
+  document.getElementById("noDoctorMsg").textContent = "";
+});
+
+};
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadDoctors();           // Populate doctor/specialization dropdowns
+  loadDoctorPairs();       // Populate delete section
+  loadDoctorsForEdit();    // Populate edit section
+});
+
+</script>
+
+</body>
+</html>
