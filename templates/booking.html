@@ -20,8 +20,9 @@
 
 
 <!-- Book by Doctor -->
-<section id="bookDoctor" style="display: none;">
+<section id="bookDoctor" class="booking-section" style="display: none;">
   <h2>Book by Doctor</h2>
+  <div class="myclass">
   <label for="doctorSelect">Select Doctor</label>
   <select id="doctorSelect"></select>
 
@@ -51,13 +52,15 @@
     <button type="submit">Book Appointment</button>
   </form>
   <div id="doctorBookingResult"></div>
+  </div>
 </section>
 
 <!-- Book by Department -->
-<section id="bookDept" style="display: none;">
+<section id="bookDept" class="booking-section" style="display: none;">
     
 
   <h2>Book by Specialization</h2>
+  <div class="myclass">
   <label for="specSelect">Select Specialization</label>
   <select id="specSelect"></select>
 
@@ -84,14 +87,19 @@
     <button type="submit">Book Appointment</button>
   </form>
   <div id="departmentBookingResult"></div>
+</div>
 </section>
 
 <!-- Admin Section -->
-<section id="admin" style="display: none;">
+<section id="admin" class="admin-section" style="display: none;">
+
   <!-- Login Form -->
-  <div id="adminLoginDiv">
+  <div id="adminLoginDiv" >
     <h2>Admin Login</h2>
+    
     <form id="adminLoginForm">
+  <div class="myclass">
+
   <label for="adminEmail">Email</label>
   <input id="adminEmail" type="email" required />
   
@@ -101,6 +109,7 @@
     <label for="adminOtp">Enter OTP</label>
     <input id="adminOtp" type="text" required />
     <button type="submit">Login</button>
+  </div>
   </div>
 </form>
     <div id="adminLoginResult" class="error"></div>
@@ -283,33 +292,47 @@ document.getElementById("doctorBookingForm").addEventListener("submit", async e 
   e.preventDefault();
   cleanAgeInput("docAge");
 
-  // (continue with booking logic)
-  const sheetname = document.getElementById("doctorSelect").value;
-  const name = document.getElementById("docName").value.trim();
-  const age = document.getElementById("docAge").value.trim();
-  const phone_number = document.getElementById("docNumber").value.trim();
-const dateInput = document.getElementById("doctorDate");
-const date = dateInput.value;
-if (!date) {
-  showMessage("doctorMsg", "⚠️ Please select a date");
-  return;
-}
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Booking...";
 
-  const res = await fetch("/book_doctor", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sheetname, name, age, phone_number, date })
-  });
+  try {
+    const sheetname = document.getElementById("doctorSelect").value;
+    const name = document.getElementById("docName").value.trim();
+    const age = document.getElementById("docAge").value.trim();
+    const phone_number = document.getElementById("docNumber").value.trim();
+    const date = document.getElementById("doctorDate").value;
 
-  const data = await res.json();
-  if (data.redirect) {
-    window.location.href = data.redirect;
-  } else if (data.success) {
-showMessage("doctorMsg", `✅ Token ${data.token} booked successfully`, "green");
-  } else {
-showMessage("doctorMsg", `❌ ${data.msg}`);
+    if (!date) {
+      showMessage("doctorMsg", "⚠️ Please select a date");
+      btn.disabled = false;
+      btn.textContent = "Book Appointment";
+      return;
+    }
+
+    const res = await fetch("/book_doctor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sheetname, name, age, phone_number, date })
+    });
+
+    const data = await res.json();
+    if (data.redirect) {
+      window.location.href = data.redirect;
+    } else if (data.success) {
+      showMessage("doctorMsg", `✅ Token ${data.token} booked successfully`, "green");
+      e.target.reset();
+    } else {
+      showMessage("doctorMsg", `❌ ${data.msg}`);
+    }
+  } catch (err) {
+    showMessage("doctorMsg", "❌ Error booking appointment.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Book Appointment";
   }
 });
+
 
 // Department Booking Form
 document.getElementById("departmentBookingForm").addEventListener("submit", async e => {
@@ -548,46 +571,60 @@ async function loadDoctorsForEdit() {
   });
 }
 
-document.getElementById("adminAddDoctorForm").addEventListener("submit", async e => {
+ document.getElementById("adminAddDoctorForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const name = document.getElementById("addDocName").value.trim();
-  const specialization = document.getElementById("addDocSpec").value.trim();
-  const days = Array.from(document.querySelectorAll('input[name="editWorkDays"]:checked')).map(cb => cb.value);
-  const startTime = document.getElementById("addStartTime").value;
-  const endTime = document.getElementById("addEndTime").value;
-  const time = `${startTime} - ${endTime}`;
-  const imageFile = document.getElementById("addDocImage").files[0];
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Adding...";
 
-  if (!name || !specialization || days.length === 0 || !startTime || !endTime) {
-    showMessage("doctorMsg", "⚠️ Please fill all fields");
-    return;
+  try {
+    const name = document.getElementById("addDocName").value.trim();
+    const specialization = document.getElementById("addDocSpec").value.trim();
+    const days = Array.from(document.querySelectorAll('input[name="editWorkDays"]:checked')).map(cb => cb.value);
+    const startTime = document.getElementById("addStartTime").value;
+    const endTime = document.getElementById("addEndTime").value;
+    const time = `${startTime} - ${endTime}`;
+    const imageFile = document.getElementById("addDocImage").files[0];
+
+    if (!name || !specialization || days.length === 0 || !startTime || !endTime) {
+      showMessage("doctorMsg", "⚠️ Please fill all fields");
+      btn.disabled = false;
+      btn.textContent = "Add Doctor";
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("specialization", specialization);
+    formData.append("days", days.join(","));
+    formData.append("time", time);
+    if (imageFile) {
+      formData.append("image", imageFile);
+    }
+
+    const res = await fetch("/admin_add_doctor", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    alert(data.msg);
+
+    if (data.success) {
+      e.target.reset();
+      loadDoctors();
+      loadDoctorPairs();
+      loadDoctorsForEdit();
+    }
+  } catch (err) {
+    alert("❌ Error adding doctor.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Add Doctor";
   }
-
-  const formData = new FormData();
-  formData.append("name", name);
-  formData.append("specialization", specialization);
-  formData.append("days", days.join(","));
-  formData.append("time", time);
-  if (imageFile) {
-    formData.append("image", imageFile);
-  }
-
-  const res = await fetch("/admin_add_doctor", {
-    method: "POST",
-    body: formData
-  });
-
-  const data = await res.json();
-  alert(data.msg);
- if (data.success) {
-  document.getElementById("adminAddDoctorForm").reset();
-  loadDoctors();
-  loadDoctorPairs();
-  loadDoctorsForEdit();
-}
-
 });
+
 
 // Auto-fill fields when doctor is selected
 document.getElementById("editDoctorSelect").addEventListener("change", function () {
@@ -702,57 +739,91 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
 // Delete doctor handler
 document.getElementById("adminDeleteDoctorForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const combined = document.getElementById("deleteDoctorSelect").value;
-  if (!combined) {
-    alert("Please select a doctor to delete.");
-    return;
-  }
 
-  const confirmed = confirm("Are you sure you want to delete this doctor?");
-  if (!confirmed) return;
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Deleting...";
 
-  const res = await fetch("/admin_delete_doctor", {
-    method: "POST",
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ combined })
-  });
+  try {
+    const combined = document.getElementById("deleteDoctorSelect").value;
+    if (!combined) {
+      alert("Please select a doctor to delete.");
+      btn.disabled = false;
+      btn.textContent = "Delete";
+      return;
+    }
 
-  const data = await res.json();
-  alert(data.msg);
-  if (data.success) {
-    loadDoctors();      // refresh booking dropdowns
-    loadDoctorPairs();  // refresh delete list
+    const confirmed = confirm("Are you sure you want to delete this doctor?");
+    if (!confirmed) {
+      btn.disabled = false;
+      btn.textContent = "Delete";
+      return;
+    }
+
+    const res = await fetch("/admin_delete_doctor", {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ combined })
+    });
+
+    const data = await res.json();
+    alert(data.msg);
+
+    if (data.success) {
+      loadDoctors();
+      loadDoctorPairs();
+      loadDoctorsForEdit();
+    }
+  } catch (err) {
+    alert("❌ Error deleting doctor.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Delete";
   }
 });
+
 document.getElementById("adminEditDoctorForm").addEventListener("submit", async e => {
   e.preventDefault();
 
-  const combined = document.getElementById("editDoctorSelect").value;
-  const startTime = document.getElementById("editStartTime").value;
-  const endTime = document.getElementById("editEndTime").value;
-  const time = `${startTime} - ${endTime}`;
-  const days = Array.from(document.querySelectorAll('input[name="editDays"]:checked')).map(cb => cb.value);
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
 
-  if (!combined || !startTime || !endTime || days.length === 0) {
-    showMessage("doctorMsg", "⚠️ Please fill all fields");
-    return;
+  try {
+    const combined = document.getElementById("editDoctorSelect").value;
+    const startTime = document.getElementById("editStartTime").value;
+    const endTime = document.getElementById("editEndTime").value;
+    const time = `${startTime} - ${endTime}`;
+    const days = Array.from(document.querySelectorAll('input[name="editDays"]:checked')).map(cb => cb.value);
+
+    if (!combined || !startTime || !endTime || days.length === 0) {
+      showMessage("doctorMsg", "⚠️ Please fill all fields");
+      btn.disabled = false;
+      btn.textContent = "Update Doctor";
+      return;
+    }
+
+    const res = await fetch("/admin_edit_doctor", {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ combined, days, time })
+    });
+
+    const data = await res.json();
+    alert(data.msg);
+
+    if (data.success) {
+      e.target.reset();
+      loadDoctors();
+      loadDoctorPairs();
+      loadDoctorsForEdit();
+    }
+  } catch (err) {
+    alert("❌ Error updating doctor.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Update Doctor";
   }
-
-  const res = await fetch("/admin_edit_doctor", {
-    method: "POST",
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ combined, days, time })
-  });
-
-  const data = await res.json();
-  alert(data.msg);
-  if (data.success) {
-  document.getElementById("adminEditDoctorForm").reset();
-  loadDoctors();
-  loadDoctorPairs();
-  loadDoctorsForEdit();
-}
-
 });
 
 document.getElementById("specDate").addEventListener("input", function () {

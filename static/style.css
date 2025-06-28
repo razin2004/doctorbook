@@ -12,28 +12,59 @@ body {
   font-family: Arial, sans-serif;
   background-color: #f9f9f9;
   color: #333;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 /* Container for pages with centered content */
 .container {
-  margin: 2rem auto;
+  margin: 0 auto;
   max-width: 700px;
-  padding: 0 1rem;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+}
+
+/* Wrapper around page content */
+.page-content {
+  margin-bottom: 3rem;
 }
 
 /* Typography */
-
 h1, h2 {
   color: #2c3e50;
+  margin-top: 0;
+  text-align: center;
+}
+
+h1 {
+  margin-bottom: 1rem;
+  font-size: 2.2rem;
+}
+
+h2 {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.6rem;
 }
 
 p {
-  line-height: 1.5;
+  margin: 0.5rem 0;
+}
+
+/* Labels */
+label {
+  font-weight: 600;
+  margin-top: 1.2rem;
+  display: block;
+  color: #2c3e50;
+  text-align: left;
 }
 
 /* Buttons */
-
-button, .back-btn, .nav-btn, #logoutBtn {
+button,
+.back-btn,
+.nav-btn,
+#logoutBtn {
   background-color: #3498db;
   color: white;
   border: none;
@@ -72,59 +103,72 @@ button:hover,
 }
 
 /* Forms */
-
-input, select {
+input, select, textarea {
   width: 100%;
-  padding: 0.5rem;
-  margin-top: 0.3rem;
+  padding: 0.7rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
 }
 
-label {
-  font-weight: 600;
-  margin-top: 1rem;
-  display: block;
+input:focus, select:focus, textarea:focus {
+  border-color: #3498db;
+  outline: none;
 }
 
 .error {
   color: #e74c3c;
   margin-top: 0.5rem;
+  font-size: 0.95rem;
 }
 
 /* Layout Blocks */
-
 section {
   background-color: white;
-  padding: 1.5rem;
+  padding: 2rem;
   border-radius: 6px;
   box-shadow: 0 0 8px rgba(0,0,0,0.1);
-  margin-bottom: 2rem;
+  margin: 2rem auto;
+  max-width: 700px;
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 2.5rem;
+}
+
+/* Center buttons inside key containers */
+section,
+nav,
+#adminOptions {
+  text-align: center;
 }
 
 /* Day Checkboxes */
-
 .day-checkboxes {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 6px;
-  margin-bottom: 12px;
+  gap: 8px 12px;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .day-checkboxes label {
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   font-weight: normal;
+  gap: 6px;
+  cursor: pointer;
 }
 
 /* ========== CONFIRMATION PAGE ========== */
-
 .confirmation-page {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   background: #f0f4f8;
   min-height: 100vh;
   padding: 1rem;
@@ -165,6 +209,13 @@ section {
   color: #0077b6;
 }
 
+.confirmation-box .back-btn {
+  display: block;
+  margin: 1.5rem auto 0 auto;
+  width: fit-content;
+  text-align: center;
+}
+
 .back-btn {
   background-color: #0077b6;
 }
@@ -173,40 +224,126 @@ section {
   background-color: #023e8a;
 }
 
+/* Admin Options Box */
+#adminOptions {
+  background-color: #ffffff;
+  padding: 1.5rem 2rem;
+  margin: 2rem auto;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  max-width: 700px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.adminPanel {
+  background-color: #ffffff;
+  padding: 2rem;
+  margin: 2rem auto;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  max-width: 700px;
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 2.5rem;
+}
+
+.admin-section {
+  background-color: #ffffff;
+  padding: 2rem;
+  margin: 2rem auto;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  border: 1px solid #ddd;
+  max-width: 700px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-section button {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-section h2 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+}
+
+.admin-section label {
+  display: block;
+  font-weight: 600;
+  margin-top: 1rem;
+  color: #2c3e50;
+  text-align: left;
+}
+
+.admin-section input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.admin-section input:focus {
+  border-color: #3498db;
+  outline: none;
+}
+
+.admin-section .error {
+  color: #e74c3c;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+}
+
 /* ========== RESPONSIVE ========== */
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   body {
-    margin: 1rem;
-    max-width: 100%;
-    font-size: 0.95rem;
+    font-size: 15px;
   }
 
   section {
-    padding: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
   }
 
-  button, .nav-btn, #logoutBtn, .back-btn {
+  .container {
+    margin: 1.5rem auto;
+    padding: 0 1rem;
+  }
+
+  h1, h2 {
+    font-size: 1.5rem;
+  }
+
+  button,
+  .nav-btn,
+  #logoutBtn,
+  .back-btn {
     width: 100%;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
     font-size: 1.1rem;
     padding: 0.8rem;
-    margin-top: 0.5rem;
-    margin-right: 0;
+    margin-top: 0.75rem;
   }
 
-  .day-checkboxes {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  input, select {
+  input, select, textarea {
     font-size: 1rem;
     padding: 0.7rem;
   }
 
   .confirmation-box {
     max-width: 100%;
-    width: 100%;
     padding: 1.5rem;
   }
 
@@ -217,4 +354,110 @@ section {
   .confirmation-box p {
     font-size: 0.95rem;
   }
+
+  .day-checkboxes {
+    gap: 6px 10px;
+    justify-content: flex-start;
+  }
+
+  .day-checkboxes label {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  #adminOptions {
+    padding: 1rem 1.2rem;
+    margin: 1.5rem auto;
+  }
+
+  .adminPanel {
+    padding: 1.2rem;
+    margin: 1.5rem auto;
+  }
+
+  .admin-section {
+    padding: 1.5rem;
+    margin: 1.5rem auto;
+  }
+
+  .admin-section h2 {
+    font-size: 1.5rem;
+  }
+
+  .admin-section input {
+    padding: 0.7rem;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+
+  .confirmation-box h1 {
+    font-size: 1.3rem;
+  }
+
+  .confirmation-box p {
+    font-size: 0.9rem;
+  }
+
+  button,
+  .nav-btn,
+  #logoutBtn,
+  .back-btn {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+
+  .adminPanel {
+    padding: 1rem;
+    margin: 1rem auto;
+  }
+
+  .admin-section {
+    padding: 1rem;
+    margin: 1rem auto;
+  }
+
+  .admin-section h2 {
+    font-size: 1.3rem;
+  }
+
+  .admin-section input {
+    padding: 0.65rem;
+    font-size: 0.95rem;
+  }
+}
+.myclass {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 30px auto;
+  max-width: 500px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  text-align: center;
+}
+.myclass h2 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+.myclass p {
+  color: #555;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+.myclass button {
+  background-color: #3498db;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.myclass button:hover {
+  background-color: #2980b9;
 }

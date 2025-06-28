@@ -4,196 +4,197 @@
   <meta charset="UTF-8" />
   <title>PrimeCare Clinic</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-  
-
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  margin: 2rem;
-  background: #f0f4f8;
-  color: #333;
-  
-}
-
-h1 {
-  color: #0077b6;
-  margin-bottom: 0.5rem;
-  text-align: center;
-}
-
-p {
-  color: #555;
-  margin-bottom: 2rem;
-  text-align: center;
-}
-.button-container {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-button {
-  padding: 1rem 2rem;
-  font-size: 1.2rem;
-  background: #0077b6;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-button:hover {
-  background: #023e8a;
-}
-
-
-.spec-heading {
-  text-align: left;
-  color: #0077b6;
-  font-size: 1.8rem;
-  margin-top: 3rem;
-  margin-bottom: 1rem;
-}
-
-.doctor-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 30px;
-  justify-items: start;
-  margin-top: 2rem;
-}
-
-.doctor-card {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-  overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  max-width: 500px;
-  width: 100%;
-  text-align: left;
-}
-
-.doctor-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 24px rgba(0,0,0,0.2);
-}
-
-.doctor-img img {
-  width: 120px;
-  height: 150px; /* 4:5 ratio */
-  object-fit: cover;
-  border-right: 4px solid #0077b6;
-  display: block;
-}
-
-.doctor-info {
-  padding: 20px;
-  flex: 1;
-}
-
-.doctor-info h4 {
-  color: #0077b6;
-  margin: 0 0 10px;
-  font-size: 1.3rem;
-}
-
-.doctor-info p {
-  margin: 4px 0;
-  font-size: 0.95rem;
-  color: #555;
-}
-
-.doctor-info p strong {
-  color: #333;
-}
-
-@media (max-width: 600px) {
-  .doctor-grid {
-    gap: 20px;
+ <style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 2rem;
+    background: #f0f4f8;
+    color: #333;
   }
-  .doctor-card {
-    flex-direction: column;
-    max-width: 100%;
+
+  h1 {
+    color: #0077b6;
+    margin-bottom: 0.5rem;
     text-align: center;
   }
+
+  p {
+    color: #555;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  
+  .button-container {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  button {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+    background: #0077b6;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+
+  button:hover {
+    background: #023e8a;
+  }
+
+  .spec-heading {
+    text-align: left;
+    color: #0077b6;
+    font-size: 1.8rem;
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .doctor-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    margin-top: 2rem;
+  }
+
+  .doctor-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    width: 100%;
+  }
+
+  .doctor-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 24px rgba(0,0,0,0.2);
+  }
+
+  .doctor-img {
+    width: 100%;
+    height: auto;
+  }
+
   .doctor-img img {
     width: 100%;
     height: auto;
-    border-right: none;
+    object-fit: cover;
     border-bottom: 4px solid #0077b6;
+    display: block;
   }
+
   .doctor-info {
-    padding: 10px;
+    padding: 20px;
   }
-}
-@media (max-width: 600px) {
-  .button-container button {
-    width: 100%;
-    font-size: 1.1rem;
-    padding: 0.8rem 1rem;
-  }
-}
-@media (max-width: 600px) {
-  h1 {
-    font-size: 1.8rem;
-  }
-  .spec-heading {
+
+  .doctor-info h4 {
+    color: #0077b6;
+    margin: 0 0 10px;
     font-size: 1.3rem;
   }
-  .doctor-info h4 {
-    font-size: 1.1rem;
-  }
+
   .doctor-info p {
-    font-size: 0.9rem;
+    margin: 4px 0;
+    font-size: 0.95rem;
+    color: #555;
   }
-}
 
+  .doctor-info p strong {
+    color: #333;
+  }
 
+  @media (max-width: 900px) {
+    .doctor-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+  }
 
-  </style>
+  @media (max-width: 600px) {
+    .doctor-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .doctor-card {
+      text-align: center;
+    }
+
+    .doctor-info {
+      padding: 10px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+    }
+
+    .spec-heading {
+      font-size: 1.3rem;
+    }
+
+    .doctor-info h4 {
+      font-size: 1.1rem;
+    }
+
+    .doctor-info p {
+      font-size: 0.9rem;
+    }
+
+    .button-container button {
+      width: 100%;
+      font-size: 1.1rem;
+      padding: 0.8rem 1rem;
+    }
+  }
+</style>
+
 </head>
 <body>
   <h1>PrimeCare Clinic</h1>
   <p>Your health is our priority.</p>
-<div class="button-container">
-  <button onclick="window.location.href='/booking'">Book Appointment</button>
-</div>
 
- {% set grouped = {} %}
-{% for doc in doctors %}
-  {% set spec = doc.Specialization %}
-  {% if spec not in grouped %}
-    {% set _ = grouped.update({spec: []}) %}
-  {% endif %}
-  {% set _ = grouped[spec].append(doc) %}
-{% endfor %}
-
-{% for spec, docs in grouped.items() %}
-  <h2 class="spec-heading">{{ spec }}</h2>
-  <div class="doctor-grid">
-    {% for doc in docs %}
-      <div class="doctor-card">
-        <div class="doctor-img">
-          {% if doc.Image %}
-            <img src="{{ url_for('static', filename='doctor_images/' + doc.Image) }}" alt="{{ doc.Name }}">
-          {% else %}
-            <img src="{{ url_for('static', filename='doctor_images/default.png') }}" alt="No image">
-          {% endif %}
-        </div>
-        <div class="doctor-info">
-          <h4>{{ doc.Name }}</h4>
-          <p><strong>Specialization:</strong> {{ doc.Specialization }}</p>
-          <p><strong>Days:</strong> {{ doc.Days|join(', ') }}</p>
-          <p><strong>Time:</strong> {{ doc.Time }}</p>
-        </div>
-      </div>
-    {% endfor %}
+  <div class="button-container">
+    <button onclick="window.location.href='/booking'">Book Appointment</button>
   </div>
-{% endfor %}
+
+  {% set grouped = {} %}
+  {% for doc in doctors %}
+    {% set spec = doc.Specialization %}
+    {% if spec not in grouped %}
+      {% set _ = grouped.update({spec: []}) %}
+    {% endif %}
+    {% set _ = grouped[spec].append(doc) %}
+  {% endfor %}
+
+  {% for spec, docs in grouped.items() %}
+    <h2 class="spec-heading">{{ spec }}</h2>
+    <div class="doctor-grid">
+      {% for doc in docs %}
+        <div class="doctor-card">
+          <div class="doctor-img">
+            {% if doc.Image %}
+              <img src="{{ url_for('static', filename='doctor_images/' + doc.Image) }}" alt="{{ doc.Name }}">
+            {% else %}
+              <img src="{{ url_for('static', filename='doctor_images/default.png') }}" alt="No image">
+            {% endif %}
+          </div>
+          <div class="doctor-info">
+            <h4>{{ doc.Name }}</h4>
+            <p><strong>Specialization:</strong> {{ doc.Specialization }}</p>
+            <p><strong>Days:</strong> {{ doc.Days | join(', ') }}</p>
+            <p><strong>Time:</strong> {{ doc.Time }}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
 
 </body>
 </html>
