@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, session, jsonify,ur
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+import pytz
 import os
 from PIL import Image
 from io import BytesIO
@@ -63,6 +64,9 @@ def get_all_doctors():
     return doctors
 
 
+def get_india_today():
+    india = pytz.timezone('Asia/Kolkata')
+    return datetime.now(india).date()
 
 
 def get_or_create_date_sheet_by_url(sheet_url, date_str):

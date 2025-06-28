@@ -1,26 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head >
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Book Appointment - PrimeCare Clinic</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+<style>
+  
+     .bg-image {
+    background-image: url("{{ url_for('static', filename='images/background12.jpeg') }}");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+    min-height: 100vh;
+   }
+
+   .bg-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+  .bg-image::after {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.4);
+  z-index: -1;
+}
+
+.container {
+  margin-bottom: 100px;
+}
+
+
+.container {
+  max-width: 500px;
+  width: 90%;
+  margin: 40px auto 100px auto; /* top, sides, bottom, sides */
+  background: rgba(255,255,255,0.9);
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+
+
+  </style>
 </head>
-<body>
 
-<h1>PrimeCare Clinic</h1>
+<body class="bg-image">
+  <div class="bg-blur"></div>
 
+  <h1>PrimeCare Clinic</h1>
 <nav>
   <button class="nav-btn" onclick="showSection('bookDoctor', this)">Book by Doctor</button>
   <button class="nav-btn" onclick="showSection('bookDept', this)">Book by Department</button>
   <button class="nav-btn" onclick="showSection('admin', this)">Admin</button>
+  <button class="nav-btn" onclick="goHome()">Go to Home</button>
+   
 </nav>
 
 
 
 
 <!-- Book by Doctor -->
-<section id="bookDoctor" class="booking-section" style="display: none;">
+<section id="bookDoctor" class="booking-section container" style="display: none;">
   <h2>Book by Doctor</h2>
   <div class="myclass">
   <label for="doctorSelect">Select Doctor</label>
@@ -56,7 +113,7 @@
 </section>
 
 <!-- Book by Department -->
-<section id="bookDept" class="booking-section" style="display: none;">
+<section id="bookDept" class="booking-section container" style="display: none;">
     
 
   <h2>Book by Specialization</h2>
@@ -91,7 +148,7 @@
 </section>
 
 <!-- Admin Section -->
-<section id="admin" class="admin-section" style="display: none;">
+<section id="admin" class="admin-section container" style="display: none;">
 
   <!-- Login Form -->
   <div id="adminLoginDiv" >
@@ -229,6 +286,16 @@
 </section>
 
 <script>
+  function goHome() {
+  window.location.href = "/";
+}
+
+  function timeToMinutes(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
   function showMessage(divId, msg, color = "red", timeout = 4000) {
   const div = document.getElementById(divId);
   if (!div) return;
@@ -339,40 +406,55 @@ document.getElementById("departmentBookingForm").addEventListener("submit", asyn
   e.preventDefault();
   cleanAgeInput("depAge");
 
-  const specialization = document.getElementById("specSelect").value;
-  const name = document.getElementById("depName").value.trim();
-  const age = document.getElementById("depAge").value.trim();
-  const phone_number = document.getElementById("depNumber").value.trim();
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Booking...";
 
-  const specDateInput = document.getElementById("specDate");
-  const date = specDateInput.value;
-  const messageDiv = document.getElementById("noDoctorMsg");
+  try {
+    const specialization = document.getElementById("specSelect").value;
+    const name = document.getElementById("depName").value.trim();
+    const age = document.getElementById("depAge").value.trim();
+    const phone_number = document.getElementById("depNumber").value.trim();
 
-  if (!date) {
-    messageDiv.textContent = "⚠️ Please select a date";
-    messageDiv.style.display = "block";
-    return;
-  }
+    const specDateInput = document.getElementById("specDate");
+    const date = specDateInput.value;
+    const messageDiv = document.getElementById("noDoctorMsg");
 
-  messageDiv.textContent = "";
-  messageDiv.style.display = "none";
+    if (!date) {
+      messageDiv.textContent = "⚠️ Please select a date";
+      messageDiv.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "Book Appointment";
+      return;
+    }
 
-  const res = await fetch("/book_department", {
-    method: "POST",
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ specialization, name, age, phone_number, date })
-  });
+    messageDiv.textContent = "";
+    messageDiv.style.display = "none";
 
-  const data = await res.json();
-  if (data.redirect) {
-    window.location.href = data.redirect;
-  } else if (data.success) {
-    alert("Booked successfully");
-  } else {
-    messageDiv.textContent = "❌ " + (data.msg || "Something went wrong");
-    messageDiv.style.display = "block";
+    const res = await fetch("/book_department", {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ specialization, name, age, phone_number, date })
+    });
+
+    const data = await res.json();
+    if (data.redirect) {
+      window.location.href = data.redirect;
+    } else if (data.success) {
+      alert("Booked successfully");
+      e.target.reset();
+    } else {
+      messageDiv.textContent = "❌ " + (data.msg || "Something went wrong");
+      messageDiv.style.display = "block";
+    }
+  } catch (err) {
+    alert("❌ Error booking appointment.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Book Appointment";
   }
 });
+
 
 
 document.getElementById("addDocName").addEventListener("blur", e => {
@@ -458,6 +540,7 @@ async function loadDoctors() {
     opt.value = d.SheetURL || "";
     opt.textContent = `${d.Name} (${d.Specialization})`;
     opt.dataset.days = d.Days || "";
+    opt.dataset.time = d.Time || "";             // ✅ ADD THIS LINE
     doctorSelect.appendChild(opt);
 
     specializations.add(d.Specialization);
@@ -476,6 +559,7 @@ async function loadDoctors() {
   });
 }
 
+
 document.getElementById("doctorSelect").addEventListener("change", function () {
   const selectedOption = this.selectedOptions[0];
   if (!selectedOption) return;
@@ -489,7 +573,7 @@ document.getElementById("doctorSelect").addEventListener("change", function () {
     workingDays = daysStr.split(",").map(day => dayMap[day.trim()]);
   }
 
-  const today = new Date().toISOString().split("T")[0];
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   document.getElementById("doctorDate").setAttribute("min", today);
   document.getElementById("doctorDate").value = "";
 });
@@ -499,25 +583,65 @@ document.getElementById("doctorDate").addEventListener("input", function () {
   doctorMsgDiv.style.display = "none";
   doctorMsgDiv.textContent = "";
 
-  const selectedDoctor = document.getElementById("doctorSelect").value;
-  if (!selectedDoctor) {
+  const selectedDoctorOption = document.getElementById("doctorSelect").selectedOptions[0];
+  if (!selectedDoctorOption) {
     doctorMsgDiv.textContent = "⚠️ Please select a doctor before choosing a date.";
     doctorMsgDiv.style.display = "block";
-    this.value = "";  // clear date selection
+    this.value = "";
     return;
   }
 
-  const selectedDate = new Date(this.value);
-  const selectedDay = selectedDate.getDay();  // 0 = Sunday, 1 = Monday, ...
+  const daysStr = selectedDoctorOption.dataset.days;
+  if (daysStr) {
+    workingDays = daysStr.split(",").map(day => dayMap[day.trim()]);
+  }
 
+  const selectedDate = new Date(this.value);
+  const selectedDay = selectedDate.getDay(); // 0=Sunday, etc
+
+  // Check if doctor works on that day
   if (!workingDays.includes(selectedDay)) {
     doctorMsgDiv.textContent = "❌ Doctor is not available on this day.";
     doctorMsgDiv.style.display = "block";
-    this.value = "";  // Clear invalid selection
-  } else {
-    doctorMsgDiv.style.display = "none";
+    this.value = "";
+    return;
+  }
+
+  // Check past dates
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const todayDate = new Date(todayStr);
+
+  if (selectedDate < todayDate) {
+    doctorMsgDiv.textContent = "❌ Cannot select past dates.";
+    doctorMsgDiv.style.display = "block";
+    this.value = "";
+    return;
+  }
+
+  // Check same-day time slot
+  if (this.value === todayStr) {
+    const timeRange = selectedDoctorOption.dataset.time;
+    if (timeRange) {
+      const endTimeStr = timeRange.split(" - ")[1];
+      if (endTimeStr) {
+        const nowStr = new Date().toLocaleTimeString("en-GB", {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Asia/Kolkata"
+        });
+
+        if (timeToMinutes(nowStr) > timeToMinutes(endTimeStr)) {
+          doctorMsgDiv.textContent = "❌ Today's booking time for this doctor is over.";
+          doctorMsgDiv.style.display = "block";
+          this.value = "";
+          return;
+        }
+      }
+    }
   }
 });
+
 
 
 // Load doctor name + specialization pairs for delete dropdown
@@ -829,16 +953,24 @@ document.getElementById("adminEditDoctorForm").addEventListener("submit", async 
 document.getElementById("specDate").addEventListener("input", function () {
   const spec = document.getElementById("specSelect").value;
   const selectedDate = new Date(this.value);
-  const selectedDay = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, ...
+  const selectedDay = selectedDate.getDay();
 
   const messageDiv = document.getElementById("noDoctorMsg");
-
-  // Clear old message
-  messageDiv.style.display = "none";
   messageDiv.textContent = "";
+  messageDiv.style.display = "none";
 
   if (!spec || !doctorsBySpecialization[spec]) {
     messageDiv.textContent = "⚠️ Please select a specialization before choosing a date.";
+    messageDiv.style.display = "block";
+    this.value = "";
+    return;
+  }
+
+  const todayDateStr = new Date().toLocaleDateString("en-CA", { timeZone: 'Asia/Kolkata' });
+  const todayDate = new Date(todayDateStr);
+
+  if (selectedDate < todayDate) {
+    messageDiv.textContent = "❌ Cannot select past dates.";
     messageDiv.style.display = "block";
     this.value = "";
     return;
@@ -852,9 +984,30 @@ document.getElementById("specDate").addEventListener("input", function () {
   if (availableDoctors.length === 0) {
     messageDiv.textContent = "❌ No doctors available on this day.";
     messageDiv.style.display = "block";
-    this.value = "";  // Clear the invalid date
-  } else {
-    messageDiv.style.display = "none";  // Hide message if doctors are available
+    this.value = "";
+    return;
+  }
+
+  // Check same-day cutoff
+  if (this.value === todayDateStr) {
+    const nowStr = new Date().toLocaleTimeString("en-GB", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: 'Asia/Kolkata'
+    });
+
+    const stillAvailable = availableDoctors.filter(doc => {
+      const endTimeStr = doc.Time.split(" - ")[1];
+      return timeToMinutes(nowStr) <= timeToMinutes(endTimeStr);
+    });
+
+    if (stillAvailable.length === 0) {
+      messageDiv.textContent = "❌ All doctors in this specialization have finished for today.";
+      messageDiv.style.display = "block";
+      this.value = "";
+      return;
+    }
   }
 });
 
@@ -865,11 +1018,11 @@ window.onload = () => {
   loadDoctorsForEdit();
 
   // 🔽 INSERT THIS BLOCK HERE
-  const today = new Date().toISOString().split("T")[0];
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   document.getElementById("specDate").setAttribute("min", today);
 
   document.getElementById("specSelect").addEventListener("change", () => {
-  const today = new Date().toISOString().split("T")[0];
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   document.getElementById("specDate").setAttribute("min", today);
   document.getElementById("specDate").value = "";
 

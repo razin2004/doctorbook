@@ -4,9 +4,46 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Appointment Confirmed - PrimeCare Clinic</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    /* Background blur layer */
+     .bg-image {
+    background-image: url("{{ url_for('static', filename='images/background12.jpeg') }}");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+    min-height: 100vh;
+   }
+
+   .bg-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  filter: blur(8px);
+  z-index: -1;
+}
+
+  .bg-image::after {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.4);
+  z-index: -1;
+}
+  </style>
 </head>
-<body class="confirmation-page">
+<body class="confirmation-page bg-image">
+  <!-- background layer -->
+  <div class="bg-blur"></div>
   <div class="confirmation-box">
     <h1>Appointment Confirmed 🎉</h1>
 
@@ -27,8 +64,11 @@
         {{ token }}
       </span>
     </p>
+<div class="button-group">
+  <a class="back-btn" href="{{ url_for('booking') }}">Take Another Appointment</a>
+  <a class="back-btn" href="/">Go to Home</a>
+</div>
 
-    <a class="back-btn" href="{{ url_for('booking') }}">Back to Booking</a>
   </div>
 </body>
 </html>
