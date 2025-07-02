@@ -273,11 +273,12 @@
         {% for doc in docs %}
           <div class="doctor-card">
             <div class="doctor-img">
-              {% if doc.Image %}
-                <img src="{{ url_for('static', filename='doctor_images/' + doc.Image) }}" alt="{{ doc.Name }}" />
-              {% else %}
-                <img src="{{ url_for('static', filename='doctor_images/default.png') }}" alt="No image" />
-              {% endif %}
+             {% if doc.Image %}
+  <img src="{{ doc.Image }}" alt="{{ doc.Name }}" />
+{% else %}
+  <img src="{{ url_for('static', filename='doctor_images/default.png') }}" alt="No image" />
+{% endif %}
+
             </div>
             <div class="doctor-info">
               <h4>{{ doc.Name }}</h4>

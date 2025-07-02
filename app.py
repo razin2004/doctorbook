@@ -8,6 +8,17 @@ from PIL import Image
 from io import BytesIO
 from flask_mail import Mail, Message
 import random
+import cloudinary
+import cloudinary.uploader
+
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name='dfwk3ps87',
+    api_key='572563869575595',
+    api_secret='lL64GZItmTHA1D00Fb9K4JFcbPg'
+)
+
+
 
 app = Flask(__name__)
 app.secret_key = 'YOUR_SECRET_KEY'
@@ -198,16 +209,9 @@ def admin_add_doctor():
 
     days = [d.strip() for d in days_str.split(",")]
 
-    UPLOAD_FOLDER = os.path.join("static", "doctor_images")
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-    # ✅ NEW block goes right here:
-    image_filename = None
+    image_url = ""
     if image_file and image_file.filename:
-        try:
-            img = Image.open(image_file.stream)
-        except Exception as e:
-            return jsonify({'success': False, 'msg': 'Invalid image file.'})
+        img = Image.open(image_file.stream)
 
         width, height = img.size
         aspect_ratio = width / height
@@ -220,15 +224,19 @@ def admin_add_doctor():
                 'msg': f'Image must have a 4:5 ratio (e.g. 400x500). Uploaded size was {width}×{height}.'
             })
 
-        ext = os.path.splitext(image_file.filename)[1].lower()
-        safe_name = name.replace(" ", "_")
-        image_filename = f"{safe_name}{ext}"
-        save_path = os.path.join(UPLOAD_FOLDER, image_filename)
-        img.save(save_path)
+        img_byte_arr = BytesIO()
+        img.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
 
-    # continue with the rest of your code...
+        upload_result = cloudinary.uploader.upload(
+            img_byte_arr,
+            folder="primecare_doctors",
+            public_id=name.replace(" ", "_"),
+            overwrite=True,
+            resource_type="image"
+        )
 
-
+        image_url = upload_result["secure_url"]
 
     sheet_title = f"{name.replace(' ', '_')}_{specialization.replace(' ', '_')}"
 
@@ -257,7 +265,7 @@ def admin_add_doctor():
             time,
             sheet_title,
             f"https://docs.google.com/spreadsheets/d/{new_doc.id}",
-            image_filename or ""
+            image_url or ""
         ])
 
         return jsonify({'success': True, 'msg': 'Doctor added successfully'})
