@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, session, jsonify,url_for
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import pytz
 import os
@@ -10,8 +9,11 @@ from flask_mail import Mail, Message
 import random
 import cloudinary
 import cloudinary.uploader
-
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 # Configure Cloudinary
+
 cloudinary.config(
     cloud_name='dfwk3ps87',
     api_key='572563869575595',
@@ -22,7 +24,7 @@ cloudinary.config(
 
 app = Flask(__name__)
 app.secret_key = 'YOUR_SECRET_KEY'
-
+      
 # Email config (example: Gmail SMTP)
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
@@ -34,14 +36,75 @@ mail = Mail(app)
 ADMIN_EMAIL = "doctorbooksystem@gmail.com"
 
 # Google Sheets setup
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+
+def get_credentials():  
+    creds = None
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+    return creds
+creds = get_credentials()
 client = gspread.authorize(creds)
 
 # Main spreadsheet to store doctor list
 MAIN_SHEET_NAME = "DoctorBookingData"
 main_sheet = client.open(MAIN_SHEET_NAME)
 doctors_ws = main_sheet.worksheet("Doctors")
+
+
+def setup_doctor(creds, main_sheet_id, doctor_name, specialization):
+    client = gspread.authorize(creds)
+    main_sheet = client.open_by_key(main_sheet_id)
+    main_worksheet = main_sheet.sheet1  # Assumes data is in first sheet
+
+    # Step 1: Create new Google Sheet for doctor
+    doctor_sheet_title = f"{doctor_name} - {specialization}"
+    new_sheet = client.create(doctor_sheet_title)
+
+    # Step 2: Share the doctor sheet with your Gmail
+    new_sheet.share('doctorbooksystem@gmail.com', perm_type='user', role='writer')
+
+    # Step 3: Get the link
+    doctor_link = f"https://docs.google.com/spreadsheets/d/{new_sheet.id}/edit"
+
+    # Step 4: Add doctor info to main sheet
+    main_worksheet.append_row([doctor_name, specialization, doctor_link])
+
+    # Step 5: Add name and specialization to top of new doctor sheet
+    ws = new_sheet.sheet1  # Default first tab
+    ws.update('A1', 'Doctor Name')
+    ws.update('B1', doctor_name)
+    ws.update('A2', 'Specialization')
+    ws.update('B2', specialization)
+
+    print(f"✅ Created sheet for {doctor_name} - link: {doctor_link}")
+    return new_sheet
+
+
+def add_booking(creds, doctor_sheet_id, patient_name, date_str, time, reason):
+    client = gspread.authorize(creds)
+    doctor_sheet = client.open_by_key(doctor_sheet_id)
+
+    # Create new tab if not exist for the date
+    tab_name = date_str
+    try:
+        worksheet = doctor_sheet.worksheet(tab_name)
+    except gspread.exceptions.WorksheetNotFound:
+        worksheet = doctor_sheet.add_worksheet(title=tab_name, rows="100", cols="5")
+        worksheet.append_row(["Patient Name", "Time", "Reason"])  # headers
+
+    worksheet.append_row([patient_name, time, reason])
+    print(f"📅 Booking added for {patient_name} on {tab_name} at {time}")
+
 
 # Email to share created spreadsheets with
 YOUR_EMAIL = "doctorbooksystem@gmail.com"  # <-- change to your Gmail
@@ -627,5 +690,6 @@ import os
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+    
     app.run(host="0.0.0.0", port=port)
 
