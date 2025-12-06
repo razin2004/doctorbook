@@ -7,9 +7,9 @@
 
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  
+
   <style>
-    /* ===== BACKGROUND ===== */
+    /* ===== PAGE BACKGROUND (works with header, desktop + mobile) ===== */
     body.bg-image {
       min-height: 100vh;
       background-image: url("/static/image/background11.jpeg");
@@ -17,10 +17,8 @@
       background-position: center;
       background-repeat: no-repeat;
       position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
+      padding: 0 1.5rem 2rem;
+      display: block;
     }
 
     .bg-blur {
@@ -36,111 +34,143 @@
     }
 
     body.bg-image::after {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.4);  /* ✅ light, like home */
-  z-index: -1;
-}
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.40);
+      z-index: -1;
+    }
 
     /* ===== CONFIRMATION CARD ===== */
     .confirmation-box {
       width: 100%;
-      max-width: 460px;
-      background: rgba(255,255,255,0.88);
+      max-width: 520px;
+      margin: 1.8rem auto 0;
+      background: rgba(255,255,255,0.94);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       border-radius: 26px;
-      padding: 2.4rem 2.1rem 2.1rem 2.1rem;
+      padding: 1.9rem 2.2rem 2.1rem 2.2rem;
       box-shadow:
-        0 20px 45px rgba(0,0,0,0.18),
-        inset 0 0 0 1px rgba(255,255,255,0.75);
+        0 20px 45px rgba(15,23,42,0.20),
+        inset 0 0 0 1px rgba(255,255,255,0.8);
       text-align: center;
-      animation: fadeInUp 0.5s ease;
       color: #4a6075;
     }
-
-    /* 👇 Used only while exporting image to make it extra sharp */
-    .confirmation-box.exporting {
-      background: #ffffff !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      box-shadow: none !important;
-      border-radius: 26px;
-      color: #374151;
+    
+    .card-brand {
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #6b7280;
+      margin-bottom: 0.35rem;
     }
 
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px);}
-      to { opacity: 1; transform: translateY(0);}
+    .confirmation-box h1 {
+      font-size: 1.8rem;
+      color: #18498a;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.03em;
+    }
+
+    .confirmation-sub {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin-bottom: 1rem;
     }
 
     .success-icon {
-      width: 64px;
-      height: 64px;
+      width: 58px;
+      height: 58px;
       border-radius: 20px;
-      margin: 0 auto 0.9rem auto;
-      background: linear-gradient(135deg, #74e69c, #3bcf7e);
+      margin: 0.7rem auto 0.9rem auto;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 12px 30px rgba(59,207,126,0.35);
+      box-shadow: 0 10px 26px rgba(22,163,74,0.45);
       font-size: 2rem;
       color: #ffffff;
     }
 
-    .confirmation-box h1 {
-      font-size: 1.9rem;
-      color: #587ca3;
-      margin-bottom: 0.8rem;
-      letter-spacing: 0.03em;
-    }
-
-    .confirmation-box p {
-      font-size: 0.98rem;
-      margin: 0.2rem 0;
-    }
-
-    .confirmation-box p strong {
-      color: #577395;
+    .section-title {
       font-weight: 600;
+      font-size: 1.02rem;
+      color: #111827;
+      margin-top: 1rem;
+      margin-bottom: 0.35rem;
+      text-align: left;
+    }
+
+    .section-title span {
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 2px;
+    }
+
+    .info-table {
+      text-align: left;
+      margin: 0.15rem auto 0;
+      max-width: 360px;
+      font-size: 0.96rem;
+      line-height: 1.5;
+    }
+
+    .info-row {
+      display: flex;
+      margin-top: 0.18rem;
+    }
+
+    .info-label {
+      flex: 0 0 130px;
+      font-weight: 500;
+      color: #4b5563;
+    }
+
+    .info-value {
+      flex: 1;
+      font-weight: 500;
+      color: #111827;
+      word-break: break-word;
     }
 
     hr {
-      margin: 1.3rem 0;
+      margin: 1rem 0 0.9rem;
       border: none;
-      border-top: 1px solid rgba(188, 206, 229, 0.9);
+      border-top: 1px solid rgba(203,213,225,0.9);
     }
 
     .token-box {
-      margin-top: 1.6rem;
-      font-size: 1.05rem;
-      color: #54657d;
+      margin-top: 1.1rem;
     }
 
     .token-title {
       font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: #5a6f8b;
+      margin-bottom: 0.55rem;
+      color: #374151;
+      font-size: 1.02rem;
     }
 
     .token-number {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 70px;
-      height: 70px;
+      width: 76px;
+      height: 76px;
       border-radius: 999px;
-      background: radial-gradient(circle at 30% 20%, #9af1be, #34c96c);
+      background: radial-gradient(circle at 30% 20%, #bdf5d2, #22c55e);
       color: white;
       font-weight: 700;
-      font-size: 1.6rem;
+      font-size: 1.7rem;
       box-shadow:
-        0 12px 26px rgba(52,201,108,0.45),
-        0 0 0 6px rgba(154,241,190,0.5);
+        0 13px 28px rgba(34,197,94,0.48),
+        0 0 0 6px rgba(187,247,208,0.75);
+    }
+
+    .footer-note {
+      margin-top: 1.3rem;
+      font-size: 0.9rem;
+      color: #6b7280;
     }
 
     /* ===== BUTTONS ===== */
@@ -149,7 +179,7 @@
       justify-content: center;
       flex-wrap: wrap;
       gap: 0.7rem;
-      margin-top: 1.8rem;
+      margin-top: 1.5rem;
     }
 
     .btn-pill {
@@ -157,119 +187,137 @@
       border: none;
       cursor: pointer;
       border-radius: 999px;
-      padding: 0.6rem 1.5rem;
-      font-size: 0.95rem;
+      padding: 0.55rem 1.6rem;
+      font-size: 0.94rem;
       font-weight: 500;
       transition: all 0.15s ease;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 132px;
+      min-width: 138px;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #76b5ff, #4a9ff6);
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
       color: #ffffff;
-      box-shadow: 0 9px 22px rgba(74,159,246,0.5);
+      box-shadow: 0 9px 20px rgba(37,99,235,0.55);
     }
 
     .btn-primary:hover {
       transform: translateY(-1px);
-      box-shadow: 0 12px 28px rgba(74,159,246,0.65);
-    }
-
-    .btn-outline {
-      background: rgba(255,255,255,0.95);
-      color: #4a9ff6;
-      border: 1px solid rgba(74,159,246,0.35);
-      box-shadow: 0 7px 16px rgba(148,181,224,0.4);
-    }
-
-    .btn-outline:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 22px rgba(148,181,224,0.55);
+      box-shadow: 0 12px 26px rgba(37,99,235,0.72);
     }
 
     .btn-ghost {
-      margin-top: 0.5rem;
-      background: rgba(255,255,255,0.9);
-      color: #7fa3c5;
+      margin-top: 0.45rem;
+      background: rgba(255,255,255,0.96);
+      color: #2563eb;
       border: 1px solid rgba(191, 210, 234, 0.9);
-      box-shadow: 0 7px 18px rgba(191,210,234,0.45);
-      font-size: 0.92rem;
+      box-shadow: 0 7px 18px rgba(191,210,234,0.55);
+      font-size: 0.9rem;
     }
 
     .btn-ghost:hover {
       transform: translateY(-1px);
-      box-shadow: 0 9px 22px rgba(191,210,234,0.65);
+      box-shadow: 0 9px 22px rgba(191,210,234,0.7);
     }
 
-    /* ===== RESPONSIVE ===== */
     @media (max-width: 480px) {
       body.bg-image {
-        padding: 1.1rem;
+        padding-inline: 1.1rem;
       }
-
       .confirmation-box {
-        padding: 2rem 1.4rem 1.8rem 1.4rem;
+        margin-top: 1.2rem;
+        padding: 1.8rem 1.5rem 1.7rem;
         border-radius: 22px;
       }
-
-      .confirmation-box h1 {
-        font-size: 1.6rem;
+      .info-table {
+        max-width: 100%;
       }
-
-      .token-number {
-        width: 64px;
-        height: 64px;
-        font-size: 1.4rem;
+      .info-label {
+        flex-basis: 115px;
       }
-
-      .button-group {
-        flex-direction: column;
-      }
-
       .btn-pill {
         width: 100%;
         max-width: 260px;
       }
-
       .btn-ghost {
         max-width: 260px;
-        margin-left: auto;
-        margin-right: auto;
       }
     }
+   
   </style>
 </head>
 
 <body class="confirmation-page bg-image">
   <div class="bg-blur"></div>
 
+  <!-- HEADER: same layout as booking.html (styles come from style.css) -->
+ 
+
   <div class="confirmation-box" id="confirmationBox">
+    <div class="card-brand">PrimeCare Clinic</div>
+
     <div class="success-icon">✓</div>
 
     <h1>Appointment Confirmed</h1>
+    <div class="confirmation-sub">
+      Your visit has been scheduled successfully.
+    </div>
 
-    <p><strong>Patient Name:</strong> {{ name }}</p>
-    <p><strong>Age:</strong> {{ age }}</p>
-    <p><strong>Phone:</strong> {{ phone }}</p>
+    <!-- PATIENT DETAILS -->
+    <div class="section-title"><span>Patient Details</span></div>
+    <div class="info-table">
+      <div class="info-row">
+        <div class="info-label">Name</div>
+        <div class="info-value">{{ name }}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Age</div>
+        <div class="info-value">{{ age }}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Phone</div>
+        <div class="info-value">{{ phone }}</div>
+      </div>
+    </div>
 
     <hr>
 
-    <p><strong>Doctor:</strong> {{ doctor }}</p>
-    <p><strong>Specialization:</strong> {{ specialization }}</p>
-    <p><strong>Date:</strong> {{ date }}</p>
-    <p><strong>Time:</strong> {{ time }}</p>
+    <!-- APPOINTMENT DETAILS -->
+    <div class="section-title"><span>Appointment Details</span></div>
+    <div class="info-table">
+      <div class="info-row">
+        <div class="info-label">Doctor</div>
+        <div class="info-value">{{ doctor }}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Specialization</div>
+        <div class="info-value">{{ specialization }}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Date</div>
+        <div class="info-value">{{ date }}</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Time</div>
+        <div class="info-value">{{ time }}</div>
+      </div>
+    </div>
 
+    <!-- TOKEN -->
     <div class="token-box">
       <div class="token-title">Your Token Number</div>
       <div class="token-number">{{ token }}</div>
     </div>
 
+    <p class="footer-note">
+      Please arrive 10–15 minutes early and bring any previous reports if available.
+    </p>
+
     <div class="button-group">
       <a class="btn-pill btn-primary" href="{{ url_for('booking') }}">Book Another</a>
-      <a class="btn-pill btn-primary" href="/">Go Home</a>
+      <a class="btn-pill btn-primary" href="{{ url_for('home') }}">Go Home</a>
     </div>
 
     <div class="button-group">
@@ -279,40 +327,215 @@
     </div>
   </div>
 
-  <!-- html2canvas -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       const btn = document.getElementById("saveImageBtn");
-      const box = document.getElementById("confirmationBox");
-      if (!btn || !box) return;
+      if (!btn) return;
+
+      const data = {
+        token: "{{ token or '' }}",
+        name: "{{ name or '' }}",
+        age: "{{ age or '' }}",
+        phone: "{{ phone or '' }}",
+        doctor: "{{ doctor or '' }}",
+        specialization: "{{ specialization or '' }}",
+        date: "{{ date or '' }}",
+        time: "{{ time or '' }}"
+      };
 
       btn.addEventListener("click", function () {
-        // make card extra sharp & flat just for export
-        box.classList.add("exporting");
+        const baseWidth = 1080;
+        const baseHeight = 1520;
+        const ratio = window.devicePixelRatio || 1;
 
-        const scale =
-          (window.devicePixelRatio && window.devicePixelRatio > 1)
-            ? window.devicePixelRatio * 2
-            : 2;
+        const canvas = document.createElement("canvas");
+        canvas.width = baseWidth * ratio;
+        canvas.height = baseHeight * ratio;
+        const ctx = canvas.getContext("2d");
+        ctx.scale(ratio, ratio);
 
-        html2canvas(box, {
-          scale: scale,
-          useCORS: true,
-          backgroundColor: "#ffffff"
-        }).then(canvas => {
-          const link = document.createElement("a");
-          link.download = "primecare-token-{{ token }}.png";
-          link.href = canvas.toDataURL("image/png");
-          link.click();
-        }).catch(err => {
-          console.error(err);
-          alert("Could not save image. Please try again.");
-        }).finally(() => {
-          // restore glass look for on-screen view
-          box.classList.remove("exporting");
-        });
+        /* ==== BACKGROUND ==== */
+        ctx.fillStyle = "#f3f4ff";
+        ctx.fillRect(0, 0, baseWidth, baseHeight);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 260, baseWidth, baseHeight - 320);
+
+        /* ==== MAIN CARD ==== */
+        const cardX = 80;
+        const cardY = 180;
+        const cardW = baseWidth - 160;
+        const cardH = baseHeight - 360;
+        const radius = 32;
+
+        ctx.save();
+        ctx.shadowColor = "rgba(15,23,42,0.18)";
+        ctx.shadowBlur = 30;
+        ctx.shadowOffsetY = 20;
+
+        ctx.beginPath();
+        ctx.moveTo(cardX + radius, cardY);
+        ctx.lineTo(cardX + cardW - radius, cardY);
+        ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + radius);
+        ctx.lineTo(cardX + cardW, cardY + cardH - radius);
+        ctx.quadraticCurveTo(cardX + cardW, cardY + cardH, cardX + cardW - radius, cardY + cardH);
+        ctx.lineTo(cardX + radius, cardY + cardH);
+        ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - radius);
+        ctx.lineTo(cardX, cardY + radius);
+        ctx.quadraticCurveTo(cardX, cardY, cardX + radius, cardY);
+        ctx.closePath();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.restore();
+
+        ctx.strokeStyle = "rgba(226,232,240,0.96)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        /* ==== BRAND ==== */
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#1d4f91";
+        ctx.font = "700 38px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        ctx.fillText("PrimeCare Clinic", baseWidth / 2, cardY + 60);
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "400 20px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        ctx.fillText("Quality care · Trusted doctors", baseWidth / 2, cardY + 92);
+
+        /* ==== SUCCESS ICON ==== */
+        const iconCy = cardY + 150;
+        const iconR = 34;
+        const iconCx = baseWidth / 2;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(iconCx, iconCy, iconR, 0, Math.PI * 2);
+        ctx.closePath();
+        const grad = ctx.createLinearGradient(iconCx - iconR, iconCy - iconR,
+                                              iconCx + iconR, iconCy + iconR);
+        grad.addColorStop(0, "#22c55e");
+        grad.addColorStop(1, "#16a34a");
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.shadowColor = "rgba(34,197,94,0.45)";
+        ctx.shadowBlur = 14;
+        ctx.restore();
+
+        ctx.save();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(iconCx - 14, iconCy + 2);
+        ctx.lineTo(iconCx - 4, iconCy + 16);
+        ctx.lineTo(iconCx + 16, iconCy - 10);
+        ctx.stroke();
+        ctx.restore();
+
+        /* ==== TITLE ==== */
+        ctx.fillStyle = "#1d4f91";
+        ctx.font = "600 42px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        ctx.fillText("Appointment Confirmed", baseWidth / 2, cardY + 210);
+
+        ctx.fillStyle = "#6b7280";
+        ctx.font = "400 22px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        ctx.fillText("Your visit has been scheduled successfully.", baseWidth / 2, cardY + 244);
+
+        /* ==== PATIENT + APPOINTMENT TABLES ==== */
+        let y = cardY + 290;
+        const leftX = cardX + 120;
+        const labelWidth = 220;
+        const gapY = 34;
+
+        const writeSectionTitle = text => {
+          ctx.fillStyle = "#111827";
+          ctx.font = "600 24px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText(text, leftX, y);
+          y += 6;
+          ctx.strokeStyle = "#3b82f6";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(leftX, y);
+          ctx.lineTo(leftX + 120, y);
+          ctx.stroke();
+          y += 26;
+        };
+
+        const writeRow = (label, value) => {
+          ctx.font = "500 20px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillStyle = "#4b5563";
+          ctx.fillText(label + ":", leftX, y);
+          ctx.fillStyle = "#111827";
+          ctx.fillText((value || "-").toString(), leftX + labelWidth, y);
+          y += gapY;
+        };
+
+        writeSectionTitle("Patient Details");
+        writeRow("Name", data.name);
+        writeRow("Age", data.age);
+        writeRow("Phone", data.phone);
+
+        y += 8;
+        ctx.strokeStyle = "rgba(203,213,225,0.9)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cardX + 48, y);
+        ctx.lineTo(cardX + cardW - 48, y);
+        ctx.stroke();
+        y += 30;
+
+        writeSectionTitle("Appointment Details");
+        writeRow("Doctor", data.doctor);
+        writeRow("Specialization", data.specialization);
+        writeRow("Date", data.date);
+        writeRow("Time", data.time || "As per clinic schedule");
+
+        /* ==== TOKEN ==== */
+        y += 24;
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#374151";
+        ctx.font = "600 26px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        ctx.fillText("Your Token Number", baseWidth / 2, y);
+        y += 48;
+
+        const tokenR = 60;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(baseWidth / 2, y + tokenR, tokenR, 0, Math.PI * 2);
+        ctx.closePath();
+        const grad2 = ctx.createRadialGradient(
+          baseWidth / 2 - 10, y + tokenR - 10, 6,
+          baseWidth / 2, y + tokenR, tokenR
+        );
+        grad2.addColorStop(0, "#bbf7d0");
+        grad2.addColorStop(1, "#22c55e");
+        ctx.fillStyle = grad2;
+        ctx.fill();
+        ctx.shadowColor = "rgba(34,197,94,0.48)";
+        ctx.shadowBlur = 18;
+        ctx.restore();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.font = "700 38px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        ctx.fillText(data.token || "-", baseWidth / 2, y + tokenR + 14);
+
+        /* ==== FOOTER TEXT ==== */
+        ctx.fillStyle = "#6b7280";
+        ctx.font = "400 20px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        ctx.fillText(
+          "Please arrive 10–15 minutes early and bring previous reports if any.",
+          baseWidth / 2,
+          cardY + cardH - 40
+        );
+
+        const a = document.createElement("a");
+        const safeToken = (data.token || "token").toString().replace(/[^0-9A-Za-z_-]/g, "");
+        a.download = `primecare-token-${safeToken}.png`;
+        a.href = canvas.toDataURL("image/png");
+        a.click();
       });
     });
   </script>

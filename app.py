@@ -23,6 +23,13 @@ cloudinary.config(
     api_key=os.environ.get('CLOUDINARY_API_KEY'),
     api_secret=os.environ.get('CLOUDINARY_API_SECRET')
 )
+# ===================== WhatsApp Cloud API config =====================
+
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+WHATSAPP_API_VERSION = os.environ.get("WHATSAPP_API_VERSION", "v21.0")
+WHATSAPP_ENABLE = os.environ.get("WHATSAPP_ENABLE", "false").lower() == "true"
+
 
 app = Flask(__name__)
 app.secret_key = 'YOUR_SECRET_KEY'
@@ -264,6 +271,8 @@ def token_for_date(sheet, date_str):
 
 IS_RENDER = os.getenv("RENDER", "") != ""
 USE_EMAIL_OTP = (not IS_RENDER) and os.getenv("USE_EMAIL_OTP", "true").lower() == "true"
+
+
 
 # ===================== Admin OTP login =====================
 
