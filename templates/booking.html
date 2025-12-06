@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="en">
+  
+<head >
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Appointment - PrimeCare Clinic</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+</head>
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div class="brand">
+        <div class="brand-title">PrimeCare Clinic</div>
+        <div class="brand-sub">Quality care · Trusted doctors</div>
+      </div>
+    </div>
+  </header>
+
+<body class="bg-image">
+  <div class="bg-blur"></div>
+
+<nav>
+  <button class="nav-btn" onclick="showSection('bookDoctor', this)">Choose Doctor</button>
+  <button class="nav-btn" onclick="showSection('bookDept', this)">Choose Specialization</button>
+  <button class="nav-btn" onclick="showSection('admin', this)">Admin Login</button>
+  <button class="nav-btn" onclick="goHome()">Back to Home</button>
+   
+</nav>
+
+
+
+
+<!-- Book by Doctor -->
+<section id="bookDoctor" class="booking-section container" style="display: none;">
+  <h2>Book by Doctor</h2>
+  <div class="myclass">
+  <label for="doctorSelect">Select Doctor</label>
+  <select id="doctorSelect"></select>
+
+  <label for="doctorDate">Select Date</label>
+  <input type="date" id="doctorDate" />
+<div id="doctorMsg" style="color: red; margin-top: 10px;"></div>
+
+  <form id="doctorBookingForm">
+    <label for="docName">Name</label>
+<input id="docName" required placeholder="Enter your full name" />
+    <label for="docAge">Age</label>
+<input id="docAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+    <label for="docGender">Gender</label>
+    <select id="docGender" required>
+      <option value="">Select gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Other">Other</option>
+    </select>
+    <label for="docNumber">Phone Number</label>
+<input 
+    id="docNumber" 
+    name="phone"          
+    type="tel"             
+    pattern="[0-9]{10}"  
+    maxlength="10"         
+    inputmode="numeric"    
+    required
+    placeholder="Enter 10-digit phone number"
+/>
+
+
+    <button type="submit">Book Appointment</button>
+  </form>
+  <div id="doctorBookingResult"></div>
+  </div>
+</section>
+
+<!-- Book by Department -->
+<section id="bookDept" class="booking-section container" style="display: none;">
+    
+
+  <h2>Book by Specification</h2>
+  <div class="myclass">
+  <label for="specSelect">Select Specialization</label>
+  <select id="specSelect"></select>
+
+  <label for="specDate">Select Date</label>
+  <input type="date" id="specDate" />
+ <div id="noDoctorMsg" style="color: red; margin-top: 10px;"></div>
+ <div id="specTimesContainer" style="margin-top: 8px;"></div>
+<!-- Book by Department -->
+<form id="departmentBookingForm">
+  <label for="depName">Name</label>
+  <input id="depName" required placeholder="Enter your full name" />
+
+  <label for="depAge">Age</label>
+  <input id="depAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+
+  <label for="depGender">Gender</label>
+  <select id="depGender" required>
+    <option value="">Select gender</option>
+    <option value="Male">Male</option>
+    <option value="Female">Female</option>
+    <option value="Other">Other</option>
+  </select>
+
+  <label for="depNumber">Phone Number</label>
+  <input 
+      id="depNumber" 
+      name="phone"          
+      type="tel"             
+      pattern="[0-9]{10}"  
+      maxlength="10"         
+      inputmode="numeric"    
+      required
+      placeholder="Enter 10-digit phone number"
+  />
+
+  <!-- 🔹 NEW: optional time select, hidden by default -->
+  <div id="depTimeWrapper" style="display:none; margin-top: 10px;">
+    <label for="depTime">Preferred Time (optional)</label>
+    <select id="depTime">
+      <option value="">Any available time</option>
+      <!-- options added by JS -->
+    </select>
+  </div>
+
+  <button type="submit">Book Appointment</button>
+</form>
+
+
+  <div id="departmentBookingResult"></div>
+</div>
+</section>
+
+<!-- Admin Section -->
+<section id="admin" class="admin-section container" style="display: none;">
+
+  <!-- Login Form -->
+<div id="adminLoginDiv">
+  <h2>Admin Login</h2>
+
+  <form id="adminLoginForm">
+    <div class="myclass">
+
+      <label for="adminEmail">Email</label>
+      <input id="adminEmail" type="email" required />
+
+      <button type="button" id="sendOtpBtn">Send OTP</button>
+
+      <div id="otpSection" style="display:none;">
+        <label for="adminOtp">Enter OTP</label>
+        <input id="adminOtp" type="text" required />
+        <button type="submit">Login</button>
+
+        <!-- ✅ moved here -->
+        <div id="adminLoginResult" class="error"></div>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+  <!-- After login -->
+  <div id="adminOptions" style="display: none;">
+    <h2>Admin Options</h2>
+    <button onclick="showAdminPanel('add', this)">Add Doctor</button>
+<button onclick="showAdminPanel('edit', this)">Edit Doctor</button>
+<button onclick="showAdminPanel('delete', this)">Delete Doctor</button>
+<button id="logoutBtn">Logout</button>
+
+  </div>
+
+  <!-- Panels -->
+  <div id="addDoctorPanel" class="adminPanel" style="display: none;">
+  <h3>Add Doctor</h3>
+  <form id="adminAddDoctorForm" enctype="multipart/form-data">
+    <label for="addDocName">Name</label>
+    <input id="addDocName" required placeholder="Enter doctor's name" />
+
+    <label for="addDocSpec">Specialization</label>
+    <input id="addDocSpec" required placeholder="Enter doctor's specialization" />
+
+    <label>Working Days and Time</label>
+
+    <div id="addDayTimes">
+      <!-- One row per day -->
+      <div class="day-row">
+        <label>
+          <input type="checkbox" class="day-check" data-day="Monday"> Monday
+        </label>
+        <div class="day-time" data-day-time="Monday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time" data-day="Monday" /> –
+          <input type="time" class="end-time" data-day="Monday" />
+        </div>
+      </div>
+
+      <div class="day-row">
+        <label>
+          <input type="checkbox" class="day-check" data-day="Tuesday"> Tuesday
+        </label>
+        <div class="day-time" data-day-time="Tuesday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time" data-day="Tuesday" /> –
+          <input type="time" class="end-time" data-day="Tuesday" />
+        </div>
+      </div>
+
+      <div class="day-row">
+        <label>
+          <input type="checkbox" class="day-check" data-day="Wednesday"> Wednesday
+        </label>
+        <div class="day-time" data-day-time="Wednesday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time" data-day="Wednesday" /> –
+          <input type="time" class="end-time" data-day="Wednesday" />
+        </div>
+      </div>
+
+      <div class="day-row">
+        <label>
+          <input type="checkbox" class="day-check" data-day="Thursday"> Thursday
+        </label>
+        <div class="day-time" data-day-time="Thursday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time" data-day="Thursday" /> –
+          <input type="time" class="end-time" data-day="Thursday" />
+        </div>
+      </div>
+
+      <div class="day-row">
+        <label>
+          <input type="checkbox" class="day-check" data-day="Friday"> Friday
+        </label>
+        <div class="day-time" data-day-time="Friday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time" data-day="Friday" /> –
+          <input type="time" class="end-time" data-day="Friday" />
+        </div>
+      </div>
+
+      <div class="day-row">
+        <label>
+          <input type="checkbox" class="day-check" data-day="Saturday"> Saturday
+        </label>
+        <div class="day-time" data-day-time="Saturday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time" data-day="Saturday" /> –
+          <input type="time" class="end-time" data-day="Saturday" />
+        </div>
+      </div>
+
+      <div class="day-row">
+        <label>
+          <input type="checkbox" class="day-check" data-day="Sunday"> Sunday
+        </label>
+        <div class="day-time" data-day-time="Sunday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time" data-day="Sunday" /> –
+          <input type="time" class="end-time" data-day="Sunday" />
+        </div>
+      </div>
+    </div>
+
+    <label>
+      <input type="checkbox" id="sameTimeAll" />
+      Same time slot for all selected days
+    </label>
+
+    <div id="commonTimeBlock" style="display:none; margin-top: 10px;">
+      <label>Common Time Slot</label>
+      <div style="display:flex; gap:10px;">
+        <div>
+          <label for="commonStart">Start</label>
+          <input type="time" id="commonStart" />
+        </div>
+        <div>
+          <label for="commonEnd">End</label>
+          <input type="time" id="commonEnd" />
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 15px;">
+      <label for="addDocImage">Profile Image</label>
+      <input 
+        type="file" 
+        id="addDocImage" 
+        name="image" 
+        accept="image/*"
+        required
+      />
+    </div>
+
+    <button type="submit">Add Doctor</button>
+  </form>
+</div>
+
+
+<!-- Fix the Edit Doctor Panel -->
+<div id="editDoctorPanel" class="adminPanel" style="display: none;">
+  <h3>Edit Doctor</h3>
+  <form id="adminEditDoctorForm">
+    <label for="editDoctorSelect">Select Doctor</label>
+    <select id="editDoctorSelect" required>
+      <option value="">-- Select Doctor --</option>
+    </select>
+
+    <label>Working Days & Time</label>
+
+    <div id="editDayTimes">
+      <!-- One row per day -->
+      <div class="day-row-edit">
+        <label>
+          <input type="checkbox" class="day-check-edit" data-day="Monday"> Monday
+        </label>
+        <div class="day-time-edit" data-day-time-edit="Monday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time-edit" data-day="Monday" /> –
+          <input type="time" class="end-time-edit" data-day="Monday" />
+        </div>
+      </div>
+
+      <div class="day-row-edit">
+        <label>
+          <input type="checkbox" class="day-check-edit" data-day="Tuesday"> Tuesday
+        </label>
+        <div class="day-time-edit" data-day-time-edit="Tuesday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time-edit" data-day="Tuesday" /> –
+          <input type="time" class="end-time-edit" data-day="Tuesday" />
+        </div>
+      </div>
+
+      <div class="day-row-edit">
+        <label>
+          <input type="checkbox" class="day-check-edit" data-day="Wednesday"> Wednesday
+        </label>
+        <div class="day-time-edit" data-day-time-edit="Wednesday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time-edit" data-day="Wednesday" /> –
+          <input type="time" class="end-time-edit" data-day="Wednesday" />
+        </div>
+      </div>
+
+      <div class="day-row-edit">
+        <label>
+          <input type="checkbox" class="day-check-edit" data-day="Thursday"> Thursday
+        </label>
+        <div class="day-time-edit" data-day-time-edit="Thursday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time-edit" data-day="Thursday" /> –
+          <input type="time" class="end-time-edit" data-day="Thursday" />
+        </div>
+      </div>
+
+      <div class="day-row-edit">
+        <label>
+          <input type="checkbox" class="day-check-edit" data-day="Friday"> Friday
+        </label>
+        <div class="day-time-edit" data-day-time-edit="Friday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time-edit" data-day="Friday" /> –
+          <input type="time" class="end-time-edit" data-day="Friday" />
+        </div>
+      </div>
+
+      <div class="day-row-edit">
+        <label>
+          <input type="checkbox" class="day-check-edit" data-day="Saturday"> Saturday
+        </label>
+        <div class="day-time-edit" data-day-time-edit="Saturday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time-edit" data-day="Saturday" /> –
+          <input type="time" class="end-time-edit" data-day="Saturday" />
+        </div>
+      </div>
+
+      <div class="day-row-edit">
+        <label>
+          <input type="checkbox" class="day-check-edit" data-day="Sunday"> Sunday
+        </label>
+        <div class="day-time-edit" data-day-time-edit="Sunday" style="display:none; margin-left: 20px;">
+          <input type="time" class="start-time-edit" data-day="Sunday" /> –
+          <input type="time" class="end-time-edit" data-day="Sunday" />
+        </div>
+      </div>
+    </div>
+
+    <label style="margin-top: 10px;">
+      <input type="checkbox" id="sameTimeAllEdit" />
+      Same time slot for all selected days
+    </label>
+
+    <div id="commonTimeBlockEdit" style="display:none; margin-top: 10px;">
+      <label>Common Time Slot</label>
+      <div style="display:flex; gap:10px;">
+        <div>
+          <label for="commonStartEdit">Start</label>
+          <input type="time" id="commonStartEdit" />
+        </div>
+        <div>
+          <label for="commonEndEdit">End</label>
+          <input type="time" id="commonEndEdit" />
+        </div>
+      </div>
+    </div>
+
+    <button type="submit">Update Doctor</button>
+  </form>
+
+  <!-- 🔹 NEW: Temporary Leave section -->
+  <hr style="margin: 20px 0;">
+
+  <h4>Temporary Leave</h4>
+  <p style="font-size: 0.9rem; margin-top: 0;">
+    Select the doctor above, then add or remove leave dates.
+  </p>
+
+  <label for="leaveDate">Leave Date</label>
+  <input type="date" id="leaveDate" />
+
+  <label for="leaveReason">Reason (optional)</label>
+  <input type="text" id="leaveReason" maxlength="12"  placeholder="Conference / Personal / etc." />
+
+  <button type="button" id="addLeaveBtn" style="margin-top: 10px;">
+    Add Leave
+  </button>
+
+  <div id="leaveMsg" style="margin-top: 8px; font-size: 0.9rem;"></div>
+
+  <h5 style="margin-top: 15px;">Existing Leave Dates</h5>
+  <table style="width:100%; border-collapse: collapse; font-size: 0.9rem;">
+    <thead>
+      <tr>
+        <th style="border-bottom:1px solid #ccc; text-align:left;">Date</th>
+        <th style="border-bottom:1px solid #ccc; text-align:left;">Reason</th>
+        <th style="border-bottom:1px solid #ccc; text-align:left;">Action</th>
+      </tr>
+    </thead>
+    <tbody id="leaveTbody">
+      <!-- Filled by JS -->
+    </tbody>
+  </table>
+</div>
+
+
+
+
+<div id="deleteDoctorPanel" class="adminPanel" style="display: none;">
+  <h3>Delete Doctor</h3>
+  <form id="adminDeleteDoctorForm">
+    <label for="deleteDoctorSelect">Select Doctor</label>
+    <select id="deleteDoctorSelect" required>
+      <option value="">-- Select Doctor --</option>
+    </select>
+    <button type="submit">Delete</button>
+  </form>
+</div>
+
+</section>
+
+<script>
+  async function refreshLeaveListForCurrentDoctor() {
+  const combined = document.getElementById("editDoctorSelect").value;
+  const tbody = document.getElementById("leaveTbody");
+  const msgDiv = document.getElementById("leaveMsg");
+
+  if (!tbody || !msgDiv) return;
+
+  tbody.innerHTML = "";
+  msgDiv.style.display = "none";
+  msgDiv.textContent = "";
+
+  if (!combined) {
+    // No doctor selected
+    return;
+  }
+
+  try {
+    const res = await fetch(`/admin_get_leaves?combined=${encodeURIComponent(combined)}`);
+    const data = await res.json();
+
+    if (!data.success) {
+      msgDiv.style.color = "red";
+      msgDiv.textContent = data.msg || "Error loading leave dates.";
+      msgDiv.style.display = "block";
+      return;
+    }
+
+    const leaves = data.leaves || [];
+    if (leaves.length === 0) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 3;
+      td.textContent = "No leave dates set.";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+
+    leaves.forEach(leave => {
+      const tr = document.createElement("tr");
+
+      const tdDate = document.createElement("td");
+      tdDate.textContent = leave.date;
+      tr.appendChild(tdDate);
+
+      const tdReason = document.createElement("td");
+      tdReason.textContent = leave.reason || "-";
+      tr.appendChild(tdReason);
+
+      const tdAction = document.createElement("td");
+      const btn = document.createElement("button");
+      btn.textContent = "Delete";
+      btn.style.fontSize = "0.8rem";
+
+      btn.addEventListener("click", async () => {
+        if (!confirm(`Remove leave on ${leave.date}?`)) return;
+
+        try {
+          const delRes = await fetch("/admin_delete_leave", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ combined, date: leave.date })
+          });
+          const delData = await delRes.json();
+          msgDiv.style.color = delData.success ? "green" : "red";
+          msgDiv.textContent = delData.msg || (delData.success ? "Leave removed." : "Error removing leave.");
+          msgDiv.style.display = "block";
+          if (delData.success) {
+            refreshLeaveListForCurrentDoctor();
+          }
+        } catch (err) {
+          msgDiv.style.color = "red";
+          msgDiv.textContent = "We couldn’t remove this leave entry right now. Please try again.";
+          msgDiv.style.display = "block";
+        }
+      });
+
+      tdAction.appendChild(btn);
+      tr.appendChild(tdAction);
+
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    msgDiv.style.color = "red";
+    msgDiv.textContent = "We couldn’t load the leave dates at the moment. Please try again.";
+    msgDiv.style.display = "block";
+  }
+}
+
+  function setupEditDoctorDayTimeUI() {
+  // Toggle each day's time inputs
+  document.querySelectorAll('.day-check-edit').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const day = cb.dataset.day;
+      const timeDiv = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
+
+      const sameTimeAll = document.getElementById('sameTimeAllEdit');
+      if (sameTimeAll && sameTimeAll.checked) {
+        timeDiv.style.display = "none";
+        return;
+      }
+
+      timeDiv.style.display = cb.checked ? "inline-block" : "none";
+    });
+  });
+
+  // Same time for all selected days toggle
+  const sameTimeAllCheckbox = document.getElementById('sameTimeAllEdit');
+  const commonTimeBlock = document.getElementById('commonTimeBlockEdit');
+
+  if (sameTimeAllCheckbox) {
+    sameTimeAllCheckbox.addEventListener('change', () => {
+      if (sameTimeAllCheckbox.checked) {
+        commonTimeBlock.style.display = "block";
+        document.querySelectorAll('.day-time-edit').forEach(div => {
+          div.style.display = "none";
+        });
+      } else {
+        commonTimeBlock.style.display = "none";
+        document.querySelectorAll('.day-check-edit').forEach(cb => {
+          const day = cb.dataset.day;
+          const timeDiv = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
+          timeDiv.style.display = cb.checked ? "inline-block" : "none";
+        });
+      }
+    });
+  }
+}
+
+  function setupAddDoctorDayTimeUI() {
+  // Show/hide time fields for each day in Add Doctor panel
+  document.querySelectorAll('.day-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const day = cb.dataset.day;
+      const timeDiv = document.querySelector(`.day-time[data-day-time="${day}"]`);
+
+      const sameTimeAll = document.getElementById('sameTimeAll');
+      if (sameTimeAll && sameTimeAll.checked) {
+        // In "same time" mode we keep the per-day time inputs hidden
+        timeDiv.style.display = "none";
+        return;
+      }
+
+      timeDiv.style.display = cb.checked ? "inline-block" : "none";
+    });
+  });
+
+  // Handle "same time for all selected days" toggle
+  const sameTimeAllCheckbox = document.getElementById('sameTimeAll');
+  const commonTimeBlock = document.getElementById('commonTimeBlock');
+
+  if (sameTimeAllCheckbox) {
+    sameTimeAllCheckbox.addEventListener('change', () => {
+      if (sameTimeAllCheckbox.checked) {
+        commonTimeBlock.style.display = "block";
+        // Hide all individual time inputs
+        document.querySelectorAll('.day-time').forEach(div => {
+          div.style.display = "none";
+        });
+      } else {
+        commonTimeBlock.style.display = "none";
+        // Show individual times only for checked days
+        document.querySelectorAll('.day-check').forEach(cb => {
+          const day = cb.dataset.day;
+          const timeDiv = document.querySelector(`.day-time[data-day-time="${day}"]`);
+          timeDiv.style.display = cb.checked ? "inline-block" : "none";
+        });
+      }
+    });
+  }
+}
+
+  function goHome() {
+  window.location.href = "/";
+}
+
+  function timeToMinutes(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+  function showMessage(divId, msg, color = "red", timeout = 4000) {
+  const div = document.getElementById(divId);
+  if (!div) return;
+
+  div.textContent = msg;
+  div.style.color = color;
+  div.style.display = "block";
+
+  if (timeout > 0) {
+    setTimeout(() => {
+      div.style.display = "none";
+    }, timeout);
+  }
+}
+
+
+    const dayMap = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6
+};
+let doctorsBySpecialization = {};
+
+let workingDays = []; // stores allowed day numbers for selected doctor
+
+    // Format Specialization
+document.getElementById("addDocSpec").addEventListener("blur", e => {
+  e.target.value = e.target.value
+    .replace(/[^a-zA-Z ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+});
+    document.getElementById("addDocName").addEventListener("blur", e => {
+  e.target.value = e.target.value
+    .replace(/[^a-zA-Z ]/g, "")             // Remove non-letters
+    .replace(/\s+/g, " ")                   // Collapse spaces
+    .trim()                                 // Trim ends
+    .split(" ")                             // Split words
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) // Capitalize
+    .join(" ");                             // Rejoin
+});
+
+    // Clean age inputs before submitting forms
+function cleanAgeInput(id) {
+  const ageField = document.getElementById(id);
+  if (ageField) {
+    ageField.value = ageField.value.trim().replace(/^0+/, '');
+    if (ageField.value === '') ageField.value = '0';  // fallback if only 0s
+  }
+}
+
+// Doctor Booking Form
+document.getElementById("doctorBookingForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  cleanAgeInput("docAge");
+
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Booking...";
+
+  try {
+    const sheetname = document.getElementById("doctorSelect").value;
+    const name = document.getElementById("docName").value.trim();
+    const age = document.getElementById("docAge").value.trim();
+    const gender = document.getElementById("docGender").value;  // NEW
+    const phone_number = document.getElementById("docNumber").value.trim();
+    const date = document.getElementById("doctorDate").value;
+
+
+    if (!date) {
+      showMessage("doctorMsg", "⚠️ Please select a date");
+      btn.disabled = false;
+      btn.textContent = "Book Appointment";
+      return;
+    }
+
+    const res = await fetch("/book_doctor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sheetname, name, age, gender, phone_number, date })
+    });
+
+    const data = await res.json();
+    if (data.redirect) {
+      window.location.href = data.redirect;
+    } else if (data.success) {
+      showMessage("doctorMsg", `✅ Token ${data.token} booked successfully`, "green");
+      e.target.reset();
+    } else {
+      showMessage("doctorMsg", `❌ ${data.msg}`);
+    }
+  } catch (err) {
+    showMessage("doctorMsg", "We’re sorry, something went wrong while booking your appointment. Please try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Book Appointment";
+  }
+});
+
+
+// Department Booking Form
+document.getElementById("departmentBookingForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  cleanAgeInput("depAge");
+
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Booking...";
+
+  try {
+    const specialization = document.getElementById("specSelect").value;
+    const name = document.getElementById("depName").value.trim();
+    const age = document.getElementById("depAge").value.trim();
+    const gender = document.getElementById("depGender").value;  // ✅ depGender
+    const phone_number = document.getElementById("depNumber").value.trim();
+
+    const specDateInput = document.getElementById("specDate");
+    const date = specDateInput.value;
+
+    const messageDiv = document.getElementById("noDoctorMsg");
+
+    if (!date) {
+      messageDiv.textContent = "Please select a date for your appointment.";
+      messageDiv.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "Book Appointment";
+      return;
+    }
+
+    // ✅ which time/doctor was chosen (if any)?
+    let doctor_sheet_url = null;
+    const timeSelect = document.getElementById("depTime");
+    if (timeSelect && timeSelect.value) {
+      doctor_sheet_url = timeSelect.value;  // this is the SheetURL of the doctor
+    }
+
+    messageDiv.textContent = "";
+    messageDiv.style.display = "none";
+
+    const res = await fetch("/book_department", {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        specialization,
+        name,
+        age,
+        gender,
+        phone_number,
+        date,
+        doctor_sheet_url   // null → auto assign, non-null → specific doctor
+      })
+    });
+
+    const data = await res.json();
+    if (data.redirect) {
+      window.location.href = data.redirect;
+    } else if (data.success) {
+      alert("Your appointment has been booked successfully.");
+      e.target.reset();
+
+      // reset time select visibility
+      const wrapper = document.getElementById("depTimeWrapper");
+      if (wrapper) wrapper.style.display = "none";
+    } else {
+      messageDiv.textContent =
+        data.msg ||
+        "We’re sorry, something went wrong while booking your appointment. Please try again.";
+      messageDiv.style.display = "block";
+    }
+  } catch (err) {
+    alert("We’re sorry, something went wrong while booking your appointment. Please try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Book Appointment";
+  }
+});
+
+
+document.getElementById("addDocName").addEventListener("blur", e => {
+  let name = e.target.value
+    .replace(/^Dr\.?\s*/i, "")              // Remove existing "Dr." prefix if any
+    .replace(/[^a-zA-Z ]/g, "")             // Remove non-letter characters
+    .replace(/\s+/g, " ")                   // Collapse multiple spaces
+    .trim()                                 // Trim leading/trailing spaces
+    .split(" ")                             // Split into words
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) // Capitalize
+    .join(" ");                             // Join back
+
+  e.target.value = `Dr. ${name}`;           // Add Dr. prefix
+});
+    document.getElementById("depName").addEventListener("blur", e => e.target.value = e.target.value.replace(/[^a-zA-Z ]/g, "").replace(/\s+/g, " ").trim().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
+    document.getElementById("docName").addEventListener("blur", e => e.target.value = e.target.value.replace(/[^a-zA-Z ]/g, "").replace(/\s+/g, " ").trim().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
+
+function showSection(id, btn) {
+  document.querySelectorAll("section").forEach(s => s.style.display = "none");
+  document.getElementById(id).style.display = "block";
+
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+
+  if (id === "admin") {
+    document.getElementById("adminLoginDiv").style.display = "block";
+    document.getElementById("adminOptions").style.display = "none";
+    document.querySelectorAll(".adminPanel").forEach(p => p.style.display = "none");
+  }
+}
+
+
+function showAdminPanel(type, btn) {
+  // Hide all panels first
+  document.querySelectorAll(".adminPanel").forEach(p => {
+    p.style.display = "none";
+  });
+
+  // Remove highlight from all admin buttons
+  document.querySelectorAll("#adminOptions button").forEach(b => {
+    b.classList.remove("active");
+  });
+
+  if (type === "add") {
+    document.getElementById("addDoctorPanel").style.display = "block";
+  } else if (type === "edit") {
+    document.getElementById("editDoctorPanel").style.display = "block";
+  } else if (type === "delete") {
+    document.getElementById("deleteDoctorPanel").style.display = "block";
+  }
+
+  if (btn) {
+    btn.classList.add("active");
+  }
+}
+
+async function loadDoctors() {
+  const res = await fetch("/get_doctors");
+  const doctors = await res.json();
+
+  const doctorSelect = document.getElementById("doctorSelect");
+  const specSelect = document.getElementById("specSelect");
+
+  doctorSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
+  specSelect.innerHTML = "<option value=''>-- Select Specialization --</option>";
+
+  doctorsBySpecialization = {};
+
+  if (!doctors || doctors.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No doctors available";
+    doctorSelect.appendChild(opt);
+    specSelect.appendChild(opt.cloneNode(true));
+    return;
+  }
+
+  const specializations = new Set();
+
+  doctors.forEach(d => {
+    const opt = document.createElement("option");
+    opt.value = d.SheetURL || "";
+    opt.textContent = `${d.Name} (${d.Specialization})`;
+
+    // Normalize Days to array
+    const daysArr = Array.isArray(d.Days)
+      ? d.Days
+      : (d.Days || "").split(",").map(x => x.trim()).filter(Boolean);
+
+    // Keep comma string for existing code that expects string
+    opt.dataset.days = daysArr.join(",");
+
+    // Store per-day times as JSON string
+    opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
+
+    doctorSelect.appendChild(opt);
+
+    specializations.add(d.Specialization);
+
+    if (!doctorsBySpecialization[d.Specialization]) {
+      doctorsBySpecialization[d.Specialization] = [];
+    }
+    // Store normalized days + DayTimes for department logic
+    doctorsBySpecialization[d.Specialization].push({
+      ...d,
+      Days: daysArr,
+      DayTimes: d.DayTimes || {}
+    });
+  });
+
+  [...specializations].sort().forEach(spec => {
+    const opt = document.createElement("option");
+    opt.value = spec;
+    opt.textContent = spec;
+    specSelect.appendChild(opt);
+  });
+}
+
+
+
+document.getElementById("doctorSelect").addEventListener("change", function () {
+  const selectedOption = this.selectedOptions[0];
+  const doctorMsgDiv = document.getElementById("doctorMsg");
+  const dateInput = document.getElementById("doctorDate");
+
+  // Reset message & date
+  doctorMsgDiv.style.display = "none";
+  doctorMsgDiv.textContent = "";
+  if (dateInput) {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    dateInput.setAttribute("min", today);
+    dateInput.value = "";
+  }
+
+  // No real doctor selected (placeholder)
+  if (!selectedOption || !selectedOption.value) {
+    workingDays = [];     // clear allowed days
+    return;
+  }
+
+  // Real doctor selected → load working days
+  const daysStr = selectedOption.dataset.days;
+  workingDays = daysStr
+    ? daysStr.split(",").map(day => dayMap[day.trim()])
+    : [];
+});
+
+
+document.getElementById("doctorDate").addEventListener("input", function () {
+  const doctorMsgDiv = document.getElementById("doctorMsg");
+  doctorMsgDiv.style.display = "none";
+  doctorMsgDiv.textContent = "";
+
+  const doctorSelect = document.getElementById("doctorSelect");
+  const selectedDoctorOption = doctorSelect.selectedOptions[0];
+
+  // ✅ Treat placeholder (value="") as "no doctor"
+  if (!selectedDoctorOption || !selectedDoctorOption.value) {
+    doctorMsgDiv.textContent = "Please select a doctor before choosing a date.";
+    doctorMsgDiv.style.display = "block";
+    this.value = "";
+    return;
+  }
+
+  const daysStr = selectedDoctorOption.dataset.days || "";
+  workingDays = daysStr
+    ? daysStr.split(",").map(day => dayMap[day.trim()])
+    : [];
+
+  const selectedDate = new Date(this.value);
+  const selectedDay = selectedDate.getDay(); // 0=Sunday
+
+  if (!workingDays.includes(selectedDay)) {
+    doctorMsgDiv.textContent = "This doctor is not available on the selected day. Please choose another date.";
+    doctorMsgDiv.style.display = "block";
+    this.value = "";
+    return;
+  }
+
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const todayDate = new Date(todayStr);
+
+  if (selectedDate < todayDate) {
+    doctorMsgDiv.textContent = "Past dates cannot be selected. Please choose a future date.";
+    doctorMsgDiv.style.display = "block";
+    this.value = "";
+    return;
+  }
+
+  // same-day closing-time logic (unchanged)
+  if (this.value === todayStr) {
+    const dayTimes = selectedDoctorOption.dataset.dayTimes
+      ? JSON.parse(selectedDoctorOption.dataset.dayTimes)
+      : {};
+    const weekdayName = Object.keys(dayMap).find(k => dayMap[k] === selectedDay);
+    const timeRange = dayTimes[weekdayName];
+
+    if (timeRange) {
+      const parts = timeRange.split("-");
+      const endTimeStr = parts[1] ? parts[1].trim() : null;
+
+      if (endTimeStr) {
+        const nowStr = new Date().toLocaleTimeString("en-GB", {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Asia/Kolkata"
+        });
+
+        if (timeToMinutes(nowStr) > timeToMinutes(endTimeStr)) {
+          doctorMsgDiv.textContent = "Bookings for this doctor have closed for today. Please select another date.";
+          doctorMsgDiv.style.display = "block";
+          this.value = "";
+          return;
+        }
+      }
+    }
+  }
+});
+
+
+
+
+// Load doctor name + specialization pairs for delete dropdown
+async function loadDoctorPairs() {
+  const res = await fetch("/get_doctor_pairs");
+  const pairs = await res.json();
+
+  const select = document.getElementById("deleteDoctorSelect");
+  select.innerHTML = "<option value=''>-- Select Doctor --</option>";
+
+  if (!pairs || pairs.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No doctors available";
+    select.appendChild(opt);
+    return;
+  }
+
+  pairs.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p;
+    opt.textContent = p;
+    select.appendChild(opt);
+  });
+}
+
+// Load doctors into the edit dropdown
+async function loadDoctorsForEdit() {
+  const select = document.getElementById("editDoctorSelect");
+  if (!select) return;
+
+  select.innerHTML = "<option value=''>-- Loading doctors... --</option>";
+
+  try {
+    const res = await fetch("/get_doctors");
+
+    if (!res.ok) {
+      console.error("Failed to load doctors for edit:", res.status, res.statusText);
+      select.innerHTML =
+        "<option value=''>-- Could not load doctors (try again later) --</option>";
+      return;
+    }
+
+    const doctors = await res.json();
+
+    select.innerHTML = "<option value=''>-- Select Doctor --</option>";
+
+    if (!doctors || doctors.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No doctors available";
+      select.appendChild(opt);
+      return;
+    }
+
+    doctors.forEach(d => {
+      const value = `${d.Name} - ${d.Specialization}`;
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = value;
+
+      const daysArr = Array.isArray(d.Days)
+        ? d.Days
+        : (d.Days || "")
+            .split(",")
+            .map(x => x.trim())
+            .filter(Boolean);
+
+      opt.dataset.days = daysArr.join(",");
+      opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
+
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Error in loadDoctorsForEdit:", err);
+    select.innerHTML =
+      "<option value=''>-- Error loading doctors (check console) --</option>";
+  }
+}
+
+
+
+
+document.getElementById("adminAddDoctorForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Adding...";
+
+  try {
+    const name = document.getElementById("addDocName").value.trim();
+    const specialization = document.getElementById("addDocSpec").value.trim();
+    const imageFile = document.getElementById("addDocImage").files[0];
+
+    const sameTimeAll = document.getElementById("sameTimeAll");
+    const selectedDays = [];
+    const dayTimes = {};
+
+    if (sameTimeAll && sameTimeAll.checked) {
+      const commonStart = document.getElementById("commonStart").value;
+      const commonEnd = document.getElementById("commonEnd").value;
+
+      if (!commonStart || !commonEnd) {
+        showMessage("doctorMsg", "Please enter both start and end times for the common time slot.");
+        btn.disabled = false;
+        btn.textContent = "Add Doctor";
+        return;
+      }
+
+      document.querySelectorAll('.day-check:checked').forEach(cb => {
+        const day = cb.dataset.day;
+        selectedDays.push(day);
+        dayTimes[day] = `${commonStart}-${commonEnd}`;
+      });
+
+    } else {
+      let hasError = false;
+
+      document.querySelectorAll('.day-check:checked').forEach(cb => {
+        if (hasError) return;  // skip more work if already invalid
+
+        const day = cb.dataset.day;
+        const container = document.querySelector(`.day-time[data-day-time="${day}"]`);
+        const start = container.querySelector('.start-time').value;
+        const end = container.querySelector('.end-time').value;
+
+        if (!start || !end) {
+          showMessage("doctorMsg", `Please enter both start and end times for ${day}.`);
+          hasError = true;
+          return;
+        }
+
+        selectedDays.push(day);
+        dayTimes[day] = `${start}-${end}`;
+      });
+
+      if (hasError) {
+        btn.disabled = false;
+        btn.textContent = "Add Doctor";
+        return;
+      }
+    }
+
+    if (!selectedDays.length) {
+      showMessage("doctorMsg", "Please select at least one working day for this doctor.");
+      btn.disabled = false;
+      btn.textContent = "Add Doctor";
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("specialization", specialization);
+    formData.append("days", selectedDays.join(", "));
+    formData.append("day_times", JSON.stringify(dayTimes));
+    if (imageFile) {
+      formData.append("image", imageFile);
+    }
+
+    const res = await fetch("/admin_add_doctor", {
+      method: "POST",
+      body: formData
+    });
+
+    // ✅ Read body ONCE
+    const rawText = await res.text();
+    let data;
+
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      // Not JSON → show raw response (e.g. HTML error page)
+      alert("Server returned a non-JSON error while adding doctor:\n\n" + rawText);
+      console.error("Raw response from /admin_add_doctor:", rawText);
+      return;
+    }
+
+    alert(data.msg);
+
+    if (data.success) {
+      e.target.reset();
+      loadDoctors();
+      loadDoctorPairs();
+      loadDoctorsForEdit();
+    }
+  } catch (err) {
+    alert("We’re sorry, there was a problem adding this doctor. Please try again.\n\n" + err);
+    console.error("Add doctor error:", err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Add Doctor";
+  }
+});
+
+
+
+
+
+// Auto-fill fields when doctor is selected
+document.getElementById("editDoctorSelect").addEventListener("change", function () {
+  const selected = this.selectedOptions[0];
+  if (!selected) return;
+
+  // Clear previous state
+  document.querySelectorAll('.day-check-edit').forEach(cb => {
+    cb.checked = false;
+  });
+  document.querySelectorAll('.day-time-edit').forEach(div => {
+    div.style.display = "none";
+  });
+  document.getElementById('sameTimeAllEdit').checked = false;
+  document.getElementById('commonTimeBlockEdit').style.display = "none";
+  document.getElementById('commonStartEdit').value = "";
+  document.getElementById('commonEndEdit').value = "";
+
+  // Fill days
+  const selectedDays = (selected.dataset.days || "")
+    .split(",")
+    .map(d => d.trim())
+    .filter(Boolean);
+
+  const dayTimes = selected.dataset.dayTimes
+    ? JSON.parse(selected.dataset.dayTimes)
+    : {};
+
+  // Set checkboxes and per-day times
+  document.querySelectorAll('.day-check-edit').forEach(cb => {
+    const day = cb.dataset.day;
+    const timeDiv = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
+    const timeRange = dayTimes[day];
+
+    if (selectedDays.includes(day)) {
+      cb.checked = true;
+      timeDiv.style.display = "inline-block";
+
+      if (timeRange) {
+        const parts = timeRange.split("-");
+        const start = (parts[0] || "").trim();
+        const end = (parts[1] || "").trim();
+        const startInput = timeDiv.querySelector('.start-time-edit');
+        const endInput = timeDiv.querySelector('.end-time-edit');
+        if (startInput) startInput.value = start;
+        if (endInput) endInput.value = end;
+      }
+    } else {
+      cb.checked = false;
+      timeDiv.style.display = "none";
+    }
+  });
+  refreshLeaveListForCurrentDoctor();
+});
+
+
+
+// Admin login
+document.getElementById("sendOtpBtn").addEventListener("click", async () => {
+  const email = document.getElementById("adminEmail").value.trim();
+
+  if (!email) {
+    showMessage("adminLoginResult", "Please enter your admin email address.");
+    return;
+  }
+
+  const res = await fetch("/send_admin_otp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: `admin_email=${encodeURIComponent(email)}`
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    showMessage("adminLoginResult", "An OTP has been sent to your email address", "green");
+    document.getElementById("otpSection").style.display = "block";
+    document.getElementById("sendOtpBtn").style.display = "none";
+  } else {
+    showMessage("adminLoginResult", data.msg || "We’re sorry, we could not send the OTP. Please try again.");
+  }
+});
+
+// Handle OTP verification
+document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const otp = document.getElementById("adminOtp").value.trim();
+
+  const res = await fetch("/verify_admin_otp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: `otp=${encodeURIComponent(otp)}`
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    showMessage("adminLoginResult", "You are now logged in as an admin.", "green");
+    document.getElementById("adminLoginDiv").style.display = "none";
+    document.getElementById("adminOptions").style.display = "block";
+    loadDoctorPairs();
+  } else {
+    showMessage("adminLoginResult", data.msg || "The OTP is incorrect or has expired. Please request a new one.");
+  }
+});
+
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await fetch("/admin_logout", { method: "POST" });
+
+  // ✅ show login panel
+  document.getElementById("adminLoginDiv").style.display = "block";
+
+  // ✅ hide admin options panel
+  document.getElementById("adminOptions").style.display = "none";
+
+  // ✅ hide all admin panels
+  document.querySelectorAll(".adminPanel").forEach(p => p.style.display = "none");
+  document.querySelectorAll("section").forEach(s => s.style.display = "none");
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+
+  // ✅ clear email field
+  document.getElementById("adminEmail").value = "";
+
+  // ✅ hide OTP section
+  document.getElementById("otpSection").style.display = "none";
+
+  // ✅ ensure Send OTP button is visible
+  document.getElementById("sendOtpBtn").style.display = "inline-block";
+
+  // ✅ clear OTP field if exists
+  const otpField = document.getElementById("adminOtp");
+  if (otpField) otpField.value = "";
+
+  // ✅ clear login messages
+  document.getElementById("adminLoginResult").textContent = "";
+
+  alert("Logged out");
+});
+
+
+
+
+
+
+// Delete doctor handler
+document.getElementById("adminDeleteDoctorForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Deleting...";
+
+  try {
+    const combined = document.getElementById("deleteDoctorSelect").value;
+    if (!combined) {
+      alert("Please select a doctor to delete.");
+      btn.disabled = false;
+      btn.textContent = "Delete";
+      return;
+    }
+
+    const confirmed = confirm("Are you sure you want to delete this doctor?");
+    if (!confirmed) {
+      btn.disabled = false;
+      btn.textContent = "Delete";
+      return;
+    }
+
+    const res = await fetch("/admin_delete_doctor", {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ combined })
+    });
+
+    const data = await res.json();
+    alert(data.msg);
+
+    if (data.success) {
+      loadDoctors();
+      loadDoctorPairs();
+      loadDoctorsForEdit();
+    }
+  } catch (err) {
+    alert("We’re sorry, there was a problem deleting this doctor. Please try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Delete";
+  }
+});
+
+document.getElementById("adminEditDoctorForm").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const btn = e.target.querySelector("button[type='submit']");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+
+  try {
+    const combined = document.getElementById("editDoctorSelect").value;
+    if (!combined) {
+      showMessage("doctorMsg", "⚠️ Please select a doctor");
+      btn.disabled = false;
+      btn.textContent = "Update Doctor";
+      return;
+    }
+
+    const sameTimeAll = document.getElementById("sameTimeAllEdit");
+    const selectedDays = [];
+    const day_times = {};
+
+    if (sameTimeAll && sameTimeAll.checked) {
+      const commonStart = document.getElementById("commonStartEdit").value;
+      const commonEnd = document.getElementById("commonEndEdit").value;
+
+      if (!commonStart || !commonEnd) {
+        showMessage("doctorMsg", "Please enter both start and end times for the common time slot.");
+        btn.disabled = false;
+        btn.textContent = "Update Doctor";
+        return;
+      }
+
+      document.querySelectorAll('.day-check-edit:checked').forEach(cb => {
+        const day = cb.dataset.day;
+        selectedDays.push(day);
+        day_times[day] = `${commonStart}-${commonEnd}`;
+      });
+
+    } else {
+      let hasError = false;
+
+      document.querySelectorAll('.day-check-edit:checked').forEach(cb => {
+        if (hasError) return;
+
+        const day = cb.dataset.day;
+        const timeDiv = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
+        const start = timeDiv.querySelector('.start-time-edit').value;
+        const end = timeDiv.querySelector('.end-time-edit').value;
+
+        if (!start || !end) {
+          showMessage(
+            "doctorMsg",
+            `Please enter both start and end times for ${day}.`
+          );
+          hasError = true;
+          return;
+        }
+
+        selectedDays.push(day);
+        day_times[day] = `${start}-${end}`;
+      });
+
+      if (hasError) {
+        btn.disabled = false;
+        btn.textContent = "Update Doctor";
+        return;
+      }
+    }
+
+    if (!selectedDays.length) {
+      showMessage("doctorMsg", "⚠️ At least one working day is required");
+      btn.disabled = false;
+      btn.textContent = "Update Doctor";
+      return;
+    }
+
+    const res = await fetch("/admin_edit_doctor", {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        combined,
+        days: selectedDays,
+        day_times
+      })
+    });
+
+    const data = await res.json();
+    alert(data.msg);
+
+    if (data.success) {
+      e.target.reset();
+      loadDoctors();
+      loadDoctorPairs();
+      loadDoctorsForEdit();
+    }
+  } catch (err) {
+    alert("We’re sorry, there was a problem updating this doctor. Please try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Update Doctor";
+  }
+});
+
+// 🔹 Add leave for selected doctor
+document.getElementById("addLeaveBtn").addEventListener("click", async () => {
+  const combined = document.getElementById("editDoctorSelect").value;
+  const date = document.getElementById("leaveDate").value;
+  const reason = document.getElementById("leaveReason").value.trim();
+  const msgDiv = document.getElementById("leaveMsg");
+
+  msgDiv.style.display = "block";
+
+  if (!combined) {
+    msgDiv.style.color = "red";
+    msgDiv.textContent = "Please select a doctor before adding leave.";
+    return;
+  }
+
+  if (!date) {
+    msgDiv.style.color = "red";
+    msgDiv.textContent = "Please select a date for leave.";
+    return;
+  }
+
+  // prevent past dates on client side (server will also validate format)
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  if (date < todayStr) {
+    msgDiv.style.color = "red";
+    msgDiv.textContent = "Leave cannot be set for past dates. Please choose a future date.";
+    return;
+  }
+
+  try {
+    const res = await fetch("/admin_add_leave", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ combined, date, reason })
+    });
+
+    const data = await res.json();
+    msgDiv.style.color = data.success ? "green" : "red";
+    msgDiv.textContent = data.msg || (data.success ? "Leave added." : "Error adding leave.");
+
+    if (data.success) {
+      document.getElementById("leaveDate").value = "";
+      document.getElementById("leaveReason").value = "";
+      refreshLeaveListForCurrentDoctor();
+    }
+  } catch (err) {
+    msgDiv.style.color = "red";
+    msgDiv.textContent = "We’re sorry, there was a problem while adding leave. Please check your connection and try again.";
+  }
+});
+
+
+
+
+document.getElementById("specDate").addEventListener("input", function () {
+  const spec = document.getElementById("specSelect").value;
+  const selectedDate = new Date(this.value);
+  const selectedDay = selectedDate.getDay();
+
+  const messageDiv = document.getElementById("noDoctorMsg");
+
+  messageDiv.textContent = "";
+  messageDiv.style.display = "none";
+
+  // also clear previous time choices
+  updateSpecTimeSelect([], null);
+
+  if (!spec || !doctorsBySpecialization[spec]) {
+    messageDiv.textContent = "Please select a Specialization before choosing a date.";
+    messageDiv.style.display = "block";
+    this.value = "";
+    return;
+  }
+
+  const todayDateStr = new Date().toLocaleDateString("en-CA", { timeZone: 'Asia/Kolkata' });
+  const todayDate = new Date(todayDateStr);
+
+  if (selectedDate < todayDate) {
+    messageDiv.textContent = "Past dates cannot be selected. Please choose a future date.";
+    messageDiv.style.display = "block";
+    this.value = "";
+    return;
+  }
+
+  const weekdayName = Object.keys(dayMap).find(key => dayMap[key] === selectedDay);
+
+  // All doctors of this spec working on that weekday
+  let availableDoctors = doctorsBySpecialization[spec].filter(doc => {
+    const daysArr = Array.isArray(doc.Days)
+      ? doc.Days
+      : (doc.Days || "").split(",").map(d => d.trim()).filter(Boolean);
+    return daysArr.includes(weekdayName);
+  });
+
+  if (availableDoctors.length === 0) {
+    messageDiv.textContent = "No doctors are available for this specialization on the selected day. Please choose another date.";
+    messageDiv.style.display = "block";
+    this.value = "";
+    return;
+  }
+
+  // 🔹 Same-day: remove doctors whose time is already over
+  if (this.value === todayDateStr) {
+    const nowStr = new Date().toLocaleTimeString("en-GB", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: 'Asia/Kolkata'
+    });
+
+    availableDoctors = availableDoctors.filter(doc => {
+      const dayTimes = doc.DayTimes || {};
+      const timeRange = dayTimes[weekdayName];
+      if (!timeRange) return false;
+
+      const parts = timeRange.split("-");
+      const endTimeStr = parts[1] ? parts[1].trim() : null;
+      if (!endTimeStr) return false;
+
+      return timeToMinutes(nowStr) <= timeToMinutes(endTimeStr);
+    });
+
+    if (availableDoctors.length === 0) {
+      messageDiv.textContent = "All doctors in this specialization have finished for today. Please select another date.";
+      messageDiv.style.display = "block";
+      this.value = "";
+      return;
+    }
+  }
+
+  // 🔹 Build the time dropdown based on remaining doctors
+  updateSpecTimeSelect(availableDoctors, weekdayName);
+});
+
+function updateSpecTimeSelect(doctors, weekdayName) {
+  const wrapper = document.getElementById("depTimeWrapper");
+  const select = document.getElementById("depTime");
+  if (!wrapper || !select) return;
+
+  // Clear old options
+  select.innerHTML = "";
+
+  // If 0 or 1 doctor, we hide the field as requested
+  if (!doctors || doctors.length <= 1) {
+    wrapper.style.display = "none";
+    return;
+  }
+
+  // More than one doctor/time → show dropdown
+  wrapper.style.display = "block";
+
+  // Default option: means "no specific time/doctor"
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "";
+  defaultOpt.textContent = "Any available time";
+  select.appendChild(defaultOpt);
+
+  doctors.forEach(doc => {
+    const dayTimes = doc.DayTimes || {};
+    const timeRange = weekdayName ? (dayTimes[weekdayName] || "") : "";
+    if (!timeRange) return; // skip if no time set for that day
+
+    const opt = document.createElement("option");
+    opt.value = doc.SheetURL || "";   // used as doctor_sheet_url
+    opt.textContent = timeRange;      // only the timing text
+    select.appendChild(opt);
+  });
+}
+
+
+
+// Single initialization function
+async function initPage() {
+  // Load doctors & options ONCE
+  await loadDoctors();
+  await loadDoctorPairs();
+  await loadDoctorsForEdit();
+
+  // Setup day/time UI for Add & Edit panels
+  setupAddDoctorDayTimeUI();
+  setupEditDoctorDayTimeUI();
+
+  // Set min date for specialization booking
+  const specDateInput = document.getElementById("specDate");
+  if (specDateInput) {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    specDateInput.setAttribute("min", today);
+  }
+
+  const specSelect = document.getElementById("specSelect");
+  if (specSelect) {
+    specSelect.addEventListener("change", () => {
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+      specDateInput.setAttribute("min", today);
+      specDateInput.value = "";
+
+      const msg = document.getElementById("noDoctorMsg");
+      if (msg) msg.textContent = "";
+    });
+  }
+
+  // Sync admin UI with backend session
+  try {
+    const res = await fetch("/check_admin");
+    const data = await res.json();
+
+    if (data.logged_in) {
+      document.getElementById("adminLoginDiv").style.display = "none";
+      document.getElementById("adminOptions").style.display = "block";
+      // pairs already loaded above; no need to call loadDoctorPairs() again
+    } else {
+      document.getElementById("adminLoginDiv").style.display = "block";
+      document.getElementById("adminOptions").style.display = "none";
+      document.querySelectorAll(".adminPanel").forEach(p => (p.style.display = "none"));
+    }
+  } catch (e) {
+    console.error("Error checking admin session:", e);
+  }
+}
+function buildSpecDoctorList(doctors, weekdayName, container) {
+  if (!container) return;
+
+  let html = '<div style="margin-top:8px;">';
+  html += '<div style="margin-bottom:4px; font-weight:600;">Select time (optional):</div>';
+
+  // "Any doctor" option
+  html += `
+    <label style="display:block; margin-bottom:4px;">
+      <input type="radio" name="specDoctorChoice" value="any" checked>
+      Any available doctor (least bookings)
+    </label>
+  `;
+
+  doctors.forEach(doc => {
+    const dayTimes = doc.DayTimes || {};
+    const timeRange = dayTimes[weekdayName] || "Time not set";
+    html += `
+      <label style="display:block; margin-bottom:3px;">
+        <input type="radio" name="specDoctorChoice" value="${doc.SheetURL}">
+        ${doc.Name} – ${timeRange}
+      </label>
+    `;
+  });
+
+  html += "</div>";
+  container.innerHTML = html;
+}
+
+// Run once when DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  initPage();
+});
+
+
+
+
+</script>
+
+</body>
+</html>

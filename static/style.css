@@ -1,0 +1,639 @@
+/* ================================
+   RESET & BASE
+=================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #102a43;
+  background: transparent; /* background image from .bg-image */
+}
+
+/* ================================
+   BACKGROUND LAYER – MATCH HOME
+=================================== */
+
+body.bg-image {
+  background-image: url("/static/image/background11.jpeg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* blurred image underneath */
+.bg-blur {
+  position: fixed;
+  inset: 0;
+  background-image: url("/static/image/background11.jpeg");
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  filter: blur(7px);
+  transform: scale(1.03);
+  z-index: -2;
+}
+
+/* soft white overlay on top of blur */
+body.bg-image::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.42);
+  z-index: -1;
+}
+
+/* ================================
+   STICKY HEADER (KEEP BEHAVIOUR)
+=================================== */
+
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.top-bar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.7rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0077b6;
+  letter-spacing: 0.03em;
+}
+
+.brand-sub {
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.top-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* ================================
+   PAGE FRAME
+=================================== */
+
+h1 {
+  text-align: center;
+  margin: 1.6rem auto 0.7rem auto;
+  font-size: 2.1rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #0b3a60;
+  text-shadow: 0 1px 4px rgba(255, 255, 255, 0.85);
+}
+
+/* Common wrapper */
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2.5rem;
+}
+
+/* ================================
+   BOOKING NAV TABS
+=================================== */
+
+nav {
+  max-width: 960px;                  /* slightly narrower so it doesn’t touch edges */
+  margin: 1.2rem auto 1.8rem auto;   /* ✅ gap below header, below nav */
+  padding: 0.8rem 1.3rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;           /* ✅ keep centered on desktop */
+  gap: 0.5rem;
+
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+
+.nav-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.48rem 1.3rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #0b3a60;
+  background-color: transparent;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.nav-btn:hover {
+  background-color: rgba(226, 239, 255, 0.9);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
+}
+
+.nav-btn.active {
+  background: linear-gradient(135deg, #2196f3, #1e88e5);
+  color: #ffffff;
+  box-shadow: 0 8px 22px rgba(33, 150, 243, 0.45);
+}
+
+/* ================================
+   GLASS CARDS – BOOKING & ADMIN
+=================================== */
+
+section.booking-section,
+section.admin-section {
+  margin-top: 0.9rem;   /* was 0.4rem */
+  margin-bottom: 1.8rem;
+}
+
+
+/* generic glass card */
+.booking-section > .myclass,
+.admin-section > #adminLoginDiv > .myclass,
+.adminPanel,
+#adminOptions {
+  background: rgba(255, 255, 255, 0.52);
+  border-radius: 20px;
+  padding: 1.6rem 1.6rem 1.9rem;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+/* booking cards */
+.myclass {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* outer admin wrapper transparent */
+.admin-section {
+  background-color: transparent;
+  border: none;
+  padding-top: 0.7rem;
+}
+
+/* compact admin login */
+#adminLoginDiv .myclass {
+  max-width: 420px;
+  margin: 0.9rem auto 0;
+}
+
+/* ================================
+   HEADINGS
+=================================== */
+
+h2 {
+  text-align: center;
+  font-size: 1.45rem;
+  font-weight: 600;
+  margin-bottom: 0.85rem;
+  color: #0b3a60;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #0b3a60;
+}
+
+h4,
+h5 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.1rem;
+  margin-bottom: 0.45rem;
+  color: #102a43;
+}
+
+/* small accent line under main cards */
+.booking-section h2::after,
+.adminPanel h3::after {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 3px;
+  margin: 0.4rem auto 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2196f3, #64b5f6);
+}
+
+/* ================================
+   FORMS
+=================================== */
+
+label {
+  display: block;
+  margin-top: 0.9rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #364354;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.62rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(176, 190, 210, 0.9);
+  background-color: rgba(255, 255, 255, 0.96);
+  font-size: 0.96rem;
+  color: #102a43;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9fb0c3;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.18);
+  background-color: #ffffff;
+}
+
+/* native arrow look */
+input[type="date"],
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #9e9e9e 50%),
+    linear-gradient(135deg, #9e9e9e 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% - 3px),
+    calc(100% - 10px) calc(50% - 3px);
+  background-size: 7px 7px;
+  background-repeat: no-repeat;
+  padding-right: 2.2rem;
+}
+
+/* helper / error text */
+.error,
+#doctorMsg,
+#noDoctorMsg,
+#adminLoginResult,
+#leaveMsg {
+  font-size: 0.86rem;
+  margin-top: 0.35rem;
+}
+
+#doctorMsg,
+#noDoctorMsg {
+  color: #d93025 !important;
+}
+
+/* ================================
+   BUTTONS
+=================================== */
+
+button,
+#logoutBtn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2196f3, #1e88e5);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(33, 150, 243, 0.42);
+  margin-top: 1.1rem;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+}
+
+button:hover,
+#logoutBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(33, 150, 243, 0.5);
+  filter: brightness(1.04);
+}
+
+button:active,
+#logoutBtn:active {
+  transform: translateY(0);
+  box-shadow: 0 7px 16px rgba(33, 150, 243, 0.4);
+}
+
+/* logout variant */
+#logoutBtn {
+  background: linear-gradient(135deg, #ef5350, #e53935);
+  box-shadow: 0 9px 22px rgba(239, 83, 80, 0.46);
+}
+
+/* ================================
+   SPECIAL ELEMENTS
+=================================== */
+
+/* day selection rows */
+.day-row,
+.day-row-edit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.4rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.day-row label,
+.day-row-edit label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 500;
+  color: #425466;
+}
+
+.day-time,
+.day-time-edit {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.day-time input,
+.day-time-edit input {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.day-row input[type="checkbox"],
+.day-row-edit input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+/* admin options bar */
+#adminOptions {
+  margin-top: 1.1rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;   /* ✅ center on all sizes */
+  gap: 0.6rem;
+}
+
+
+/* admin panels spacing */
+.adminPanel {
+  margin-top: 1.4rem;
+}
+
+/* leave table */
+#leaveTbody td,
+#leaveTbody th {
+  padding: 0.4rem 0.35rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #e0e7f1;
+  color: #425466;
+}
+
+#leaveTbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* department optional time select */
+#depTimeWrapper {
+  margin-top: 0.8rem;
+}
+
+/* ================================
+   CONFIRMATION PAGE SHARED STYLES
+=================================== */
+
+.confirmation-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: radial-gradient(circle at top, #e3f2fd, #f3f6fb);
+}
+
+.confirmation-box {
+  max-width: 460px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 18px;
+  padding: 2.1rem 2.4rem 2.3rem;
+  box-shadow:
+    0 14px 32px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(226, 232, 240, 0.9);
+  text-align: center;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.confirmation-box h1 {
+  font-size: 1.7rem;
+  color: #12426a;
+  margin-bottom: 0.4rem;
+}
+
+.confirmation-box .checkmark {
+  font-size: 3rem;
+  color: #2e7d32;
+  margin-bottom: 0.7rem;
+}
+
+.confirmation-box p {
+  font-size: 0.96rem;
+  color: #425466;
+  margin: 0.25rem 0;
+}
+
+.confirmation-box p strong {
+  color: #1565c0;
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.3rem;
+}
+
+/* ================================
+   RESPONSIVE
+=================================== */
+
+/* Tablets */
+@media (max-width: 992px) {
+  .container {
+    padding: 0 1.25rem 2.2rem;
+  }
+
+  nav {
+    border-radius: 16px;
+  }
+
+  section.booking-section > .myclass,
+  .admin-section > #adminLoginDiv > .myclass,
+  .adminPanel {
+    padding: 1.4rem 1.25rem 1.6rem;
+  }
+}
+
+/* Small tablets & large phones */
+@media (max-width: 768px) {
+  nav {
+    margin: 1rem 1rem 1.4rem 1rem;  /* ✅ space from sides & header */
+    padding-inline: 0.7rem;
+    justify-content: center;        /* ✅ stay centered, not left */
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  nav::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  nav::-webkit-scrollbar-thumb {
+    background-color: #cbd5e0;
+    border-radius: 999px;
+  }
+
+  .nav-btn {
+    flex: 0 0 auto;
+  }
+
+  .container {
+    padding-inline: 1rem;
+  }
+
+  section.booking-section,
+  section.admin-section {
+    margin-bottom: 1.2rem;
+  }
+
+  .myclass {
+    max-width: 100%;
+  }
+
+  .day-row,
+  .day-row-edit {
+    grid-template-columns: 1fr;
+  }
+
+  .day-time,
+  .day-time-edit {
+    justify-content: flex-start;
+  }
+
+  button,
+  #logoutBtn {
+    width: 100%;
+    max-width: 260px;
+  }
+
+  #adminOptions {
+    justify-content: center;
+  }
+
+  #adminOptions button {
+    flex: 0 0 auto;
+    min-width: 130px;                     /* nice pill size */
+  }
+
+  .confirmation-box {
+    padding: 1.7rem 1.5rem 2rem;
+  }
+}
+
+/* Phones */
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.55rem;
+    margin-top: 1.1rem;
+  }
+
+  nav {
+    margin-bottom: 1.1rem;
+  }
+
+  section.booking-section > .myclass,
+  .admin-section > #adminLoginDiv > .myclass,
+  .adminPanel {
+    padding: 1.25rem 1rem 1.5rem;
+    border-radius: 16px;
+  }
+
+  label {
+    font-size: 0.88rem;
+  }
+
+  input,
+  select {
+    font-size: 0.9rem;
+  }
+
+  .button-group {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .button-group button {
+    width: 100%;
+    max-width: 260px;
+  }
+}

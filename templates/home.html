@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PrimeCare Clinic</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #222;
+    }
+    body {
+      background: #f0f4f8;
+    }
+
+    /* Background layers */
+    .bg-image {
+      background-image: url("{{ url_for('static', filename='images/background12.jpeg') }}");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-attachment: fixed;
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+    }
+    .bg-blur {
+      position: fixed;
+      inset: 0;
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-attachment: fixed;
+      filter: blur(8px);
+      z-index: -2;
+    }
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.65);
+      z-index: -1;
+    }
+
+    /* Top bar / header */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(6px);
+      background: rgba(255, 255, 255, 0.94);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .top-bar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.7rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0077b6;
+      letter-spacing: 0.03em;
+    }
+    .brand-sub {
+      font-size: 0.85rem;
+      color: #555;
+    }
+    .top-actions {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .btn {
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 0.45rem 1.1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: #0077b6;
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(0, 119, 182, 0.28);
+    }
+    .btn-primary:hover {
+      background: #005c8f;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 119, 182, 0.35);
+    }
+    .btn-outline {
+      background: #ffffff;
+      color: #0077b6;
+      border: 1px solid rgba(0, 119, 182, 0.35);
+    }
+    .btn-outline:hover {
+      background: #e6f4ff;
+      transform: translateY(-1px);
+    }
+
+    /* Hero section */
+    .hero {
+      max-width: 1200px;
+      margin: 1.5rem auto 1rem auto;
+      padding: 1.5rem 1.5rem 0.5rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.3fr);
+      gap: 2.2rem;
+      align-items: center;
+    }
+    .hero-left h1 {
+      font-size: 2.4rem;
+      margin: 0 0 0.4rem;
+      color: #023e8a;
+    }
+    .hero-left h1 span {
+      color: #0077b6;
+    }
+    .hero-tagline {
+      margin: 0 0 1rem;
+      font-size: 1rem;
+      color: #555;
+    }
+    .hero-highlights {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin: 0.7rem 0 1.2rem;
+    }
+    .pill {
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      background: rgba(0, 119, 182, 0.06);
+      border: 1px solid rgba(0, 119, 182, 0.16);
+      font-size: 0.8rem;
+      color: #135f8c;
+    }
+    .hero-cta {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      flex-wrap: wrap;
+    }
+    .hero-note {
+      font-size: 0.82rem;
+      color: #666;
+    }
+
+    .hero-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 14px;
+      padding: 1.1rem 1.2rem;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.08);
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .hero-card h3 {
+      margin: 0 0 0.7rem;
+      color: #0077b6;
+      font-size: 1.1rem;
+    }
+    .hero-card-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.88rem;
+      color: #444;
+    }
+    .hero-card-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      margin-bottom: 0.35rem;
+    }
+    .hero-dot {
+      margin-top: 0.25rem;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #00b894;
+      flex-shrink: 0;
+    }
+
+    /* “Our Doctors” sticky heading */
+    .doctors-heading {
+      position: sticky;
+      top: 4.5rem; /* slightly below top bar */
+      width: 100%;
+      background: rgba(0, 119, 182, 0.98);
+      color: #fff;
+      padding: 0.7rem 1.5rem;
+      font-size: 1.4rem;
+      text-align: center;
+      z-index: 20;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      margin: 0;
+    }
+
+    .content-inner {
+      max-width: 1200px;
+      margin: 0 auto 3rem auto;
+      padding: 0 1.5rem 2.5rem;
+    }
+
+    /* Ensure first specialization heading not hidden when scrolled */
+    #first-spec {
+      scroll-margin-top: 7.7rem; /* desktop / tablet */
+    }
+    @media (max-width: 800px) {
+      #first-spec {
+        scroll-margin-top: 10.7rem; /* mobile: extra space for sticky bars */
+      }
+      .brand-title {
+      font-size: 1.25rem;
+      font-weight: 800rem;
+      }
+    }
+
+    .spec-section {
+      margin-top: 2.3rem;
+    }
+    .spec-heading {
+      color: #0077b6;
+      font-size: 1.5rem;
+      margin: 0 0 0.8rem;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 4px;
+    }
+
+    /* Doctor cards layout */
+    .doctor-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr)); /* desktop: 4 columns */
+      gap: 24px;
+      margin-bottom: 1.5rem;
+    }
+
+    .doctor-card {
+      position: relative; /* for timing popup */
+      display: flex;
+      flex-direction: column;
+      background: rgba(255,255,255,0.96);
+      border-radius: 10px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+    .doctor-card:hover {
+      box-shadow: 0 18px 30px rgba(0,0,0,0.12);
+    }
+    .doctor-img {
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      overflow: hidden;
+      background: #e0edf7;
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+    }
+    .doctor-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-bottom: 3px solid #0077b6;
+    }
+    .doctor-info {
+      padding: 0.7rem 0.8rem 0.9rem;
+    }
+    .doctor-info h4 {
+      margin: 0 0 0.35rem;
+      font-size: 1.02rem;
+      color: #023e8a;
+    }
+    .doctor-meta {
+      font-size: 0.84rem;
+      margin: 0.12rem 0;
+      color: #555;
+    }
+    .doctor-meta strong {
+      color: #333;
+    }
+
+    .btn-timing {
+      margin-top: 0.4rem;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.8rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 119, 182, 0.35);
+      background: rgba(0, 119, 182, 0.05);
+      color: #005f8c;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-weight: 600;
+      transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-timing:hover {
+      background: rgba(0, 119, 182, 0.12);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
+    }
+
+    /* Timing popup (above card) */
+    
+    .card-timing-popup {
+  position: absolute;
+  /* cover almost the whole card */
+  inset: 6px;               /* shorthand for top/right/bottom/left */
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.2);
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 0.55rem 0.65rem 0.55rem;
+  font-size: 0.82rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.98);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 15;
+}
+.card-timing-popup.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+    .card-timing-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.35rem;
+    }
+    .card-timing-title {
+      font-weight: 600;
+      color: #024b80;
+      font-size: 0.85rem;
+      margin-right: 0.5rem;
+    }
+    .close-timing {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.95rem;
+      line-height: 1;
+      color: #666;
+      padding: 0;
+    }
+    .close-timing:hover {
+      color: #222;
+    }
+    .timing-list {
+      list-style: none;
+      margin: 0.1rem 0 0;
+      padding: 0;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .timing-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.23rem 0.2rem;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .timing-list li:last-child {
+      border-bottom: none;
+    }
+    .timing-day {
+      font-weight: 600;
+      color: #024b80;
+    }
+    .timing-time {
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 0.82rem;
+      color: #333;
+    }
+
+    /* “No doctors” message */
+    .no-doctors {
+      text-align: center;
+      margin: 2rem 0 3rem;
+      font-size: 0.95rem;
+      color: #666;
+    }
+
+    /* Responsive breakpoints */
+    @media (max-width: 1200px) {
+      .doctor-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.2fr);
+        gap: 1.5rem;
+      }
+      .hero-left h1 {
+        font-size: 2rem;
+      }
+      .doctor-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)); /* 1–2, 3–4, etc. */
+      }
+    }
+    @media (max-width: 800px) {
+      .hero {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+        padding-top: 1.1rem;
+      }
+      .hero-card {
+        order: -1; /* card above text on mobile */
+      }
+      .doctors-heading {
+        top: 6.82rem; /* push slightly below top-bar for mobile */
+      }
+    }
+    @media (max-width: 520px) {
+      .top-bar-inner {
+        padding-inline: 1rem;
+      }
+      .hero {
+        padding-inline: 1rem;
+      }
+      .content-inner {
+        padding-inline: 1rem;
+      }
+      .doctor-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 columns on mobile */
+        gap: 14px;
+      }
+      .doctor-info {
+        padding: 0.6rem 0.65rem 0.75rem;
+      }
+      .doctor-info h4 {
+        font-size: 0.96rem;
+      }
+      .spec-heading {
+        font-size: 1.3rem;
+      }
+      .hero-left h1 {
+        font-size: 1.8rem;
+      }
+      .btn-timing {
+        font-size: 0.78rem;
+        padding: 0.25rem 0.55rem;
+      }
+    }
+    /* default (desktop) – show full name, hide short */
+.timing-day .full-day {
+  display: inline;
+}
+.timing-day .short-day {
+  display: none;
+}
+
+/* ✅ Mobile view – show short form only */
+@media (max-width: 520px) {
+  .timing-day .full-day {
+    display: none;
+  }
+  .timing-day .short-day {
+    display: inline;
+  }
+}
+
+  </style>
+</head>
+
+<body>
+  <div class="bg-image"></div>
+  <div class="bg-blur"></div>
+  <div class="bg-overlay"></div>
+
+  <!-- Top bar -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div class="brand">
+        <div class="brand-title">PrimeCare Clinic</div>
+        <div class="brand-sub">Quality care · Trusted doctors</div>
+      </div>
+      <div class="top-actions">
+        <button
+          class="btn btn-outline"
+          onclick="document.getElementById('first-spec')?.scrollIntoView({behavior:'smooth', block:'start'})">
+          View Doctors
+        </button>
+        <button class="btn btn-primary" onclick="window.location.href='/booking'">
+          Book Appointment
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero section -->
+  <section class="hero">
+    <div class="hero-left">
+      <h1>Care you can <span>trust</span>, when you need it.</h1>
+      <p class="hero-tagline">
+        Consult experienced specialists at PrimeCare Clinic. Book your visit in a few clicks —
+        no phone calls, no waiting in long queues.
+      </p>
+
+      <div class="hero-highlights">
+        <div class="pill">Experienced specialists</div>
+        <div class="pill">Online token booking</div>
+        <div class="pill">Fair department-wise allocation</div>
+        <div class="pill">Organised daily schedule</div>
+      </div>
+
+      <div class="hero-cta">
+        <button class="btn btn-primary" onclick="window.location.href='/booking'">
+          Book an Appointment
+        </button>
+        <span class="hero-note">
+          Choose doctor or department · Instant token number
+        </span>
+      </div>
+    </div>
+
+    <aside class="hero-card">
+      <h3>How our booking works</h3>
+      <ul class="hero-card-list">
+        <li>
+          <span class="hero-dot"></span>
+          <span>Select a doctor or specialization and your preferred date.</span>
+        </li>
+        <li>
+          <span class="hero-dot"></span>
+          <span>System assigns the next available token for that doctor / department.</span>
+        </li>
+        <li>
+          <span class="hero-dot"></span>
+          <span>See your token details on the confirmation screen immediately.</span>
+        </li>
+        <li>
+          <span class="hero-dot"></span>
+          <span>Visit the clinic with your token number at the scheduled time.</span>
+        </li>
+      </ul>
+    </aside>
+  </section>
+
+  <!-- Our Doctors heading -->
+  <h2 class="doctors-heading">Doctors</h2>
+
+  <main class="content-inner">
+    {% if not doctors %}
+      <div class="no-doctors">
+        Doctor list is currently unavailable. Please contact the clinic or try again later.
+      </div>
+    {% else %}
+      {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+
+      {% for group in doctors | groupby('Specialization') %}
+        {% set spec_index = loop.index0 %}
+        <section class="spec-section"{% if loop.first %} id="first-spec"{% endif %}>
+          <h2 class="spec-heading">{{ group.grouper }}</h2>
+          <div class="doctor-grid">
+            {% for doc in group.list %}
+              {% set card_id = 'timing-' ~ spec_index ~ '-' ~ loop.index0 %}
+              <article class="doctor-card">
+                <!-- timing popup above card -->
+                <div class="card-timing-popup" id="{{ card_id }}">
+                  <div class="card-timing-header">
+                    <div class="card-timing-title">
+                      {{ doc.Name }} &mdash; Timing
+                    </div>
+                    <button type="button" class="close-timing" aria-label="Close timings">&times;</button>
+                  </div>
+                  <ul class="timing-list">
+                    {% for day in day_order %}
+                      {% set t = doc.DayTimes.get(day) if doc.DayTimes else None %}
+
+                      <li>
+                        <span class="timing-day">
+                          <span class="full-day">{{ day }}</span>
+                          <span class="short-day">{{ day[:3] }}</span>
+                        </span>
+
+                        {% if day not in doc.Days %}
+                          <span class="timing-time" style="color:#999;">Not working</span>
+
+                        {% elif t %}
+                          <span class="timing-time">{{ t }}</span>
+
+                        {% else %}
+                          <span class="timing-time" style="color:#999;">Time not set</span>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+
+                </div>
+
+                <div class="doctor-img">
+                  {% if doc.Image %}
+                    <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" />
+                  {% else %}
+                    <img src="{{ url_for('static', filename='doctor_images/default.png') }}"
+                         alt="No image" loading="lazy" />
+                  {% endif %}
+                </div>
+                <div class="doctor-info">
+                  <h4>{{ doc.Name }}</h4>
+                  <p class="doctor-meta">
+                    <strong>Specialization:</strong> {{ doc.Specialization }}
+                  </p>
+                  <p class="doctor-meta">
+                    <strong>Working Days:</strong>
+                    {% if doc.Days %}
+                      {{ doc.Days | join(', ') }}
+                    {% else %}
+                      Not set
+                    {% endif %}
+                  </p>
+
+                  <button
+                    type="button"
+                    class="btn-timing"
+                    data-target="{{ card_id }}">
+                    View timings
+                  </button>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    {% endif %}
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Open timing popup
+      document.querySelectorAll(".btn-timing").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          const id = btn.dataset.target;
+          const popup = document.getElementById(id);
+          if (!popup) return;
+
+          // Close any other open popups first
+          document.querySelectorAll(".card-timing-popup.show").forEach(function (p) {
+            if (p !== popup) p.classList.remove("show");
+          });
+
+          popup.classList.add("show");
+
+          // Optional: ensure popup is visible on small screens
+          const rect = popup.getBoundingClientRect();
+          if (rect.top < 70) {
+            window.scrollBy({
+              top: rect.top - 80,
+              behavior: "smooth"
+            });
+          }
+        });
+      });
+
+      // Close timing popup
+      document.querySelectorAll(".card-timing-popup .close-timing").forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          const popup = btn.closest(".card-timing-popup");
+          if (popup) popup.classList.remove("show");
+        });
+      });
+
+      // Close any open popup if you tap elsewhere (optional)
+      document.addEventListener("click", function (e) {
+        if (e.target.closest(".card-timing-popup") || e.target.closest(".btn-timing")) {
+          return;
+        }
+        document.querySelectorAll(".card-timing-popup.show").forEach(function (p) {
+          p.classList.remove("show");
+        });
+      });
+    });
+  </script>
+</body>
+</html>

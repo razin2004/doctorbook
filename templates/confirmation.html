@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Appointment Confirmed - PrimeCare Clinic</title>
+
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  
+  <style>
+    /* ===== BACKGROUND ===== */
+    body.bg-image {
+      min-height: 100vh;
+      background-image: url("/static/image/background11.jpeg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .bg-blur {
+      position: fixed;
+      inset: 0;
+      background-image: url("/static/image/background11.jpeg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(5px);
+      transform: scale(1.04);
+      z-index: -2;
+    }
+
+    body.bg-image::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.4);  /* ✅ light, like home */
+  z-index: -1;
+}
+
+    /* ===== CONFIRMATION CARD ===== */
+    .confirmation-box {
+      width: 100%;
+      max-width: 460px;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: 26px;
+      padding: 2.4rem 2.1rem 2.1rem 2.1rem;
+      box-shadow:
+        0 20px 45px rgba(0,0,0,0.18),
+        inset 0 0 0 1px rgba(255,255,255,0.75);
+      text-align: center;
+      animation: fadeInUp 0.5s ease;
+      color: #4a6075;
+    }
+
+    /* 👇 Used only while exporting image to make it extra sharp */
+    .confirmation-box.exporting {
+      background: #ffffff !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      box-shadow: none !important;
+      border-radius: 26px;
+      color: #374151;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      margin: 0 auto 0.9rem auto;
+      background: linear-gradient(135deg, #74e69c, #3bcf7e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 12px 30px rgba(59,207,126,0.35);
+      font-size: 2rem;
+      color: #ffffff;
+    }
+
+    .confirmation-box h1 {
+      font-size: 1.9rem;
+      color: #587ca3;
+      margin-bottom: 0.8rem;
+      letter-spacing: 0.03em;
+    }
+
+    .confirmation-box p {
+      font-size: 0.98rem;
+      margin: 0.2rem 0;
+    }
+
+    .confirmation-box p strong {
+      color: #577395;
+      font-weight: 600;
+    }
+
+    hr {
+      margin: 1.3rem 0;
+      border: none;
+      border-top: 1px solid rgba(188, 206, 229, 0.9);
+    }
+
+    .token-box {
+      margin-top: 1.6rem;
+      font-size: 1.05rem;
+      color: #54657d;
+    }
+
+    .token-title {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #5a6f8b;
+    }
+
+    .token-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 70px;
+      height: 70px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #9af1be, #34c96c);
+      color: white;
+      font-weight: 700;
+      font-size: 1.6rem;
+      box-shadow:
+        0 12px 26px rgba(52,201,108,0.45),
+        0 0 0 6px rgba(154,241,190,0.5);
+    }
+
+    /* ===== BUTTONS ===== */
+    .button-group {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      margin-top: 1.8rem;
+    }
+
+    .btn-pill {
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 0.6rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 132px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #76b5ff, #4a9ff6);
+      color: #ffffff;
+      box-shadow: 0 9px 22px rgba(74,159,246,0.5);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px rgba(74,159,246,0.65);
+    }
+
+    .btn-outline {
+      background: rgba(255,255,255,0.95);
+      color: #4a9ff6;
+      border: 1px solid rgba(74,159,246,0.35);
+      box-shadow: 0 7px 16px rgba(148,181,224,0.4);
+    }
+
+    .btn-outline:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(148,181,224,0.55);
+    }
+
+    .btn-ghost {
+      margin-top: 0.5rem;
+      background: rgba(255,255,255,0.9);
+      color: #7fa3c5;
+      border: 1px solid rgba(191, 210, 234, 0.9);
+      box-shadow: 0 7px 18px rgba(191,210,234,0.45);
+      font-size: 0.92rem;
+    }
+
+    .btn-ghost:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 9px 22px rgba(191,210,234,0.65);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 480px) {
+      body.bg-image {
+        padding: 1.1rem;
+      }
+
+      .confirmation-box {
+        padding: 2rem 1.4rem 1.8rem 1.4rem;
+        border-radius: 22px;
+      }
+
+      .confirmation-box h1 {
+        font-size: 1.6rem;
+      }
+
+      .token-number {
+        width: 64px;
+        height: 64px;
+        font-size: 1.4rem;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      .btn-pill {
+        width: 100%;
+        max-width: 260px;
+      }
+
+      .btn-ghost {
+        max-width: 260px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+  </style>
+</head>
+
+<body class="confirmation-page bg-image">
+  <div class="bg-blur"></div>
+
+  <div class="confirmation-box" id="confirmationBox">
+    <div class="success-icon">✓</div>
+
+    <h1>Appointment Confirmed</h1>
+
+    <p><strong>Patient Name:</strong> {{ name }}</p>
+    <p><strong>Age:</strong> {{ age }}</p>
+    <p><strong>Phone:</strong> {{ phone }}</p>
+
+    <hr>
+
+    <p><strong>Doctor:</strong> {{ doctor }}</p>
+    <p><strong>Specialization:</strong> {{ specialization }}</p>
+    <p><strong>Date:</strong> {{ date }}</p>
+    <p><strong>Time:</strong> {{ time }}</p>
+
+    <div class="token-box">
+      <div class="token-title">Your Token Number</div>
+      <div class="token-number">{{ token }}</div>
+    </div>
+
+    <div class="button-group">
+      <a class="btn-pill btn-primary" href="{{ url_for('booking') }}">Book Another</a>
+      <a class="btn-pill btn-primary" href="/">Go Home</a>
+    </div>
+
+    <div class="button-group">
+      <button type="button" class="btn-pill btn-ghost" id="saveImageBtn">
+        Save as Image
+      </button>
+    </div>
+  </div>
+
+  <!-- html2canvas -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const btn = document.getElementById("saveImageBtn");
+      const box = document.getElementById("confirmationBox");
+      if (!btn || !box) return;
+
+      btn.addEventListener("click", function () {
+        // make card extra sharp & flat just for export
+        box.classList.add("exporting");
+
+        const scale =
+          (window.devicePixelRatio && window.devicePixelRatio > 1)
+            ? window.devicePixelRatio * 2
+            : 2;
+
+        html2canvas(box, {
+          scale: scale,
+          useCORS: true,
+          backgroundColor: "#ffffff"
+        }).then(canvas => {
+          const link = document.createElement("a");
+          link.download = "primecare-token-{{ token }}.png";
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+        }).catch(err => {
+          console.error(err);
+          alert("Could not save image. Please try again.");
+        }).finally(() => {
+          // restore glass look for on-screen view
+          box.classList.remove("exporting");
+        });
+      });
+    });
+  </script>
+</body>
+</html>
