@@ -1036,7 +1036,7 @@
         const res  = await fetch('/send_admin_otp',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`admin_email=${encodeURIComponent(email)}` });
         const data = await res.json();
         if (data.success) {
-          showToast('Administrative authentication code sent successfully', 'success');
+          showToast('OTP sent successfully', 'success');
           document.getElementById('otpSection').style.display = 'block';
           btn.style.display = 'none';
         } else {
@@ -1062,7 +1062,7 @@
         const res  = await fetch('/verify_admin_otp',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`otp=${encodeURIComponent(otp)}` });
         const data = await res.json();
         if (data.success) {
-          showToast('Administrative access granted', 'success');
+          showToast('OTP verified successfully', 'success');
           setTimeout(() => {
             document.getElementById('adminLoginDiv').style.display = 'none';
             document.getElementById('adminOptions').style.display = 'block';
@@ -1175,7 +1175,7 @@
           localStorage.removeItem('activeAdminPanel');
           localStorage.removeItem('activeDoctor');
 
-          showToast('Administrative session ended successfully', 'success');
+          showToast('Logged out successfully', 'success');
           lucide.createIcons();
         } else {
           showToast('Logout notification failed.', 'error');
