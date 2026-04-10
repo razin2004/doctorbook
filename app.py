@@ -101,7 +101,47 @@ def is_doctor_on_leave(doctor_name, specialization, date_str):
             return True
     return False
 
+# ========= Render / OTP flags =========
+
+IS_RENDER = os.getenv("RENDER", "") != ""
+USE_EMAIL_OTP = os.getenv("USE_EMAIL_OTP", "true").lower() == "true"
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+
+
 # ===================== Email helpers =====================
+
+def send_email_brevo(to_email, subject, html_content):
+    """Sends a professional HTML email using Brevo (Sendinblue) API."""
+    try:
+        api_key = os.environ.get('BREVO_API_KEY')
+        sender_email = os.environ.get('MAIL_SENDER_EMAIL')
+
+        if not api_key:
+            print("Unable to send OTP")
+            return False
+
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json"
+        }
+        payload = {
+            "sender": {"name": "PrimeCare Clinic", "email": sender_email},
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "htmlContent": html_content
+        }
+
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        if response.status_code in [200, 201, 202]:
+            return True
+        else:
+            print(f"API Error: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"Exception: {e}")
+        return False
 
 def send_email_smtp(to_email, subject, html_content):
     """Sends a professional HTML email using Gmail SMTP."""
@@ -124,8 +164,15 @@ def send_email_smtp(to_email, subject, html_content):
             server.sendmail(sender_email, to_email, msg.as_string())
         return True
     except Exception as e:
-        print(f"❌ SMTP Error: {e}")
+        print(f"Error: {e}")
         return False
+
+def send_email(to_email, subject, html_content):
+    """Unified email sender that chooses provider based on environment."""
+    if IS_RENDER:
+        return send_email_brevo(to_email, subject, html_content)
+    else:
+        return send_email_smtp(to_email, subject, html_content)
 
 def get_otp_html(otp):
     """Returns a premium HTML template for the OTP code."""
@@ -315,11 +362,6 @@ def token_for_date(sheet, date_str):
     records = sheet.get_all_records()
     return sum(1 for r in records if r["Date"] == date_str)
 
-# ========= Render / OTP flags =========
-
-IS_RENDER = os.getenv("RENDER", "") != ""
-USE_EMAIL_OTP = (not IS_RENDER) and os.getenv("USE_EMAIL_OTP", "true").lower() == "true"
-BREVO_API_KEY=os.getenv("BREVO_API_KEY")
 
 
 # ===================== Admin OTP login =====================
@@ -335,12 +377,12 @@ def send_admin_otp():
     session['admin_otp'] = otp
 
     html_content = get_otp_html(otp)
-    success = send_email_smtp(admin_email, "Your PrimeCare Admin Login Code", html_content)
+    success = send_email(admin_email, "Your PrimeCare Admin Login Code", html_content)
 
     if success:
         return jsonify(success=True, msg="OTP sent to email")
     else:
-        return jsonify(success=False, msg="Error sending OTP via SMTP. Please check credentials.")
+        return jsonify(success=False, msg="Error sending OTP")
 
 
 @app.route('/verify_admin_otp', methods=['POST'])
