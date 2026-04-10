@@ -60,16 +60,22 @@
   margin-left: auto;
   margin-right: auto;
 }
+    @media (max-width: 480px) {
+      .common-time-row > div {
+        min-width: 100% !important;
+      }
+    }
   </style>
 </head>
 
 <body class="bg-image">
+  <!-- Global Toast Container -->
+  <div id="globalToast"></div>
   <div class="bg-blur"></div>
 
   <!-- HEADER -->
   <header class="top-bar">
-    <!-- Global Toast Container -->
-    <div id="globalToast"></div>
+
 
     <div class="top-bar-inner">
       <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0;">
@@ -339,12 +345,12 @@
 
         <div id="commonTimeBlock" style="display:none; margin-top:10px;">
           <label><i data-lucide="clock"></i> Common Time Slot</label>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:120px;">
+          <div class="common-time-row" style="display:flex; gap:12px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:140px;">
               <label for="commonStart" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="play-circle"></i> Start</label>
               <input type="time" id="commonStart" />
             </div>
-            <div style="flex:1; min-width:120px;">
+            <div style="flex:1; min-width:140px;">
               <label for="commonEnd" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="stop-circle"></i> End</label>
               <input type="time" id="commonEnd" />
             </div>
@@ -395,12 +401,12 @@
 
         <div id="commonTimeBlockEdit" style="display:none; margin-top:10px;">
           <label><i data-lucide="clock"></i> Common Time Slot</label>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:120px;">
+          <div class="common-time-row" style="display:flex; gap:12px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:140px;">
               <label for="commonStartEdit" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="play-circle"></i> Start</label>
               <input type="time" id="commonStartEdit" />
             </div>
-            <div style="flex:1; min-width:120px;">
+            <div style="flex:1; min-width:140px;">
               <label for="commonEndEdit" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="stop-circle"></i> End</label>
               <input type="time" id="commonEndEdit" />
             </div>

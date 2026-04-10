@@ -247,9 +247,9 @@
 
     /* ── TIMING POPUP ── */
     .card-timing-popup {
-      position: absolute; inset: 6px;
+      position: absolute; inset: 0;
       background: rgba(255,255,255,0.98);
-      border-radius: 12px;
+      border-radius: 14px;
       box-shadow: 0 12px 30px rgba(0,0,0,0.18);
       border: 1px solid rgba(0,0,0,0.06);
       padding: 0.6rem 0.7rem;
@@ -584,6 +584,9 @@
 </head>
 
 <body>
+  <!-- Global Toast Container -->
+  <div id="globalToast"></div>
+
   <div class="bg-image"></div>
   <div class="bg-blur"></div>
   <div class="bg-overlay"></div>
@@ -939,8 +942,7 @@
       checkAdminSession();
     });
   </script>
-  <!-- Global Toast Container -->
-  <div id="globalToast"></div>
+
 
   <!-- Universal Confirmation Modal (Reusable for Logout, etc.) -->
   <div class="modal-overlay" id="universalModal">
