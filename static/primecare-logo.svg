@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Outer ring -->
+  <circle cx="50" cy="50" r="46" stroke="#0077b6" stroke-width="3.2"/>
+  <!-- Inner ring -->
+  <circle cx="50" cy="50" r="38.5" stroke="#0077b6" stroke-width="2"/>
+
+  <!-- Medical cross (plus) shape - outline style matching original -->
+  <path d="
+    M42 17
+    L58 17
+    L58 42
+    L83 42
+    L83 58
+    L58 58
+    L58 83
+    L42 83
+    L42 58
+    L17 58
+    L17 42
+    L42 42
+    Z
+  " stroke="#0077b6" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <!-- ECG / heartbeat line through the horizontal bar of the cross -->
+  <polyline
+    points="17,50 29,50 33,40 38,60 42.5,50 57.5,50 62,40 67,60 71,50 83,50"
+    stroke="#0077b6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
