@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 
   <style>
@@ -50,21 +50,226 @@
 
     /* ── Panel nav top margin adjustment when header is taller on narrow ── */
     .panel-nav { margin-top: 1.1rem; }
-    .modal-content h3 {
-  display: block !important;
-  text-align: center !important;
-  margin-left: auto;
-  margin-right: auto;
-}
-.modal-icon-container {
+    .modal-icon-container {
   margin-left: auto;
   margin-right: auto;
 }
     @media (max-width: 480px) {
       .common-time-row > div {
         min-width: 100% !important;
+        flex: 1 1 100% !important;
+      }
+      .common-time-row {
+        gap: 8px !important;
+      }
+      .day-row-edit, .day-row {
+        gap: 0.35rem;
+        padding: 0.4rem;
       }
     }
+    
+    /* Booking Viewer Styles */
+    .booking-table-wrapper {
+      overflow-x: auto;
+      margin-top: 1rem;
+      border-radius: 16px;
+      border: 1px solid rgba(0, 119, 182, 0.15);
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+    .booking-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .booking-table th {
+      background: rgba(0, 119, 182, 0.06);
+      color: #024b80;
+      font-weight: 700;
+      text-align: left;
+      padding: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-size: 0.75rem;
+      border-bottom: 2px solid rgba(0, 119, 182, 0.1);
+    }
+    .booking-table td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+      color: #364354;
+      font-weight: 500;
+    }
+    .booking-table tr:last-child td { border-bottom: none; }
+    .booking-table tr:hover { background: rgba(0, 119, 182, 0.04); }
+    
+    .token-badge {
+      background: #0077b6;
+      color: white;
+      padding: 0.25rem 0.6rem;
+      border-radius: 8px;
+      font-weight: 800;
+      font-family: inherit;
+      box-shadow: 0 2px 8px rgba(0, 119, 182, 0.2);
+    }
+
+    .booking-count-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: linear-gradient(135deg, #0077b6, #00b4d8);
+      color: #fff;
+      padding: 0.35rem 0.9rem;
+      border-radius: 99px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-left: 0.8rem;
+      box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
+    }
+
+    /* Success Token Card in Modal */
+    .success-token-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        text-align: center;
+        border: 2px dashed #0077b6;
+        margin: 1.5rem 0;
+        position: relative;
+    }
+    .success-token-value {
+        font-size: 3.5rem;
+        font-weight: 800;
+        color: #0077b6;
+        display: block;
+        margin: 0.5rem 0;
+        letter-spacing: -1px;
+    }
+
+    .booking-table-header {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #f8fafc; /* Solid background to cover table text while scrolling */
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Professional & Premium Printing Styles */
+    @media print {
+      @page { margin: 15mm; size: auto; }
+      body { background: white !important; font-family: 'Inter', sans-serif !important; }
+      body * { visibility: hidden !important; height: 0 !important; overflow: hidden !important; padding: 0 !important; margin: 0 !important; }
+      
+      #printReportTemplate, #printReportTemplate * { visibility: visible !important; display: block !important; height: auto !important; overflow: visible !important; }
+      #printReportTemplate { 
+        position: absolute; 
+        left: 0; 
+        top: 0; 
+        width: 100%; 
+        display: block !important;
+        padding: 0 !important;
+        visibility: visible !important;
+      }
+
+      /* Layout Structures */
+      .print-header { display: flex !important; justify-content: space-between !important; align-items: flex-end !important; border-bottom: 2.5px solid #0077b6 !important; padding-bottom: 12px !important; margin-bottom: 25px !important; }
+      .print-branding { display: flex !important; align-items: center !important; gap: 12px !important; }
+      .print-manifest-title { text-align: right !important; }
+      .print-manifest-title h1 { color: #0077b6 !important; font-size: 22px !important; text-transform: uppercase !important; letter-spacing: 2px !important; font-weight: 800 !important; margin: 0 !important; }
+      .print-manifest-title p { color: #64748b !important; font-size: 10px !important; margin: 0 !important; font-weight: 600 !important; }
+
+      .print-metadata-grid { 
+        display: grid !important; 
+        grid-template-columns: repeat(4, 1fr) !important; 
+        gap: 15px !important; 
+        margin-bottom: 30px !important;
+        background: #f8fafc !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        border: 1px solid #e2e8f0 !important;
+      }
+      .print-meta-item { display: flex !important; flex-direction: column !important; gap: 2px !important; }
+      .print-meta-label { font-size: 9px !important; text-transform: uppercase !important; color: #64748b !important; font-weight: 700 !important; letter-spacing: 0.5px !important; }
+      .print-meta-value { font-size: 13px !important; color: #0f172a !important; font-weight: 600 !important; }
+
+      /* Table Refinements */
+      #printReportTemplate table { display: table !important; width: 100% !important; border-collapse: collapse !important; margin-top: 10px !important; }
+      #printReportTemplate thead { display: table-header-group !important; }
+      #printReportTemplate tbody { display: table-row-group !important; }
+      #printReportTemplate tr { display: table-row !important; border-bottom: 1px solid #e2e8f0 !important; }
+      #printReportTemplate tr:nth-child(even) { background-color: #fbfcfe !important; }
+      
+      #printReportTemplate th { 
+        display: table-cell !important; 
+        padding: 12px 10px !important; 
+        text-align: left !important;
+        font-size: 10px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        color: #475569 !important;
+        border-bottom: 2px solid #0077b6 !important;
+        font-weight: 700 !important;
+      }
+      #printReportTemplate td { 
+        display: table-cell !important; 
+        padding: 12px 10px !important; 
+        font-size: 12px !important;
+        color: #334155 !important;
+        vertical-align: middle !important;
+      }
+      .print-token-cell { font-family: monospace !important; font-weight: 800 !important; color: #0077b6 !important; font-size: 14px !important; }
+      
+      .print-footer { 
+        margin-top: 50px !important; 
+        padding-top: 15px !important;
+        border-top: 1px solid #e2e8f0 !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        font-size: 9px !important;
+        color: #94a3b8 !important;
+      }
+    }
+
+    /* 🔥 Align icon + text perfectly centered */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn svg {
+  margin-right: 6px;
+  margin-left: 0;
+}
+/* 🔥 Override global flex heading behavior */
+.modal-content h3 {
+  display: block !important;
+  text-align: center !important;
+}
+
+@media (max-width: 480px) {
+  .print-btn {
+    padding: 0.4rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    min-width: auto !important;
+    width: auto !important;
+    gap: 0 !important;
+  }
+  .print-btn .btn-text {
+    display: none;
+  }
+  .print-btn i, .print-btn svg {
+    margin-right: 0 !important;
+  }
+}
+
   </style>
 </head>
 
@@ -283,6 +488,22 @@
       <h2 style="text-align:center; margin-bottom: 1.2rem;"><i data-lucide="settings-2"></i> Admin Control Panel</h2>
       
       <div class="panel-nav admin-nav">
+        <div class="panel-card" onclick="showAdminPanel('book', this)">
+          <div class="panel-card-icon"><i data-lucide="phone-call"></i></div>
+          <div class="panel-card-text">
+            <div class="panel-card-label">Patient Booking</div>
+            <div class="panel-card-sub">Quick booking for call-in patients</div>
+          </div>
+        </div>
+
+        <div class="panel-card" onclick="showAdminPanel('view', this)">
+          <div class="panel-card-icon"><i data-lucide="calendar-check-2"></i></div>
+          <div class="panel-card-text">
+            <div class="panel-card-label">Manage Bookings</div>
+            <div class="panel-card-sub">View tokens & manage cancellations</div>
+          </div>
+        </div>
+
         <div class="panel-card" onclick="showAdminPanel('add', this)">
           <div class="panel-card-icon"><i data-lucide="user-plus"></i></div>
           <div class="panel-card-text">
@@ -306,7 +527,6 @@
             <div class="panel-card-sub">Remove from the registry</div>
           </div>
         </div>
-
 
       </div>
     </div>
@@ -346,11 +566,11 @@
         <div id="commonTimeBlock" style="display:none; margin-top:10px;">
           <label><i data-lucide="clock"></i> Common Time Slot</label>
           <div class="common-time-row" style="display:flex; gap:12px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:140px;">
+            <div style="flex:1; min-width:120px;">
               <label for="commonStart" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="play-circle"></i> Start</label>
               <input type="time" id="commonStart" />
             </div>
-            <div style="flex:1; min-width:140px;">
+            <div style="flex:1; min-width:120px;">
               <label for="commonEnd" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="stop-circle"></i> End</label>
               <input type="time" id="commonEnd" />
             </div>
@@ -358,7 +578,7 @@
         </div>
 
         <div style="margin-top:1rem;">
-          <label for="addDocImage"><i data-lucide="image"></i> Profile Image</label>
+          <label for="addDocImage"><i data-lucide="image"></i> Profile Image(4:5)</label>
           <input type="file" id="addDocImage" name="image" accept="image/*" required />
         </div>
 
@@ -402,11 +622,11 @@
         <div id="commonTimeBlockEdit" style="display:none; margin-top:10px;">
           <label><i data-lucide="clock"></i> Common Time Slot</label>
           <div class="common-time-row" style="display:flex; gap:12px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:140px;">
+            <div style="flex:1; min-width:120px;">
               <label for="commonStartEdit" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="play-circle"></i> Start</label>
               <input type="time" id="commonStartEdit" />
             </div>
-            <div style="flex:1; min-width:140px;">
+            <div style="flex:1; min-width:120px;">
               <label for="commonEndEdit" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="stop-circle"></i> End</label>
               <input type="time" id="commonEndEdit" />
             </div>
@@ -476,6 +696,162 @@
       </form>
     </div>
 
+
+    <!-- PATIENT BOOKING PANEL (Admin) -->
+    <div id="bookPatientPanel" class="adminPanel" style="display:none;">
+      <h3><i data-lucide="phone-call"></i> Call-in Patient Booking</h3>
+      <form id="adminBookPatientForm">
+        <label for="adminBookDoc"><i data-lucide="stethoscope"></i> Select Doctor</label>
+        <select id="adminBookDoc" required onchange="updateAdminBookDates()"></select>
+
+        <label for="adminBookDate"><i data-lucide="calendar"></i> Select Date</label>
+        <input type="date" id="adminBookDate" required />
+        <div id="adminBookDateMsg"></div>
+
+        <hr style="margin: 1.5rem 0; opacity: 0.1;" />
+
+        <label for="adminBookName"><i data-lucide="user"></i> Patient Name (Required)</label>
+        <input id="adminBookName" required placeholder="Enter full name" />
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px;">
+          <div style="flex: 1; min-width: 120px;">
+            <label for="adminBookAge" style="font-size: 0.82rem;"><i data-lucide="cake"></i> Age (Optional)</label>
+            <input id="adminBookAge" type="number" min="1" max="110" placeholder="Age" />
+          </div>
+          <div style="flex: 1; min-width: 120px;">
+            <label for="adminBookGender" style="font-size: 0.82rem;"><i data-lucide="venus"></i> Gender (Optional)</label>
+            <select id="adminBookGender">
+              <option value="">Select</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="adminBookPhone" style="margin-top: 10px;"><i data-lucide="phone"></i> Phone Number (Optional)</label>
+        <input id="adminBookPhone" type="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit number" />
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1.5rem;">
+          <i data-lucide="calendar-check"></i> Confirm Booking
+        </button>
+      </form>
+      <div id="adminBookResult" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- VIEW BOOKINGS PANEL -->
+    <div id="viewBookingsPanel" class="adminPanel" style="display:none;">
+      <h3>
+        <i data-lucide="calendar-check-2"></i> Manage Bookings
+        <span id="bookingCountBadge" class="booking-count-badge" style="display:none;">
+          <i data-lucide="users"></i> <span id="bookingCountNum">0</span>
+        </span>
+      </h3>
+      
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap:15px; margin-bottom:1.5rem;">
+        <div>
+          <label for="viewBookingDoctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
+          <select id="viewBookingDoctorSelect" required>
+            <option value="">-- Select Doctor --</option>
+          </select>
+        </div>
+        <div>
+          <label for="viewBookingDate"><i data-lucide="calendar"></i> Select Date</label>
+          <input type="date" id="viewBookingDate" required />
+        </div>
+      </div>
+
+      <button type="button" id="fetchBookingsBtn" class="btn btn-primary" style="width:100%; margin-bottom:1rem;">
+        <i data-lucide="search"></i> Show Bookings
+      </button>
+
+      <div id="viewBookingMsg" style="margin-top:8px; font-size:0.88rem; display:none;"></div>
+
+      <div class="booking-table-wrapper" id="bookingTableWrapper" style="display:none;">
+        <div class="booking-table-header">
+            <h4 style="margin:0; font-size:1rem; color:#024b80;"><i data-lucide="list"></i> Bookings List</h4>
+            <button onclick="prepareAndPrint()" class="btn btn-outline no-print print-btn" style="padding: 0.4rem 0.8rem; font-size:0.82rem;">
+                <i data-lucide="printer"></i> <span class="btn-text">Print List</span>
+            </button>
+        </div>
+        <table class="booking-table">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Patient Name</th>
+              <th>Age</th>
+              <th>Gender</th>
+              <th>Phone</th>
+              <th class="no-print">Action</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PROFESSIONAL PRINT TEMPLATE (Hidden) -->
+    <div id="printReportTemplate" style="display: none;">
+      <!-- Modern Header -->
+      <div class="print-header">
+        <div class="print-branding">
+          <img src="{{ url_for('static', filename='primecare-logo.svg') }}" style="width: 42px; height: 42px;" />
+          <div>
+            <h2 style="margin:0; font-size:18px; color:#0f172a; font-weight:800;">PrimeCare Clinic</h2>
+            <p style="margin:0; font-size:9px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Premium Medical Services Panel</p>
+          </div>
+        </div>
+        <div class="print-manifest-title">
+          <h1>Booking List</h1>
+          <p id="printTimestampMeta"></p>
+        </div>
+      </div>
+
+      <!-- Discovery Metadata -->
+      <div class="print-metadata-grid">
+        <div class="print-meta-item">
+          <span class="print-meta-label">Doctor</span>
+          <span class="print-meta-value" id="printDocName"></span>
+        </div>
+        <div class="print-meta-item">
+          <span class="print-meta-label">Specialization</span>
+          <span class="print-meta-value" id="printSpec"></span>
+        </div>
+        <div class="print-meta-item">
+          <span class="print-meta-label">Date</span>
+          <span class="print-meta-value" id="printDate"></span>
+        </div>
+        <div class="print-meta-item">
+          <span class="print-meta-label">Total Bookings</span>
+          <span class="print-meta-value" id="printTotal"></span>
+        </div>
+      </div>
+
+      <!-- Main Data Table -->
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 80px;">Token ID</th>
+            <th>Patient Identity</th>
+            <th style="width: 60px;">Age</th>
+            <th style="width: 100px;">Gender</th>
+            <th>Contact Reference</th>
+          </tr>
+        </thead>
+        <tbody id="printTableBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+
+      <!-- Secure Footer -->
+      <div class="print-footer">
+        <div>Generated by Authorized Admin Panel · System Access Logged</div>
+        <div style="text-align: right;">
+          <strong>PrimeCare Clinic</strong><br/>
+          Confidential Patient Manifest · Authorized Use Only
+        </div>
+      </div>
+    </div>
   </section>
 
   <script>
@@ -634,6 +1010,14 @@
       if (type === 'add')    document.getElementById('addDoctorPanel').style.display    = 'block';
       else if (type === 'edit')   document.getElementById('editDoctorPanel').style.display   = 'block';
       else if (type === 'delete') document.getElementById('deleteDoctorPanel').style.display = 'block';
+      else if (type === 'view') {
+        document.getElementById('viewBookingsPanel').style.display = 'block';
+        loadDoctorsForView();
+      }
+      else if (type === 'book') {
+        document.getElementById('bookPatientPanel').style.display = 'block';
+        loadDoctorsForAdminBooking();
+      }
       
       if (btn) btn.classList.add('active');
       localStorage.setItem('activeAdminPanel', type); // Save state
@@ -724,17 +1108,31 @@
 
     async function loadDoctorsForEdit() {
       const select = document.getElementById('editDoctorSelect');
-      if (!select) return;
-      console.log("Loading doctors for edit...");
-      select.innerHTML = "<option value=''>-- Loading doctors... --</option>";
+      const viewSelect = document.getElementById('viewBookingDoctorSelect');
+      if (!select && !viewSelect) return;
+
+      const elements = [];
+      if (select) elements.push(select);
+      if (viewSelect) elements.push(viewSelect);
+
+      console.log("Loading doctors for admin select...");
+      elements.forEach(el => el.innerHTML = "<option value=''>-- Loading doctors... --</option>");
+
       try {
         const res = await fetch('/get_doctors');
-        if (!res.ok) { select.innerHTML="<option value=''>-- Could not load doctors --</option>"; return; }
+        if (!res.ok) { 
+          elements.forEach(el => el.innerHTML="<option value=''>-- Could not load doctors --</option>"); 
+          return; 
+        }
         const doctors = await res.json();
-        select.innerHTML = "<option value=''>-- Select Doctor --</option>";
+        elements.forEach(el => el.innerHTML = "<option value=''>-- Select Doctor --</option>");
+
         if (!doctors || doctors.length === 0) {
-          const opt=document.createElement('option'); opt.value=''; opt.textContent='No doctors available';
-          select.appendChild(opt); return;
+          elements.forEach(el => {
+            const opt=document.createElement('option'); opt.value=''; opt.textContent='No doctors available';
+            el.appendChild(opt);
+          });
+          return;
         }
         doctors.forEach(d => {
           const value = `${d.Name} - ${d.Specialization}`;
@@ -743,11 +1141,17 @@
           const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
           opt.dataset.days = daysArr.join(',');
           opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
-          select.appendChild(opt);
+          
+          if (select) select.appendChild(opt.cloneNode(true));
+          if (viewSelect) viewSelect.appendChild(opt);
         });
       } catch(err) {
-        select.innerHTML="<option value=''>-- Error loading doctors --</option>";
+        elements.forEach(el => el.innerHTML="<option value=''>-- Error loading doctors --</option>");
       }
+    }
+
+    function loadDoctorsForView() {
+      loadDoctorsForEdit(); // shared logic
     }
 
     // ─── Doctor select → date ──────────────────────────────────
@@ -766,7 +1170,7 @@
       workingDays = daysStr ? daysStr.split(',').map(day=>dayMap[day.trim()]) : [];
     });
 
-    document.getElementById('doctorDate').addEventListener('change', function () {
+    document.getElementById('doctorDate').addEventListener('change', async function () {
       const doctorMsgDiv = document.getElementById('doctorMsg');
       doctorMsgDiv.style.display='none'; doctorMsgDiv.textContent='';
       const doctorSelect = document.getElementById('doctorSelect');
@@ -805,6 +1209,16 @@
           }
         }
       }
+
+      // Live Availability/Leave Check via API
+      try {
+        const res = await fetch(`/api/check_doctor_availability?sheet_url=${encodeURIComponent(selectedDoctorOption.value)}&date=${encodeURIComponent(this.value)}`);
+        const data = await res.json();
+        if (data.available === false) {
+          showMessage('doctorMsg', data.reason || 'Doctor is not available.');
+          this.value = '';
+        }
+      } catch (err) { console.error('Availability check failed:', err); }
     });
 
     // ─── Edit doctor select ────────────────────────────────────
@@ -971,8 +1385,7 @@
       finally { btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); }
     });
 
-    // ─── Spec date validation ──────────────────────────────────
-    document.getElementById('specDate').addEventListener('change', function() {
+    document.getElementById('specDate').addEventListener('change', async function() {
       const spec         = document.getElementById('specSelect').value;
       const selectedDate = new Date(this.value);
       const selectedDay  = selectedDate.getDay();
@@ -998,6 +1411,8 @@
         showMessage('noDoctorMsg','No doctors available for this specialization on the selected day.');
         this.value=''; return;
       }
+
+      // Check for finished times if today
       if (this.value===todayStr) {
         const nowStr = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'});
         availableDoctors = availableDoctors.filter(doc => {
@@ -1012,6 +1427,31 @@
           this.value=''; return;
         }
       }
+
+      // Batch Leave Check via API
+      try {
+        const sheetUrls = availableDoctors.map(d => d.SheetURL).filter(Boolean);
+        if (sheetUrls.length > 0) {
+          const res = await fetch('/api/check_doctor_availability', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({sheet_urls: sheetUrls, date: this.value})
+          });
+          const data = await res.json();
+          const results = data.results || {};
+          
+          availableDoctors = availableDoctors.filter(doc => {
+            const status = results[doc.SheetURL];
+            return status && status.available !== false;
+          });
+
+          if (availableDoctors.length === 0) {
+            showMessage('noDoctorMsg', 'All doctors in this specialization are on temporary leave for the selected date.');
+            this.value = ''; return;
+          }
+        }
+      } catch (err) { console.error('Batch availability check failed:', err); }
+
       updateSpecTimeSelect(availableDoctors, weekdayName);
     });
 
@@ -1029,6 +1469,160 @@
         const opt=document.createElement('option'); opt.value=doc.SheetURL||''; opt.textContent=timeRange; select.appendChild(opt);
       });
     }
+
+    // ─── Admin Booking Helpers ─────────────────────────────────
+    async function loadDoctorsForAdminBooking() {
+      const select = document.getElementById('adminBookDoc');
+      if (!select) return;
+      
+      // Use existing loadDoctors to ensure data is fresh
+      await loadDoctors(); 
+      
+      const mainSelect = document.getElementById('doctorSelect');
+      if (!mainSelect) return;
+      
+      select.innerHTML = "<option value=''>-- Select Doctor --</option>";
+      // Copy options from the main doctor select
+      Array.from(mainSelect.options).forEach(opt => {
+        if (opt.value) {
+          const newOpt = opt.cloneNode(true);
+          select.appendChild(newOpt);
+        }
+      });
+      
+      // Set min date to today
+      const dateInput = document.getElementById('adminBookDate');
+      if (dateInput) {
+        const today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'});
+        dateInput.setAttribute('min', today);
+      }
+    }
+
+    function updateAdminBookDates() {
+      const select = document.getElementById('adminBookDoc');
+      const dateInput = document.getElementById('adminBookDate');
+      const msgDiv = document.getElementById('adminBookDateMsg');
+      if (!select || !dateInput) return;
+      
+      dateInput.value = '';
+      if (msgDiv) { msgDiv.style.display = 'none'; msgDiv.textContent = ''; }
+      const opt = select.options[select.selectedIndex];
+      if (!opt || !opt.value) return;
+      
+      const today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'});
+      dateInput.setAttribute('min', today);
+    }
+
+    document.getElementById('adminBookDate').addEventListener('change', async function() {
+      const msgDiv = document.getElementById('adminBookDateMsg');
+      if (msgDiv) { msgDiv.style.display = 'none'; msgDiv.textContent = ''; }
+      
+      const docSelect = document.getElementById('adminBookDoc');
+      const selectedOpt = docSelect.selectedOptions[0];
+      const date = this.value;
+      const sheet_url = selectedOpt ? selectedOpt.value : '';
+
+      if (!sheet_url) {
+        showMessage('adminBookDateMsg', 'Please select a doctor first.');
+        this.value = '';
+        return;
+      }
+      if (!date) return;
+
+      try {
+        const res = await fetch(`/api/check_doctor_availability?sheet_url=${encodeURIComponent(sheet_url)}&date=${encodeURIComponent(date)}`);
+        const data = await res.json();
+        if (data.available === false) {
+          showMessage('adminBookDateMsg', data.reason || 'Doctor is not available on this date.');
+          this.value = '';
+        }
+      } catch (err) {
+        console.error('Availability check failed:', err);
+      }
+    });
+
+    document.getElementById('adminBookPatientForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = e.target.querySelector("button[type='submit']");
+      const msgDiv = document.getElementById('adminBookResult');
+      
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Processing...';
+      lucide.createIcons();
+      
+      try {
+        const payload = {
+          sheet_url: document.getElementById('adminBookDoc').value,
+          date: document.getElementById('adminBookDate').value,
+          name: document.getElementById('adminBookName').value.trim(),
+          age: document.getElementById('adminBookAge').value.trim(),
+          gender: document.getElementById('adminBookGender').value,
+          phone_number: document.getElementById('adminBookPhone').value.trim()
+        };
+        
+        const res = await fetch('/admin_book_patient', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          // Success Feedback via Modal instead of redirect
+          const modal = document.getElementById('universalModal');
+          modal.querySelector('h3').textContent = 'Booking Successful';
+          modal.querySelector('p').innerHTML = `Appointment for <strong>${data.name}</strong> with <strong>${data.doctor}</strong> is confirmed.`;
+          
+          // Add a custom token display to the modal
+          const contentP = modal.querySelector('p');
+          const tokenCard = document.createElement('div');
+          tokenCard.className = 'success-token-card';
+          tokenCard.innerHTML = `
+            <span style="font-size:0.8rem; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Token Number</span>
+            <span class="success-token-value">${data.token}</span>
+            <span style="font-size:0.82rem; color:#0077b6; font-weight:600;">${data.date} | ${data.time}</span>
+          `;
+          
+          // Remove if already exists
+          const oldCard = modal.querySelector('.success-token-card');
+          if (oldCard) oldCard.remove();
+          contentP.after(tokenCard);
+          
+          const confirmBtn = modal.querySelector('.btn-primary');
+          confirmBtn.textContent = 'Book Another';
+          confirmBtn.style.background = '#10b981';
+          confirmBtn.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.35)';
+          
+          activeModalAction = () => {
+              modal.style.display = 'none';
+              tokenCard.remove();
+          };
+          
+           modal.style.display = 'flex';
+          
+          // Ensure Icon is correct (Check Circle for success)
+          const iconContainer = modal.querySelector('.modal-icon-container');
+          if (iconContainer) {
+            iconContainer.style.color = '#10b981';
+            iconContainer.style.background = 'rgba(16, 185, 129, 0.1)';
+            const icon = iconContainer.querySelector('i, svg');
+            if (icon) icon.setAttribute('data-lucide', 'check-circle');
+          }
+          
+          e.target.reset();
+          lucide.createIcons();
+        } else {
+          showMessage('adminBookResult', data.msg || 'Booking failed.');
+        }
+      } catch (err) {
+        showToast('Communication error. Please retry.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="calendar-check"></i> Confirm Booking';
+        lucide.createIcons();
+      }
+    });
 
     // ─── Admin login ───────────────────────────────────────────
 
@@ -1080,6 +1674,7 @@
             loadDoctorPairs();
             loadDoctors();      // Refresh main dropdowns
             loadDoctorsForEdit(); // Refresh edit dropdown
+            loadDoctorsForAdminBooking(); // Refresh admin booking dropdown
             lucide.createIcons();
           }, 600);
         } else {
@@ -1100,6 +1695,10 @@
       const modal = document.getElementById('universalModal');
       if (!modal) return;
       
+      // Cleanup previous custom additions (like the token card)
+      const oldCard = modal.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+
       modal.querySelector('h3').textContent = title;
       modal.querySelector('p').textContent = message;
       
@@ -1110,11 +1709,18 @@
       
       const iconContainer = modal.querySelector('.modal-icon-container');
       if (iconContainer) {
-        iconContainer.style.color = isDanger ? '#e11d48' : '#0077b6';
-        iconContainer.style.background = isDanger ? 'rgba(225, 29, 72, 0.1)' : 'rgba(0, 119, 182, 0.1)';
-        const icon = iconContainer.querySelector('i, svg');
-        if (icon) {
-          icon.setAttribute('data-lucide', isDanger ? 'log-out' : 'help-circle');
+        if (id === 'success') {
+          iconContainer.style.color = '#10b981';
+          iconContainer.style.background = 'rgba(16, 185, 129, 0.1)';
+          const icon = iconContainer.querySelector('i, svg');
+          if (icon) icon.setAttribute('data-lucide', 'check-circle');
+        } else {
+          iconContainer.style.color = isDanger ? '#e11d48' : '#0077b6';
+          iconContainer.style.background = isDanger ? 'rgba(225, 29, 72, 0.1)' : 'rgba(0, 119, 182, 0.1)';
+          const icon = iconContainer.querySelector('i, svg');
+          if (icon) {
+            icon.setAttribute('data-lucide', isDanger ? 'log-out' : 'help-circle');
+          }
         }
       }
       
@@ -1394,11 +2000,186 @@
       }
     });
 
+    // ─── Booking Viewer logic ──────────────────────────────────
+    document.getElementById('fetchBookingsBtn')?.addEventListener('click', async () => {
+      const combined = document.getElementById('viewBookingDoctorSelect').value;
+      const date = document.getElementById('viewBookingDate').value;
+      const btn = document.getElementById('fetchBookingsBtn');
+      const tableWrapper = document.getElementById('bookingTableWrapper');
+      const tbody = document.getElementById('bookingsTbody');
+      const msgDiv = document.getElementById('viewBookingMsg');
+      const countBadge = document.getElementById('bookingCountBadge');
+      const countNum = document.getElementById('bookingCountNum');
+
+      if (!combined || !date) {
+        showToast('Please select both doctor and date.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Fetching...';
+      msgDiv.style.display = 'none';
+      tableWrapper.style.display = 'none';
+      countBadge.style.display = 'none';
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/admin_get_bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ combined, date })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          msgDiv.textContent = data.msg || 'Error fetching bookings.';
+          msgDiv.style.display = 'block';
+          return;
+        }
+
+        const bookings = data.bookings || [];
+        if (bookings.length === 0) {
+          msgDiv.textContent = `No bookings found for this doctor on ${date}.`;
+          msgDiv.style.display = 'block';
+          return;
+        }
+
+        tbody.innerHTML = '';
+        bookings.forEach(b => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><span class="token-badge">#${b.token}</span></td>
+            <td><div style="font-weight:700; color:#0f172a;">${b.name}</div></td>
+            <td>${b.age || '-'}</td>
+            <td><span style="display:flex; align-items:center; gap:0.4rem;">
+                <i data-lucide="${b.gender==='Male'?'mars':(b.gender==='Female'?'venus':'circle-user')}" style="width:14px;height:14px;opacity:0.7;"></i>
+                ${b.gender || '-'}
+            </span></td>
+            <td><span style="font-family:monospace; font-size:0.95rem; color:#0077b6;">${b.phone || '-'}</span></td>
+            <td class="no-print">
+                <button onclick="deleteBooking(${b.token},'${b.name}')" class="btn btn-danger" style="padding: 0.35rem 0.7rem; font-size: 0.75rem; margin: 0; box-shadow:none;">
+                    <i data-lucide="trash-2"></i> 
+                </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        tableWrapper.style.display = 'block';
+        countNum.textContent = data.count;
+        countBadge.style.display = 'inline-flex';
+        lucide.createIcons();
+
+      } catch (err) {
+        showToast('Failed to fetch bookings. Connection error.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="search"></i> Show Bookings';
+        lucide.createIcons();
+      }
+    });
+
+    window.prepareAndPrint = function() {
+      const combined = document.getElementById('viewBookingDoctorSelect').value;
+      const date = document.getElementById('viewBookingDate').value;
+      const tbody = document.getElementById('bookingsTbody');
+      
+      if (!combined || !date || !tbody || tbody.rows.length === 0) {
+        showToast('No booking data available to print.', 'error');
+        return;
+      }
+
+      const [docName, docSpec] = combined.split(' - ');
+      const totalBookings = tbody.rows.length;
+
+      // Populate Template
+      document.getElementById('printDocName').textContent = docName;
+      document.getElementById('printDate').textContent = date;
+      document.getElementById('printSpec').textContent = docSpec;
+      document.getElementById('printTotal').textContent = totalBookings;
+      document.getElementById('printTimestampMeta').textContent = `Generated: ${new Date().toLocaleString()}`;
+
+      const printTbody = document.getElementById('printTableBody');
+      printTbody.innerHTML = '';
+
+      // Clone table rows (extracting data only)
+      Array.from(tbody.rows).forEach(row => {
+          const token = row.cells[0].textContent.trim();
+          const name = row.cells[1].textContent.trim();
+          const age = row.cells[2].textContent.trim();
+          const gender = row.cells[3].textContent.trim();
+          const phone = row.cells[4].textContent.trim();
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+              <td class="print-token-cell">${token}</td>
+              <td style="font-weight: 700; color: #0f172a;">${name}</td>
+              <td>${age}</td>
+              <td>${gender}</td>
+              <td style="font-family: monospace; font-size: 13px;">${phone}</td>
+          `;
+          printTbody.appendChild(tr);
+      });
+
+      // Set Document Title for PDF Filename
+      const originalTitle = document.title;
+      document.title = `${docName.replace(/\./g, '')}_${date}`;
+
+      window.print();
+
+      // Restore
+      document.title = originalTitle;
+    };
+    window.deleteBooking = async function(token, patientName) {
+      const combined = document.getElementById('viewBookingDoctorSelect').value;
+      const date = document.getElementById('viewBookingDate').value;
+      
+      openModal(
+        'universalModal',
+        'Cancel Booking',
+        `Are you sure you want to cancel the booking for ${patientName} (Token #${token})?`,
+        'Cancel Booking',
+        async () => {
+          try {
+            const res = await fetch('/admin_delete_booking', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ combined, date, token })
+            });
+            const data = await res.json();
+            if (data.success) {
+              showToast('Booking cancelled successfully.', 'success');
+              document.getElementById('fetchBookingsBtn').click(); // Refresh list
+            } else {
+              showToast(data.msg || 'Error cancelling booking.', 'error');
+            }
+          } catch (err) {
+            showToast('Communication error. Please retry.', 'error');
+          }
+        },
+        true
+      );
+      
+      // Inject the correct token card for confirmation
+      const modal = document.getElementById('universalModal');
+      const contentP = modal.querySelector('p');
+      const tokenCard = document.createElement('div');
+      tokenCard.className = 'success-token-card';
+      tokenCard.style.borderColor = '#e11d48'; // Red for cancellation
+      tokenCard.innerHTML = `
+        <span style="font-size:0.8rem; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Token Number</span>
+        <span class="success-token-value" style="color:#e11d48;">${token}</span>
+        <span style="font-size:0.82rem; color:#64748b; font-weight:600;">${date} | ${patientName}</span>
+      `;
+      contentP.after(tokenCard);
+    }
+
     // ─── Init ──────────────────────────────────────────────────
     async function initPage() {
       await loadDoctors();
       await loadDoctorPairs();
       await loadDoctorsForEdit();
+      await loadDoctorsForAdminBooking();
       setupAddDoctorDayTimeUI();
       setupEditDoctorDayTimeUI();
       const specDateInput=document.getElementById('specDate');
@@ -1472,6 +2253,62 @@
         }
       }
     });
+    function generatePDF(element) {
+  const clone = element.cloneNode(true);
+
+  clone.style.display = 'block';
+  clone.style.position = 'absolute';
+  clone.style.left = '-9999px';
+
+  document.body.appendChild(clone); // 🔥 required
+
+  clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+  html2pdf().set({
+    margin: 10,
+    filename: 'Bookings.pdf',
+    html2canvas: { scale: 2 },
+    jsPDF: { format: 'a4' }
+  }).from(clone).save().then(() => {
+    document.body.removeChild(clone); // cleanup
+  });
+}
+function downloadPDF() {
+  const original = document.getElementById('bookingTableWrapper');
+  const tableBody = document.getElementById('bookingsTbody');
+
+  if (!tableBody || tableBody.children.length === 0) {
+    showToast('No bookings to download', 'error');
+    return;
+  }
+
+  // Ensure visible
+  original.style.display = 'block';
+
+  setTimeout(() => {
+    const clone = original.cloneNode(true);
+
+    clone.style.display = 'block';
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.background = '#ffffff';
+    clone.style.overflow = 'visible';
+
+    clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+    document.body.appendChild(clone);
+
+    html2pdf().set({
+      margin: 10,
+      filename: 'Bookings_List.pdf',
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4' }
+    }).from(clone).save().then(() => {
+      document.body.removeChild(clone);
+    });
+
+  }, 300);
+}
   </script>
 
   <!-- Universal Confirmation Modal (Reusable for Logout, Leave, etc.) -->

@@ -353,6 +353,8 @@ input,
 select,
 textarea {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0.62rem 0.85rem;
   border-radius: 12px;
   border: 1.5px solid rgba(176, 190, 210, 0.85);
@@ -386,17 +388,19 @@ select {
   background-size: 14px;
   background-repeat: no-repeat;
   padding-right: 2.2rem;
+  min-width: 0; /* Ensures it doesn't overflow its parent flex/grid container */
 }
 
-/* helper / error text */
-.error,
 /* helper / error text */
 .error,
 #doctorMsg,
 #noDoctorMsg,
 #adminLoginResult,
 #adminPreOtpMsg,
-#leaveMsg {
+#leaveMsg,
+#adminBookDateMsg,
+#adminBookResult,
+#viewBookingMsg {
   font-size: 0.88rem;
   margin-top: 0.8rem;
   border-radius: 12px;
@@ -411,7 +415,10 @@ select {
 #noDoctorMsg,
 #adminLoginResult,
 #adminPreOtpMsg,
-#leaveMsg {
+#leaveMsg,
+#adminBookDateMsg,
+#adminBookResult,
+#viewBookingMsg {
   background: rgba(225, 29, 72, 0.04); /* Subtle rose tint */
   color: #be123c !important;
   border: 1px solid rgba(225, 29, 72, 0.15);
@@ -1151,4 +1158,31 @@ button:active,
   color: #94a3b8;
   font-weight: 500;
   letter-spacing: 0.01em;
+}
+/* 🔥 FIX: Force full center alignment inside modal */
+.modal-content h3,
+.modal-content p {
+  text-align: center !important;
+  display: block !important;   /* FIX */
+  width: 100%;
+}
+
+.modal-content p {
+  white-space: normal;         /* ensure proper wrapping */
+  word-break: normal;
+}
+
+/* Center buttons content properly */
+.modal-btns {
+  justify-content: center !important;
+}
+
+.modal-btns .btn {
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+/* Fix icon alignment inside buttons */
+.modal-btns .btn svg {
+  margin-right: 6px;
 }

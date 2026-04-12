@@ -63,13 +63,21 @@ def get_credentials():
     return creds
 
 
-creds = get_credentials()
-client = gspread.authorize(creds)
+creds = None
+client = None
+main_sheet = None
+doctors_ws = None
 
-# Main spreadsheet to store doctor list
-MAIN_SHEET_NAME = "DoctorBookingData"
-main_sheet = client.open(MAIN_SHEET_NAME)
-doctors_ws = main_sheet.worksheet("Doctors")
+try:
+    creds = get_credentials()
+    client = gspread.authorize(creds)
+    # Main spreadsheet to store doctor list
+    MAIN_SHEET_NAME = "DoctorBookingData"
+    main_sheet = client.open(MAIN_SHEET_NAME)
+    doctors_ws = main_sheet.worksheet("Doctors")
+except Exception as e:
+    print(f"⚠️ [WARNING] Failed to connect to Google Sheets at startup: {e}")
+    print("The app will still run, but doctor-related data might be unavailable.")
 
 # ===================== Leave helpers =====================
 
@@ -133,14 +141,16 @@ def send_email_brevo(to_email, subject, html_content):
             "htmlContent": html_content
         }
 
-        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        print(f"Attempting to send email via Brevo to {to_email}...")
+        response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=10)
         if response.status_code in [200, 201, 202]:
+            print("✅ Email sent successfully via Brevo.")
             return True
         else:
-            print(f"API Error: {response.status_code} - {response.text}")
+            print(f"❌ Brevo API Error: {response.status_code} - {response.text}")
             return False
     except Exception as e:
-        print(f"Exception: {e}")
+        print(f"❌ Brevo Exception: {e}")
         return False
 
 def send_email_smtp(to_email, subject, html_content):
@@ -149,6 +159,11 @@ def send_email_smtp(to_email, subject, html_content):
         sender_email = os.environ.get('MAIL_SENDER_EMAIL')
         app_password = os.environ.get('SMTP_APP_PASSWORD')
         
+        if not app_password:
+            print("❌ SMTP Error: SMTP_APP_PASSWORD not found in .env")
+            return False
+
+        print(f"Attempting to send email via SMTP to {to_email}...")
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = f"PrimeCare Clinic <{sender_email}>"
@@ -159,20 +174,25 @@ def send_email_smtp(to_email, subject, html_content):
         msg.attach(part)
         
         # Connect to Gmail SMTP
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
             server.login(sender_email, app_password)
             server.sendmail(sender_email, to_email, msg.as_string())
+        print("✅ Email sent successfully via SMTP.")
         return True
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ SMTP Error: {e}")
         return False
 
 def send_email(to_email, subject, html_content):
-    """Unified email sender that chooses provider based on environment."""
-    if IS_RENDER:
-        return send_email_brevo(to_email, subject, html_content)
-    else:
-        return send_email_smtp(to_email, subject, html_content)
+    """Unified email sender with Brevo -> SMTP fallback."""
+    # Always try Brevo first if a key is present (even locally)
+    if BREVO_API_KEY:
+        success = send_email_brevo(to_email, subject, html_content)
+        if success:
+            return True
+        print("Brevo failed or unavailable, attempting SMTP fallback...")
+    
+    return send_email_smtp(to_email, subject, html_content)
 
 def get_otp_html(otp):
     """Returns a premium HTML template for the OTP code."""
@@ -875,17 +895,16 @@ def book_doctor():
         spreadsheet = client.open_by_url(sheet_url)
         sheet = get_or_create_date_sheet(spreadsheet, date)
 
-        existing_rows = sheet.get_all_values()[1:]
-        token = len([row for row in existing_rows if any(cell.strip() for cell in row)])
-
-        sheet.append_row([token + 1, name, age, gender, phone_number, date])
+        # Calculate token based on row count to ensure uniqueness
+        token = len(sheet.get_all_values())
+        sheet.append_row([token, name, age, gender, phone_number, date])
 
         increment_booking_counter()
         cleanup_old_date_sheets(spreadsheet)
 
         return jsonify({
             "success": True,
-            "token": token + 1,
+            "token": token,
             "doctor": doctor_info["Name"],
             "specialization": doctor_info["Specialization"],
             "date": date,
@@ -895,19 +914,102 @@ def book_doctor():
             "phone": phone_number,
             "redirect": url_for(
                 "confirmation_page",
-                token=token + 1,
+                token=token,
                 doctor=doctor_info["Name"],
                 specialization=doctor_info["Specialization"],
                 date=date,
                 time=time_for_booking,
                 name=name,
                 age=age,
+                gender=gender,
                 phone=phone_number
             )
         })
 
     except Exception as e:
         return jsonify({"success": False, "msg": f"Error: {str(e)}"}), 500
+
+@app.route("/admin_book_patient", methods=["POST"])
+def admin_book_patient():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"}), 403
+
+    data = request.get_json()
+    sheet_url = data.get("sheet_url")
+    name = data.get("name")
+    age = data.get("age", "")
+    gender = data.get("gender", "Not Specified")
+    phone_number = data.get("phone_number", "")
+    date = data.get("date")
+
+    if not all([sheet_url, name, date]):
+        return jsonify({"success": False, "msg": "Doctor, Name and Date are required."}), 400
+
+    try:
+        doctor_info = next((doc for doc in get_all_doctors()
+                            if doc["SheetURL"] == sheet_url), None)
+        if not doctor_info:
+            return jsonify({"success": False, "msg": "Doctor not found."}), 404
+
+        weekday = datetime.strptime(date, "%Y-%m-%d").strftime("%A")
+        if weekday not in doctor_info["Days"]:
+             return jsonify({"success": False, "msg": f"{doctor_info['Name']} not available on {weekday}."}), 400
+        
+        if is_doctor_on_leave(doctor_info["Name"], doctor_info["Specialization"], date):
+            return jsonify({"success": False, "msg": f"{doctor_info['Name']} is on leave on {date}."}), 400
+
+        # Duty hour check if booking for today
+        ist = pytz.timezone('Asia/Kolkata')
+        now_ist = datetime.now(ist)
+        today_ist_str = now_ist.strftime("%Y-%m-%d")
+
+        if date == today_ist_str:
+            day_times = doctor_info.get("DayTimes", {})
+            time_range = day_times.get(weekday, "")
+            if time_range and "-" in time_range:
+                end_time_str = time_range.split("-")[1].strip()
+                now_time_str = now_ist.strftime("%H:%M")
+                if now_time_str > end_time_str:
+                    return jsonify({"success": False, "msg": "Duty hours for today have already ended."}), 400
+
+        day_times = doctor_info.get("DayTimes", {})
+        time_for_booking = day_times.get(weekday, "")
+
+        spreadsheet = client.open_by_url(sheet_url)
+        sheet = get_or_create_date_sheet(spreadsheet, date)
+
+        # Calculate token based on row count to ensure uniqueness
+        token = len(sheet.get_all_values())
+
+        sheet.append_row([token, name, age, gender, phone_number, date])
+
+        increment_booking_counter()
+        cleanup_old_date_sheets(spreadsheet)
+
+        return jsonify({
+            "success": True,
+            "token": token,
+            "doctor": doctor_info["Name"],
+            "specialization": doctor_info["Specialization"],
+            "date": date,
+            "time": time_for_booking,
+            "name": name,
+            "age": age or "-",
+            "phone": phone_number or "-",
+            "redirect": url_for("confirmation_page",
+                token=token,
+                doctor=doctor_info["Name"],
+                specialization=doctor_info["Specialization"],
+                date=date,
+                time=time_for_booking,
+                name=name,
+                age=age or "-",
+                gender=gender,
+                phone=phone_number or "-"
+            )
+        })
+    except Exception as e:
+        return jsonify({"success": False, "msg": str(e)}), 500
 
 @app.route("/book_department", methods=["POST"])
 def book_department():
@@ -964,9 +1066,8 @@ def book_department():
             date_sheet = get_or_create_date_sheet(spreadsheet, date_str)
 
             # count existing valid rows
-            existing_rows = date_sheet.get_all_values()[1:]
-            valid_rows = [row for row in existing_rows if any((cell or "").strip() for cell in row)]
-            token = len(valid_rows) + 1
+            # Calculate token based on row count to ensure uniqueness
+            token = len(date_sheet.get_all_values())
 
             # optional – get time string for this weekday
             day_times = chosen_doc.get("DayTimes", {})
@@ -998,6 +1099,7 @@ def book_department():
                     time=time_for_booking,
                     name=name,
                     age=age,
+                    gender=gender,
                     phone=phone_number
                 )
             })
@@ -1013,9 +1115,8 @@ def book_department():
             try:
                 spreadsheet = client.open_by_url(doc["SheetURL"])
                 date_sheet = get_or_create_date_sheet(spreadsheet, date_str)
-                rows = date_sheet.get_all_values()[1:]
-                valid_rows = [row for row in rows if any((cell or "").strip() for cell in row)]
-                count = len(valid_rows)
+                # Note: count still includes cancelled slots for balancing load
+                count = len(date_sheet.get_all_values()) - 1 
             except Exception as e:
                 # If one doctor's sheet fails, skip that doctor
                 current_app.logger.exception(
@@ -1037,7 +1138,7 @@ def book_department():
             }), 500
 
         # Book with the selected least-booked doctor
-        token = (best_count or 0) + 1
+        token = len(best_sheet.get_all_values())
 
         day_times = best_doc.get("DayTimes", {})
         time_for_booking = day_times.get(weekday, "")
@@ -1066,6 +1167,7 @@ def book_department():
                 time=time_for_booking,
                 name=name,
                 age=age,
+                gender=gender,
                 phone=phone_number
             )
         })
@@ -1073,6 +1175,79 @@ def book_department():
     except Exception as e:
         current_app.logger.exception("Error in /book_department")
         return jsonify({"success": False, "msg": f"Error: {str(e)}"}), 500
+
+# ===================== Availability Check API =====================
+
+@app.route("/api/check_doctor_availability", methods=["GET", "POST"])
+def check_doctor_availability():
+    if request.method == "POST":
+        data = request.get_json() or {}
+        sheet_urls = data.get("sheet_urls", [])
+        date_str = data.get("date")
+    else:
+        sheet_urls = [request.args.get("sheet_url")]
+        date_str = request.args.get("date")
+
+    if not sheet_urls or not date_str:
+        return jsonify({"available": False, "msg": "Missing parameters"}), 400
+
+    try:
+        all_doctors = get_all_doctors()
+        output = {}
+        
+        # IST Timezone handling
+        ist = pytz.timezone('Asia/Kolkata')
+        now_ist = datetime.now(ist)
+        today_ist = now_ist.date()
+        now_time_str = now_ist.strftime("%H:%M")
+
+        selected_date_dt = datetime.strptime(date_str, "%Y-%m-%d")
+        selected_date = selected_date_dt.date()
+        weekday = selected_date_dt.strftime("%A")
+
+        for url in sheet_urls:
+            if not url: continue
+            doc = next((d for d in all_doctors if d["SheetURL"] == url), None)
+            if not doc:
+                output[url] = {"available": False, "reason": "Doctor not found"}
+                continue
+            
+            # 1. Past date check
+            if selected_date < today_ist:
+                output[url] = {"available": False, "reason": "cannot book for past dates"}
+                continue
+
+            # 2. Not working day
+            if weekday not in doc["Days"]:
+                output[url] = {"available": False, "reason": f" {doc['Name']} is not available on {weekday}s."}
+                continue
+
+            # 3. Temporary Leave
+            if is_doctor_on_leave(doc["Name"], doc["Specialization"], date_str):
+                output[url] = {"available": False, "reason": f" {doc['Name']} is on temporary leave on this date."}
+                continue
+
+            # 4. Working hours finished
+            if selected_date == today_ist:
+                day_times = doc.get("DayTimes", {})
+                time_range = day_times.get(weekday, "")
+                if time_range and "-" in time_range:
+                    end_time_str = time_range.split("-")[1].strip()
+                    if now_time_str > end_time_str:
+                        output[url] = {"available": False, "reason": f"{doc['Name']}'s duty is finished for today."}
+                        continue
+
+            output[url] = {"available": True}
+
+        if request.method == "POST":
+            return jsonify({"results": output})
+        else:
+            # Single result for GET
+            res = output.get(sheet_urls[0], {"available": False, "reason": "Unknown error"})
+            return jsonify(res)
+
+    except Exception as e:
+        return jsonify({"available": False, "msg": str(e)}), 500
 
 # ===================== Confirmation & cleanup =====================
 
@@ -1096,6 +1271,7 @@ def confirmation_page():
         time=time,
         name=name,
         age=age,
+        gender=request.args.get("gender"),
         phone=phone
     )
 
@@ -1127,6 +1303,138 @@ def cleanup_old_date_sheets(spreadsheet, keep_last_n=4):
 
     except Exception as e:
         print(f"[ERROR] Failed to cleanup old sheets: {e}")
+
+
+@app.route("/admin_get_bookings", methods=["POST"])
+def admin_get_bookings():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+
+    data = request.get_json() or {}
+    combined = (data.get("combined") or "").strip()
+    date_str = (data.get("date") or "").strip()
+
+    if not combined or not date_str:
+        return jsonify({"success": False, "msg": "Missing doctor or date"})
+
+    if " - " not in combined:
+        return jsonify({"success": False, "msg": "Invalid doctor format"})
+
+    name_query, spec_query = [x.strip().lower() for x in combined.split(" - ", 1)]
+
+    try:
+        # 1. Find the doctor's sheet URL
+        all_docs = get_all_doctors()
+        target_doc = None
+        for d in all_docs:
+            if (d["Name"].strip().lower() == name_query and 
+                d["Specialization"].strip().lower() == spec_query):
+                target_doc = d
+                break
+        
+        if not target_doc or not target_doc.get("SheetURL"):
+            return jsonify({"success": False, "msg": "Doctor spreadsheet not found"})
+
+        # 2. Open the spreadsheet and specific date worksheet
+        spreadsheet = client.open_by_url(target_doc["SheetURL"])
+        # Pattern in app is DD-MM-YYYY for worksheet titles
+        formatted_date = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+        
+        try:
+            worksheet = spreadsheet.worksheet(formatted_date)
+        except gspread.exceptions.WorksheetNotFound:
+            return jsonify({"success": True, "bookings": [], "count": 0})
+
+        # 3. Get all data
+        records = worksheet.get_all_records()
+        
+        # Normalize records (ensure keys exist) and filter out cancelled/empty rows
+        bookings = []
+        for r in records:
+            name = (r.get("Name", "") or "").strip()
+            if not name:
+                continue
+            
+            bookings.append({
+                "token": r.get("Token", ""),
+                "name": name,
+                "age": r.get("Age", ""),
+                "gender": r.get("Gender", ""),
+                "phone": r.get("Phone_Number", "")
+            })
+ 
+        return jsonify({
+            "success": True, 
+            "bookings": bookings, 
+            "count": len(bookings),
+            "doctor": target_doc["Name"]
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "msg": str(e)})
+
+
+@app.route("/admin_delete_booking", methods=["POST"])
+def admin_delete_booking():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+
+    data = request.get_json() or {}
+    combined = (data.get("combined") or "").strip()
+    date_str = (data.get("date") or "").strip()
+    token_to_del = data.get("token")
+
+    if not combined or not date_str or token_to_del is None:
+        return jsonify({"success": False, "msg": "Missing parameters"})
+
+    if " - " not in combined:
+        return jsonify({"success": False, "msg": "Invalid doctor format"})
+
+    name_query, spec_query = [x.strip().lower() for x in combined.split(" - ", 1)]
+
+    try:
+        all_docs = get_all_doctors()
+        target_doc = next((d for d in all_docs if d["Name"].strip().lower() == name_query and d["Specialization"].strip().lower() == spec_query), None)
+        
+        if not target_doc:
+            return jsonify({"success": False, "msg": "Doctor not found"})
+
+        spreadsheet = client.open_by_url(target_doc["SheetURL"])
+        formatted_date = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+        worksheet = spreadsheet.worksheet(formatted_date)
+
+        rows = worksheet.get_all_values()
+        if not rows:
+            return jsonify({"success": False, "msg": "Sheet is empty"})
+            
+        data_rows = rows[1:]
+
+        # Find the row with matching token
+        # Token is usually in the first column (index 0)
+        row_to_delete = None
+        for i, row in enumerate(data_rows):
+            if row and str(row[0]).strip() == str(token_to_del).strip():
+                # gspread uses 1-based indexing for rows, and we skipped header (row 1)
+                row_to_delete = i + 2 
+                break
+        
+        if not row_to_delete:
+            return jsonify({"success": False, "msg": "Booking not found"})
+
+        # New Logic: If it's the last row, delete physically. If middle, soft-delete.
+        total_rows = len(rows) 
+        if row_to_delete == total_rows:
+            worksheet.delete_rows(row_to_delete)
+            return jsonify({"success": True, "msg": "Last booking deleted and slot freed."})
+        else:
+            # Soft delete: Clear cells from Col B to Col F (leaving Token in A)
+            range_to_clear = f"B{row_to_delete}:F{row_to_delete}"
+            worksheet.update(range_to_clear, [["", "", "", "", ""]])
+            return jsonify({"success": True, "msg": "Booking cancelled (slot preserved)"})
+
+    except Exception as e:
+        return jsonify({"success": False, "msg": str(e)})
+
 
 # ===================== Admin session check =====================
 

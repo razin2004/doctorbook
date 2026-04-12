@@ -282,10 +282,6 @@
           <i data-lucide="house"></i>
           <span>Home</span>
         </a>
-        <button id="headerLogoutBtn" class="btn btn-outline" onclick="openLogoutModal()" style="display:none; color:#e11d48; border-color:rgba(225,29,72,0.3); margin-left:0.2rem;">
-          <i data-lucide="log-out"></i>
-          <span>Logout</span>
-        </button>
       </div>
     </div>
   </header>
@@ -316,12 +312,17 @@
         <div class="info-row">
           <div class="info-row-icon"><i data-lucide="cake"></i></div>
           <div class="info-label">Age</div>
-          <div class="info-value">{{ age }}</div>
+          <div class="info-value">{% if age and age != "-" %}{{ age }}{% else %}Not Provided{% endif %}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-row-icon"><i data-lucide="venus"></i></div>
+          <div class="info-label">Gender</div>
+          <div class="info-value">{% if gender and gender != "-" %}{{ gender }}{% else %}Not Specified{% endif %}</div>
         </div>
         <div class="info-row">
           <div class="info-row-icon"><i data-lucide="phone"></i></div>
           <div class="info-label">Phone</div>
-          <div class="info-value">{{ phone }}</div>
+          <div class="info-value">{% if phone and phone != "-" %}{{ phone }}{% else %}Not Provided{% endif %}</div>
         </div>
       </div>
 
