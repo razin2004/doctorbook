@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Appointment Confirmed – PrimeCare Clinic</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <meta name="description" content="Your appointment at PrimeCare Clinic has been confirmed. View your token number and appointment details." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <style>
+    /* Single header button stays inline on all screen sizes */
+    @media (max-width: 420px) {
+      .top-bar-inner { flex-direction: row; align-items: center; padding: 0.5rem 0.9rem; }
+      .top-actions .btn { flex: 0 0 auto; max-width: none; font-size: 0.8rem; padding: 0.35rem 0.8rem; margin-top: 0; }
+    }
+    .brand-logo { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
+    .brand-name-row { display: flex; align-items: center; gap: 0.4rem; }
+
+    /* ── Page background ── */
+    body.bg-image {
+      min-height: 100vh;
+      background-image: url("/static/image/background11.jpeg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: relative;
+      display: block;
+      padding: 0;
+    }
+
+    .bg-blur {
+      position: fixed; inset: 0;
+      background-image: url("/static/image/background11.jpeg");
+      background-size: cover; background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(5px); transform: scale(1.04); z-index: -2;
+    }
+
+    body.bg-image::after {
+      content: ""; position: fixed; inset: 0;
+      background: rgba(255,255,255,0.48); z-index: -1;
+    }
+
+    /* ── Confirmation card ── */
+    .confirm-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 1.6rem 1.2rem 2.5rem;
+    }
+
+    .confirmation-box {
+      width: 100%;
+      max-width: 500px;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 2rem 2.2rem 2.2rem;
+      box-shadow:
+        0 24px 56px rgba(15,23,42,0.18),
+        inset 0 0 0 1px rgba(255,255,255,0.88);
+      text-align: center;
+      color: #374151;
+    }
+
+    /* clinic brand inside card */
+    .card-brand {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #9ca3af;
+      margin-bottom: 0.4rem;
+    }
+
+    /* success icon */
+    .success-icon {
+      width: 60px; height: 60px;
+      border-radius: 18px;
+      margin: 0.6rem auto 0.85rem;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 12px 28px rgba(22,163,74,0.42);
+      color: #fff;
+    }
+    .success-icon svg { width: 30px; height: 30px; }
+
+    .confirmation-box h1 {
+      font-size: 1.72rem;
+      font-weight: 800;
+      color: #0b3a60;
+      margin: 0 0 0.3rem;
+      letter-spacing: 0.01em;
+    }
+
+    .confirmation-sub {
+      font-size: 0.88rem;
+      color: #6b7280;
+      margin-bottom: 1.1rem;
+    }
+
+    /* ── Info rows ── */
+    .section-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #111827;
+      margin: 1.1rem 0 0.45rem;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 2px solid rgba(0,119,182,0.14);
+    }
+    .section-title svg { width: 16px; height: 16px; color: #0077b6; flex-shrink: 0; }
+
+    .info-table {
+      text-align: left;
+      margin: 0.25rem 0 0;
+      font-size: 0.92rem;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.28rem 0;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .info-row:last-child { border-bottom: none; }
+
+    .info-row-icon {
+      width: 26px; height: 26px;
+      border-radius: 8px;
+      background: rgba(0,119,182,0.08);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .info-row-icon svg { width: 13px; height: 13px; color: #0077b6; }
+
+    .info-label {
+      flex: 0 0 120px;
+      font-weight: 500;
+      color: #6b7280;
+      font-size: 0.87rem;
+      padding-top: 3px;
+    }
+
+    .info-value {
+      flex: 1;
+      font-weight: 600;
+      color: #111827;
+      word-break: break-word;
+      padding-top: 3px;
+    }
+
+    hr.divider {
+      margin: 1rem 0;
+      border: none;
+      border-top: 1.5px solid rgba(0,119,182,0.1);
+    }
+
+    /* ── Token box ── */
+    .token-box {
+      margin-top: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .token-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #374151;
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .token-title svg { width: 16px; height: 16px; color: #0077b6; }
+
+    .token-number {
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      width: 82px; height: 82px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 20%, #bbf7d0, #22c55e);
+      color: white;
+      font-weight: 800;
+      font-size: 1.9rem;
+      box-shadow:
+        0 14px 30px rgba(34,197,94,0.45),
+        0 0 0 7px rgba(187,247,208,0.7);
+      letter-spacing: -0.02em;
+    }
+
+    .footer-note {
+      margin-top: 1.1rem;
+      font-size: 0.84rem;
+      color: #6b7280;
+      display: flex; align-items: flex-start; gap: 0.35rem;
+      text-align: left;
+    }
+    .footer-note svg { width: 15px; height: 15px; color: #0077b6; flex-shrink: 0; margin-top: 2px; }
+
+    /* ── Buttons ── */
+    .button-group {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-top: 1.4rem;
+    }
+
+    .btn-pill {
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 0.55rem 1.4rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      min-width: 130px;
+    }
+    .btn-pill svg { width: 15px; height: 15px; }
+
+    .btn-blue {
+      background: linear-gradient(135deg, #0077b6, #0096c7);
+      color: #fff;
+      box-shadow: 0 8px 22px rgba(0,119,182,0.38);
+    }
+    .btn-blue:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(0,119,182,0.5); }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.96);
+      color: #0077b6;
+      border: 1.5px solid rgba(0,119,182,0.25);
+      box-shadow: 0 6px 16px rgba(0,119,182,0.1);
+    }
+    .btn-ghost:hover { transform: translateY(-1px); box-shadow: 0 9px 22px rgba(0,119,182,0.18); }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      body.bg-image { padding-inline: 0; }
+      .confirm-wrap { padding: 1rem 0.9rem 2rem; }
+      .confirmation-box { padding: 1.7rem 1.3rem 1.9rem; border-radius: 20px; }
+      .info-label { flex-basis: 105px; font-size: 0.83rem; }
+      .btn-pill { width: 100%; max-width: 280px; }
+      .footer-note { font-size: 0.82rem; }
+    }
+  </style>
+</head>
+
+<body class="bg-image">
+  <div class="bg-blur"></div>
+
+  <!-- SHARED HEADER -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0;">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+             style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
+             alt="PrimeCare Logo" />
+        <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+          <div class="brand-title">PrimeCare Clinic</div>
+          <div class="brand-sub">Quality care · Trusted doctors</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <a class="btn btn-outline" href="{{ url_for('home') }}" style="margin-top:0;">
+          <i data-lucide="house"></i>
+          <span>Home</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONFIRMATION CARD -->
+  <div class="confirm-wrap">
+    <div class="confirmation-box" id="confirmationBox">
+
+      <div class="card-brand">PrimeCare Clinic</div>
+
+      <div class="success-icon">
+        <i data-lucide="check"></i>
+      </div>
+
+      <h1>Appointment Confirmed</h1>
+      <div class="confirmation-sub">Your visit has been scheduled successfully.</div>
+
+      <!-- PATIENT DETAILS -->
+      <div class="section-title">
+        <i data-lucide="user-round"></i> Patient Details
+      </div>
+      <div class="info-table">
+        <div class="info-row">
+          <div class="info-row-icon"><i data-lucide="user"></i></div>
+          <div class="info-label">Name</div>
+          <div class="info-value">{{ name }}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-row-icon"><i data-lucide="cake"></i></div>
+          <div class="info-label">Age</div>
+          <div class="info-value">{% if age and age != "-" %}{{ age }}{% else %}Not Provided{% endif %}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-row-icon"><i data-lucide="venus"></i></div>
+          <div class="info-label">Gender</div>
+          <div class="info-value">{% if gender and gender != "-" %}{{ gender }}{% else %}Not Specified{% endif %}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-row-icon"><i data-lucide="phone"></i></div>
+          <div class="info-label">Phone</div>
+          <div class="info-value">{% if phone and phone != "-" %}{{ phone }}{% else %}Not Provided{% endif %}</div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- APPOINTMENT DETAILS -->
+      <div class="section-title">
+        <i data-lucide="stethoscope"></i> Appointment Details
+      </div>
+      <div class="info-table">
+        <div class="info-row">
+          <div class="info-row-icon"><i data-lucide="user-round"></i></div>
+          <div class="info-label">Doctor</div>
+          <div class="info-value">{{ doctor }}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-row-icon"><i data-lucide="activity"></i></div>
+          <div class="info-label">Specialization</div>
+          <div class="info-value">{{ specialization }}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-row-icon"><i data-lucide="calendar"></i></div>
+          <div class="info-label">Date</div>
+          <div class="info-value">{{ date }}</div>
+        </div>
+        <div class="info-row">
+          <div class="info-row-icon"><i data-lucide="clock"></i></div>
+          <div class="info-label">Time</div>
+          <div class="info-value">{{ time }}</div>
+        </div>
+      </div>
+
+      <!-- TOKEN -->
+      <div class="token-box">
+        <div class="token-title">
+          <i data-lucide="hash"></i> Your Token Number
+        </div>
+        <div class="token-number">{{ token }}</div>
+      </div>
+
+      <p class="footer-note">
+        <i data-lucide="info"></i>
+        Please arrive 10–15 minutes early and bring any previous reports if available.
+      </p>
+
+      <!-- ACTION BUTTONS: Save as Image first, then Book Another -->
+      <div class="button-group">
+        <button type="button" class="btn-pill btn-ghost" id="saveImageBtn">
+          <i data-lucide="download"></i> Save as Image
+        </button>
+      </div>
+
+      <div class="button-group">
+        <a class="btn-pill btn-blue" href="{{ url_for('booking') }}">
+          <i data-lucide="calendar-plus"></i> Book Another
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    async function checkAdminSession() {
+      try {
+        const res  = await fetch('/check_admin');
+        const data = await res.json();
+        const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+        if (data.logged_in) {
+          if (headerLogoutBtn) headerLogoutBtn.style.display = 'inline-flex';
+        } else {
+          if (headerLogoutBtn) headerLogoutBtn.style.display = 'none';
+        }
+        lucide.createIcons();
+      } catch(e) { console.error('Session check failed:', e); }
+    }
+
+    let activeModalAction = null;
+    function openModal(title, message, actionText, actionFn, isDanger = false) {
+      const modal = document.getElementById('universalModal');
+      if (!modal) return;
+      modal.querySelector('h3').textContent = title;
+      modal.querySelector('p').textContent = message;
+      const confirmBtn = modal.querySelector('.confirm-btn');
+      confirmBtn.textContent = actionText;
+      confirmBtn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      activeModalAction = actionFn;
+      modal.style.display = 'flex';
+      lucide.createIcons();
+    }
+    function closeModal() {
+      const modal = document.getElementById('universalModal');
+      if (modal) modal.style.display = 'none';
+      activeModalAction = null;
+    }
+    function handleConfirm() {
+      if (activeModalAction) activeModalAction();
+      closeModal();
+    }
+    function openLogoutModal() {
+      openModal('Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
+    }
+    async function confirmLogout() {
+      try {
+        await fetch('/admin_logout', { method: 'POST' });
+        const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+        if (headerLogoutBtn) headerLogoutBtn.style.display = 'none';
+        showToast('Administrative session ended successfully', 'success');
+      } catch(err) { console.error('Logout failed:', err); }
+    }
+
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('globalToast');
+      if (!toast) return;
+      toast.className = 'toast-' + type;
+      toast.innerHTML = (type === 'success' 
+        ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' 
+        : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
+      lucide.createIcons();
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 5000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      lucide.createIcons();
+      checkAdminSession();
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const btn = document.getElementById('saveImageBtn');
+      if (!btn) return;
+
+      const data = {
+        token:          '{{ token or "" }}',
+        name:           '{{ name or "" }}',
+        age:            '{{ age or "" }}',
+        phone:          '{{ phone or "" }}',
+        doctor:         '{{ doctor or "" }}',
+        specialization: '{{ specialization or "" }}',
+        date:           '{{ date or "" }}',
+        time:           '{{ time or "" }}'
+      };
+
+      btn.addEventListener('click', function () {
+        const baseWidth  = 1080;
+        const baseHeight = 1560;
+        const ratio      = window.devicePixelRatio || 1;
+
+        const canvas   = document.createElement('canvas');
+        canvas.width   = baseWidth  * ratio;
+        canvas.height  = baseHeight * ratio;
+        const ctx      = canvas.getContext('2d');
+        ctx.scale(ratio, ratio);
+
+        /* ── Background ── */
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, baseHeight);
+        bgGrad.addColorStop(0, '#e8f4fd');
+        bgGrad.addColorStop(1, '#f0f8ff');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, baseWidth, baseHeight);
+
+        /* ── Card ── */
+        const cardX = 70; const cardY = 160;
+        const cardW = baseWidth - 140; const cardH = baseHeight - 300;
+        const radius = 36;
+        ctx.save();
+        ctx.shadowColor = 'rgba(15,23,42,0.16)';
+        ctx.shadowBlur  = 36;
+        ctx.shadowOffsetY = 20;
+        ctx.beginPath();
+        ctx.moveTo(cardX + radius, cardY);
+        ctx.lineTo(cardX + cardW - radius, cardY);
+        ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + radius);
+        ctx.lineTo(cardX + cardW, cardY + cardH - radius);
+        ctx.quadraticCurveTo(cardX + cardW, cardY + cardH, cardX + cardW - radius, cardY + cardH);
+        ctx.lineTo(cardX + radius, cardY + cardH);
+        ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - radius);
+        ctx.lineTo(cardX, cardY + radius);
+        ctx.quadraticCurveTo(cardX, cardY, cardX + radius, cardY);
+        ctx.closePath();
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.restore();
+
+        /* ── Brand ── */
+        ctx.textAlign  = 'center';
+        ctx.fillStyle  = '#0b3a60';
+        ctx.font       = "800 40px 'Segoe UI', system-ui, sans-serif";
+        ctx.fillText('PrimeCare Clinic', baseWidth / 2, cardY + 62);
+        ctx.fillStyle  = '#6b7280';
+        ctx.font       = "400 20px 'Segoe UI', system-ui, sans-serif";
+        ctx.fillText('Quality care · Trusted doctors', baseWidth / 2, cardY + 94);
+
+        /* ── Success circle ── */
+        const iconCy = cardY + 158; const iconR = 38; const iconCx = baseWidth / 2;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(iconCx, iconCy, iconR, 0, Math.PI * 2); ctx.closePath();
+        const g = ctx.createLinearGradient(iconCx - iconR, iconCy - iconR, iconCx + iconR, iconCy + iconR);
+        g.addColorStop(0, '#22c55e'); g.addColorStop(1, '#16a34a');
+        ctx.fillStyle = g;
+        ctx.shadowColor = 'rgba(34,197,94,0.42)'; ctx.shadowBlur = 16;
+        ctx.fill(); ctx.restore();
+        ctx.save();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4.5; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(iconCx - 14, iconCy + 2);
+        ctx.lineTo(iconCx - 4, iconCy + 16);
+        ctx.lineTo(iconCx + 16, iconCy - 10);
+        ctx.stroke(); ctx.restore();
+
+        /* ── Title ── */
+        ctx.fillStyle = '#0b3a60';
+        ctx.font      = "700 44px 'Segoe UI', system-ui, sans-serif";
+        ctx.fillText('Appointment Confirmed', baseWidth / 2, cardY + 222);
+        ctx.fillStyle = '#6b7280';
+        ctx.font      = "400 22px 'Segoe UI', system-ui, sans-serif";
+        ctx.fillText('Your visit has been scheduled successfully.', baseWidth / 2, cardY + 256);
+
+        /* ── Helper functions ── */
+        let y = cardY + 302;
+        const leftX     = cardX + 110;
+        const labelW    = 220;
+        const rowGapY   = 38;
+
+        const writeSectionTitle = text => {
+          ctx.fillStyle  = '#111827';
+          ctx.font       = "600 24px 'Segoe UI', system-ui, sans-serif";
+          ctx.textAlign  = 'left';
+          ctx.fillText(text, leftX, y);
+          y += 8;
+          ctx.strokeStyle = '#0077b6'; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.moveTo(leftX, y); ctx.lineTo(leftX + 130, y); ctx.stroke();
+          y += 28;
+        };
+
+        const writeRow = (label, value) => {
+          ctx.font      = "500 20px 'Segoe UI', system-ui, sans-serif";
+          ctx.textAlign = 'left';
+          ctx.fillStyle = '#6b7280'; ctx.fillText(label + ':', leftX, y);
+          ctx.fillStyle = '#111827'; ctx.fillText((value || '-').toString(), leftX + labelW, y);
+          y += rowGapY;
+        };
+
+        writeSectionTitle('Patient Details');
+        writeRow('Name',  data.name);
+        writeRow('Age',   data.age);
+        writeRow('Phone', data.phone);
+
+        y += 10;
+        ctx.strokeStyle = 'rgba(0,119,182,0.12)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cardX + 50, y); ctx.lineTo(cardX + cardW - 50, y); ctx.stroke();
+        y += 28;
+
+        writeSectionTitle('Appointment Details');
+        writeRow('Doctor',         data.doctor);
+        writeRow('Specialization', data.specialization);
+        writeRow('Date',           data.date);
+        writeRow('Time',           data.time || 'As per clinic schedule');
+
+        /* ── Token ── */
+        y += 28;
+        ctx.textAlign  = 'center';
+        ctx.fillStyle  = '#374151';
+        ctx.font       = "600 26px 'Segoe UI', system-ui, sans-serif";
+        ctx.fillText('Your Token Number', baseWidth / 2, y);
+        y += 52;
+
+        const tokenR = 66;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(baseWidth / 2, y + tokenR, tokenR, 0, Math.PI * 2); ctx.closePath();
+        const g2 = ctx.createRadialGradient(baseWidth/2 - 12, y + tokenR - 12, 6, baseWidth/2, y + tokenR, tokenR);
+        g2.addColorStop(0, '#bbf7d0'); g2.addColorStop(1, '#22c55e');
+        ctx.fillStyle = g2;
+        ctx.shadowColor = 'rgba(34,197,94,0.46)'; ctx.shadowBlur = 20;
+        ctx.fill(); ctx.restore();
+        ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center';
+        ctx.font      = "800 42px 'Segoe UI', system-ui, sans-serif";
+        ctx.fillText(data.token || '-', baseWidth / 2, y + tokenR + 16);
+
+        /* ── Footer note ── */
+        ctx.fillStyle = '#6b7280';
+        ctx.font      = "400 19px 'Segoe UI', system-ui, sans-serif";
+        ctx.fillText('Please arrive 10–15 minutes early and bring previous reports if any.', baseWidth / 2, cardY + cardH - 38);
+
+        /* ── Download ── */
+        const a = document.createElement('a');
+        const safeToken = (data.token || 'token').toString().replace(/[^0-9A-Za-z_-]/g, '');
+        a.download = `primecare-token-${safeToken}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      });
+    });
+  </script>
+  <!-- Global Toast Container -->
+  <div id="globalToast"></div>
+
+  <!-- Universal Confirmation Modal -->
+  <div class="modal-overlay" id="universalModal">
+    <div class="modal-content">
+      <div class="modal-icon-container" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6;">
+        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+      </div>
+      <h3>Confirm Action</h3>
+      <p>Are you sure you want to proceed with this action?</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" onclick="closeModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem;">Cancel</button>
+        <button class="btn btn-primary confirm-btn" onclick="handleConfirm()" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem;">Confirm</button>
+      </div>
+    </div>
+  </div>
+  <footer class="site-footer">
+    <div class="footer-content">
+      <p class="footer-copy">© 2026 PrimeCare Clinic. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PrimeCare Clinic – Trusted Healthcare</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="description" content="Book appointments at PrimeCare Clinic. Experienced specialists, online token booking, instant confirmation." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      height: 100%; margin: 0; padding: 0; overflow-x: hidden;
+      font-family: 'Inter', system-ui, sans-serif; color: #222;
+      -webkit-font-smoothing: antialiased;
+    }
+    body { background: #f0f4f8; }
+
+    /* Background */
+    .bg-image {
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover; background-repeat: no-repeat;
+      background-position: center; background-attachment: fixed;
+      position: fixed; inset: 0; z-index: -3;
+    }
+    .bg-blur {
+      position: fixed; inset: 0;
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover; background-repeat: no-repeat;
+      background-position: center; background-attachment: fixed;
+      filter: blur(8px); z-index: -2;
+    }
+    .bg-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,0.68); z-index: -1;
+    }
+
+    /* ── TOP BAR ── */
+    .top-bar {
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      background: rgba(255,255,255,0.96);
+      border-bottom: 1px solid rgba(0,119,182,0.1);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .top-bar-inner {
+      max-width: 1200px; margin: 0 auto;
+      padding: 0.6rem 1.5rem;
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 0.75rem;
+    }
+    .brand { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex-shrink: 1; }
+    .brand-title {
+      font-size: 1.35rem; font-weight: 800; color: #0077b6;
+      letter-spacing: 0.02em; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .brand-sub {
+      font-size: 0.74rem; color: #6b7280; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .top-actions {
+      display: flex; gap: 0.45rem; align-items: center;
+      flex-shrink: 0; flex-wrap: nowrap;
+    }
+    .btn {
+      border: none; cursor: pointer; border-radius: 999px;
+      padding: 0.42rem 1.1rem; font-size: 0.86rem; font-weight: 600;
+      font-family: inherit;
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.35rem;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+      white-space: nowrap; text-decoration: none;
+      min-width: 105px; /* Standardize size for header buttons */
+    }
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .btn-primary {
+      background: linear-gradient(135deg,#0077b6,#0096c7);
+      color: #fff; box-shadow: 0 4px 12px rgba(0,119,182,0.28);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,119,182,0.42); }
+    .btn-outline {
+      background: #fff; color: #0077b6;
+      border: 1.5px solid rgba(0,119,182,0.28);
+    }
+    .btn-outline:hover { background: #e6f4ff; transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 1200px; margin: 1.4rem auto 0.8rem;
+      padding: 1.2rem 1.5rem 0.5rem;
+      display: grid;
+      grid-template-columns: minmax(0,1.7fr) minmax(0,1.2fr);
+      gap: 2rem; align-items: start;
+    }
+    .hero-left h1 {
+      font-size: 2.3rem; margin: 0 0 0.45rem;
+      color: #023e8a; font-weight: 800; line-height: 1.2;
+    }
+    .hero-left h1 span { color: #0077b6; }
+    .hero-tagline { margin: 0 0 1rem; font-size: 0.97rem; color: #555; line-height: 1.6; }
+
+    .hero-highlights {
+      display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0.6rem 0 1.1rem;
+    }
+    .pill {
+      padding: 0.28rem 0.75rem; border-radius: 999px;
+      background: rgba(0,119,182,0.07);
+      border: 1px solid rgba(0,119,182,0.18);
+      font-size: 0.8rem; color: #135f8c;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+    }
+    .pill svg { width: 13px; height: 13px; }
+
+    .hero-cta {
+      display: flex;
+      flex-direction: column;   /* buttons row on top, note below */
+      gap: 0.5rem;
+      align-items: flex-start;
+    }
+    .hero-cta-btns {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .hero-note {
+      font-size: 0.8rem;
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .hero-note svg { width: 13px; height: 13px; color: #0077b6; flex-shrink: 0; }
+
+    /* info button */
+    .btn-info {
+      background: none; border: none; cursor: pointer;
+      color: #0077b6; padding: 0.2rem;
+      display: inline-flex; align-items: center;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .btn-info:hover { background: rgba(0,119,182,0.08); }
+    .btn-info svg { width: 20px; height: 20px; }
+
+    /* ── DOCTORS HEADING ── */
+    .doctors-heading {
+      position: sticky;
+      top: 4.1rem;       /* header is ~4rem tall, tiny gap */
+      width: 100%;
+      background: rgba(0,119,182,0.97);
+      color: #fff;
+      padding: 0.65rem 1.5rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-align: center;
+      z-index: 20;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: 'Inter', sans-serif;
+    }
+    .doctors-heading svg { width: 20px; height: 20px; }
+
+    /* ── CONTENT ── */
+    .content-inner {
+      max-width: 1200px; margin: 0 auto 3rem;
+      padding: 0 1.5rem 2.5rem;
+    }
+
+    #first-spec { scroll-margin-top: 8rem; }
+
+    .spec-section { margin-top: 2.2rem; }
+    .spec-heading {
+      color: #0077b6; font-size: 1.45rem; font-weight: 700;
+      margin: 0 0 0.85rem;
+      display: flex; align-items: center; gap: 0.45rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 2.5px solid rgba(0,119,182,0.18);
+    }
+    .spec-heading svg { width: 20px; height: 20px; }
+
+    /* ── DOCTOR CARDS ── */
+    .doctor-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 22px; margin-bottom: 1.5rem;
+    }
+    .doctor-card {
+      position: relative;
+      display: flex; flex-direction: column;
+      background: rgba(255,255,255,0.97);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.09);
+      border: 1px solid rgba(0,0,0,0.04);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .doctor-card:hover { box-shadow: 0 16px 36px rgba(0,0,0,0.14); transform: translateY(-2px); }
+    .doctor-img {
+      width: 100%; aspect-ratio: 4 / 5; overflow: hidden;
+      background: #e0edf7;
+      border-top-left-radius: 14px; border-top-right-radius: 14px;
+    }
+    .doctor-img img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      border-bottom: 3px solid #0077b6;
+    }
+    .doctor-info { padding: 0.7rem 0.85rem 0.9rem; }
+    .doctor-info h4 {
+      margin: 0 0 0.3rem; font-size: 1rem; color: #023e8a; font-weight: 700;
+      display: block;
+    }
+    .doctor-meta {
+      font-size: 0.82rem; margin: 0.1rem 0; color: #555;
+      display: flex; align-items: flex-start; gap: 0.3rem; line-height: 1.4;
+    }
+    .doctor-meta svg { width: 13px; height: 13px; color: #0077b6; margin-top: 2px; flex-shrink: 0; }
+    .doctor-meta strong { color: #333; }
+
+    .btn-timing {
+      margin-top: 0.5rem;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 999px;
+      border: 1.5px solid rgba(0,119,182,0.28);
+      background: rgba(0,119,182,0.05);
+      color: #005f8c; cursor: pointer; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-weight: 600;
+      transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-timing svg { width: 13px; height: 13px; }
+    .btn-timing:hover {
+      background: rgba(0,119,182,0.12);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
+    }
+
+    /* ── TIMING POPUP ── */
+    .card-timing-popup {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0.98);
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+      border: 1px solid rgba(0,0,0,0.06);
+      padding: 0.6rem 0.7rem;
+      font-size: 0.82rem;
+      opacity: 0; pointer-events: none;
+      transform: scale(0.97);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 15;
+    }
+    .card-timing-popup.show { opacity: 1; pointer-events: auto; transform: scale(1); }
+    .card-timing-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+    .card-timing-title {
+      font-weight: 700; color: #024b80; font-size: 0.84rem;
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .card-timing-title svg { width: 14px; height: 14px; }
+    .close-timing {
+      border: none; background: transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #666; padding: 0.2rem; border-radius: 4px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .close-timing:hover { background: rgba(0,0,0,0.08); color: #222; }
+    .close-timing svg { width: 16px; height: 16px; }
+    .timing-list {
+      list-style: none; margin: 0.1rem 0 0; padding: 0;
+      max-height: 185px; overflow-y: auto;
+    }
+    .timing-list li {
+      display: flex; justify-content: space-between; gap: 0.5rem;
+      padding: 0.22rem 0.1rem; border-bottom: 1px solid rgba(0,0,0,0.05);
+      align-items: center;
+    }
+    .timing-list li:last-child { border-bottom: none; }
+    .timing-day { font-weight: 600; color: #024b80; font-size: 0.82rem; display: flex; align-items: center; gap: 0.25rem; }
+    .timing-day svg { width: 12px; height: 12px; color: #0077b6; }
+    .timing-time { font-family: 'Consolas','Courier New',monospace; font-size: 0.8rem; color: #333; }
+    .timing-na { color: #bbb; font-style: italic; font-size: 0.8rem; }
+
+    .no-doctors { text-align: center; margin: 2rem 0 3rem; font-size: 0.95rem; color: #666; }
+
+    /* ── INFO MODAL ── */
+    .info-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.48); z-index: 200;
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+    .info-modal-overlay.open { display: flex; }
+    .info-modal {
+      background: #fff; border-radius: 20px;
+      padding: 1.8rem 2rem; max-width: 440px; width: 100%;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.22); position: relative;
+      animation: mi 0.2s ease;
+    }
+    @keyframes mi { from { transform: scale(0.94) translateY(8px); opacity:0; } to { transform: scale(1); opacity:1; } }
+    .info-modal h3 {
+      font-size: 1.05rem; color: #0b3a60;
+      margin: 0 0 1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .info-modal h3 svg { width: 18px; height: 18px; color: #0077b6; }
+    .info-modal-close {
+      position: absolute; top: 1rem; right: 1rem;
+      background: none; border: none; cursor: pointer;
+      color: #6b7280; padding: 0.25rem; border-radius: 6px;
+      display: flex; align-items: center; transition: background 0.15s;
+    }
+    .info-modal-close:hover { background: rgba(0,0,0,0.07); color: #111; }
+    .info-modal-close svg { width: 19px; height: 19px; }
+    .info-modal-steps { list-style: none; padding: 0; margin: 0; }
+    .info-modal-steps li {
+      display: flex; align-items: flex-start; gap: 0.7rem;
+      padding: 0.55rem 0; border-bottom: 1px solid #f0f4f8;
+      font-size: 0.9rem; color: #374151; line-height: 1.5;
+    }
+    .info-modal-steps li:last-child { border-bottom: none; }
+    .step-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: linear-gradient(135deg,#0077b6,#0096c7);
+      color: #fff; font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; margin-top: 1px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1200px) {
+      .doctor-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: minmax(0,1fr); gap: 1.3rem; }
+      .doctor-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .doctors-heading { top: 3.8rem; font-size: 1.15rem; }
+      #first-spec { scroll-margin-top: 9rem; }
+    }
+    @media (max-width: 768px) {
+      .top-bar-inner { padding: 0.5rem 1rem; }
+      .brand-title { font-size: 1.12rem; }
+      .brand-sub { font-size: 0.7rem; }
+      .hero { padding-inline: 1rem; padding-top: 1rem; gap: 1rem; }
+      .hero-left h1 { font-size: 1.8rem; }
+      .doctors-heading { top: 3.9rem; font-size: 1.1rem; }
+      #first-spec { scroll-margin-top: 8.5rem; }
+      .content-inner { padding-inline: 1rem; }
+    }
+    @media (max-width: 520px) {
+      .top-bar-inner {
+        flex-direction: row;        /* brand LEFT, buttons RIGHT — stays as a row */
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.85rem;
+        gap: 0.5rem;
+      }
+      .brand { align-items: flex-start; flex-shrink: 1; min-width: 0; }
+      .brand-title { font-size: 1.0rem; }
+      .brand-sub { font-size: 0.65rem; }
+      .hero-left h1 { font-size: 1.6rem; }
+      .doctor-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 13px; }
+      .doctor-info { padding: 0.55rem 0.65rem 0.7rem; }
+      .doctor-info h4 { font-size: 0.93rem; }
+      .spec-heading { font-size: 1.25rem; }
+      .btn-timing { font-size: 0.76rem; padding: 0.25rem 0.55rem; }
+      
+      /* Buttons stack vertically on the RIGHT side — Doctors above Book Now */
+      .top-actions {
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        gap: 0.28rem;
+        align-items: flex-end;
+      }
+      .top-actions .btn {
+        font-size: 0.75rem;
+        padding: 0.28rem 0.65rem;
+        margin-top: 0;
+        white-space: nowrap;
+        min-width: 90px;
+      }
+      .top-actions .btn svg { width: 12px; height: 12px; }
+      
+      .doctors-heading { font-size: 1rem; top: 3.9rem; }
+      #first-spec { scroll-margin-top: 8.5rem; }
+    }
+
+    /* day name display */
+    .timing-day .full-day { display: inline; }
+    .timing-day .short-day { display: none; }
+    @media (max-width: 520px) {
+      .timing-day .full-day { display: none; }
+      .timing-day .short-day { display: inline; }
+    }
+    /* ── HIGH-FIDELITY MODAL ── */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 10000;
+      animation: modalFade 0.3s ease;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 2.8rem 2.2rem;
+      border-radius: 32px;
+      max-width: 460px;
+      width: 94%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      box-shadow: 0 35px 80px rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255,255,255,1);
+      animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+    @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes modalPop  { from { transform: scale(0.92) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+    .modal-btns {
+      display: flex; gap: 1.2rem; margin-top: 2rem; justify-content: center; width: 100%;
+    }
+    .modal-btns .btn { margin-top: 0; min-width: 140px; font-weight: 600; }
+
+    /* ── AUTH MODAL ── */
+    .auth-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(8px);
+      z-index: 10000; align-items: center; justify-content: center;
+      animation: modalFade 0.3s ease; padding: 1rem;
+    }
+    .auth-modal-overlay.open { display: flex; }
+    .auth-modal {
+      background: #fff; padding: 2.2rem 2rem; border-radius: 24px;
+      max-width: 420px; width: 100%; box-shadow: 0 35px 80px rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255,255,255,1); position: relative;
+      animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .auth-modal-close {
+      position: absolute; top: 1.2rem; right: 1.2rem; background: rgba(0,0,0,0.04); border: none;
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #555; transition: background 0.2s;
+    }
+    .auth-modal-close:hover { background: rgba(0,0,0,0.08); }
+    .auth-title { font-size: 1.4rem; color: #023e8a; margin: 0 0 1.2rem; text-align: center; font-weight: 800; }
+    .auth-subtitle { text-align: center; font-size: 0.9rem; color: #64748b; margin-top: -0.8rem; margin-bottom: 1.2rem; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 0.4rem; }
+    .form-control {
+      width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #e2e8f0;
+      border-radius: 12px; font-size: 0.95rem; font-family: inherit;
+      transition: all 0.2s ease; background: #f8fafc;
+    }
+    .form-control:focus { outline: none; border-color: #0077b6; background: #fff; box-shadow: 0 0 0 4px rgba(0,119,182,0.1); }
+    .auth-btn {
+      width: 100%; border: none; background: linear-gradient(135deg,#0077b6,#0096c7);
+      color: #fff; padding: 0.85rem; border-radius: 12px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; margin-top: 0.5rem; transition: transform 0.2s, box-shadow 0.2s;
+      min-height: 44px;
+    }
+    .auth-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,119,182,0.25); }
+    .auth-switch { text-align: center; margin-top: 1.2rem; font-size: 0.85rem; color: #64748b; }
+    .auth-switch a { color: #0077b6; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .auth-switch a:hover { text-decoration: underline; }
+    
+    .view-section { display: none; }
+    .view-section.active { display: block; animation: modalFade 0.3s ease; }
+    
+    .otp-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 1rem; }
+    .otp-input { width: 44px; height: 50px; text-align: center; font-size: 1.5rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #f8fafc; }
+    .otp-input:focus { border-color: #0077b6; outline: none; background: #fff; }
+
+    /* ── PREMIUM TOAST ISLAND ── */
+    #globalToast {
+      position: fixed; top: 24px; left: 50%;
+      transform: translateX(-50%); z-index: 10001;
+      padding: 16px 32px; border-radius: 24px;
+      font-weight: 600; font-size: 1rem;
+      display: none; align-items: center; gap: 14px;
+      box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(14px);
+      color: #fff;
+      transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+    @media (max-width: 600px) {
+      #globalToast {
+        width: 95%; top: 16px; padding: 14px 22px; border-radius: 20px; font-size: 0.92rem;
+      }
+    }
+    .toast-success { background: rgba(5, 150, 105, 0.95); }
+    .toast-error   { background: rgba(225, 29, 72, 0.95); }
+
+    /* ── PREMIUM CONTACT SECTION (ULTRA-MODERN) ── */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 2rem;
+    }
+    .contact-card {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 1.4rem 0.8rem;
+      text-align: center;
+      box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.05),
+        0 10px 15px -3px rgba(0, 0, 0, 0.08),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.7rem;
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+      overflow: hidden;
+    }
+    .contact-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.4), transparent);
+      opacity: 0.5; pointer-events: none;
+    }
+    .contact-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
+    }
+    .contact-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      background: white;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+      transition: transform 0.3s ease;
+    }
+    .contact-card:hover .contact-icon { transform: rotate(8deg) scale(1.1); }
+    .contact-icon svg { width: 24px; height: 24px; }
+    
+    .contact-card h4 { 
+      margin: 0.2rem 0 0.1rem; 
+      font-size: 0.95rem; 
+      font-weight: 800; 
+      color: #0f172a; 
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .contact-text-primary { 
+      font-size: 0.82rem; 
+      font-weight: 700; 
+      color: #334155; 
+      margin: 0;
+    }
+    .contact-text-sub { 
+      font-size: 0.68rem; 
+      font-weight: 600; 
+      color: #64748b; 
+      margin: 0;
+      opacity: 0.85;
+    }
+    
+    /* Premium Themes */
+    .contact-phone .contact-icon { color: #0077b6; border: 1px solid rgba(0, 119, 182, 0.15); }
+    .contact-phone:hover { box-shadow: 0 25px 50px -12px rgba(0, 119, 182, 0.2); }
+    
+    .contact-whatsapp .contact-icon { color: #25d366; border: 1px solid rgba(37, 211, 102, 0.15); }
+    .contact-whatsapp:hover { box-shadow: 0 25px 50px -12px rgba(37, 211, 102, 0.2); }
+    
+    .contact-location .contact-icon { color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.15); }
+    .contact-location:hover { box-shadow: 0 25px 50px -12px rgba(244, 63, 94, 0.2); }
+
+    /* ── GLOBAL MINIMALIST FOOTER ── */
+    .site-footer {
+      padding: 3.5rem 1.5rem 1.25rem;
+      text-align: center;
+      margin-top: auto;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.6rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .footer-link {
+      color: #334155;
+      text-decoration: none;
+      font-size: 0.86rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .footer-link svg { width: 14px; height: 14px; color: #0077b6; }
+    .footer-link:hover { color: #0077b6; transform: translateY(-1px); }
+    .footer-copy { 
+      font-size: 0.8rem; 
+      color: #94a3b8; 
+      font-weight: 500; 
+      margin: 0;
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width: 600px) {
+      .contact-grid { gap: 8px; }
+      .contact-card { padding: 0.85rem 0.35rem; border-radius: 14px; }
+      .contact-card h4 { font-size: 0.78rem; font-weight: 800; }
+      .contact-card p { font-size: 0.64rem; font-weight: 600; }
+      .contact-icon { width: 34px; height: 34px; border-radius: 10px; }
+      .contact-icon svg { width: 18px; height: 18px; }
+      .footer-links { gap: 1.1rem; }
+      .footer-link { font-size: 0.8rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Global Toast Container -->
+  <div id="globalToast"></div>
+
+  <div class="bg-image"></div>
+  <div class="bg-blur"></div>
+  <div class="bg-overlay"></div>
+
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <!-- Logo + text column: logo on left, clinic name + tagline stacked on right -->
+      <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0;">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+             style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
+             alt="PrimeCare Logo" />
+        <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+          <div class="brand-title">PrimeCare Clinic</div>
+          <div class="brand-sub">Quality care · Trusted doctors</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        {% if session.get('user_id') %}
+        <button id="profileBtn" class="btn btn-outline" onclick="window.location.href='/patient_dashboard'">
+          <i data-lucide="user"></i>
+          <span>Profile</span>
+        </button>
+        {% else %}
+        <button id="loginBtn" class="btn btn-outline" onclick="openAuthModal('login')">
+          <i data-lucide="log-in"></i>
+          <span>Login</span>
+        </button>
+        {% endif %}
+        <button class="btn btn-primary" onclick="window.location.href='/booking'">
+          <i data-lucide="calendar-plus"></i>
+          <span>Book Now</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <h1>Care you can <span>trust</span>,<br>when you need it.</h1>
+      <p class="hero-tagline">
+        Consult experienced specialists at PrimeCare Clinic. Book your visit in a few clicks —
+        no phone calls, no waiting in long queues.
+      </p>
+
+      <div class="hero-highlights">
+        <div class="pill"><i data-lucide="shield-check"></i> Experienced specialists</div>
+        <div class="pill"><i data-lucide="ticket"></i> Online token booking</div>
+        <div class="pill"><i data-lucide="list-ordered"></i> Fair department allocation</div>
+        <div class="pill"><i data-lucide="clock"></i> Organised daily schedule</div>
+      </div>
+
+      <div class="hero-cta">
+        <div class="hero-cta-btns">
+          <button class="btn btn-primary" onclick="window.location.href='/booking'">
+            <i data-lucide="calendar-plus"></i>
+            Book an Appointment
+          </button>
+
+          <button class="btn-info" id="howItWorksBtn" title="How booking works" aria-label="How booking works">
+            <i data-lucide="info"></i>
+          </button>
+        </div>
+        <span class="hero-note">
+          <i data-lucide="zap"></i>
+          Instant token &middot; No waiting in queues
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS MODAL -->
+  <div class="info-modal-overlay" id="infoModal" role="dialog" aria-modal="true" aria-label="How booking works">
+    <div class="info-modal">
+      <button class="info-modal-close" id="infoModalClose" aria-label="Close">
+        <i data-lucide="x"></i>
+      </button>
+      <h3><i data-lucide="info"></i> How our booking works</h3>
+      <ul class="info-modal-steps">
+        <li><span class="step-num">1</span> Select a doctor or specialization and your preferred date.</li>
+        <li><span class="step-num">2</span> Fill in your name, age, gender and phone number.</li>
+        <li><span class="step-num">3</span> The system assigns your next available token automatically.</li>
+        <li><span class="step-num">4</span> View and save your confirmation with token number.</li>
+        <li><span class="step-num">5</span> Arrive 10–15 minutes early and show your token at the clinic.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PATIENT AUTH MODAL -->
+  <div class="auth-modal-overlay" id="authModal">
+    <div class="auth-modal">
+      <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close">
+        <i data-lucide="x"></i>
+      </button>
+
+      <!-- LOGIN VIEW -->
+      <div id="authView-login" class="view-section active">
+        <h3 class="auth-title">Welcome Back</h3>
+        <p class="auth-subtitle">Login to your patient account</p>
+        <form onsubmit="handleAuthSubmit(event, 'login')">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="login-email" class="form-control" placeholder="name@example.com" required>
+          </div>
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between;">
+              <label>Password</label>
+              <a href="#" onclick="switchAuthView('forgot')" style="font-size:0.8rem; color:#0077b6; text-decoration:none;">Forgot?</a>
+            </div>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="auth-btn" id="loginBtnSubmit">Sign In</button>
+        </form>
+        <div class="auth-switch">Don't have an account? <a onclick="switchAuthView('register')">Sign up</a></div>
+      </div>
+
+      <!-- REGISTER VIEW -->
+      <div id="authView-register" class="view-section">
+        <h3 class="auth-title">Create Account</h3>
+        <p class="auth-subtitle">Join PrimeCare Clinic</p>
+        <form onsubmit="handleAuthSubmit(event, 'register')">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" class="form-control" placeholder="John Doe" required>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="reg-email" class="form-control" placeholder="name@example.com" required>
+          </div>
+          <div class="form-group">
+            <label>Password (min 6 chars)</label>
+            <input type="password" id="reg-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('register')">
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="reg-confirm-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('register')">
+            <div id="register-match-msg" style="font-size:0.75rem; margin-top:0.3rem; font-weight:600; display:none;"></div>
+          </div>
+          <button type="submit" class="auth-btn" id="regBtnSubmit">Continue</button>
+        </form>
+        <div class="auth-switch">Already have an account? <a onclick="switchAuthView('login')">Log in</a></div>
+      </div>
+
+      <!-- OTP VIEW (Used for both Register and Forgot) -->
+      <div id="authView-otp" class="view-section">
+        <h3 class="auth-title">Enter OTP</h3>
+        <p class="auth-subtitle">We sent a 6-digit code to your email.</p>
+        <form onsubmit="handleAuthSubmit(event, 'otp')">
+          <div class="otp-inputs" id="authOtpInputs">
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+          </div>
+          <button type="submit" class="auth-btn" id="otpBtnSubmit">Verify Code</button>
+        </form>
+        <div class="auth-switch" style="margin-top: 1rem; margin-bottom: 0.8rem;">
+          Didn't receive code? <a id="resendOtpBtn" onclick="handleResendOtp()">Resend OTP</a>
+        </div>
+        <div class="auth-switch"><a onclick="switchAuthView('login')">Cancel</a></div>
+      </div>
+
+      <!-- FORGOT PASSWORD VIEW -->
+      <div id="authView-forgot" class="view-section">
+        <h3 class="auth-title">Reset Password</h3>
+        <p class="auth-subtitle">Enter email to receive reset code</p>
+        <form onsubmit="handleAuthSubmit(event, 'forgot')">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="forgot-email" class="form-control" placeholder="name@example.com" required>
+          </div>
+          <button type="submit" class="auth-btn" id="forgotBtnSubmit">Send Code</button>
+        </form>
+        <div class="auth-switch"><a onclick="switchAuthView('login')">Back to Login</a></div>
+      </div>
+
+      <!-- RESET PASSWORD VIEW -->
+      <div id="authView-reset" class="view-section">
+        <h3 class="auth-title">New Password</h3>
+        <p class="auth-subtitle">Create a secure new password</p>
+        <form onsubmit="handleAuthSubmit(event, 'reset')">
+          <div class="form-group">
+            <label>New Password (min 6 chars)</label>
+            <input type="password" id="reset-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('reset')">
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="reset-confirm-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('reset')">
+            <div id="reset-match-msg" style="font-size:0.75rem; margin-top:0.3rem; font-weight:600; display:none;"></div>
+          </div>
+          <button type="submit" class="auth-btn" id="resetBtnSubmit">Update Password</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DOCTORS HEADING (sticky) -->
+  <div id="doctors-anchor" style="scroll-margin-top: 0px;"></div>
+  <h2 class="doctors-heading" id="doctors-section">
+    <i data-lucide="stethoscope"></i>
+    Our Doctors
+  </h2>
+
+  <main class="content-inner">
+    {% if not doctors %}
+      <div class="no-doctors">
+        <i data-lucide="circle-alert" style="width:32px;height:32px;color:#bbb;display:block;margin:0 auto 0.5rem;"></i>
+        Doctor list is currently unavailable. Please contact the clinic or try again later.
+      </div>
+    {% else %}
+      {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+
+      {% for group in doctors | groupby('Specialization') %}
+        {% set spec_index = loop.index0 %}
+        <section class="spec-section" {% if loop.first %}id="first-spec"{% endif %} >
+          <h2 class="spec-heading">
+            <i data-lucide="activity"></i>
+            {{ group.grouper }}
+          </h2>
+          <div class="doctor-grid">
+            {% for doc in group.list %}
+              {% set card_id = 'timing-' ~ spec_index ~ '-' ~ loop.index0 %}
+              <article class="doctor-card">
+
+                <!-- Timing popup -->
+                <div class="card-timing-popup" id="{{ card_id }}">
+                  <div class="card-timing-header">
+                    <div class="card-timing-title">
+                      <i data-lucide="clock-3"></i>
+                      {{ doc.Name }}
+                    </div>
+                    <button type="button" class="close-timing" aria-label="Close timings">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                  <ul class="timing-list">
+                    {% for day in day_order %}
+                      {% set t = doc.DayTimes.get(day) if doc.DayTimes else None %}
+                      <li>
+                        <span class="timing-day">
+                          <i data-lucide="calendar-days"></i>
+                          <span class="full-day">{{ day }}</span>
+                          <span class="short-day">{{ day[:3] }}</span>
+                        </span>
+                        {% if day not in doc.Days %}
+                          <span class="timing-na">Not working</span>
+                        {% elif t %}
+                          <span class="timing-time">{{ t }}</span>
+                        {% else %}
+                          <span class="timing-na">Time not set</span>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+
+                <!-- Doctor image -->
+                <div class="doctor-img">
+                  {% if doc.Image %}
+                    <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" />
+                  {% else %}
+                    <img src="{{ url_for('static', filename='doctor_images/default.png') }}"
+                         alt="No image" loading="lazy" />
+                  {% endif %}
+                </div>
+
+                <!-- Doctor info -->
+                <div class="doctor-info">
+                  <h4>{{ doc.Name }}</h4>
+                  <p class="doctor-meta">
+                    <i data-lucide="stethoscope"></i>
+                    {{ doc.Specialization }}
+                  </p>
+                  <p class="doctor-meta">
+                    <i data-lucide="calendar-check"></i>
+                    {% if doc.Days %}{{ doc.Days | join(', ') }}{% else %}Not set{% endif %}
+                  </p>
+                  <button type="button" class="btn-timing" data-target="{{ card_id }}">
+                    <i data-lucide="clock"></i>
+                    View timings
+                  </button>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    {% endif %}
+
+  <footer class="site-footer" style="background: none;">
+    <!-- PREMIUM CONTACT SECTION (MOVED) -->
+    <div class="contact-grid">
+      <!-- Phone Card -->
+      <a href="tel:+918592031725" class="contact-card contact-phone">
+        <div class="contact-icon"><i data-lucide="phone"></i></div>
+        <h4>Call Us</h4>
+        <p class="contact-text-primary">8592031725</p>
+        <p class="contact-text-sub">Enquiries & Cancellation</p>
+      </a>
+
+      <!-- WhatsApp Card -->
+      <a href="https://wa.me/918592031725" target="_blank" class="contact-card contact-whatsapp">
+        <div class="contact-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </div>
+        <h4>WhatsApp</h4>
+        <p class="contact-text-primary">8592031725</p>
+        <p class="contact-text-sub">WhatsApp Enquiry</p>
+      </a>
+
+      <!-- Location Card -->
+      <a href="https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z/data=!3m1!4b1!4m4!3m3!8m2!3d11.5384625!4d75.8455156?entry=ttu" 
+         target="_blank" class="contact-card contact-location">
+        <div class="contact-icon"><i data-lucide="map-pin"></i></div>
+        <h4>Location</h4>
+        <p class="contact-text-primary">Koorachundu</p>
+        <p class="contact-text-sub">Get Directions</p>
+      </a>
+    </div>
+
+    <div class="footer-links" style="margin-top: 2rem;">
+      <a href="/booking" class="footer-link">
+        <i data-lucide="calendar-plus"></i> Book Appointment
+      </a>
+      <a href="javascript:void(0)" onclick="scrollToDoctors()" class="footer-link">
+        <i data-lucide="users"></i> Our Doctors
+      </a>
+      <a href="javascript:void(0)" class="footer-link" onclick="scrollToDoctors(true)" style="cursor: pointer;">
+        <i data-lucide="clock"></i> Doctor Timings
+      </a>
+      {% if session.get('user_id') %}
+      <a href="/patient_dashboard" class="footer-link">
+        <i data-lucide="user"></i> My Profile
+      </a>
+      {% else %}
+      <a href="javascript:void(0)" class="footer-link" onclick="openAuthModal('login')" style="cursor: pointer;">
+        <i data-lucide="shield-check"></i> Patient Login
+      </a>
+      {% endif %}
+    </div>
+    <div class="footer-content">
+      <p class="footer-copy">© 2026 PrimeCare Clinic. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Init Lucide icons
+    lucide.createIcons();
+
+    // --- PATIENT AUTH LOGIC ---
+    function openAuthModal(view = 'login') {
+      document.getElementById('authModal').classList.add('open');
+      switchAuthView(view);
+    }
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.remove('open');
+    }
+    function switchAuthView(viewId) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      document.getElementById('authView-' + viewId).classList.add('active');
+    }
+
+    // OTP Input Auto-Advance
+    document.querySelectorAll('.otp-input').forEach((input, index, inputs) => {
+      input.addEventListener('input', (e) => {
+        if (e.target.value && index < inputs.length - 1) inputs[index + 1].focus();
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && index > 0) inputs[index - 1].focus();
+      });
+    });
+
+    function validateMatch(flow) {
+      const p1 = document.getElementById(flow === 'register' ? 'reg-password' : 'reset-password').value;
+      const p2 = document.getElementById(flow === 'register' ? 'reg-confirm-password' : 'reset-confirm-password').value;
+      const msg = document.getElementById(flow === 'register' ? 'register-match-msg' : 'reset-match-msg');
+      const btn = document.getElementById(flow === 'register' ? 'regBtnSubmit' : 'resetBtnSubmit');
+
+      if (!p1 && !p2) {
+        msg.style.display = 'none';
+        return;
+      }
+      msg.style.display = 'block';
+
+      if (p1 === p2) {
+        msg.textContent = 'Passwords match';
+        msg.style.color = '#16a34a'; // Success green
+      } else {
+        msg.textContent = 'Passwords do not match';
+        msg.style.color = '#e11d48'; // Danger rose
+      }
+    }
+
+    async function handleAuthSubmit(event, flow) {
+      event.preventDefault();
+
+      if (flow === 'register' || flow === 'reset') {
+        const p1 = document.getElementById(flow === 'register' ? 'reg-password' : 'reset-password').value;
+        const p2 = document.getElementById(flow === 'register' ? 'reg-confirm-password' : 'reset-confirm-password').value;
+        
+        if (p1.length < 6) {
+          showToast('Password must be at least 6 characters', 'error');
+          return;
+        }
+        if (p1 !== p2) {
+          showToast('Passwords do not match', 'error');
+          return;
+        }
+      }
+
+      const btn = event.target.querySelector('button[type="submit"]');
+      const ogText = btn.textContent;
+      btn.textContent = 'Processing...';
+      btn.disabled = true;
+
+      try {
+        let endpoint = '';
+        let payload = {};
+
+        if (flow === 'login') {
+          endpoint = '/patient_login';
+          payload = { email: document.getElementById('login-email').value, password: document.getElementById('login-password').value };
+        } else if (flow === 'register') {
+          endpoint = '/patient_register';
+          payload = { name: document.getElementById('reg-name').value, email: document.getElementById('reg-email').value, password: document.getElementById('reg-password').value };
+        } else if (flow === 'otp') {
+          endpoint = '/verify_patient_otp';
+          const otpStr = Array.from(document.querySelectorAll('.otp-input')).map(i => i.value).join('');
+          payload = { otp: otpStr };
+        } else if (flow === 'forgot') {
+          endpoint = '/send_forgot_otp';
+          payload = { email: document.getElementById('forgot-email').value };
+        } else if (flow === 'reset') {
+          endpoint = '/reset_password';
+          payload = { password: document.getElementById('reset-password').value };
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast(data.msg, 'success');
+          if (flow === 'login' || flow === 'reset' || (flow === 'otp' && data.flow === 'register')) {
+            setTimeout(() => window.location.href = '/patient_dashboard', 1000);
+          } else if (flow === 'register' || flow === 'forgot') {
+            switchAuthView('otp');
+          } else if (flow === 'otp' && data.flow === 'forgot') {
+            switchAuthView('reset');
+          }
+        } else {
+          showToast(data.msg || 'An error occurred', 'error');
+        }
+      } catch (err) {
+        showToast('Network error, try again.', 'error');
+      } finally {
+        btn.textContent = ogText;
+        btn.disabled = false;
+      }
+    }
+
+    async function handleResendOtp() {
+      const btn = document.getElementById('resendOtpBtn');
+      if (btn.style.opacity === '0.5') return;
+      btn.style.opacity = '0.5';
+      btn.textContent = 'Sending...';
+
+      let isRegister = false;
+      let email = document.getElementById('reg-email').value;
+      if (email) {
+          isRegister = true;
+      } else {
+          email = document.getElementById('forgot-email').value;
+      }
+
+      const endpoint = isRegister ? '/patient_register' : '/send_forgot_otp';
+      const payload = isRegister ? { email: email, password: document.getElementById('reg-password').value } : { email: email };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if(data.success) {
+          showToast('OTP Resent!', 'success');
+        } else {
+          showToast(data.msg || 'Error resending OTP', 'error');
+        }
+      } catch (err) {
+        showToast('Network error', 'error');
+      } finally {
+        btn.textContent = 'Resend OTP';
+        setTimeout(() => btn.style.opacity = '1', 10000); // 10s cooldown
+      }
+    }
+
+    async function checkAdminSession() {
+      // Logout button removed from home page as per requirement
+    }
+
+    let activeModalAction = null;
+    function openModal(title, message, actionText, actionFn, isDanger = false) {
+      const modal = document.getElementById('universalModal');
+      if (!modal) return;
+      modal.querySelector('h3').textContent = title;
+      modal.querySelector('p').textContent = message;
+      const confirmBtn = modal.querySelector('.confirm-btn');
+      confirmBtn.textContent = actionText;
+      confirmBtn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      activeModalAction = actionFn;
+      modal.style.display = 'flex';
+      lucide.createIcons();
+    }
+    function closeModal() {
+      const modal = document.getElementById('universalModal');
+      if (modal) modal.style.display = 'none';
+      activeModalAction = null;
+    }
+    function handleConfirm() {
+      if (activeModalAction) activeModalAction();
+      closeModal();
+    }
+    function openLogoutModal() {
+      openModal('Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
+    }
+    async function confirmLogout() {
+      try {
+        await fetch('/admin_logout', { method: 'POST' });
+        showToast('Administrative session ended successfully', 'success');
+      } catch(err) { console.error('Logout failed:', err); }
+    }
+
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('globalToast');
+      if (!toast) return;
+      toast.className = 'toast-' + type;
+      toast.innerHTML = (type === 'success' 
+        ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' 
+        : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
+      lucide.createIcons();
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 5000);
+    }
+
+    // Update sticky positioning on load/resize — drives scroll-margin-top on anchor
+    function updateStickyLayout() {
+      const topBar = document.querySelector('.top-bar');
+      const docHeading = document.getElementById('doctors-section');
+      const anchor = document.getElementById('doctors-anchor');
+      if (topBar) {
+        const h = Math.round(topBar.getBoundingClientRect().height);
+        if (docHeading) docHeading.style.top = h + 'px';
+        if (anchor) anchor.style.scrollMarginTop = h + 'px';
+      }
+    }
+    window.addEventListener('resize', updateStickyLayout);
+    updateStickyLayout();
+
+    // Scroll to doctors section
+    function scrollToDoctors(openTimings = false) {
+      updateStickyLayout();
+      const anchor = document.getElementById('doctors-anchor');
+      if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      
+      if (openTimings) {
+        setTimeout(() => {
+          document.querySelectorAll('.card-timing-popup').forEach(p => p.classList.add('show'));
+        }, 500);
+      }
+    }
+    const viewDocsBtn = document.getElementById('viewDoctorsBtn');
+    if (viewDocsBtn) viewDocsBtn.addEventListener('click', () => scrollToDoctors());
+
+    // How it works modal
+    const infoModal = document.getElementById('infoModal');
+    const howBtn = document.getElementById('howItWorksBtn');
+    if (infoModal && howBtn) {
+      howBtn.addEventListener('click', () => {
+        infoModal.classList.add('open');
+      });
+      const closeBtn = document.getElementById('infoModalClose');
+      if (closeBtn) closeBtn.addEventListener('click', () => {
+        infoModal.classList.remove('open');
+      });
+      infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) infoModal.classList.remove('open');
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') infoModal.classList.remove('open');
+      });
+    }
+
+    // Timing popup open
+    document.querySelectorAll('.btn-timing').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const id = btn.dataset.target;
+        const popup = document.getElementById(id);
+        if (!popup) return;
+        document.querySelectorAll('.card-timing-popup.show').forEach(function (p) {
+          if (p !== popup) p.classList.remove('show');
+        });
+        popup.classList.add('show');
+        const rect = popup.getBoundingClientRect();
+        if (rect.top < 70) {
+          window.scrollBy({ top: rect.top - 80, behavior: 'smooth' });
+        }
+      });
+    });
+
+    // Timing popup close button
+    document.querySelectorAll('.card-timing-popup .close-timing').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const popup = btn.closest('.card-timing-popup');
+        if (popup) popup.classList.remove('show');
+      });
+    });
+
+    // Close timing popup on outside click
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.card-timing-popup') || e.target.closest('.btn-timing')) return;
+      document.querySelectorAll('.card-timing-popup.show').forEach(function (p) {
+        p.classList.remove('show');
+      });
+    });
+
+    // Re-run Lucide after DOM fully ready (for dynamic icons)
+    document.addEventListener('DOMContentLoaded', function () {
+      lucide.createIcons();
+      checkAdminSession();
+      
+      // Check if URL hash is #timings to automatically open doctor timings
+      if (window.location.hash === '#timings') {
+        setTimeout(() => scrollToDoctors(true), 600);
+      }
+    });
+  </script>
+
+
+  <!-- Universal Confirmation Modal (Reusable for Logout, etc.) -->
+  <div class="modal-overlay" id="universalModal">
+    <div class="modal-content">
+      <div class="modal-icon-container" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
+        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+      </div>
+      <h3>Confirm Action</h3>
+      <p>Are you sure you want to proceed with this action?</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary confirm-btn" onclick="handleConfirm()">Confirm</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

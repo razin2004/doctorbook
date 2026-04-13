@@ -1,0 +1,2353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book Appointment – PrimeCare Clinic</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <meta name="description" content="Book your clinic appointment online. Choose a doctor or specialization and get an instant token number." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+  <style>
+    /* ── Booking page: single header button stays inline on all sizes ── */
+    /* ── Header: buttons stack vertically on mobile to match homepage ── */
+    @media (max-width: 520px) {
+      .top-bar-inner {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.85rem;
+        gap: 0.5rem;
+      }
+      .top-actions {
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        gap: 0.28rem;
+        align-items: flex-end;
+      }
+      .top-actions .btn {
+        font-size: 0.75rem;
+        padding: 0.28rem 0.65rem;
+        margin-top: 0;
+        white-space: nowrap;
+        min-width: 90px;
+      }
+      .top-actions .btn svg { width: 12px; height: 12px; }
+    }
+
+    /* ── Section content spacing below panel-nav ── */
+    .booking-section.container,
+    .admin-section.container {
+      margin-top: 1rem;
+    }
+
+    /* ── Panel nav top margin adjustment when header is taller on narrow ── */
+    .panel-nav { margin-top: 1.1rem; }
+    .modal-icon-container {
+  margin-left: auto;
+  margin-right: auto;
+}
+    @media (max-width: 480px) {
+      .common-time-row > div {
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+      }
+      .common-time-row {
+        gap: 8px !important;
+      }
+      .day-row-edit, .day-row {
+        gap: 0.35rem;
+        padding: 0.4rem;
+      }
+    }
+    
+    /* Booking Viewer Styles */
+    .booking-table-wrapper {
+      overflow-x: auto;
+      margin-top: 1rem;
+      border-radius: 16px;
+      border: 1px solid rgba(0, 119, 182, 0.15);
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+    .booking-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .booking-table th {
+      background: rgba(0, 119, 182, 0.06);
+      color: #024b80;
+      font-weight: 700;
+      text-align: left;
+      padding: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-size: 0.75rem;
+      border-bottom: 2px solid rgba(0, 119, 182, 0.1);
+    }
+    .booking-table td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+      color: #364354;
+      font-weight: 500;
+    }
+    .booking-table tr:last-child td { border-bottom: none; }
+    .booking-table tr:hover { background: rgba(0, 119, 182, 0.04); }
+    
+    .token-badge {
+      background: #0077b6;
+      color: white;
+      padding: 0.25rem 0.6rem;
+      border-radius: 8px;
+      font-weight: 800;
+      font-family: inherit;
+      box-shadow: 0 2px 8px rgba(0, 119, 182, 0.2);
+    }
+
+    .booking-count-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: linear-gradient(135deg, #0077b6, #00b4d8);
+      color: #fff;
+      padding: 0.35rem 0.9rem;
+      border-radius: 99px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-left: 0.8rem;
+      box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
+    }
+
+    /* Success Token Card in Modal */
+    .success-token-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        text-align: center;
+        border: 2px dashed #0077b6;
+        margin: 1.5rem 0;
+        position: relative;
+    }
+    .success-token-value {
+        font-size: 3.5rem;
+        font-weight: 800;
+        color: #0077b6;
+        display: block;
+        margin: 0.5rem 0;
+        letter-spacing: -1px;
+    }
+
+    .booking-table-header {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #f8fafc; /* Solid background to cover table text while scrolling */
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Professional & Premium Printing Styles */
+    @media print {
+      @page { margin: 15mm; size: auto; }
+      body { background: white !important; font-family: 'Inter', sans-serif !important; }
+      body * { visibility: hidden !important; height: 0 !important; overflow: hidden !important; padding: 0 !important; margin: 0 !important; }
+      
+      #printReportTemplate, #printReportTemplate * { visibility: visible !important; display: block !important; height: auto !important; overflow: visible !important; }
+      #printReportTemplate { 
+        position: absolute; 
+        left: 0; 
+        top: 0; 
+        width: 100%; 
+        display: block !important;
+        padding: 0 !important;
+        visibility: visible !important;
+      }
+
+      /* Layout Structures */
+      .print-header { display: flex !important; justify-content: space-between !important; align-items: flex-end !important; border-bottom: 2.5px solid #0077b6 !important; padding-bottom: 12px !important; margin-bottom: 25px !important; }
+      .print-branding { display: flex !important; align-items: center !important; gap: 12px !important; }
+      .print-manifest-title { text-align: right !important; }
+      .print-manifest-title h1 { color: #0077b6 !important; font-size: 22px !important; text-transform: uppercase !important; letter-spacing: 2px !important; font-weight: 800 !important; margin: 0 !important; }
+      .print-manifest-title p { color: #64748b !important; font-size: 10px !important; margin: 0 !important; font-weight: 600 !important; }
+
+      .print-metadata-grid { 
+        display: grid !important; 
+        grid-template-columns: repeat(4, 1fr) !important; 
+        gap: 15px !important; 
+        margin-bottom: 30px !important;
+        background: #f8fafc !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        border: 1px solid #e2e8f0 !important;
+      }
+      .print-meta-item { display: flex !important; flex-direction: column !important; gap: 2px !important; }
+      .print-meta-label { font-size: 9px !important; text-transform: uppercase !important; color: #64748b !important; font-weight: 700 !important; letter-spacing: 0.5px !important; }
+      .print-meta-value { font-size: 13px !important; color: #0f172a !important; font-weight: 600 !important; }
+
+      /* Table Refinements */
+      #printReportTemplate table { display: table !important; width: 100% !important; border-collapse: collapse !important; margin-top: 10px !important; }
+      #printReportTemplate thead { display: table-header-group !important; }
+      #printReportTemplate tbody { display: table-row-group !important; }
+      #printReportTemplate tr { display: table-row !important; border-bottom: 1px solid #e2e8f0 !important; }
+      #printReportTemplate tr:nth-child(even) { background-color: #fbfcfe !important; }
+      
+      #printReportTemplate th { 
+        display: table-cell !important; 
+        padding: 12px 10px !important; 
+        text-align: left !important;
+        font-size: 10px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        color: #475569 !important;
+        border-bottom: 2px solid #0077b6 !important;
+        font-weight: 700 !important;
+      }
+      #printReportTemplate td { 
+        display: table-cell !important; 
+        padding: 12px 10px !important; 
+        font-size: 12px !important;
+        color: #334155 !important;
+        vertical-align: middle !important;
+      }
+      .print-token-cell { font-family: monospace !important; font-weight: 800 !important; color: #0077b6 !important; font-size: 14px !important; }
+      
+      .print-footer { 
+        margin-top: 50px !important; 
+        padding-top: 15px !important;
+        border-top: 1px solid #e2e8f0 !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        font-size: 9px !important;
+        color: #94a3b8 !important;
+      }
+    }
+
+    /* 🔥 Align icon + text perfectly centered */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn svg {
+  margin-right: 6px;
+  margin-left: 0;
+}
+/* 🔥 Override global flex heading behavior */
+.modal-content h3 {
+  display: block !important;
+  text-align: center !important;
+}
+
+@media (max-width: 480px) {
+  .print-btn {
+    padding: 0.4rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    min-width: auto !important;
+    width: auto !important;
+    gap: 0 !important;
+  }
+  .print-btn .btn-text {
+    display: none;
+  }
+  .print-btn i, .print-btn svg {
+    margin-right: 0 !important;
+  }
+}
+/* ✅ FIX: Common time inputs responsive (Add + Edit Doctor) */
+@media (max-width: 480px) {
+
+  .common-time-row {
+    display: flex;
+    flex-direction: column;   /* 🔥 stack vertically */
+    gap: 8px;
+    width: 100%;
+  }
+
+  .common-time-row > div {
+    width: 100%;
+    min-width: 0 !important;  /* 🔥 critical fix */
+    flex: 1 1 100%;
+  }
+
+  .common-time-row input {
+    width: 100%;
+  }
+}
+  </style>
+</head>
+
+<body class="bg-image">
+  <!-- Global Toast Container -->
+  <div id="globalToast"></div>
+  <div class="bg-blur"></div>
+
+  <!-- HEADER -->
+  <header class="top-bar">
+
+
+    <div class="top-bar-inner">
+      <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0;">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+             style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
+             alt="PrimeCare Logo" />
+        <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+          <div class="brand-title">PrimeCare Clinic</div>
+          <div class="brand-sub">Quality care · Trusted doctors</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn btn-outline" onclick="goHome()" style="margin-top:0;">
+          <i data-lucide="house"></i>
+          <span>Home</span>
+        </button>
+        <button id="headerLogoutBtn" class="btn btn-outline" style="display:none; color:#e11d48; border-color:rgba(225,29,72,0.3);">
+          <i data-lucide="log-out"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 3-PANEL CARD NAV -->
+  <div class="panel-nav">
+    <div class="panel-card" id="panelDoctor" onclick="showSection('bookDoctor', this)">
+      <div class="panel-card-icon"><i data-lucide="user-round-search"></i></div>
+      <div class="panel-card-text">
+        <div class="panel-card-label">By Doctor</div>
+        <div class="panel-card-sub">Pick a specific doctor</div>
+      </div>
+    </div>
+    <div class="panel-card" id="panelDept" onclick="showSection('bookDept', this)">
+      <div class="panel-card-icon"><i data-lucide="layers"></i></div>
+      <div class="panel-card-text">
+        <div class="panel-card-label">By Specialization</div>
+        <div class="panel-card-sub">Choose by department</div>
+      </div>
+    </div>
+    <div class="panel-card" id="panelAdmin" onclick="showSection('admin', this)">
+      <div class="panel-card-icon"><i data-lucide="shield-check"></i></div>
+      <div class="panel-card-text">
+        <div class="panel-card-label">Admin</div>
+        <div class="panel-card-sub">Manage doctors &amp; schedule</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="helper-text">
+    <i data-lucide="mouse-pointer-2" style="width:14px;height:14px;"></i>
+    <span>Select a panel above to book an appointment or manage records</span>
+  </div>
+
+  <!-- ==================== BOOK BY DOCTOR ==================== -->
+  <section id="bookDoctor" class="booking-section container" style="display:none;">
+    <h2><i data-lucide="user-round-search"></i> Book by Doctor</h2>
+    <div class="myclass">
+
+      <label for="doctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
+      <select id="doctorSelect"></select>
+
+      <label for="doctorDate"><i data-lucide="calendar"></i> Select Date</label>
+      <input type="date" id="doctorDate" />
+      <div id="doctorMsg"></div>
+
+      <form id="doctorBookingForm">
+        <label for="docName"><i data-lucide="user"></i> Full Name</label>
+        <input id="docName" required placeholder="Enter your full name" />
+
+        <label for="docAge"><i data-lucide="cake"></i> Age</label>
+        <input id="docAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+
+        <label for="docGender"><i data-lucide="venus"></i> Gender</label>
+        <select id="docGender" required>
+          <option value="">Select gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="docNumber"><i data-lucide="phone"></i> Phone Number</label>
+        <input id="docNumber" name="phone" type="tel"
+               pattern="[0-9]{10}" maxlength="10"
+               inputmode="numeric" required
+               placeholder="Enter 10-digit phone number" />
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1.5rem;">
+          <i data-lucide="calendar-check"></i> Book Appointment
+        </button>
+      </form>
+
+      <div id="doctorBookingResult"></div>
+    </div>
+  </section>
+
+  <!-- ==================== BOOK BY DEPT ==================== -->
+  <section id="bookDept" class="booking-section container" style="display:none;">
+    <h2><i data-lucide="layers"></i> Book by Specialization</h2>
+    <div class="myclass">
+
+      <label for="specSelect"><i data-lucide="activity"></i> Select Specialization</label>
+      <select id="specSelect"></select>
+
+      <label for="specDate"><i data-lucide="calendar"></i> Select Date</label>
+      <input type="date" id="specDate" />
+      <div id="noDoctorMsg"></div>
+
+      <div id="specTimesContainer" style="margin-top:8px;"></div>
+
+      <form id="departmentBookingForm">
+        <label for="depName"><i data-lucide="user"></i> Full Name</label>
+        <input id="depName" required placeholder="Enter your full name" />
+
+        <label for="depAge"><i data-lucide="cake"></i> Age</label>
+        <input id="depAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+
+        <label for="depGender"><i data-lucide="venus"></i> Gender</label>
+        <select id="depGender" required>
+          <option value="">Select gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="depNumber"><i data-lucide="phone"></i> Phone Number</label>
+        <input id="depNumber" name="phone" type="tel"
+               pattern="[0-9]{10}" maxlength="10"
+               inputmode="numeric" required
+               placeholder="Enter 10-digit phone number" />
+
+        <div id="depTimeWrapper" style="display:none; margin-top:10px;">
+          <label for="depTime"><i data-lucide="clock"></i> Preferred Time (optional)</label>
+          <select id="depTime">
+            <option value="">Any available time</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1.5rem;">
+          <i data-lucide="calendar-check"></i> Book Appointment
+        </button>
+      </form>
+
+      <div id="departmentBookingResult"></div>
+    </div>
+  </section>
+
+  <!-- ==================== ADMIN ==================== -->
+  <section id="admin" class="admin-section container" style="display:none;">
+
+    <!-- Login Form – glass panel matching other booking panels -->
+    <div id="adminLoginDiv">
+      <!-- Simplified Session Re-entry (Hidden by default) -->
+      <div id="adminActiveSessionDiv" class="myclass" style="display:none; max-width:460px; margin:0 auto; text-align:center; padding:2.5rem 2rem;">
+        <div style="background: rgba(16, 185, 129, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #10b981;">
+          <i data-lucide="shield-check" style="width: 32px; height: 32px;"></i>
+        </div>
+        <h3 style="margin: 0 0 0.5rem; color: #0f172a; font-size: 1.35rem; font-weight: 700;">Active Session</h3>
+        <p style="color: #64748b; font-size: 1rem; margin-bottom: 2rem; line-height: 1.5;">You are already authenticated as an administrator.</p>
+        <button class="btn btn-primary" onclick="showAdminOptions()" style="width:100%; border-radius:16px; padding:0.9rem;">
+          <i data-lucide="layout-dashboard"></i> Enter Control Panel
+        </button>
+      </div>
+
+      <!-- Standard Login Form -->
+      <div id="adminLoginFormDiv" class="myclass" style="max-width:460px; margin:0 auto;">
+        <h2 style="margin-top:0;"><i data-lucide="shield-check"></i> Admin Login</h2>
+        <p style="font-size:0.85rem; color:#6b7280; margin:-0.4rem 0 1rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.35rem;">
+          <span style="display:flex; align-items:center; gap:0.4rem;">
+            <i data-lucide="lock" style="width:14px;height:14px;"></i>
+            Only authorized admin accounts
+          </span>
+          <span>can access this section securely.</span>
+        </p>
+        <form id="adminLoginForm">
+          <label for="adminEmail"><i data-lucide="mail"></i> Admin Email</label>
+          <input id="adminEmail" type="email" required placeholder="Enter admin email" />
+
+          <!-- Error shown ABOVE the send button -->
+          <div id="adminPreOtpMsg"
+               style="display:none; font-size:0.86rem; margin-bottom:0.5rem; border-radius:9px; padding:0.45rem 0.75rem; font-weight:500;"
+          ></div>
+
+          <button type="button" id="sendOtpBtn" class="btn btn-primary" style="width:100%; margin-top:1rem;">
+            <i data-lucide="send-horizontal"></i> Send OTP
+          </button>
+
+          <div id="otpSection" style="display:none; margin-top:0.8rem;">
+            <label for="adminOtp"><i data-lucide="key-round"></i> Enter OTP</label>
+            <input id="adminOtp" type="text" required placeholder="6-digit code from your email" maxlength="6" inputmode="numeric" />
+            <!-- Error shown ABOVE the login button -->
+            <div id="adminLoginResult"
+                 style="display:none; font-size:0.86rem; margin:0.45rem 0; border-radius:9px; padding:0.45rem 0.75rem; font-weight:500;"
+            ></div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1rem;">
+              <i data-lucide="log-in"></i> Login
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Admin Options (after login) -->
+    <div id="adminOptions" style="display:none; margin-top: 1.5rem;">
+      <h2 style="text-align:center; margin-bottom: 1.2rem;"><i data-lucide="settings-2"></i> Admin Control Panel</h2>
+      
+      <div class="panel-nav admin-nav">
+        <div class="panel-card" onclick="showAdminPanel('book', this)">
+          <div class="panel-card-icon"><i data-lucide="phone-call"></i></div>
+          <div class="panel-card-text">
+            <div class="panel-card-label">Patient Booking</div>
+            <div class="panel-card-sub">Quick booking for call-in patients</div>
+          </div>
+        </div>
+
+        <div class="panel-card" onclick="showAdminPanel('view', this)">
+          <div class="panel-card-icon"><i data-lucide="calendar-check-2"></i></div>
+          <div class="panel-card-text">
+            <div class="panel-card-label">Manage Bookings</div>
+            <div class="panel-card-sub">View tokens & manage cancellations</div>
+          </div>
+        </div>
+
+        <div class="panel-card" onclick="showAdminPanel('add', this)">
+          <div class="panel-card-icon"><i data-lucide="user-plus"></i></div>
+          <div class="panel-card-text">
+            <div class="panel-card-label">Add Doctor</div>
+            <div class="panel-card-sub">Register a new clinic doctor</div>
+          </div>
+        </div>
+
+        <div class="panel-card" onclick="showAdminPanel('edit', this)">
+          <div class="panel-card-icon"><i data-lucide="pencil"></i></div>
+          <div class="panel-card-text">
+            <div class="panel-card-label">Edit Doctor</div>
+            <div class="panel-card-sub">Update details & schedule</div>
+          </div>
+        </div>
+
+        <div class="panel-card" onclick="showAdminPanel('delete', this)">
+          <div class="panel-card-icon"><i data-lucide="trash-2"></i></div>
+          <div class="panel-card-text">
+            <div class="panel-card-label">Delete Doctor</div>
+            <div class="panel-card-sub">Remove from the registry</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ADD DOCTOR PANEL -->
+    <div id="addDoctorPanel" class="adminPanel" style="display:none;">
+      <h3><i data-lucide="user-plus"></i> Add Doctor</h3>
+      <form id="adminAddDoctorForm" enctype="multipart/form-data">
+
+        <label for="addDocName"><i data-lucide="user"></i> Doctor Name</label>
+        <input id="addDocName" required placeholder="e.g. Dr.Razin Muhammad" />
+
+        <label for="addDocSpec"><i data-lucide="activity"></i> Specialization</label>
+        <input id="addDocSpec" required placeholder="e.g. Cardiology" />
+
+        <label style="margin-top:1rem;"><i data-lucide="calendar-days"></i> Working Days &amp; Time</label>
+
+        <div id="addDayTimes">
+          {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+          <div class="day-row">
+            <label>
+              <input type="checkbox" class="day-check" data-day="{{ day }}"> {{ day }}
+            </label>
+            <div class="day-time" data-day-time="{{ day }}" style="display:none; margin-left:15px;">
+              <input type="time" class="start-time" data-day="{{ day }}" /> &ndash;
+              <input type="time" class="end-time" data-day="{{ day }}" />
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <label style="margin-top:0.8rem;">
+          <input type="checkbox" id="sameTimeAll" style="width:16px;height:16px;accent-color:#0077b6;" />
+          Same time slot for all selected days
+        </label>
+
+        <div id="commonTimeBlock" style="display:none; margin-top:10px;">
+          <label><i data-lucide="clock"></i> Common Time Slot</label>
+          <div class="common-time-row" style="display:flex; gap:12px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:120px;">
+              <label for="commonStart" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="play-circle"></i> Start</label>
+              <input type="time" id="commonStart" />
+            </div>
+            <div style="flex:1; min-width:120px;">
+              <label for="commonEnd" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="stop-circle"></i> End</label>
+              <input type="time" id="commonEnd" />
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:1rem;">
+          <label for="addDocImage"><i data-lucide="image"></i> Profile Image(4:5)</label>
+          <input type="file" id="addDocImage" name="image" accept="image/*" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1.5rem;">
+          <i data-lucide="plus-circle"></i> Add Doctor
+        </button>
+      </form>
+    </div>
+
+    <!-- EDIT DOCTOR PANEL -->
+    <div id="editDoctorPanel" class="adminPanel" style="display:none;">
+      <h3><i data-lucide="pencil"></i> Edit Doctor</h3>
+      <form id="adminEditDoctorForm">
+
+        <label for="editDoctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
+        <select id="editDoctorSelect" required>
+          <option value="">-- Select Doctor --</option>
+        </select>
+
+        <label style="margin-top:1rem;"><i data-lucide="calendar-days"></i> Working Days &amp; Time</label>
+
+        <div id="editDayTimes">
+          {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+          <div class="day-row-edit">
+            <label>
+              <input type="checkbox" class="day-check-edit" data-day="{{ day }}"> {{ day }}
+            </label>
+            <div class="day-time-edit" data-day-time-edit="{{ day }}" style="display:none; margin-left:15px;">
+              <input type="time" class="start-time-edit" data-day="{{ day }}" /> &ndash;
+              <input type="time" class="end-time-edit" data-day="{{ day }}" />
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <label style="margin-top:0.8rem;">
+          <input type="checkbox" id="sameTimeAllEdit" style="width:16px;height:16px;accent-color:#0077b6;" />
+          Same time slot for all selected days
+        </label>
+
+        <div id="commonTimeBlockEdit" style="display:none; margin-top:10px;">
+          <label><i data-lucide="clock"></i> Common Time Slot</label>
+          <div class="common-time-row" style="display:flex; gap:12px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:120px;">
+              <label for="commonStartEdit" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="play-circle"></i> Start</label>
+              <input type="time" id="commonStartEdit" />
+            </div>
+            <div style="flex:1; min-width:120px;">
+              <label for="commonEndEdit" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="stop-circle"></i> End</label>
+              <input type="time" id="commonEndEdit" />
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1.2rem;">
+          <i data-lucide="save"></i> Update Doctor
+        </button>
+      </form>
+
+      <!-- TEMPORARY LEAVE -->
+      <hr style="margin:1.5rem 0; border:none; border-top:1.5px solid rgba(0,119,182,0.15);" />
+
+      <h4><i data-lucide="calendar-off"></i> Temporary Leave</h4>
+      <p style="font-size:0.88rem; color:#6b7280; margin-bottom:0.8rem; display:flex; align-items:center; gap:0.35rem;">
+        <i data-lucide="info" style="width:14px;height:14px;color:#0077b6;"></i>
+        Select the doctor above, then add or remove leave dates.
+      </p>
+
+      <label for="leaveDate"><i data-lucide="calendar-x"></i> Leave Date</label>
+      <input type="date" id="leaveDate" />
+
+      <label for="leaveReason"><i data-lucide="message-square"></i> Reason (optional)</label>
+      <input type="text" id="leaveReason" maxlength="12" placeholder="Conference / Personal / etc." />
+
+      <button type="button" id="addLeaveBtn" class="btn btn-primary" style="width:100%; margin-top:1.20rem;">
+        <i data-lucide="plus-circle"></i> Add Leave
+      </button>
+
+      <div id="leaveMsg" style="margin-top:8px; font-size:0.88rem;"></div>
+
+      <h5 style="margin-top:1.2rem;"><i data-lucide="list"></i> Existing Leave Dates</h5>
+      <div style="overflow-x:auto; margin-top:0.5rem;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+          <thead>
+            <tr style="background:rgba(0,119,182,0.07);">
+              <th style="border-bottom:1.5px solid #d1e9f6; padding:0.45rem 0.5rem; text-align:left; color:#024b80;">
+                <span style="display:flex;align-items:center;gap:0.3rem;">
+                  <i data-lucide="calendar" style="width:13px;height:13px;"></i> Date
+                </span>
+              </th>
+              <th style="border-bottom:1.5px solid #d1e9f6; padding:0.45rem 0.5rem; text-align:left; color:#024b80;">
+                <span style="display:flex;align-items:center;gap:0.3rem;">
+                  <i data-lucide="message-square" style="width:13px;height:13px;"></i> Reason
+                </span>
+              </th>
+              <th style="border-bottom:1.5px solid #d1e9f6; padding:0.45rem 0.5rem; text-align:left; color:#024b80;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="leaveTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DELETE DOCTOR PANEL -->
+    <div id="deleteDoctorPanel" class="adminPanel" style="display:none;">
+      <h3><i data-lucide="trash-2"></i> Delete Doctor</h3>
+      <form id="adminDeleteDoctorForm">
+        <label for="deleteDoctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
+        <select id="deleteDoctorSelect" required>
+          <option value="">-- Select Doctor --</option>
+        </select>
+        <button type="submit" class="btn btn-danger" style="width:100%; margin-top:1.5rem;">
+          <i data-lucide="trash-2"></i> Delete Doctor
+        </button>
+      </form>
+    </div>
+
+
+    <!-- PATIENT BOOKING PANEL (Admin) -->
+    <div id="bookPatientPanel" class="adminPanel" style="display:none;">
+      <h3><i data-lucide="phone-call"></i> Call-in Patient Booking</h3>
+      <form id="adminBookPatientForm">
+        <label for="adminBookDoc"><i data-lucide="stethoscope"></i> Select Doctor</label>
+        <select id="adminBookDoc" required onchange="updateAdminBookDates()"></select>
+
+        <label for="adminBookDate"><i data-lucide="calendar"></i> Select Date</label>
+        <input type="date" id="adminBookDate" required />
+        <div id="adminBookDateMsg"></div>
+
+        <hr style="margin: 1.5rem 0; opacity: 0.1;" />
+
+        <label for="adminBookName"><i data-lucide="user"></i> Patient Name (Required)</label>
+        <input id="adminBookName" required placeholder="Enter full name" />
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px;">
+          <div style="flex: 1; min-width: 120px;">
+            <label for="adminBookAge" style="font-size: 0.82rem;"><i data-lucide="cake"></i> Age (Optional)</label>
+            <input id="adminBookAge" type="number" min="1" max="110" placeholder="Age" />
+          </div>
+          <div style="flex: 1; min-width: 120px;">
+            <label for="adminBookGender" style="font-size: 0.82rem;"><i data-lucide="venus"></i> Gender (Optional)</label>
+            <select id="adminBookGender">
+              <option value="">Select</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="adminBookPhone" style="margin-top: 10px;"><i data-lucide="phone"></i> Phone Number (Optional)</label>
+        <input id="adminBookPhone" type="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit number" />
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1.5rem;">
+          <i data-lucide="calendar-check"></i> Confirm Booking
+        </button>
+      </form>
+      <div id="adminBookResult" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- VIEW BOOKINGS PANEL -->
+    <div id="viewBookingsPanel" class="adminPanel" style="display:none;">
+      <h3>
+        <i data-lucide="calendar-check-2"></i> Manage Bookings
+        <span id="bookingCountBadge" class="booking-count-badge" style="display:none;">
+          <i data-lucide="users"></i> <span id="bookingCountNum">0</span>
+        </span>
+      </h3>
+      
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap:15px; margin-bottom:1.5rem;">
+        <div>
+          <label for="viewBookingDoctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
+          <select id="viewBookingDoctorSelect" required>
+            <option value="">-- Select Doctor --</option>
+          </select>
+        </div>
+        <div>
+          <label for="viewBookingDate"><i data-lucide="calendar"></i> Select Date</label>
+          <input type="date" id="viewBookingDate" required />
+        </div>
+      </div>
+
+      <button type="button" id="fetchBookingsBtn" class="btn btn-primary" style="width:100%; margin-bottom:1rem;">
+        <i data-lucide="search"></i> Show Bookings
+      </button>
+
+      <div id="viewBookingMsg" style="margin-top:8px; font-size:0.88rem; display:none;"></div>
+
+      <div class="booking-table-wrapper" id="bookingTableWrapper" style="display:none;">
+        <div class="booking-table-header">
+            <h4 style="margin:0; font-size:1rem; color:#024b80;"><i data-lucide="list"></i> Bookings List</h4>
+            <button onclick="prepareAndPrint()" class="btn btn-outline no-print print-btn" style="padding: 0.4rem 0.8rem; font-size:0.82rem;">
+                <i data-lucide="printer"></i> <span class="btn-text">Print List</span>
+            </button>
+        </div>
+        <table class="booking-table">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Patient Name</th>
+              <th>Age</th>
+              <th>Gender</th>
+              <th>Phone</th>
+              <th class="no-print">Action</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PROFESSIONAL PRINT TEMPLATE (Hidden) -->
+    <div id="printReportTemplate" style="display: none;">
+      <!-- Modern Header -->
+      <div class="print-header">
+        <div class="print-branding">
+          <img src="{{ url_for('static', filename='primecare-logo.svg') }}" style="width: 42px; height: 42px;" />
+          <div>
+            <h2 style="margin:0; font-size:18px; color:#0f172a; font-weight:800;">PrimeCare Clinic</h2>
+            <p style="margin:0; font-size:9px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Premium Medical Services Panel</p>
+          </div>
+        </div>
+        <div class="print-manifest-title">
+          <h1>Booking List</h1>
+          <p id="printTimestampMeta"></p>
+        </div>
+      </div>
+
+      <!-- Discovery Metadata -->
+      <div class="print-metadata-grid">
+        <div class="print-meta-item">
+          <span class="print-meta-label">Doctor</span>
+          <span class="print-meta-value" id="printDocName"></span>
+        </div>
+        <div class="print-meta-item">
+          <span class="print-meta-label">Specialization</span>
+          <span class="print-meta-value" id="printSpec"></span>
+        </div>
+        <div class="print-meta-item">
+          <span class="print-meta-label">Date</span>
+          <span class="print-meta-value" id="printDate"></span>
+        </div>
+        <div class="print-meta-item">
+          <span class="print-meta-label">Total Bookings</span>
+          <span class="print-meta-value" id="printTotal"></span>
+        </div>
+      </div>
+
+      <!-- Main Data Table -->
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 80px;">Token ID</th>
+            <th>Patient Identity</th>
+            <th style="width: 60px;">Age</th>
+            <th style="width: 100px;">Gender</th>
+            <th>Contact Reference</th>
+          </tr>
+        </thead>
+        <tbody id="printTableBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+
+      <!-- Secure Footer -->
+      <div class="print-footer">
+        <div>Generated by Authorized Admin Panel · System Access Logged</div>
+        <div style="text-align: right;">
+          <strong>PrimeCare Clinic</strong><br/>
+          Confidential Patient Manifest · Authorized Use Only
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // ─── Lucide icons ───────────────────────────────────────────
+    lucide.createIcons();
+
+    // ─── Utility ────────────────────────────────────────────────
+    const dayMap = {
+      Sunday:0, Monday:1, Tuesday:2, Wednesday:3,
+      Thursday:4, Friday:5, Saturday:6
+    };
+    let doctorsBySpecialization = {};
+    let workingDays = [];
+    let lastActiveAdminPanel = null; // Track last active admin sub-panel
+
+    function goHome() { window.location.href = '/'; }
+
+    function timeToMinutes(t) {
+      if (!t) return 0;
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function showMessage(divId, msg, color = 'red', timeout = 5000) {
+      const div = document.getElementById(divId);
+      if (!div) return;
+      
+      div.style.display = 'block';
+      div.innerHTML = (color === 'green' 
+        ? '<i data-lucide="check-circle" style="width:16px;height:16px;vertical-align:middle;margin-right:8px;"></i> ' 
+        : '<i data-lucide="alert-circle" style="width:16px;height:16px;vertical-align:middle;margin-right:8px;"></i> ') + msg;
+      
+      div.className = color === 'green' ? 'msg-success' : '';
+      lucide.createIcons();
+      if (timeout > 0) setTimeout(() => { div.style.display = 'none'; div.innerHTML = ''; }, timeout);
+    }
+
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('globalToast');
+      if (!toast) return;
+      toast.className = 'toast-' + type;
+      toast.innerHTML = (type === 'success' 
+        ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' 
+        : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
+      lucide.createIcons();
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 5000);
+    }
+
+    // map section id → panel card id
+    const sectionPanelMap = {
+      bookDoctor: 'panelDoctor',
+      bookDept:   'panelDept',
+      admin:      'panelAdmin'
+    };
+
+    function showSection(id, clickedEl) {
+      document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+
+      // deactivate all panel cards
+      document.querySelectorAll('.panel-card').forEach(c => c.classList.remove('active'));
+      // activate the matching panel card
+      const panelId = sectionPanelMap[id];
+      if (panelId) document.getElementById(panelId)?.classList.add('active');
+
+      if (id === 'admin') {
+        checkAdminSession();
+      }
+      localStorage.setItem('activeSection', id); // Save state
+      lucide.createIcons();
+    }
+
+    async function checkAdminSession() {
+      try {
+        const res  = await fetch('/check_admin');
+        const data = await res.json();
+        
+        const loginDiv  = document.getElementById('adminLoginDiv');
+        const activeDiv = document.getElementById('adminActiveSessionDiv');
+        const formDiv   = document.getElementById('adminLoginFormDiv');
+        const options   = document.getElementById('adminOptions');
+
+        const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+
+        if (data.logged_in) {
+          if (headerLogoutBtn) headerLogoutBtn.style.display = 'inline-flex';
+          
+          if (lastActiveAdminPanel) {
+            // Restore last active sub-panel directly
+            showAdminOptions();
+            showAdminPanel(lastActiveAdminPanel, document.querySelector(`.admin-nav .panel-card[onclick*="'${lastActiveAdminPanel}'"]`));
+          } else {
+            formDiv.style.display = 'none';
+            activeDiv.style.display = 'block';
+            options.style.display = 'none';
+            loginDiv.style.display = 'block';
+          }
+        } else {
+          if (headerLogoutBtn) headerLogoutBtn.style.display = 'none';
+          resetAdminLoginUI();
+          formDiv.style.display = 'block';
+          activeDiv.style.display = 'none';
+          options.style.display = 'none';
+          loginDiv.style.display = 'block';
+        }
+      } catch(e) { console.error('Session check failed:', e); }
+    }
+
+    function resetAdminLoginUI() {
+      // Inputs
+      const emailField = document.getElementById('adminEmail');
+      const otpField = document.getElementById('adminOtp');
+      if (emailField) emailField.value = '';
+      if (otpField) otpField.value = '';
+
+      // UI Sections
+      const otpSection = document.getElementById('otpSection');
+      if (otpSection) otpSection.style.display = 'none';
+
+      // Messages
+      const preOtpMsg = document.getElementById('adminPreOtpMsg');
+      const loginRes = document.getElementById('adminLoginResult');
+      if (preOtpMsg) { preOtpMsg.textContent = ''; preOtpMsg.style.display = 'none'; }
+      if (loginRes) { loginRes.textContent = ''; loginRes.style.display = 'none'; }
+
+      // Buttons
+      const sendBtn = document.getElementById('sendOtpBtn');
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.style.display = 'inline-flex';
+        sendBtn.innerHTML = '<i data-lucide="send-horizontal"></i> Send OTP';
+      }
+      
+      const loginBtn = document.querySelector('#adminLoginForm button[type="submit"]');
+      if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i data-lucide="log-in"></i> Login';
+      }
+      lucide.createIcons();
+    }
+
+    function showAdminOptions() {
+      document.getElementById('adminLoginDiv').style.display = 'none';
+      document.getElementById('adminOptions').style.display = 'block';
+      loadDoctorPairs();
+      lucide.createIcons();
+    }
+
+    function showAdminPanel(type, btn) {
+      lastActiveAdminPanel = type; // Save state
+      document.querySelectorAll('.adminPanel').forEach(p => p.style.display = 'none');
+      // Fix: Specifically target panel-cards in the admin section to clear active state
+      document.querySelectorAll('.admin-nav .panel-card').forEach(b => b.classList.remove('active'));
+      
+      if (type === 'add')    document.getElementById('addDoctorPanel').style.display    = 'block';
+      else if (type === 'edit')   document.getElementById('editDoctorPanel').style.display   = 'block';
+      else if (type === 'delete') document.getElementById('deleteDoctorPanel').style.display = 'block';
+      else if (type === 'view') {
+        document.getElementById('viewBookingsPanel').style.display = 'block';
+        loadDoctorsForView();
+      }
+      else if (type === 'book') {
+        document.getElementById('bookPatientPanel').style.display = 'block';
+        loadDoctorsForAdminBooking();
+      }
+      
+      if (btn) btn.classList.add('active');
+      localStorage.setItem('activeAdminPanel', type); // Save state
+      lucide.createIcons();
+    }
+
+    // ─── Load doctors ──────────────────────────────────────────
+    async function loadDoctors() {
+      try {
+        console.log("Fetching doctors list...");
+        const res = await fetch('/get_doctors');
+        if (!res.ok) throw new Error('API request failed');
+        const doctors = await res.json();
+        const doctorSelect = document.getElementById('doctorSelect');
+        const specSelect   = document.getElementById('specSelect');
+
+        if (!doctorSelect || !specSelect) return;
+
+        doctorSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
+        specSelect.innerHTML   = "<option value=''>-- Select Specialization --</option>";
+        doctorsBySpecialization = {};
+
+        if (!doctors || doctors.length === 0) {
+          console.warn("API returned empty doctor list");
+          const opt = document.createElement('option');
+          opt.value = ''; opt.textContent = 'No doctors available';
+          if (doctorSelect) doctorSelect.appendChild(opt);
+          if (specSelect) specSelect.appendChild(opt.cloneNode(true));
+          return;
+        }
+
+        console.log(`Populating ${doctors.length} doctors into dropdowns.`);
+        const specializations = new Set();
+        doctors.forEach(d => {
+          try {
+            if (!d.Name || !d.Specialization) {
+              console.warn("Skipping doctor record with missing Name or Specialization:", d);
+              return;
+            }
+            const opt = document.createElement('option');
+            opt.value = d.SheetURL || '';
+            opt.textContent = `${d.Name} (${d.Specialization})`;
+            
+            // Normalize Days
+            const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
+            opt.dataset.days = daysArr.join(',');
+            opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
+            
+            doctorSelect.appendChild(opt);
+            
+            const spec = d.Specialization.trim();
+            specializations.add(spec);
+            if (!doctorsBySpecialization[spec]) doctorsBySpecialization[spec] = [];
+            doctorsBySpecialization[spec].push({ ...d, Days: daysArr, DayTimes: d.DayTimes || {} });
+          } catch (e) {
+             console.error("Error processing doctor record:", d, e);
+          }
+        });
+
+        [...specializations].sort().forEach(spec => {
+          const opt = document.createElement('option');
+          opt.value = spec; opt.textContent = spec;
+          specSelect.appendChild(opt);
+        });
+        console.log("Dropdowns populated successfully.");
+        lucide.createIcons();
+      } catch (err) {
+        console.error("Error in loadDoctors:", err);
+      }
+    }
+
+    async function loadDoctorPairs() {
+      const res = await fetch('/get_doctor_pairs');
+      const pairs = await res.json();
+      const select = document.getElementById('deleteDoctorSelect');
+      select.innerHTML = "<option value=''>-- Select Doctor --</option>";
+      if (!pairs || pairs.length === 0) {
+        const opt = document.createElement('option');
+        opt.value=''; opt.textContent='No doctors available';
+        select.appendChild(opt); return;
+      }
+      pairs.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p; opt.textContent = p;
+        select.appendChild(opt);
+      });
+    }
+
+    async function loadDoctorsForEdit() {
+      const select = document.getElementById('editDoctorSelect');
+      const viewSelect = document.getElementById('viewBookingDoctorSelect');
+      if (!select && !viewSelect) return;
+
+      const elements = [];
+      if (select) elements.push(select);
+      if (viewSelect) elements.push(viewSelect);
+
+      console.log("Loading doctors for admin select...");
+      elements.forEach(el => el.innerHTML = "<option value=''>-- Loading doctors... --</option>");
+
+      try {
+        const res = await fetch('/get_doctors');
+        if (!res.ok) { 
+          elements.forEach(el => el.innerHTML="<option value=''>-- Could not load doctors --</option>"); 
+          return; 
+        }
+        const doctors = await res.json();
+        elements.forEach(el => el.innerHTML = "<option value=''>-- Select Doctor --</option>");
+
+        if (!doctors || doctors.length === 0) {
+          elements.forEach(el => {
+            const opt=document.createElement('option'); opt.value=''; opt.textContent='No doctors available';
+            el.appendChild(opt);
+          });
+          return;
+        }
+        doctors.forEach(d => {
+          const value = `${d.Name} - ${d.Specialization}`;
+          const opt = document.createElement('option');
+          opt.value = value; opt.textContent = value;
+          const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
+          opt.dataset.days = daysArr.join(',');
+          opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
+          
+          if (select) select.appendChild(opt.cloneNode(true));
+          if (viewSelect) viewSelect.appendChild(opt);
+        });
+      } catch(err) {
+        elements.forEach(el => el.innerHTML="<option value=''>-- Error loading doctors --</option>");
+      }
+    }
+
+    function loadDoctorsForView() {
+      loadDoctorsForEdit(); // shared logic
+    }
+
+    // ─── Doctor select → date ──────────────────────────────────
+    document.getElementById('doctorSelect').addEventListener('change', function () {
+      const selectedOption = this.selectedOptions[0];
+      const doctorMsgDiv = document.getElementById('doctorMsg');
+      const dateInput    = document.getElementById('doctorDate');
+      doctorMsgDiv.style.display='none'; doctorMsgDiv.textContent='';
+      if (dateInput) {
+        const today = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+        dateInput.setAttribute('min', today);
+        dateInput.value = '';
+      }
+      if (!selectedOption || !selectedOption.value) { workingDays=[]; return; }
+      const daysStr = selectedOption.dataset.days;
+      workingDays = daysStr ? daysStr.split(',').map(day=>dayMap[day.trim()]) : [];
+    });
+
+    document.getElementById('doctorDate').addEventListener('change', async function () {
+      const doctorMsgDiv = document.getElementById('doctorMsg');
+      doctorMsgDiv.style.display='none'; doctorMsgDiv.textContent='';
+      const doctorSelect = document.getElementById('doctorSelect');
+      const selectedDoctorOption = doctorSelect.selectedOptions[0];
+      if (!selectedDoctorOption || !selectedDoctorOption.value) {
+        showMessage('doctorMsg','Please select a doctor to view availability.');
+        this.value=''; return;
+      }
+      const daysStr = selectedDoctorOption.dataset.days || '';
+      workingDays = daysStr ? daysStr.split(',').map(day=>dayMap[day.trim()]) : [];
+      const selectedDate = new Date(this.value);
+      const selectedDay  = selectedDate.getDay();
+      if (!workingDays.includes(selectedDay)) {
+        showMessage('doctorMsg','This doctor is not available on the selected date. Please choose another.');
+        this.value=''; return;
+      }
+      const todayStr  = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+      const todayDate = new Date(todayStr);
+      if (selectedDate < todayDate) {
+        showMessage('doctorMsg','Appointment dates cannot be set in the past. Please select a future date.');
+        this.value=''; return;
+      }
+      if (this.value === todayStr) {
+        const dayTimes = selectedDoctorOption.dataset.dayTimes ? JSON.parse(selectedDoctorOption.dataset.dayTimes) : {};
+        const weekdayName = Object.keys(dayMap).find(k=>dayMap[k]===selectedDay);
+        const timeRange = dayTimes[weekdayName];
+        if (timeRange) {
+          const parts = timeRange.split('-');
+          const endTimeStr = parts[1] ? parts[1].trim() : null;
+          if (endTimeStr) {
+            const nowStr = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'});
+            if (timeToMinutes(nowStr) > timeToMinutes(endTimeStr)) {
+              showMessage('doctorMsg','Bookings for this doctor have closed for today. Please select another date.');
+              this.value=''; return;
+            }
+          }
+        }
+      }
+
+      // Live Availability/Leave Check via API
+      try {
+        const res = await fetch(`/api/check_doctor_availability?sheet_url=${encodeURIComponent(selectedDoctorOption.value)}&date=${encodeURIComponent(this.value)}`);
+        const data = await res.json();
+        if (data.available === false) {
+          showMessage('doctorMsg', data.reason || 'Doctor is not available.');
+          this.value = '';
+        }
+      } catch (err) { console.error('Availability check failed:', err); }
+    });
+
+    // ─── Edit doctor select ────────────────────────────────────
+    document.getElementById('editDoctorSelect').addEventListener('change', function () {
+      const selected = this.selectedOptions[0];
+      if (!selected) return;
+      document.querySelectorAll('.day-check-edit').forEach(cb => cb.checked=false);
+      document.querySelectorAll('.day-time-edit').forEach(div => div.style.display='none');
+      document.getElementById('sameTimeAllEdit').checked=false;
+      document.getElementById('commonTimeBlockEdit').style.display='none';
+      document.getElementById('commonStartEdit').value='';
+      document.getElementById('commonEndEdit').value='';
+      const selectedDays = (selected.dataset.days||'').split(',').map(d=>d.trim()).filter(Boolean);
+      const dayTimes = selected.dataset.dayTimes ? JSON.parse(selected.dataset.dayTimes) : {};
+      document.querySelectorAll('.day-check-edit').forEach(cb => {
+        const day = cb.dataset.day;
+        const timeDiv = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
+        const timeRange = dayTimes[day];
+        if (selectedDays.includes(day)) {
+          cb.checked=true; timeDiv.style.display='inline-block';
+          if (timeRange) {
+            const parts = timeRange.split('-');
+            const start = (parts[0]||'').trim();
+            const end   = (parts[1]||'').trim();
+            const si = timeDiv.querySelector('.start-time-edit');
+            const ei = timeDiv.querySelector('.end-time-edit');
+            if (si) si.value=start;
+            if (ei) ei.value=end;
+          }
+        } else {
+          cb.checked=false; timeDiv.style.display='none';
+        }
+      });
+      localStorage.setItem('activeDoctor', this.value); // Save selected doctor
+      refreshLeaveListForCurrentDoctor();
+    });
+
+    // ─── Day/time UI setup ─────────────────────────────────────
+    function setupAddDoctorDayTimeUI() {
+      document.querySelectorAll('.day-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const day = cb.dataset.day;
+          const timeDiv = document.querySelector(`.day-time[data-day-time="${day}"]`);
+          const sameTimeAll = document.getElementById('sameTimeAll');
+          if (sameTimeAll && sameTimeAll.checked) { timeDiv.style.display='none'; return; }
+          timeDiv.style.display = cb.checked ? 'inline-block' : 'none';
+        });
+      });
+      const staCb = document.getElementById('sameTimeAll');
+      const ctb   = document.getElementById('commonTimeBlock');
+      if (staCb) {
+        staCb.addEventListener('change', () => {
+          if (staCb.checked) {
+            ctb.style.display='block';
+            document.querySelectorAll('.day-time').forEach(d => d.style.display='none');
+          } else {
+            ctb.style.display='none';
+            document.querySelectorAll('.day-check').forEach(cb => {
+              const day = cb.dataset.day;
+              const td = document.querySelector(`.day-time[data-day-time="${day}"]`);
+              td.style.display = cb.checked ? 'inline-block' : 'none';
+            });
+          }
+        });
+      }
+    }
+
+    function setupEditDoctorDayTimeUI() {
+      document.querySelectorAll('.day-check-edit').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const day = cb.dataset.day;
+          const timeDiv = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
+          const sameTimeAll = document.getElementById('sameTimeAllEdit');
+          if (sameTimeAll && sameTimeAll.checked) { timeDiv.style.display='none'; return; }
+          timeDiv.style.display = cb.checked ? 'inline-block' : 'none';
+        });
+      });
+      const staCb = document.getElementById('sameTimeAllEdit');
+      const ctb   = document.getElementById('commonTimeBlockEdit');
+      if (staCb) {
+        staCb.addEventListener('change', () => {
+          if (staCb.checked) {
+            ctb.style.display='block';
+            document.querySelectorAll('.day-time-edit').forEach(d => d.style.display='none');
+          } else {
+            ctb.style.display='none';
+            document.querySelectorAll('.day-check-edit').forEach(cb => {
+              const day = cb.dataset.day;
+              const td = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
+              td.style.display = cb.checked ? 'inline-block' : 'none';
+            });
+          }
+        });
+      }
+    }
+
+    // ─── Input formatting ──────────────────────────────────────
+    function capitalizeWords(str) {
+      return str.replace(/[^a-zA-Z ]/g,'').replace(/\s+/g,' ').trim()
+                .split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+    }
+
+    document.getElementById('addDocSpec').addEventListener('blur', e => { e.target.value = capitalizeWords(e.target.value); });
+    document.getElementById('addDocName').addEventListener('blur', e => {
+      let name = e.target.value.replace(/^Dr\.?\s*/i,'');
+      e.target.value = `Dr. ${capitalizeWords(name)}`;
+    });
+    document.getElementById('depName').addEventListener('blur', e => { e.target.value = capitalizeWords(e.target.value); });
+    document.getElementById('docName').addEventListener('blur', e => { e.target.value = capitalizeWords(e.target.value); });
+
+    function cleanAgeInput(id) {
+      const f = document.getElementById(id);
+      if (f) { f.value = f.value.trim().replace(/^0+/,''); if (f.value==='') f.value='0'; }
+    }
+
+    // ─── Book by Doctor form ───────────────────────────────────
+    document.getElementById('doctorBookingForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      cleanAgeInput('docAge');
+      const btn = e.target.querySelector("button[type='submit']");
+      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Booking...'; lucide.createIcons();
+      try {
+        const sheetname    = document.getElementById('doctorSelect').value;
+        const name         = document.getElementById('docName').value.trim();
+        const age          = document.getElementById('docAge').value.trim();
+        const gender       = document.getElementById('docGender').value;
+        const phone_number = document.getElementById('docNumber').value.trim();
+        const date         = document.getElementById('doctorDate').value;
+        if (!date) { showMessage('doctorMsg','Please select a date.'); btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); return; }
+        const res  = await fetch('/book_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sheetname,name,age,gender,phone_number,date}) });
+        const data = await res.json();
+        if (data.redirect) { window.location.href = data.redirect; }
+        else if (data.success) { showMessage('doctorMsg', 'Appointment scheduled successfully. Token: ' + data.token, 'green'); e.target.reset(); }
+        else { showMessage('doctorMsg', data.msg || 'Unable to process booking.'); }
+      } catch(err) { showMessage('doctorMsg','Communication error. Please try again.'); }
+      finally { btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); }
+    });
+
+    // ─── Book by Dept form ─────────────────────────────────────
+    document.getElementById('departmentBookingForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      cleanAgeInput('depAge');
+      const btn = e.target.querySelector("button[type='submit']");
+      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Booking...'; lucide.createIcons();
+      try {
+        const specialization = document.getElementById('specSelect').value;
+        const name           = document.getElementById('depName').value.trim();
+        const age            = document.getElementById('depAge').value.trim();
+        const gender         = document.getElementById('depGender').value;
+        const phone_number   = document.getElementById('depNumber').value.trim();
+        const date           = document.getElementById('specDate').value;
+        const messageDiv     = document.getElementById('noDoctorMsg');
+        if (!date) { messageDiv.textContent='Please select a date for your appointment.'; messageDiv.style.display='block'; btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); return; }
+        let doctor_sheet_url=null;
+        const timeSelect = document.getElementById('depTime');
+        if (timeSelect && timeSelect.value) doctor_sheet_url = timeSelect.value;
+        messageDiv.textContent=''; messageDiv.style.display='none';
+        const res  = await fetch('/book_department',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({specialization,name,age,gender,phone_number,date,doctor_sheet_url}) });
+        const data = await res.json();
+        if (data.redirect) { window.location.href = data.redirect; }
+        else if (data.success) { showToast('Appointment scheduled successfully', 'success'); e.target.reset(); const w=document.getElementById('depTimeWrapper'); if(w) w.style.display='none'; }
+        else { messageDiv.textContent = data.msg || 'Unable to complete appointment. Please retry.'; messageDiv.style.display='block'; }
+      } catch(err) { showToast('Administrative system error. Please try again.', 'error'); }
+      finally { btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); }
+    });
+
+    document.getElementById('specDate').addEventListener('change', async function() {
+      const spec         = document.getElementById('specSelect').value;
+      const selectedDate = new Date(this.value);
+      const selectedDay  = selectedDate.getDay();
+      const messageDiv   = document.getElementById('noDoctorMsg');
+      messageDiv.textContent=''; messageDiv.style.display='none';
+      updateSpecTimeSelect([],null);
+      if (!spec || !doctorsBySpecialization[spec]) {
+        showMessage('noDoctorMsg','Please select a Specialization before choosing a date.');
+        this.value=''; return;
+      }
+      const todayStr  = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+      const todayDate = new Date(todayStr);
+      if (selectedDate < todayDate) {
+        showMessage('noDoctorMsg','Past dates cannot be selected. Please choose a future date.');
+        this.value=''; return;
+      }
+      const weekdayName = Object.keys(dayMap).find(key=>dayMap[key]===selectedDay);
+      let availableDoctors = doctorsBySpecialization[spec].filter(doc => {
+        const daysArr = Array.isArray(doc.Days)?doc.Days:(doc.Days||'').split(',').map(d=>d.trim()).filter(Boolean);
+        return daysArr.includes(weekdayName);
+      });
+      if (availableDoctors.length===0) {
+        showMessage('noDoctorMsg','No doctors available for this specialization on the selected day.');
+        this.value=''; return;
+      }
+
+      // Check for finished times if today
+      if (this.value===todayStr) {
+        const nowStr = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'});
+        availableDoctors = availableDoctors.filter(doc => {
+          const tr = (doc.DayTimes||{})[weekdayName];
+          if (!tr) return false;
+          const endTimeStr = (tr.split('-')[1]||'').trim();
+          if (!endTimeStr) return false;
+          return timeToMinutes(nowStr) <= timeToMinutes(endTimeStr);
+        });
+        if (availableDoctors.length===0) {
+          showMessage('noDoctorMsg','All doctors in this specialization have finished for today. Please select another date.');
+          this.value=''; return;
+        }
+      }
+
+      // Batch Leave Check via API
+      try {
+        const sheetUrls = availableDoctors.map(d => d.SheetURL).filter(Boolean);
+        if (sheetUrls.length > 0) {
+          const res = await fetch('/api/check_doctor_availability', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({sheet_urls: sheetUrls, date: this.value})
+          });
+          const data = await res.json();
+          const results = data.results || {};
+          
+          availableDoctors = availableDoctors.filter(doc => {
+            const status = results[doc.SheetURL];
+            return status && status.available !== false;
+          });
+
+          if (availableDoctors.length === 0) {
+            showMessage('noDoctorMsg', 'All doctors in this specialization are on temporary leave for the selected date.');
+            this.value = ''; return;
+          }
+        }
+      } catch (err) { console.error('Batch availability check failed:', err); }
+
+      updateSpecTimeSelect(availableDoctors, weekdayName);
+    });
+
+    function updateSpecTimeSelect(doctors, weekdayName) {
+      const wrapper = document.getElementById('depTimeWrapper');
+      const select  = document.getElementById('depTime');
+      if (!wrapper||!select) return;
+      select.innerHTML='';
+      if (!doctors||doctors.length<=1) { wrapper.style.display='none'; return; }
+      wrapper.style.display='block';
+      const defaultOpt=document.createElement('option'); defaultOpt.value=''; defaultOpt.textContent='Any available time'; select.appendChild(defaultOpt);
+      doctors.forEach(doc=>{
+        const timeRange = weekdayName ? (doc.DayTimes||{})[weekdayName]||'': '';
+        if (!timeRange) return;
+        const opt=document.createElement('option'); opt.value=doc.SheetURL||''; opt.textContent=timeRange; select.appendChild(opt);
+      });
+    }
+
+    // ─── Admin Booking Helpers ─────────────────────────────────
+    async function loadDoctorsForAdminBooking() {
+      const select = document.getElementById('adminBookDoc');
+      if (!select) return;
+      
+      // Use existing loadDoctors to ensure data is fresh
+      await loadDoctors(); 
+      
+      const mainSelect = document.getElementById('doctorSelect');
+      if (!mainSelect) return;
+      
+      select.innerHTML = "<option value=''>-- Select Doctor --</option>";
+      // Copy options from the main doctor select
+      Array.from(mainSelect.options).forEach(opt => {
+        if (opt.value) {
+          const newOpt = opt.cloneNode(true);
+          select.appendChild(newOpt);
+        }
+      });
+      
+      // Set min date to today
+      const dateInput = document.getElementById('adminBookDate');
+      if (dateInput) {
+        const today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'});
+        dateInput.setAttribute('min', today);
+      }
+    }
+
+    function updateAdminBookDates() {
+      const select = document.getElementById('adminBookDoc');
+      const dateInput = document.getElementById('adminBookDate');
+      const msgDiv = document.getElementById('adminBookDateMsg');
+      if (!select || !dateInput) return;
+      
+      dateInput.value = '';
+      if (msgDiv) { msgDiv.style.display = 'none'; msgDiv.textContent = ''; }
+      const opt = select.options[select.selectedIndex];
+      if (!opt || !opt.value) return;
+      
+      const today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'});
+      dateInput.setAttribute('min', today);
+    }
+
+    document.getElementById('adminBookDate').addEventListener('change', async function() {
+      const msgDiv = document.getElementById('adminBookDateMsg');
+      if (msgDiv) { msgDiv.style.display = 'none'; msgDiv.textContent = ''; }
+      
+      const docSelect = document.getElementById('adminBookDoc');
+      const selectedOpt = docSelect.selectedOptions[0];
+      const date = this.value;
+      const sheet_url = selectedOpt ? selectedOpt.value : '';
+
+      if (!sheet_url) {
+        showMessage('adminBookDateMsg', 'Please select a doctor first.');
+        this.value = '';
+        return;
+      }
+      if (!date) return;
+
+      try {
+        const res = await fetch(`/api/check_doctor_availability?sheet_url=${encodeURIComponent(sheet_url)}&date=${encodeURIComponent(date)}`);
+        const data = await res.json();
+        if (data.available === false) {
+          showMessage('adminBookDateMsg', data.reason || 'Doctor is not available on this date.');
+          this.value = '';
+        }
+      } catch (err) {
+        console.error('Availability check failed:', err);
+      }
+    });
+
+    document.getElementById('adminBookPatientForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = e.target.querySelector("button[type='submit']");
+      const msgDiv = document.getElementById('adminBookResult');
+      
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Processing...';
+      lucide.createIcons();
+      
+      try {
+        const payload = {
+          sheet_url: document.getElementById('adminBookDoc').value,
+          date: document.getElementById('adminBookDate').value,
+          name: document.getElementById('adminBookName').value.trim(),
+          age: document.getElementById('adminBookAge').value.trim(),
+          gender: document.getElementById('adminBookGender').value,
+          phone_number: document.getElementById('adminBookPhone').value.trim()
+        };
+        
+        const res = await fetch('/admin_book_patient', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          // Success Feedback via Modal instead of redirect
+          const modal = document.getElementById('universalModal');
+          modal.querySelector('h3').textContent = 'Booking Successful';
+          modal.querySelector('p').innerHTML = `Appointment for <strong>${data.name}</strong> with <strong>${data.doctor}</strong> is confirmed.`;
+          
+          // Add a custom token display to the modal
+          const contentP = modal.querySelector('p');
+          const tokenCard = document.createElement('div');
+          tokenCard.className = 'success-token-card';
+          tokenCard.innerHTML = `
+            <span style="font-size:0.8rem; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Token Number</span>
+            <span class="success-token-value">${data.token}</span>
+            <span style="font-size:0.82rem; color:#0077b6; font-weight:600;">${data.date} | ${data.time}</span>
+          `;
+          
+          // Remove if already exists
+          const oldCard = modal.querySelector('.success-token-card');
+          if (oldCard) oldCard.remove();
+          contentP.after(tokenCard);
+          
+          const confirmBtn = modal.querySelector('.btn-primary');
+          confirmBtn.textContent = 'Book Another';
+          confirmBtn.style.background = '#10b981';
+          confirmBtn.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.35)';
+          
+          activeModalAction = () => {
+              modal.style.display = 'none';
+              tokenCard.remove();
+          };
+          
+           modal.style.display = 'flex';
+          
+          // Ensure Icon is correct (Check Circle for success)
+          const iconContainer = modal.querySelector('.modal-icon-container');
+          if (iconContainer) {
+            iconContainer.style.color = '#10b981';
+            iconContainer.style.background = 'rgba(16, 185, 129, 0.1)';
+            const icon = iconContainer.querySelector('i, svg');
+            if (icon) icon.setAttribute('data-lucide', 'check-circle');
+          }
+          
+          e.target.reset();
+          lucide.createIcons();
+        } else {
+          showMessage('adminBookResult', data.msg || 'Booking failed.');
+        }
+      } catch (err) {
+        showToast('Communication error. Please retry.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="calendar-check"></i> Confirm Booking';
+        lucide.createIcons();
+      }
+    });
+
+    // ─── Admin login ───────────────────────────────────────────
+
+    document.getElementById('sendOtpBtn').addEventListener('click', async () => {
+      const btn  = document.getElementById('sendOtpBtn');
+      const email = document.getElementById('adminEmail').value.trim();
+      if (!email) { showToast('Please enter your admin email address.', 'error'); return; }
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Sending...'; lucide.createIcons();
+      try {
+        const res  = await fetch('/send_admin_otp',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`admin_email=${encodeURIComponent(email)}` });
+        const data = await res.json();
+        if (data.success) {
+          showToast('OTP sent successfully', 'success');
+          document.getElementById('otpSection').style.display = 'block';
+          btn.style.display = 'none';
+        } else {
+          showToast(data.msg || 'Could not send OTP. Please try again.', 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="send-horizontal"></i> Send OTP'; lucide.createIcons();
+        }
+      } catch(err) {
+        showToast('Communication error. Please check your connection.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="send-horizontal"></i> Send OTP'; lucide.createIcons();
+      }
+    });
+
+    document.getElementById('adminLoginForm').addEventListener('submit', async(e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector("button[type='submit']");
+      const otp = document.getElementById('adminOtp').value.trim();
+      if (!otp || otp.length < 4) { showToast('Please enter the OTP sent to your email.', 'error'); return; }
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Verifying...'; lucide.createIcons();
+      try {
+        const res  = await fetch('/verify_admin_otp',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`otp=${encodeURIComponent(otp)}` });
+        const data = await res.json();
+        if (data.success) {
+          showToast('OTP verified successfully', 'success');
+          setTimeout(() => {
+            document.getElementById('adminLoginDiv').style.display = 'none';
+            document.getElementById('adminOptions').style.display = 'block';
+            
+            // Immediate visibility of Logout in header
+            const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+            if (headerLogoutBtn) headerLogoutBtn.style.display = 'inline-flex';
+
+            loadDoctorPairs();
+            loadDoctors();      // Refresh main dropdowns
+            loadDoctorsForEdit(); // Refresh edit dropdown
+            loadDoctorsForAdminBooking(); // Refresh admin booking dropdown
+            lucide.createIcons();
+          }, 600);
+        } else {
+          showToast(data.msg || 'Authentication failed. Please verify the code.', 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="log-in"></i> Login'; lucide.createIcons();
+        }
+      } catch(err) {
+        showToast('System error during login. Please retry.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="log-in"></i> Login'; lucide.createIcons();
+      }
+    });
+
+    let activeModalAction = null;
+
+    function openModal(id, title, message, actionText, actionFn, isDanger = false) {
+      const modal = document.getElementById('universalModal');
+      if (!modal) return;
+      
+      // Cleanup previous custom additions (like the token card)
+      const oldCard = modal.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+
+      modal.querySelector('h3').textContent = title;
+      modal.querySelector('p').textContent = message;
+      
+      const confirmBtn = modal.querySelector('.btn-primary');
+      confirmBtn.textContent = actionText;
+      confirmBtn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      confirmBtn.style.boxShadow = isDanger ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      
+      const iconContainer = modal.querySelector('.modal-icon-container');
+      if (iconContainer) {
+        if (id === 'success') {
+          iconContainer.style.color = '#10b981';
+          iconContainer.style.background = 'rgba(16, 185, 129, 0.1)';
+          const icon = iconContainer.querySelector('i, svg');
+          if (icon) icon.setAttribute('data-lucide', 'check-circle');
+        } else {
+          iconContainer.style.color = isDanger ? '#e11d48' : '#0077b6';
+          iconContainer.style.background = isDanger ? 'rgba(225, 29, 72, 0.1)' : 'rgba(0, 119, 182, 0.1)';
+          const icon = iconContainer.querySelector('i, svg');
+          if (icon) {
+            icon.setAttribute('data-lucide', isDanger ? 'log-out' : 'help-circle');
+          }
+        }
+      }
+      
+      activeModalAction = actionFn;
+      modal.style.display = 'flex';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    window.closeModal = function() {
+      const modal = document.getElementById('universalModal');
+      if (modal) modal.style.display = 'none';
+      activeModalAction = null;
+    }
+
+    window.handleConfirm = function() {
+      console.log("Modal confirmation triggered");
+      if (activeModalAction) activeModalAction();
+      closeModal();
+    }
+
+    window.openLogoutModal = function() {
+      console.log("Logout modal requested");
+      openModal('universalModal', 'Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
+    }
+    async function confirmLogout() {
+      console.log("Initiating logout...");
+      try {
+        const res = await fetch('/admin_logout', { method: 'POST' });
+        if (!res.ok) throw new Error('Logout failed on server');
+        let data = { success: true };
+        try { data = await res.json(); } catch(e) {}
+        
+        if (data.success) {
+          // Reset Admin UI State
+          if(document.getElementById('adminOptions')) document.getElementById('adminOptions').style.display = 'none';
+          if(document.getElementById('adminActiveSessionDiv')) document.getElementById('adminActiveSessionDiv').style.display = 'none';
+          if(document.getElementById('adminLoginFormDiv')) document.getElementById('adminLoginFormDiv').style.display = 'block';
+          if(document.getElementById('adminLoginDiv')) document.getElementById('adminLoginDiv').style.display = 'block';
+          document.querySelectorAll('.adminPanel').forEach(p => p.style.display = 'none');
+          lastActiveAdminPanel = null;
+          
+          if(document.getElementById('adminEmail')) document.getElementById('adminEmail').value = '';
+          if(document.getElementById('adminOtp')) document.getElementById('adminOtp').value = '';
+          if(document.getElementById('otpSection')) document.getElementById('otpSection').style.display = 'none';
+          
+          const sendBtn = document.getElementById('sendOtpBtn');
+          if (sendBtn) {
+            sendBtn.style.display = 'inline-flex';
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i data-lucide="send-horizontal"></i> Send OTP';
+          }
+          
+          const loginBtn = document.querySelector('#adminLoginForm button[type="submit"]');
+          if (loginBtn) {
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<i data-lucide="log-in"></i> Login';
+          }
+          
+          const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+          if (headerLogoutBtn) headerLogoutBtn.style.display = 'none';
+
+          // Clear UI State Persistence
+          localStorage.removeItem('activeSection');
+          localStorage.removeItem('activeAdminPanel');
+          localStorage.removeItem('activeDoctor');
+
+          showToast('Logged out successfully', 'success');
+          lucide.createIcons();
+        } else {
+          showToast('Logout notification failed.', 'error');
+        }
+      } catch(err) {
+        console.error("Logout error:", err);
+        showToast('Operation failed. Please check your connection.', 'error');
+      } finally {
+        closeModal();
+      }
+    }
+
+    // document.getElementById('logoutBtn').addEventListener('click', openLogoutModal); // Fixed: logoutBtn id does not exist, use headerLogoutBtn instead (already handled in DOMContentLoaded)
+
+    // ─── Add doctor ────────────────────────────────────────────
+    document.getElementById('adminAddDoctorForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn=e.target.querySelector("button[type='submit']");
+      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Adding...'; lucide.createIcons();
+      try {
+        const name           = document.getElementById('addDocName').value.trim();
+        const specialization = document.getElementById('addDocSpec').value.trim();
+        const imageFile      = document.getElementById('addDocImage').files[0];
+        const sameTimeAll    = document.getElementById('sameTimeAll');
+        const selectedDays=[]; const dayTimes={};
+        if (sameTimeAll && sameTimeAll.checked) {
+          const cs=document.getElementById('commonStart').value;
+          const ce=document.getElementById('commonEnd').value;
+          if (!cs||!ce) { showToast('Please enter start and end times for the common slot.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); return; }
+          document.querySelectorAll('.day-check:checked').forEach(cb=>{ const day=cb.dataset.day; selectedDays.push(day); dayTimes[day]=`${cs}-${ce}`; });
+        } else {
+          let hasError=false;
+          document.querySelectorAll('.day-check:checked').forEach(cb=>{
+            if(hasError)return;
+            const day=cb.dataset.day;
+            const container=document.querySelector(`.day-time[data-day-time="${day}"]`);
+            const s=container.querySelector('.start-time').value;
+            const en=container.querySelector('.end-time').value;
+            if(!s||!en) { showToast(`Please enter start and end times for ${day}.`, 'error'); hasError=true; return; }
+            selectedDays.push(day); dayTimes[day]=`${s}-${en}`;
+          });
+          if(hasError) { btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); return; }
+        }
+        if(!selectedDays.length) { showToast('Please select at least one working day.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); return; }
+        const formData=new FormData();
+        formData.append('name',name); formData.append('specialization',specialization);
+        formData.append('days',selectedDays.join(', ')); formData.append('day_times',JSON.stringify(dayTimes));
+        if(imageFile) formData.append('image',imageFile);
+        const res=await fetch('/admin_add_doctor',{method:'POST',body:formData});
+        const rawText=await res.text(); let data;
+        try { data=JSON.parse(rawText); } catch(pe) { showToast('Response parsing error: '+rawText, 'error'); return; }
+        showToast(data.msg || 'Doctor profile created successfully', data.success ? 'success' : 'error');
+        if(data.success) { e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
+      } catch(err) { showToast('Unable to complete doctor registration.', 'error'); }
+      finally { btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); }
+    });
+
+    // ─── Edit doctor ───────────────────────────────────────────
+    document.getElementById('adminEditDoctorForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn=e.target.querySelector("button[type='submit']");
+      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Saving...'; lucide.createIcons();
+      try {
+        const combined=document.getElementById('editDoctorSelect').value;
+        if(!combined) { showToast('Please select a doctor to edit.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
+        const sameTimeAll=document.getElementById('sameTimeAllEdit');
+        const selectedDays=[]; const day_times={};
+        if(sameTimeAll&&sameTimeAll.checked) {
+          const cs=document.getElementById('commonStartEdit').value;
+          const ce=document.getElementById('commonEndEdit').value;
+          if(!cs||!ce) { showToast('Please enter start and end times for the common slot.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
+          document.querySelectorAll('.day-check-edit:checked').forEach(cb=>{ const day=cb.dataset.day; selectedDays.push(day); day_times[day]=`${cs}-${ce}`; });
+        } else {
+          let hasError=false;
+          document.querySelectorAll('.day-check-edit:checked').forEach(cb=>{
+            if(hasError)return;
+            const day=cb.dataset.day;
+            const timeDiv=document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
+            const s=timeDiv.querySelector('.start-time-edit').value;
+            const en=timeDiv.querySelector('.end-time-edit').value;
+            if(!s||!en){ showToast(`Please enter start and end times for ${day}.`, 'error'); hasError=true; return; }
+            selectedDays.push(day); day_times[day]=`${s}-${en}`;
+          });
+          if(hasError){ btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
+        }
+        if(!selectedDays.length){ showToast('At least one working day is required.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
+        const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined,days:selectedDays,day_times}) });
+        const data=await res.json();
+        showToast(data.msg, data.success ? 'success' : 'error');
+        if(data.success){ e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
+      } catch(err){ showToast('An error occurred while updating the doctor profile.', 'error'); }
+      finally{ btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); }
+    });
+
+    // ─── Delete doctor ─────────────────────────────────────────
+    document.getElementById('adminDeleteDoctorForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn=e.target.querySelector("button[type='submit']");
+      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Deleting...'; lucide.createIcons();
+      try {
+        const combined=document.getElementById('deleteDoctorSelect').value;
+        if(!combined){ showToast('Select a doctor to remove from the system.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="trash-2"></i> Delete Doctor'; lucide.createIcons(); return; }
+        
+        openModal(
+          'universalModal',
+          'Confirm Removal',
+          'Are you sure you want to permanently remove this doctor from the registry?',
+          'Delete',
+          async () => {
+            btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Deleting...'; lucide.createIcons();
+            try {
+              const res=await fetch('/admin_delete_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined}) });
+              const data=await res.json();
+              showToast(data.msg, data.success ? 'success' : 'error');
+              if(data.success){ loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
+            } catch(err){ showToast('An error occurred during doctor removal.', 'error'); }
+            finally{ btn.disabled=false; btn.innerHTML='<i data-lucide="trash-2"></i> Delete Doctor'; lucide.createIcons(); }
+          },
+          true
+        );
+      } catch(err){ showToast('An error occurred during doctor removal.', 'error'); }
+      finally{ btn.disabled=false; btn.innerHTML='<i data-lucide="trash-2"></i> Delete Doctor'; lucide.createIcons(); }
+    });
+
+    // ─── Leave management ──────────────────────────────────────
+    async function refreshLeaveListForCurrentDoctor() {
+      const combined=document.getElementById('editDoctorSelect').value;
+      const tbody=document.getElementById('leaveTbody');
+      const msgDiv=document.getElementById('leaveMsg');
+      if(!tbody||!msgDiv)return;
+      tbody.innerHTML=''; msgDiv.style.display='none'; msgDiv.textContent='';
+      if(!combined)return;
+      try {
+        const res=await fetch(`/admin_get_leaves?combined=${encodeURIComponent(combined)}`);
+        const data=await res.json();
+        if(!data.success){ showMessage('leaveMsg',data.msg||'Error loading leave dates.'); return; }
+        const leaves=data.leaves||[];
+        if(leaves.length===0){
+          const tr=document.createElement('tr');
+          const td=document.createElement('td'); td.colSpan=3; td.textContent='No leave dates set.'; td.style.color='#9fb0c3';
+          tr.appendChild(td); tbody.appendChild(tr); return;
+        }
+        leaves.forEach(leave=>{
+          const tr=document.createElement('tr');
+          const tdDate=document.createElement('td'); tdDate.textContent=leave.date; tr.appendChild(tdDate);
+          const tdReason=document.createElement('td'); tdReason.textContent=leave.reason||'-'; tr.appendChild(tdReason);
+          const tdAction=document.createElement('td');
+          const btn=document.createElement('button');
+          btn.innerHTML='<i data-lucide="trash-2"></i> Remove';
+          btn.style.cssText='font-size:0.78rem;margin:0;padding:0.28rem 0.7rem;background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:none;';
+          btn.addEventListener('click', ()=>{
+            openModal(
+              'universalModal',
+              'Remove Leave',
+              `Are you sure you want to remove the leave entry for ${leave.date}?`,
+              'Remove',
+              async () => {
+                try {
+                  const delRes=await fetch('/admin_delete_leave',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined,date:leave.date}) });
+                  const delData=await delRes.json();
+                  if (delData.success) {
+                    showToast(`Leave for ${leave.date} has been removed.`, 'success');
+                    refreshLeaveListForCurrentDoctor();
+                  } else {
+                    showToast(delData.msg || 'Error removing leave.', 'error');
+                  }
+                } catch(err){ showToast("Couldn't remove leave entry. Please try again.", 'error'); }
+              },
+              true
+            );
+          });
+          lucide.createIcons(btn);
+          tdAction.appendChild(btn); tr.appendChild(tdAction);
+          tbody.appendChild(tr);
+        });
+        lucide.createIcons();
+      } catch(err){ showMessage('leaveMsg',"Couldn't load leave dates. Please try again."); }
+    }
+
+    document.getElementById('addLeaveBtn').addEventListener('click', async()=>{
+      const combined=document.getElementById('editDoctorSelect').value;
+      const date=document.getElementById('leaveDate').value;
+      const reason=document.getElementById('leaveReason').value.trim();
+      if(!combined){ showMessage('leaveMsg','Please select a doctor before adding leave.'); return; }
+      if(!date){ showMessage('leaveMsg','Please select a date for leave.'); return; }
+      const todayStr=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+      if(date<todayStr){ showMessage('leaveMsg','Leave cannot be set for past dates.'); return; }
+      const btn = document.getElementById('addLeaveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Adding...';
+      lucide.createIcons();
+
+      try {
+        const res=await fetch('/admin_add_leave',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined,date,reason}) });
+        const data=await res.json();
+        if (data.success) {
+          const docOnly = combined.split(' - ')[0];
+          showToast(`Leave added for ${docOnly} on ${date}.`, 'success');
+          document.getElementById('leaveDate').value=''; 
+          document.getElementById('leaveReason').value=''; 
+          refreshLeaveListForCurrentDoctor(); 
+        } else {
+          showToast(data.msg || 'Error adding leave.', 'error');
+        }
+      } catch(err){ showToast("Couldn't add leave. Please try again.", 'error'); }
+      finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="plus-circle"></i> Add Leave';
+        lucide.createIcons();
+      }
+    });
+
+    // ─── Booking Viewer logic ──────────────────────────────────
+    document.getElementById('fetchBookingsBtn')?.addEventListener('click', async () => {
+      const combined = document.getElementById('viewBookingDoctorSelect').value;
+      const date = document.getElementById('viewBookingDate').value;
+      const btn = document.getElementById('fetchBookingsBtn');
+      const tableWrapper = document.getElementById('bookingTableWrapper');
+      const tbody = document.getElementById('bookingsTbody');
+      const msgDiv = document.getElementById('viewBookingMsg');
+      const countBadge = document.getElementById('bookingCountBadge');
+      const countNum = document.getElementById('bookingCountNum');
+
+      if (!combined || !date) {
+        showToast('Please select both doctor and date.', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Fetching...';
+      msgDiv.style.display = 'none';
+      tableWrapper.style.display = 'none';
+      countBadge.style.display = 'none';
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/admin_get_bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ combined, date })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          msgDiv.textContent = data.msg || 'Error fetching bookings.';
+          msgDiv.style.display = 'block';
+          return;
+        }
+
+        const bookings = data.bookings || [];
+        if (bookings.length === 0) {
+          msgDiv.textContent = `No bookings found for this doctor on ${date}.`;
+          msgDiv.style.display = 'block';
+          return;
+        }
+
+        tbody.innerHTML = '';
+        bookings.forEach(b => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><span class="token-badge">#${b.token}</span></td>
+            <td><div style="font-weight:700; color:#0f172a;">${b.name}</div></td>
+            <td>${b.age || '-'}</td>
+            <td><span style="display:flex; align-items:center; gap:0.4rem;">
+                <i data-lucide="${b.gender==='Male'?'mars':(b.gender==='Female'?'venus':'circle-user')}" style="width:14px;height:14px;opacity:0.7;"></i>
+                ${b.gender || '-'}
+            </span></td>
+            <td><span style="font-family:monospace; font-size:0.95rem; color:#0077b6;">${b.phone || '-'}</span></td>
+            <td class="no-print">
+                <button onclick="deleteBooking(${b.token},'${b.name}')" class="btn btn-danger" style="padding: 0.35rem 0.7rem; font-size: 0.75rem; margin: 0; box-shadow:none;">
+                    <i data-lucide="trash-2"></i> 
+                </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        tableWrapper.style.display = 'block';
+        countNum.textContent = data.count;
+        countBadge.style.display = 'inline-flex';
+        lucide.createIcons();
+
+      } catch (err) {
+        showToast('Failed to fetch bookings. Connection error.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="search"></i> Show Bookings';
+        lucide.createIcons();
+      }
+    });
+
+    window.prepareAndPrint = function() {
+      const combined = document.getElementById('viewBookingDoctorSelect').value;
+      const date = document.getElementById('viewBookingDate').value;
+      const tbody = document.getElementById('bookingsTbody');
+      
+      if (!combined || !date || !tbody || tbody.rows.length === 0) {
+        showToast('No booking data available to print.', 'error');
+        return;
+      }
+
+      const [docName, docSpec] = combined.split(' - ');
+      const totalBookings = tbody.rows.length;
+
+      // Populate Template
+      document.getElementById('printDocName').textContent = docName;
+      document.getElementById('printDate').textContent = date;
+      document.getElementById('printSpec').textContent = docSpec;
+      document.getElementById('printTotal').textContent = totalBookings;
+      document.getElementById('printTimestampMeta').textContent = `Generated: ${new Date().toLocaleString()}`;
+
+      const printTbody = document.getElementById('printTableBody');
+      printTbody.innerHTML = '';
+
+      // Clone table rows (extracting data only)
+      Array.from(tbody.rows).forEach(row => {
+          const token = row.cells[0].textContent.trim();
+          const name = row.cells[1].textContent.trim();
+          const age = row.cells[2].textContent.trim();
+          const gender = row.cells[3].textContent.trim();
+          const phone = row.cells[4].textContent.trim();
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+              <td class="print-token-cell">${token}</td>
+              <td style="font-weight: 700; color: #0f172a;">${name}</td>
+              <td>${age}</td>
+              <td>${gender}</td>
+              <td style="font-family: monospace; font-size: 13px;">${phone}</td>
+          `;
+          printTbody.appendChild(tr);
+      });
+
+      // Set Document Title for PDF Filename
+      const originalTitle = document.title;
+      document.title = `${docName.replace(/\./g, '')}_${date}`;
+
+      window.print();
+
+      // Restore
+      document.title = originalTitle;
+    };
+    window.deleteBooking = async function(token, patientName) {
+      const combined = document.getElementById('viewBookingDoctorSelect').value;
+      const date = document.getElementById('viewBookingDate').value;
+      
+      openModal(
+        'universalModal',
+        'Cancel Booking',
+        `Are you sure you want to cancel the booking for ${patientName} (Token #${token})?`,
+        'Cancel Booking',
+        async () => {
+          try {
+            const res = await fetch('/admin_delete_booking', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ combined, date, token })
+            });
+            const data = await res.json();
+            if (data.success) {
+              showToast('Booking cancelled successfully.', 'success');
+              document.getElementById('fetchBookingsBtn').click(); // Refresh list
+            } else {
+              showToast(data.msg || 'Error cancelling booking.', 'error');
+            }
+          } catch (err) {
+            showToast('Communication error. Please retry.', 'error');
+          }
+        },
+        true
+      );
+      
+      // Inject the correct token card for confirmation
+      const modal = document.getElementById('universalModal');
+      const contentP = modal.querySelector('p');
+      const tokenCard = document.createElement('div');
+      tokenCard.className = 'success-token-card';
+      tokenCard.style.borderColor = '#e11d48'; // Red for cancellation
+      tokenCard.innerHTML = `
+        <span style="font-size:0.8rem; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Token Number</span>
+        <span class="success-token-value" style="color:#e11d48;">${token}</span>
+        <span style="font-size:0.82rem; color:#64748b; font-weight:600;">${date} | ${patientName}</span>
+      `;
+      contentP.after(tokenCard);
+    }
+
+    // ─── Init ──────────────────────────────────────────────────
+    async function initPage() {
+      await loadDoctors();
+      await loadDoctorPairs();
+      await loadDoctorsForEdit();
+      await loadDoctorsForAdminBooking();
+      setupAddDoctorDayTimeUI();
+      setupEditDoctorDayTimeUI();
+      const specDateInput=document.getElementById('specDate');
+      if(specDateInput){
+        const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+        specDateInput.setAttribute('min',today);
+      }
+      const specSelect=document.getElementById('specSelect');
+      if(specSelect){
+        specSelect.addEventListener('change',()=>{
+          const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+          specDateInput.setAttribute('min',today);
+          specDateInput.value='';
+          const msg=document.getElementById('noDoctorMsg');
+          if(msg) msg.textContent='';
+        });
+      }
+      // Check current section and trigger session check if needed
+      const currentActiveSection = Array.from(document.querySelectorAll('section')).find(s => s.style.display !== 'none');
+      if (currentActiveSection && currentActiveSection.id === 'admin') {
+        checkAdminSession();
+      }
+      lucide.createIcons();
+    }
+
+    document.addEventListener('DOMContentLoaded', async ()=> {
+      // 1. Restore last active section from localStorage
+      const savedSection = localStorage.getItem('activeSection') || 'bookDoctor';
+      showSection(savedSection, null);
+      
+      const panelId = sectionPanelMap[savedSection];
+      if (panelId) document.getElementById(panelId)?.classList.add('active');
+      
+      // 2. Bind header logout button
+      const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+      if (headerLogoutBtn) {
+        headerLogoutBtn.addEventListener('click', openLogoutModal);
+      }
+
+      lucide.createIcons();
+
+      // 3. Then check admin state and perform other inits
+      await initPage();
+
+      // 4. Restore last active admin panel if we are in admin section
+      if (savedSection === 'admin') {
+        const savedAdminPanel = localStorage.getItem('activeAdminPanel');
+        if (savedAdminPanel) {
+          const adminBtn = document.querySelector(`.admin-nav .panel-card[onclick*="'${savedAdminPanel}'"]`);
+          showAdminPanel(savedAdminPanel, adminBtn);
+        }
+        
+        const savedDoctor = localStorage.getItem('activeDoctor');
+        if (savedDoctor) {
+          const editSelect = document.getElementById('editDoctorSelect');
+          const deleteSelect = document.getElementById('deleteDoctorSelect');
+          
+          if (editSelect) {
+            // Wait for options to be populated if needed, though initPage should have done it
+            const setDoctor = () => {
+              if (editSelect.options.length > 1) {
+                editSelect.value = savedDoctor;
+                editSelect.dispatchEvent(new Event('change'));
+                if (deleteSelect) deleteSelect.value = savedDoctor;
+              } else {
+                setTimeout(setDoctor, 100);
+              }
+            };
+            setDoctor();
+          }
+        }
+      }
+    });
+    function generatePDF(element) {
+  const clone = element.cloneNode(true);
+
+  clone.style.display = 'block';
+  clone.style.position = 'absolute';
+  clone.style.left = '-9999px';
+
+  document.body.appendChild(clone); // 🔥 required
+
+  clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+  html2pdf().set({
+    margin: 10,
+    filename: 'Bookings.pdf',
+    html2canvas: { scale: 2 },
+    jsPDF: { format: 'a4' }
+  }).from(clone).save().then(() => {
+    document.body.removeChild(clone); // cleanup
+  });
+}
+function downloadPDF() {
+  const original = document.getElementById('bookingTableWrapper');
+  const tableBody = document.getElementById('bookingsTbody');
+
+  if (!tableBody || tableBody.children.length === 0) {
+    showToast('No bookings to download', 'error');
+    return;
+  }
+
+  // Ensure visible
+  original.style.display = 'block';
+
+  setTimeout(() => {
+    const clone = original.cloneNode(true);
+
+    clone.style.display = 'block';
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.background = '#ffffff';
+    clone.style.overflow = 'visible';
+
+    clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+    document.body.appendChild(clone);
+
+    html2pdf().set({
+      margin: 10,
+      filename: 'Bookings_List.pdf',
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4' }
+    }).from(clone).save().then(() => {
+      document.body.removeChild(clone);
+    });
+
+  }, 300);
+}
+  </script>
+
+  <!-- Universal Confirmation Modal (Reusable for Logout, Leave, etc.) -->
+  <div class="modal-overlay" id="universalModal">
+    <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+      <div class="modal-icon-container" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
+        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+      </div>
+      <h3 style="margin: 0 auto 0.5rem auto; color: #0f172a; font-size: 1.4rem; font-weight: 800; text-align: center; width: 100%;">Confirm Action</h3>
+      <p style="color: #64748b; font-size: 1.05rem; margin: 0 auto 2.2rem auto; line-height: 1.6; text-align: center; width: 100%;">Are you sure you want to proceed with this action?</p>
+      <div class="modal-btns" style="display: flex; gap: 1.2rem; justify-content: center; width: 100%;">
+        <button class="btn btn-outline" onclick="closeModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Cancel</button>
+        <button class="btn btn-primary" onclick="handleConfirm()" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Confirm</button>
+      </div>
+    </div>
+  </div>
+  <footer class="site-footer">
+    <div class="footer-content">
+      <p class="footer-copy">© 2026 PrimeCare Clinic. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>
