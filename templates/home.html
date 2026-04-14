@@ -663,22 +663,43 @@
       width: 450px;
       max-height: calc(100vh - 160px);
       height: 620px;
-      background: rgba(255, 255, 255, 0.82);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      /* Background setup: same image as the page */
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
       border-radius: 30px;
-      box-shadow: 0 32px 100px rgba(0, 0, 0, 0.25), 
-                  inset 0 0 0 1px rgba(255, 255, 255, 0.4);
-      border: 1px solid rgba(0, 119, 182, 0.1);
+      box-shadow: 0 32px 100px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.3);
       display: flex; flex-direction: column;
       transform: translateY(30px) scale(0.92); opacity: 0; pointer-events: none;
       transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
       overflow: hidden;
     }
+    #aiChatPanel::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: -1;
+    }
     #aiChatPanel.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
 
+    /* Background Blur Overlay for AI Chat */
+    .ai-chat-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.3);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 9000;
+      display: none;
+      animation: modalFade 0.3s ease;
+    }
+    .ai-chat-overlay.open { display: block; }
+
     .ai-chat-header {
-      background: linear-gradient(135deg, rgba(2, 62, 138, 0.95), rgba(0, 119, 182, 0.95));
+      background: linear-gradient(135deg, rgba(2, 62, 138, 0.9), rgba(0, 119, 182, 0.9));
       padding: 1.25rem 1.4rem;
       display: flex; align-items: center; gap: 1rem;
       flex-shrink: 0;
@@ -797,6 +818,7 @@
     .ai-suggestions {
       display: flex; flex-wrap: wrap; gap: 0.6rem;
       padding: 0 1.4rem 0.8rem; flex-shrink: 0;
+      background: transparent;
     }
     .ai-suggestion-chip {
       background: #f1f5f9; border: 1px solid rgba(0,0,0,0.04);
@@ -808,9 +830,12 @@
 
     .ai-chat-footer {
       padding: 1.1rem 1.4rem 1.4rem;
-      border-top: 1px solid rgba(0,0,0,0.04);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
       display: flex; gap: 0.75rem; align-items: center;
-      background: #fff; flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      flex-shrink: 0;
     }
     #aiChatInput {
       flex: 1; border: 1.5px solid #f1f5f9; border-radius: 18px;
@@ -840,24 +865,39 @@
 
     @media (max-width: 520px) {
       #aiChatPanel { 
-        width: calc(100vw - 20px); 
-        right: 10px; 
-        top: 75px; 
-        bottom: auto;
-        max-height: calc(100vh - 100px);
-        height: auto;
-        border-radius: 24px; 
+        width: 100%; 
+        right: 0; 
+        left: 0;
+        bottom: 0;
+        top: 0;
+        max-height: 100vh;
+        height: 100vh;
+        border-radius: 0; 
+        margin: 0;
+        background-attachment: scroll; /* Attachment fixed is tricky on some mobile browsers */
+      }
+      #aiChatPanel::before {
+        background: rgba(255, 255, 255, 0.88); /* More solid background for readability in full screen */
+      }
+      .ai-chat-header {
+        padding-top: max(1.25rem, env(safe-area-inset-top));
+        border-radius: 0;
+      }
+      .ai-chat-footer {
+        padding-bottom: max(1.4rem, env(safe-area-inset-bottom));
       }
       #aiChatFab { 
         bottom: 24px; 
         right: 20px; 
         width: 54px; 
         height: 54px; 
+        z-index: 8999; /* Below overlay */
       }
       #aiChatFab svg { width: 24px; height: 24px; }
       .ai-header-name { font-size: 0.95rem; }
       .ai-header-status { font-size: 0.72rem; }
       .ai-bubble { font-size: 0.86rem; padding: 0.75rem 1rem; }
+      .ai-chat-body { padding: 1rem; }
     }
   </style>
 </head>
@@ -1550,6 +1590,9 @@
     <span class="fab-badge" id="aiFabBadge">AI</span>
   </button>
 
+  <!-- AI Chat Overlay -->
+  <div id="aiChatOverlay" class="ai-chat-overlay" onclick="toggleAiChat()"></div>
+
   <!-- AI Chat Panel -->
   <div id="aiChatPanel" role="dialog" aria-label="PrimeCare AI Assistant" onclick="event.stopPropagation()">
     <!-- Header -->
@@ -1608,12 +1651,22 @@
     // ── Toggle panel ──────────────────────────────────────
     window.toggleAiChat = function(e) {
       if (e) e.stopPropagation();
+      const overlay = document.getElementById('aiChatOverlay');
       isOpen = !isOpen;
+      
       panel.classList.toggle('open', isOpen);
+      if (overlay) overlay.classList.toggle('open', isOpen);
+
       if (isOpen) {
         badge.style.display = 'none';
         if (firstOpen) { firstOpen = false; showWelcome(); }
+        // Lock body scroll on mobile
+        if (window.innerWidth <= 520) {
+          document.body.style.overflow = 'hidden';
+        }
         setTimeout(() => input.focus(), 350);
+      } else {
+        document.body.style.overflow = '';
       }
     };
 
