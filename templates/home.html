@@ -735,7 +735,7 @@
                   url("{{ url_for('static', filename='image/background11.jpeg') }}");
       background-size: cover;
       background-position: center;
-      background-attachment: local;
+      background-attachment: scroll;
     }
     .ai-chat-body::-webkit-scrollbar { width: 4px; }
     .ai-chat-body::-webkit-scrollbar-thumb { background: rgba(0, 119, 182, 0.15); border-radius: 10px; }
@@ -855,14 +855,16 @@
 
     @media (max-width: 520px) {
       #aiChatPanel { 
-        width: 100vw; 
-        right: 0; 
-        bottom: 0;
-        top: 0;
-        max-height: 100%;
-        height: 100%;
-        border-radius: 0; 
+        width: 92vw; 
+        height: 82vh;
+        max-height: 82vh;
+        left: 4vw; 
+        top: 9vh;
+        bottom: 9vh;
+        right: 4vw;
+        border-radius: 28px; 
         z-index: 10001;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.3);
       }
       #aiChatFab { 
         bottom: 24px; 
@@ -874,8 +876,7 @@
       .ai-header-status { font-size: 0.72rem; }
       .ai-bubble { font-size: 0.86rem; padding: 0.75rem 1rem; }
       
-      .ai-chat-header { border-radius: 0; }
-      .ai-chat-footer { padding-bottom: 2rem; } /* Extra space for mobile home bar */
+      .ai-chat-footer { padding-bottom: 1.2rem; }
     }
   </style>
 </head>
