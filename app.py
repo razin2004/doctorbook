@@ -19,6 +19,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from google import genai
+from google.genai import types as genai_types
 
 load_dotenv()  # Load .env file when running locally
 
@@ -339,6 +341,8 @@ def get_all_doctors(force_refresh=False):
         return DOCTOR_CACHE["data"]
 
     try:
+        if not doctors_ws:
+            return []
         rows = doctors_ws.get_all_values()  # single read
     except APIError as e:
         app.logger.error(f"Error reading Doctors sheet: {e}")
@@ -1819,6 +1823,185 @@ def admin_delete_booking():
         return jsonify({"success": False, "msg": str(e)})
 
 
+# ===================== AI Triage =====================
+
+def build_clinic_context(user_id=None):
+    """Build a rich text snapshot of all doctors/schedules for the AI system prompt."""
+    try:
+        doctors = get_all_doctors()
+    except Exception:
+        doctors = []
+
+    lines = []
+    
+# 1. USER'S PERSONAL BOOKINGS (if logged in)
+    if user_id:
+        ist = pytz.timezone('Asia/Kolkata')
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        
+        # It already knows what PatientBooking is from the top of the file!
+        user_bookings = PatientBooking.query.filter_by(user_id=user_id).all()
+        upcoming = [b for b in user_bookings if (b.date or "") >= today_str]
+        upcoming.sort(key=lambda x: x.date + x.time)
+
+        lines.append("=== USER'S PERSONAL BOOKINGS ===")
+        if not upcoming:
+            lines.append("  You have no upcoming bookings.")
+        else:
+            lines.append(f"  Total upcoming bookings: {len(upcoming)}")
+            for i, b in enumerate(upcoming):
+                status = "NEXT UPCOMING" if i == 0 else f"Booking {i+1}"
+                lines.append(f"  - {status}: Doctor {b.doctor_name} on {b.date} at {b.time} (Token {b.token})")
+        lines.append("")
+
+    if not doctors:
+        lines.append("No doctor data is currently available.")
+    else:
+        # Department summary
+        from collections import defaultdict
+        dept_counts = defaultdict(int)
+        for d in doctors:
+            dept_counts[d.get("Specialization", "Unknown")] += 1
+
+        lines.append("=== CLINIC DOCTOR DIRECTORY ===")
+        lines.append(f"Total doctors: {len(doctors)}")
+        lines.append("")
+        lines.append("--- Departments & doctor counts ---")
+        for dept, cnt in sorted(dept_counts.items()):
+            lines.append(f"  {dept}: {cnt} doctor(s)")
+
+        lines.append("")
+        lines.append("--- Individual doctor details ---")
+        day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+        for d in doctors:
+            name = d.get("Name", "Unknown")
+            spec = d.get("Specialization", "Unknown")
+            days = d.get("Days", [])
+            day_times = d.get("DayTimes", {})
+
+            schedule_parts = []
+            for day in day_names:
+                if day in days:
+                    t = day_times.get(day, "time not set")
+                    schedule_parts.append(f"{day}: {t}")
+
+            schedule_str = "; ".join(schedule_parts) if schedule_parts else "No schedule set"
+            lines.append(f"  Doctor: {name} | Specialization: {spec}")
+            lines.append(f"    Working days & times: {schedule_str}")
+
+        # Day-wise summary (who works on each day)
+        lines.append("")
+        lines.append("--- Doctors working on each day ---")
+        for day in day_names:
+            working = [d["Name"] for d in doctors if day in d.get("Days", [])]
+            if working:
+                lines.append(f"  {day}: {', '.join(working)} ({len(working)} doctor(s))")
+
+    # 3. Contact info
+    lines.append("")
+    lines.append("--- Clinic Contact Details ---")
+    lines.append("  Phone / WhatsApp: +91 8592031725")
+    lines.append("  Location: [Koorachundu](https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z/data=!3m1!4b1!4m4!3m3!8m2!3d11.5384625!4d75.8455156?entry=ttu)")
+
+    return "\n".join(lines)
+
+
+# Configure Gemini once at startup
+GEMINI_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
+
+GEMINI_SYSTEM_PROMPT = """You are PrimeCare AI Assistant — a friendly, professional medical triage and clinic information assistant for PrimeCare Clinic.
+
+Your core roles:
+1. SYMPTOM TRIAGE: When a patient describes symptoms, analyse them and recommend the most appropriate medical specialization available at PrimeCare Clinic. Always be empathetic, clear, and add a note that the AI recommendation is not a substitute for professional medical advice.
+2. CLINIC INFORMATION: Answer operational questions about doctors, their working days, timings, departments, etc., using ONLY the real clinic data provided below.
+3. PERSONAL BOOKINGS: If a user is logged in, you will see their personal booking data. Use this to answer questions about how many bookings they have, upcoming dates, and their next appointment.
+
+Behaviour rules:
+- Always be concise, warm, and professional.
+- For symptoms, end your response with a recommendation like: "➡️ Recommended: [Specialization]" on its own line.
+- For clinic queries, give direct, factual answers based on the provided data.
+- If the user asks for the clinic's location, provide the name "Koorachundu" and include the clickable Google Maps link: [Koorachundu](https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z/data=!3m1!4b1!4m4!3m3!8m2!3d11.5384625!4d75.8455156?entry=ttu).
+- If a patient asks when they should reach/arrive for their booking, always tell them to arrive 10 minutes before their scheduled time, and explicitly mention their appointment start time (e.g., "Your appointment is at 10:00 AM, so please reach the clinic by 09:50 AM.").
+- If a user asks about their bookings and you see none in the context, politely inform them they have no upcoming appointments.
+- If a patient asks to book an appointment, tell them to click the "Book Now" button or visit /booking.
+- Never make up doctors or schedule data not present in the context.
+- If a question is completely outside clinic scope, politely say you can only help with health and clinic queries.
+
+{clinic_context}"""
+
+@app.route("/ai_triage", methods=["POST"])
+def ai_triage():
+    """Gemini-powered symptom triage + clinic Q&A endpoint."""
+    if not GEMINI_API_KEY:
+        return jsonify({"success": False, "reply": "Hello! I'm PrimeCare AI Assistant. How can I help you today?"})
+
+    data = request.get_json() or {}
+    history = data.get("history", [])  
+
+    if not history:
+        return jsonify({"success": False, "reply": "Hello! I'm PrimeCare AI Assistant. How can I help you today?"})
+
+    try:
+        user_id = session.get('user_id')
+        clinic_context = build_clinic_context(user_id=user_id)
+        system_prompt = GEMINI_SYSTEM_PROMPT.format(clinic_context=clinic_context)
+
+        client = genai.Client(api_key=GEMINI_API_KEY)
+
+        contents = []
+        for msg in history[-10:]:  # Keep last 10 turns max
+            role = msg.get("role", "user")
+            text = msg.get("text", "")
+            if role in ("user", "model") and text:
+                contents.append(
+                    genai_types.Content(
+                        role=role,
+                        # Using from_text() which is the safest method in the new SDK
+                        parts=[genai_types.Part.from_text(text=text)] 
+                    )
+                )
+
+        import time
+        from google.genai.errors import APIError
+
+        max_retries = 3
+        reply_text = "Sorry, the clinic's AI assistant is currently busy. Please try again later."
+        
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=contents,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.7,
+                        max_output_tokens=600,
+                    )
+                )
+                reply_text = response.text.strip()
+                break # Success!
+            except APIError as e:
+                # Check for 429 Resource Exhausted
+                if e.code == 429 and attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+                    continue
+                else:
+                    raise e # Re-raise if not 429 or max retries hit
+            except Exception as e:
+                raise e # Re-raise other exceptions
+
+        return jsonify({"success": True, "reply": reply_text})
+
+    except Exception as e:
+        # We still log the real error to the terminal so YOU can see it
+        app.logger.error(f"AI Triage error: {e}")
+        
+        # But we send a short, polite message to the patient
+        return jsonify({
+            "success": False, 
+            "reply": "Sorry, the clinic's AI assistant is currently busy. Please try again later."
+        })
 # ===================== Admin session check =====================
 
 @app.route("/check_admin", methods=["GET"])

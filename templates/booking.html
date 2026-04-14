@@ -289,6 +289,36 @@
     width: 100%;
   }
 }
+/* ✅ FINAL FIX – Mobile-safe common time block */
+.common-time-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.common-time-row > div {
+  flex: 1 1 48%;
+  min-width: 0;              /* 🔥 critical */
+}
+
+.common-time-row input {
+  width: 100%;
+  box-sizing: border-box;    /* 🔥 prevents overflow */
+}
+
+/* Mobile: stack perfectly */
+@media (max-width: 480px) {
+  .common-time-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .common-time-row > div {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
   </style>
 </head>
 
@@ -1778,9 +1808,13 @@
           if(document.getElementById('adminActiveSessionDiv')) document.getElementById('adminActiveSessionDiv').style.display = 'none';
           if(document.getElementById('adminLoginFormDiv')) document.getElementById('adminLoginFormDiv').style.display = 'block';
           if(document.getElementById('adminLoginDiv')) document.getElementById('adminLoginDiv').style.display = 'block';
-          document.querySelectorAll('.adminPanel').forEach(p => p.style.display = 'none');
+          // 🔥 HARD RESET all admin panels
+          document.querySelectorAll('.adminPanel').forEach(p => {
+            p.style.display = 'none';
+            p.classList.remove('active');
+          });
           lastActiveAdminPanel = null;
-          
+          localStorage.removeItem('activeAdminPanel');
           if(document.getElementById('adminEmail')) document.getElementById('adminEmail').value = '';
           if(document.getElementById('adminOtp')) document.getElementById('adminOtp').value = '';
           if(document.getElementById('otpSection')) document.getElementById('otpSection').style.display = 'none';
