@@ -11,6 +11,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PrimeCare">
+  <link rel="apple-touch-icon" href="/static/image/pwa-icon.png">
 
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -2029,6 +2034,25 @@
           const data = await res.json();
           
           if(data.success && data.status === 'active') {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            // Check if we need to notify
+            if (isMobile && typeof Notification !== 'undefined') {
+              const ahead = data.patients_ahead;
+              const sessionKey = `last_notified_${data.doctor_name}_${data.your_token}`;
+              const lastAhead = sessionStorage.getItem(sessionKey);
+              
+              if (Notification.permission === 'granted' && ahead <= 2 && ahead >= 0 && lastAhead != ahead) {
+                new Notification("PrimeCare Clinic", {
+                  body: ahead === 0 ? "It's your turn! Please proceed to the doctor." : 
+                        ahead === 1 ? "You are next! Please prepare for consultation." :
+                        "You are 2 tokens away. Please be ready.",
+                  icon: "/static/primecare-logo.svg"
+                });
+                sessionStorage.setItem(sessionKey, ahead);
+              }
+            }
+
             hasNotification = true;
             docName.textContent = data.doctor_name;
             liveTokenEl.textContent = data.current_token;
@@ -2047,6 +2071,11 @@
               statusText.textContent = "Live Status";
             }
 
+            // Notification permission prompt for mobile
+            if (isMobile && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+               statusText.innerHTML += ` <button onclick="Notification.requestPermission()" style="background:none; border:none; color:#0077b6; padding:0; font-size:0.7rem; text-decoration:underline; margin-left:5px; cursor:pointer;"><i data-lucide="bell-ring" style="width:10px;height:10px;vertical-align:middle;"></i> Alert Me</button>`;
+            }
+
             if (!isDismissed) {
               banner.classList.add('show');
             } else {
@@ -2063,7 +2092,9 @@
       }
 
       const userLoggedIn = {{ 'true' if 'user_id' in session else 'false' }};
-      if (userLoggedIn) {
+      const isPatient = {{ 'true' if session.get('user_role') == 'patient' else 'false' }};
+
+      if (userLoggedIn && isPatient) {
           updateBanner();
           setInterval(updateBanner, 5000);
       }

@@ -287,7 +287,7 @@
               <span class="filter-label">
                 <i data-lucide="stethoscope"></i> Specialty
               </span>
-              <select id="specFilter" class="filter-select" onchange="applyFilters()">
+              <select id="specFilter" class="filter-select" onchange="updateDoctorFilter(); applyFilters()">
                 <option value="all">All Specialties</option>
               </select>
             </div>
@@ -335,19 +335,34 @@
     
     function populateFilters(data) {
         const specFilter = document.getElementById('specFilter');
-        const docFilter = document.getElementById('docFilter');
-        
         const currentSpec = specFilter.value;
-        const currentDoc = docFilter.value;
-        
         const specs = [...new Set(data.map(d => d.specialization))].sort();
-        const docs = [...new Set(data.map(d => d.doctor_name))].sort();
         
         specFilter.innerHTML = '<option value="all">All Specialties</option>' + 
             specs.map(s => `<option value="${s}" ${s === currentSpec ? 'selected' : ''}>${s}</option>`).join('');
             
+        updateDoctorFilter();
+    }
+    
+    function updateDoctorFilter() {
+        const specValue = document.getElementById('specFilter').value;
+        const docFilter = document.getElementById('docFilter');
+        const currentDoc = docFilter.value;
+        
+        let doctorsData = allTokensData;
+        if (specValue !== 'all') {
+            doctorsData = allTokensData.filter(d => d.specialization === specValue);
+        }
+        
+        const docs = [...new Set(doctorsData.map(d => d.doctor_name))].sort();
+        
         docFilter.innerHTML = '<option value="all">All Doctors</option>' + 
             docs.map(d => `<option value="${d}" ${d === currentDoc ? 'selected' : ''}>${d}</option>`).join('');
+            
+        // If current selected doctor is no longer in the list, reset to 'all'
+        if (specValue !== 'all' && currentDoc !== 'all' && !docs.includes(currentDoc)) {
+            docFilter.value = 'all';
+        }
     }
     
     function applyFilters() {

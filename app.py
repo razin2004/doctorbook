@@ -145,35 +145,115 @@ except Exception as e:
     print(f"[WARNING] Failed to connect to Google Sheets at startup: {e}")
     print("The app will still run, but doctor-related data might be unavailable.")
 
-# ===================== Leave helpers =====================
-
 def get_leave_worksheet():
-    """Return 'Leave' worksheet, create if missing."""
+    """Return 'Leave' worksheet, create if missing, ensure headers."""
     try:
-        return main_sheet.worksheet("Leave")
+        ws = main_sheet.worksheet("Leave")
+        # Ensure headers if sheet is empty
+        if not ws.get_all_values():
+            ws.append_row(["DoctorName", "Specialization", "Date", "Reason"])
+        return ws
     except gspread.exceptions.WorksheetNotFound:
-        ws = main_sheet.add_worksheet(title="Leave", rows="200", cols="4")
+        ws = main_sheet.add_worksheet(title="Leave", rows="100", cols="4")
         ws.append_row(["DoctorName", "Specialization", "Date", "Reason"])
         return ws
+    except Exception as e:
+        print(f"[ERROR] get_leave_worksheet failed: {e}")
+        return None
 
+# ===================== Leave helpers =====================
+
+def is_clinic_holiday(date_str):
+    """
+    Check if the specific date exists in ClinicHolidays sheet.
+    Returns (True, Reason) or (False, None)
+    """
+    try:
+        ws = get_holiday_worksheet()
+        all_vals = ws.get_all_values()
+        if not all_vals or len(all_vals) <= 1:
+            return False, None
+        
+        for row in all_vals[1:]:
+            if not row: continue
+            r_date = str(row[0]).strip()
+            if r_date == date_str:
+                reason = "General Holiday"
+                if len(row) > 1: reason = str(row[1]).strip()
+                return True, reason
+    except Exception as e:
+        print(f"[ERROR] is_clinic_holiday check failed: {e}")
+    return False, None
+
+def get_holiday_worksheet():
+    """Return 'ClinicHolidays' worksheet, create if missing, ensure headers."""
+    try:
+        ws = main_sheet.worksheet("ClinicHolidays")
+        # Ensure headers if sheet is empty
+        if not ws.get_all_values():
+            ws.append_row(["Date", "Reason"])
+        return ws
+    except gspread.exceptions.WorksheetNotFound:
+        ws = main_sheet.add_worksheet(title="ClinicHolidays", rows="100", cols="2")
+        ws.append_row(["Date", "Reason"])
+        return ws
+    except Exception as e:
+        print(f"[ERROR] get_holiday_worksheet failed: {e}")
+        return None
+
+def get_holiday_display_message(date_str, reason):
+    """
+    Returns a dynamic message like 'Clinic is on leave Today - Reason'
+    """
+    ist = pytz.timezone('Asia/Kolkata')
+    today = datetime.now(ist).date()
+    target = datetime.strptime(date_str, "%Y-%m-%d").date()
+    diff = (target - today).days
+    
+    prefix = ""
+    if diff == 0: prefix = "Clinic is on leave Today"
+    elif diff == 1: prefix = "Clinic is on leave Tomorrow"
+    else: prefix = f"Clinic is on leave on {date_str}"
+    
+    return f"{prefix} - {reason}"
 
 def is_doctor_on_leave(doctor_name, specialization, date_str):
     """
     Check Leave sheet for this doctor + specialization + YYYY-MM-DD date.
+    ALSO checks if clinic is on global holiday.
+    Returns (True, msg) or (False, None)
     """
-    leave_ws = get_leave_worksheet()
-    records = leave_ws.get_all_records()
+    # 1. Check Global Holiday (Highest Priority)
+    is_holiday, reason = is_clinic_holiday(date_str)
+    if is_holiday:
+        return True, get_holiday_display_message(date_str, reason)
 
-    dn = (doctor_name or "").strip().lower()
-    sp = (specialization or "").strip().lower()
+    # 2. Check Doctor-specific leave
+    try:
+        ws = get_leave_worksheet()
+        all_vals = ws.get_all_values()
+        if not all_vals or len(all_vals) <= 1:
+            return False, None
 
-    for row in records:
-        r_name = (row.get("DoctorName", "") or "").strip().lower()
-        r_spec = (row.get("Specialization", "") or "").strip().lower()
-        r_date = (row.get("Date", "") or "").strip()
-        if r_name == dn and r_spec == sp and r_date == date_str:
-            return True
-    return False
+        dn = (doctor_name or "").strip().lower()
+        sp = (specialization or "").strip().lower()
+        
+        headers = all_vals[0]
+        for row in all_vals[1:]:
+            if not row or len(row) < 3: continue
+            row_dict = dict(zip(headers, row))
+            
+            r_name = str(row_dict.get("DoctorName", "")).strip().lower()
+            r_spec = str(row_dict.get("Specialization", "")).strip().lower()
+            r_date = str(row_dict.get("Date", "")).strip()
+            
+            if r_name == dn and r_spec == sp and r_date == date_str:
+                reason = row_dict.get("Reason", "Temporary Leave")
+                return True, f"{doctor_name} is on leave on {date_str} ({reason})."
+    except Exception as e:
+        print(f"[ERROR] is_doctor_on_leave check failed: {e}")
+
+    return False, None
 
 # ========= Render / OTP flags =========
 
@@ -812,8 +892,28 @@ def patient_dashboard():
     user_email = session.get('user_email')
     is_doctor = DoctorSession.query.filter_by(email=user_email).first() is not None
 
+    # Enrich bookings with holiday status
+    h_data = [] # cache to avoid redundant sheet reads
+    try:
+        holiday_ws = get_holiday_worksheet()
+        h_data = holiday_ws.get_all_records()
+    except: pass
+
+    def get_holiday_reason(d_str):
+        for h in h_data:
+            if (h.get("Date") or "").strip() == d_str:
+                return (h.get("Reason") or "General Holiday").strip()
+        return None
+
+    final_upcoming = []
+    for b in upcoming_bookings:
+        reason = get_holiday_reason(b.date)
+        b.is_holiday = reason is not None
+        b.holiday_reason = reason
+        final_upcoming.append(b)
+
     return render_template('patient_dashboard.html', 
-                           upcoming_bookings=upcoming_bookings,
+                           upcoming_bookings=final_upcoming,
                            past_bookings=past_bookings,
                            prescriptions=prescriptions, 
                            all_doctors=all_doctors,
@@ -921,6 +1021,36 @@ def delete_prescription():
     return jsonify(success=False, msg="Prescription not found")
 
 # ===================== Doctor CRUD =====================
+# ===================== User-Friendly Error Handling =====================
+
+def get_friendly_error_message(e):
+    """
+    Translates technical exceptions into professional, human-readable messages.
+    Logs the full error for administrative debugging.
+    """
+    err_str = str(e)
+    # Technical log for backend visibility
+    print(f"\n[EXCEPTION CAUGHT]: {err_str}\n")
+    
+    # ─── Connectivity / API Issues ───
+    if "Read timed out" in err_str or "ConnectionPool" in err_str:
+        return "The system is currently slow or connection to database was lost. Please check your internet and try again."
+    if "quota exceeded" in err_str.lower():
+        return "System API limit reached. Please wait a few minutes and try again."
+    
+    # ─── Database / Integrity Issues ───
+    if "UNIQUE constraint failed" in err_str:
+        if "doctor_session.email" in err_str or "user.email" in err_str:
+            return "This email is already registered to another doctor or account."
+        return "This detail (e.g. Email) is already registered in our system."
+    
+    if "IntegrityError" in err_str:
+        return "Record already exists or is conflicting with existing data."
+    
+    # ─── Fallback ───
+    return "An unexpected error occurred. Please try again later."
+
+
 @app.route('/admin_add_doctor', methods=['POST'])
 def admin_add_doctor():
     admin_email = session.get("admin_email")
@@ -1073,7 +1203,7 @@ def admin_add_doctor():
 
     except Exception as e:
         app.logger.exception("Error in admin_add_doctor")
-        return jsonify({'success': False, 'msg': str(e)})
+        return jsonify({'success': False, 'msg': get_friendly_error_message(e)})
 
 
 
@@ -1108,24 +1238,29 @@ def admin_edit_doctor():
             return jsonify({"success": False, "msg": "Doctors sheet is empty"})
 
         headers = all_rows[0]
-        if "Email" not in headers:
-            headers.append("Email")
-            # we don't automatically rewrite headers here, we just know Email is in our row_dict logic
-            
         rows = all_rows[1:]
 
         # Email uniqueness check (excluding currently edited doctor)
         if email:
             email_lower = email.lower().strip()
+            
+            # Check Spreadsheet uniqueness
             for r in rows:
                 r_dict = dict(zip(headers, r))
                 r_name = r_dict.get("Name", "").strip().lower()
                 r_spec = r_dict.get("Specialization", "").strip().lower()
                 r_email = r_dict.get("Email", "").strip().lower()
                 
-                # If email exists for ANOTHER doctor
                 if r_email == email_lower and (r_name != name or r_spec != spec):
-                    return jsonify({"success": False, "msg": "Email already registered by another doctor"})
+                    return jsonify({"success": False, "msg": "Email already registered by another doctor in spreadsheet"})
+
+            # Check SQLite uniqueness (Safety layer)
+            other_session = DoctorSession.query.filter(
+                DoctorSession.email == email_lower,
+                (DoctorSession.doctor_name != name) | (DoctorSession.specialization != spec)
+            ).first()
+            if other_session:
+                 return jsonify({"success": False, "msg": f"Email is already assigned to {other_session.doctor_name} in system database."})
 
         updated = False
         new_rows = []
@@ -1138,22 +1273,36 @@ def admin_edit_doctor():
 
                 row_dict["Days"] = ", ".join(days)
                 if email:
-                    email = email.lower()
-                    row_dict["Email"] = email
+                    email_clean = email.lower().strip()
+                    row_dict["Email"] = email_clean
                     
-                    # Update SQLite
-                    doc_session = DoctorSession.query.filter_by(doctor_name=row_dict.get("Name", "").strip(), specialization=row_dict.get("Specialization", "").strip()).first()
+                    # Update SQLite (Finding existing or syncing missing)
+                    doc_session = DoctorSession.query.filter_by(
+                        doctor_name=row_dict.get("Name", "").strip(), 
+                        specialization=row_dict.get("Specialization", "").strip()
+                    ).first()
+                    
                     if doc_session:
-                        doc_session.email = email.lower()
+                        doc_session.email = email_clean
                     else:
-                        new_doc_session = DoctorSession(doctor_name=row_dict.get("Name", "").strip(), specialization=row_dict.get("Specialization", "").strip(), email=email.lower())
+                        new_doc_session = DoctorSession(
+                            doctor_name=row_dict.get("Name", "").strip(), 
+                            specialization=row_dict.get("Specialization", "").strip(), 
+                            email=email_clean
+                        )
                         db.session.add(new_doc_session)
                         
-                    existing_user = User.query.filter_by(email=email).first()
+                    # Sync User roles
+                    existing_user = User.query.filter_by(email=email_clean).first()
                     if existing_user:
                         existing_user.role = "doctor"
                         
-                    db.session.commit()
+                    try:
+                        db.session.commit()
+                    except Exception as db_err:
+                        db.session.rollback()
+                        app.logger.error(f"DB Auth Sync Error: {db_err}")
+                        return jsonify({"success": False, "msg": "Failed to sync credentials to system database."})
 
                 for day in day_names:
                     col_name = f"{day}Time"
@@ -1165,7 +1314,7 @@ def admin_edit_doctor():
             new_rows.append([row_dict.get(h, "") for h in headers])
 
         if not updated:
-            return jsonify({"success": False, "msg": "Doctor not found"})
+            return jsonify({"success": False, "msg": "Doctor metadata not found in sheet"})
 
         doctors_ws.clear()
         doctors_ws.append_row(headers)
@@ -1173,10 +1322,10 @@ def admin_edit_doctor():
             row[0] = str(i + 1)  # keep serial numbers
             doctors_ws.append_row(row)
 
-        return jsonify({"success": True, "msg": "Doctor updated successfully"})
+        return jsonify({"success": True, "msg": "Doctor updated and credentials synchronized successfully"})
 
     except Exception as e:
-        return jsonify({"success": False, "msg": str(e)})
+        return jsonify({"success": False, "msg": get_friendly_error_message(e)})
 
 
 @app.route("/admin_delete_doctor", methods=["POST"])
@@ -1201,16 +1350,36 @@ def admin_delete_doctor():
 
         updated_rows = []
         found = False
+        target_email = None
+
         for row in rows:
             row_dict = dict(zip(headers, row))
-            if (row_dict["Name"].strip().lower() == name and
-                    row_dict["Specialization"].strip().lower() == specialization):
+            if (row_dict.get("Name", "").strip().lower() == name and
+                    row_dict.get("Specialization", "").strip().lower() == specialization):
                 found = True
+                target_email = row_dict.get("Email", "").strip().lower()
                 continue
             updated_rows.append(row)
 
         if not found:
             return jsonify({'success': False, 'msg': 'Doctor not found'})
+
+        # ─── SYNC LOGIC: Clean up DB session and Role ───
+        if target_email:
+            try:
+                # 1. Remove from DoctorSession
+                DoctorSession.query.filter_by(email=target_email).delete()
+                
+                # 2. Revert User role to patient
+                user = User.query.filter_by(email=target_email).first()
+                if user:
+                    user.role = "patient"
+                
+                db.session.commit()
+            except Exception as db_err:
+                app.logger.error(f"Failed to sync doctor deletion in DB: {db_err}")
+                # We continue since sheet deletion is the primary goal, 
+                # but we log the error.
 
         doctors_ws.clear()
         doctors_ws.append_row(headers)
@@ -1218,10 +1387,10 @@ def admin_delete_doctor():
             row[0] = i + 1
             doctors_ws.append_row(row)
 
-        return jsonify({'success': True, 'msg': 'Doctor deleted successfully'})
+        return jsonify({'success': True, 'msg': 'Doctor deleted successfully and login roles synchronized.'})
 
     except Exception as e:
-        return jsonify({'success': False, 'msg': str(e)})
+        return jsonify({'success': False, 'msg': get_friendly_error_message(e)})
 
 # ===================== Leave CRUD =====================
 
@@ -1249,17 +1418,20 @@ def admin_add_leave():
         return jsonify({"success": False, "msg": "Invalid date format"})
 
     leave_ws = get_leave_worksheet()
-    records = leave_ws.get_all_records()
-
-    # Prevent duplicates
-    for row in records:
-        if ((row.get("DoctorName", "") or "").strip().lower() == doctor_name.lower()
-                and (row.get("Specialization", "") or "").strip().lower() == specialization.lower()
-                and (row.get("Date", "") or "").strip() == date_str):
-            return jsonify({
-                "success": False,
-                "msg": "Leave already set for this doctor on this date."
-            })
+    all_vals = leave_ws.get_all_values()
+    
+    if len(all_vals) > 1:
+        headers = all_vals[0]
+        for row in all_vals[1:]:
+            if not row or len(row) < 3: continue
+            row_dict = dict(zip(headers, row))
+            if (str(row_dict.get("DoctorName", "")).strip().lower() == doctor_name.lower()
+                    and str(row_dict.get("Specialization", "")).strip().lower() == specialization.lower()
+                    and str(row_dict.get("Date", "")).strip() == date_str):
+                return jsonify({
+                    "success": False,
+                    "msg": "Leave already set for this doctor on this date."
+                })
 
     leave_ws.append_row([doctor_name, specialization, date_str, reason])
     return jsonify({"success": True, "msg": "Leave added successfully."})
@@ -1282,20 +1454,24 @@ def admin_get_leaves():
     doctor_name, specialization = [x.strip() for x in combined.split(" - ", 1)]
 
     leave_ws = get_leave_worksheet()
-    records = leave_ws.get_all_records()
-
-    dn = doctor_name.strip().lower()
-    sp = specialization.strip().lower()
-
+    all_vals = leave_ws.get_all_values()
+    
     leaves = []
-    for row in records:
-        r_name = (row.get("DoctorName", "") or "").strip().lower()
-        r_spec = (row.get("Specialization", "") or "").strip().lower()
-        if r_name == dn and r_spec == sp:
-            leaves.append({
-                "date": (row.get("Date", "") or "").strip(),
-                "reason": (row.get("Reason", "") or "").strip()
-            })
+    if all_vals and len(all_vals) > 1:
+        headers = all_vals[0]
+        dn = doctor_name.strip().lower()
+        sp = specialization.strip().lower()
+
+        for row in all_vals[1:]:
+            if not row or len(row) < 3: continue
+            row_dict = dict(zip(headers, row))
+            r_name = str(row_dict.get("DoctorName", "")).strip().lower()
+            r_spec = str(row_dict.get("Specialization", "")).strip().lower()
+            if r_name == dn and r_spec == sp:
+                leaves.append({
+                    "date": str(row_dict.get("Date", "")).strip(),
+                    "reason": str(row_dict.get("Reason", "")).strip()
+                })
 
     leaves.sort(key=lambda x: x["date"])
     return jsonify({"success": True, "leaves": leaves})
@@ -1349,6 +1525,113 @@ def admin_delete_leave():
         leave_ws.append_row(row)
 
     return jsonify({"success": True, "msg": "Leave entry removed."})
+
+# ===================== Holiday CRUD =====================
+
+@app.route("/admin_add_holiday", methods=["POST"])
+def admin_add_holiday():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+
+    data = request.get_json() or {}
+    start_date_str = (data.get("date") or "").strip()
+    end_date_str = (data.get("endDate") or "").strip()
+    reason = (data.get("reason") or "General Holiday").strip()
+
+    if not start_date_str:
+        return jsonify({"success": False, "msg": "Start date is required"})
+
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        target_dates = [start_date_str]
+        
+        if end_date_str:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            if end_date < start_date:
+                return jsonify({"success": False, "msg": "End date cannot be before start date"})
+            
+            # Generate all dates in range
+            curr = start_date + timedelta(days=1)
+            while curr <= end_date:
+                target_dates.append(curr.strftime("%Y-%m-%d"))
+                curr += timedelta(days=1)
+        
+        holiday_ws = get_holiday_worksheet()
+        all_vals = holiday_ws.get_all_values()
+        existing_dates = set()
+        if len(all_vals) > 1:
+            # Dates are in the 1st column (index 0)
+            existing_dates = {str(row[0]).strip() for row in all_vals[1:] if row}
+        
+        new_entries = []
+        skipped_count = 0
+        for d in target_dates:
+            if d in existing_dates:
+                skipped_count += 1
+                continue
+            new_entries.append([d, reason])
+        
+        if not new_entries:
+            return jsonify({"success": False, "msg": f"Skipped: Date(s) already marked as holidays ({skipped_count} skipped)."})
+        
+        holiday_ws.append_rows(new_entries)
+        
+        msg = f"Successfully added {len(new_entries)} holiday(s)."
+        if skipped_count > 0:
+            msg += f" ({skipped_count} date(s) were already holidays and skipped)."
+            
+        return jsonify({"success": True, "msg": msg})
+
+    except Exception as e:
+        return jsonify({"success": False, "msg": get_friendly_error_message(e)})
+
+@app.route("/admin_get_holidays", methods=["GET"])
+def admin_get_holidays():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+
+    holiday_ws = get_holiday_worksheet()
+    all_vals = holiday_ws.get_all_values()
+    if not all_vals or len(all_vals) <= 1:
+        return jsonify({"success": True, "holidays": []})
+
+    headers = all_vals[0]
+    holidays = []
+    for row in all_vals[1:]:
+        if not row: continue
+        holidays.append(dict(zip(headers, row)))
+    
+    # Sort by date
+    holidays.sort(key=lambda x: x.get("Date", ""))
+    return jsonify({"success": True, "holidays": holidays})
+
+@app.route("/admin_delete_holiday", methods=["POST"])
+def admin_delete_holiday():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+
+    data = request.get_json() or {}
+    date_str = (data.get("date") or "").strip()
+    
+    holiday_ws = get_holiday_worksheet()
+    all_rows = holiday_ws.get_all_values()
+    if not all_rows: return jsonify({"success": False, "msg": "Sheet is empty"})
+    
+    new_rows = [all_rows[0]]
+    found = False
+    for row in all_rows[1:]:
+        if not row or len(row) < 1: continue # Skip empty rows
+        if row[0].strip() == date_str:
+            found = True
+            continue
+        new_rows.append(row)
+    
+    if found:
+        holiday_ws.clear()
+        holiday_ws.update("A1", new_rows)
+        return jsonify({"success": True, "msg": "Holiday removed"})
+    
+    return jsonify({"success": False, "msg": "Holiday not found"})
 
 # ===================== Doctor lists =====================
 
@@ -1448,12 +1731,10 @@ def book_doctor():
             return jsonify({"success": False,
                             "msg": f"{doctor_info['Name']} does not work on {weekday}."}), 400
 
-        # Temporary leave check
-        if is_doctor_on_leave(doctor_info["Name"], doctor_info["Specialization"], date):
-            return jsonify({
-                "success": False,
-                "msg": f"{doctor_info['Name']} is on leave on {date}."
-            }), 400
+        # Temporary leave check (Clinic wide or Doctor specific)
+        on_leave, msg = is_doctor_on_leave(doctor_info["Name"], doctor_info["Specialization"], date)
+        if on_leave:
+            return jsonify({"success": False, "msg": msg}), 400
 
         day_times = doctor_info.get("DayTimes", {})
         time_for_booking = day_times.get(weekday, "")
@@ -1517,7 +1798,7 @@ def book_doctor():
         })
 
     except Exception as e:
-        return jsonify({"success": False, "msg": f"Error: {str(e)}"}), 500
+        return jsonify({"success": False, "msg": get_friendly_error_message(e)}), 500
 
 @app.route("/admin_book_patient", methods=["POST"])
 def admin_book_patient():
@@ -1545,8 +1826,10 @@ def admin_book_patient():
         if weekday not in doctor_info["Days"]:
              return jsonify({"success": False, "msg": f"{doctor_info['Name']} not available on {weekday}."}), 400
         
-        if is_doctor_on_leave(doctor_info["Name"], doctor_info["Specialization"], date):
-            return jsonify({"success": False, "msg": f"{doctor_info['Name']} is on leave on {date}."}), 400
+        # Leave check (Includes Clinic Holiday check)
+        on_leave, leave_msg = is_doctor_on_leave(doctor_info["Name"], doctor_info["Specialization"], date)
+        if on_leave:
+            return jsonify({"success": False, "msg": leave_msg}), 400
 
         # ─── Refined 25-Booking Limit Check (Admin Warning/Override) ───
         spreadsheet = client.open_by_url(sheet_url)
@@ -1612,7 +1895,7 @@ def admin_book_patient():
             )
         })
     except Exception as e:
-        return jsonify({"success": False, "msg": str(e)}), 500
+        return jsonify({"success": False, "msg": get_friendly_error_message(e)}), 500
 
 @app.route("/book_department", methods=["POST"])
 def book_department():
@@ -1644,6 +1927,11 @@ def book_department():
         if days_diff > 15:
             return jsonify({"success": False, "msg": "Bookings are only allowed up to 15 days in advance."}), 400
 
+        # Global Holiday Check
+        is_holiday, h_reason = is_clinic_holiday(date_str)
+        if is_holiday:
+            return jsonify({"success": False, "msg": get_holiday_display_message(date_str, h_reason)}), 400
+
         all_doctors = get_all_doctors()
 
         # Doctors in specialization working that weekday
@@ -1655,15 +1943,22 @@ def book_department():
         ]
 
         # Exclude leave days
-        available_doctors = [
-            doc for doc in matching_doctors
-            if not is_doctor_on_leave(doc["Name"], doc["Specialization"], date_str)
-        ]
-
+        available_doctors = []
+        for doc in matching_doctors:
+            on_leave, _ = is_doctor_on_leave(doc["Name"], doc["Specialization"], date_str)
+            if not on_leave:
+                available_doctors.append(doc)
+        
         if not available_doctors:
+            # Check if it was a clinic holiday or just no doctors
+            is_holiday, h_reason = is_clinic_holiday(date_str)
+            errMsg = f"No doctors available for {specialization} on {weekday}."
+            if is_holiday:
+                errMsg = get_holiday_display_message(date_str, h_reason)
+            
             return jsonify({
                 "success": False,
-                "msg": f"No doctors available for {specialization} on {weekday}."
+                "msg": errMsg
             }), 400
 
         # ---------- CASE 1: Patient selected a specific doctor/time ----------
@@ -1836,7 +2131,7 @@ def book_department():
 
     except Exception as e:
         app.logger.exception("Error in /book_department")
-        return jsonify({"success": False, "msg": f"Error: {str(e)}"}), 500
+        return jsonify({"success": False, "msg": get_friendly_error_message(e)}), 500
 
 # ===================== Availability Check API =====================
 
@@ -1867,6 +2162,17 @@ def check_doctor_availability():
         selected_date = selected_date_dt.date()
         weekday = selected_date_dt.strftime("%A")
 
+        # ─── Priority 1: Global Clinic Holiday ───
+        is_holiday, h_reason = is_clinic_holiday(date_str)
+        if is_holiday:
+            holiday_msg = get_holiday_display_message(date_str, h_reason)
+            return jsonify({
+                "success": True, 
+                "holiday": True, 
+                "reason": holiday_msg,
+                "results": {url: {"available": False, "reason": holiday_msg} for url in sheet_urls}
+            })
+
         for url in sheet_urls:
             if not url: continue
             doc = next((d for d in all_doctors if d["SheetURL"] == url), None)
@@ -1885,8 +2191,9 @@ def check_doctor_availability():
                 continue
 
             # 3. Temporary Leave
-            if is_doctor_on_leave(doc["Name"], doc["Specialization"], date_str):
-                output[url] = {"available": False, "reason": f" {doc['Name']} is on temporary leave on this date."}
+            on_leave, leave_msg = is_doctor_on_leave(doc["Name"], doc["Specialization"], date_str)
+            if on_leave:
+                output[url] = {"available": False, "reason": leave_msg}
                 continue
 
             # 4. Working hours finished
@@ -1909,7 +2216,7 @@ def check_doctor_availability():
             return jsonify(res)
 
     except Exception as e:
-        return jsonify({"available": False, "msg": str(e)}), 500
+        return jsonify({"available": False, "msg": get_friendly_error_message(e)}), 500
 
 # ===================== Confirmation & cleanup =====================
 
@@ -1979,7 +2286,7 @@ def get_booking_stats():
         count = get_filled_booking_count(ws)
         return jsonify({"success": True, "count": count, "total": 25})
     except Exception as e:
-        return jsonify({"success": False, "msg": str(e)}), 500
+        return jsonify({"success": False, "msg": get_friendly_error_message(e)}), 500
 
 @app.route("/manage_bookings", methods=["POST"])
 def admin_get_bookings():
@@ -2047,7 +2354,7 @@ def admin_get_bookings():
         })
 
     except Exception as e:
-        return jsonify({"success": False, "msg": str(e)})
+        return jsonify({"success": False, "msg": get_friendly_error_message(e)})
 
 
 @app.route("/admin_delete_booking", methods=["POST"])
@@ -2109,7 +2416,7 @@ def admin_delete_booking():
             return jsonify({"success": True, "msg": "Booking cancelled (slot preserved)"})
 
     except Exception as e:
-        return jsonify({"success": False, "msg": str(e)})
+        return jsonify({"success": False, "msg": get_friendly_error_message(e)})
 
 
 # ===================== AI Triage =====================
@@ -2464,6 +2771,8 @@ def consult_skipped():
 
 @app.route('/live-tracking')
 def live_tracking():
+    if not session.get('user_id') and not session.get('admin_logged_in'):
+        return redirect(url_for('home', _anchor='auth'))
     return render_template('live_tracking.html')
 
 @app.route('/live_tokens', methods=['GET'])
@@ -2522,8 +2831,13 @@ def live_tokens():
 @app.route('/my_token_status', methods=['GET'])
 def my_token_status():
     user_id = session.get('user_id')
+    user_role = session.get('user_role')
+    
     if not user_id:
         return jsonify({"success": False, "msg": "Not logged in"})
+    
+    if user_role != 'patient':
+        return jsonify({"success": False, "msg": "Notifications restricted to patient role"})
         
     ist = pytz.timezone('Asia/Kolkata')
     today_str = datetime.now(ist).strftime("%Y-%m-%d")

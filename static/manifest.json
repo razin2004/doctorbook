@@ -1,0 +1,19 @@
+{
+  "name": "PrimeCare Clinic Portal",
+  "short_name": "PrimeCare",
+  "start_url": "/patient_dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0077b6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/image/pwa-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "description": "Premium patient portal for PrimeCare Clinic - Real-time token tracking and bookings.",
+  "id": "/patient_dashboard"
+}

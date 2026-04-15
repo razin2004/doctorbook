@@ -13,6 +13,11 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PrimeCare">
+  <link rel="apple-touch-icon" href="/static/image/pwa-icon.png">
 
   <style>
     /* ── Booking page: single header button stays inline on all sizes ── */
@@ -319,6 +324,15 @@
     flex: 1 1 100%;
   }
 }
+    .holiday-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 600px) {
+      .holiday-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 
@@ -552,6 +566,13 @@
             <div class="panel-card-sub">View tokens & manage cancellations</div>
           </div>
         </div>
+  <div class="panel-card" onclick="showAdminPanel('holiday', this)">
+          <div class="panel-card-icon" style="background:rgba(249,115,22,0.1); color:#f97316;"><i data-lucide="calendar-off"></i></div>
+          <div class="panel-card-text">
+            <div class="panel-card-label">Clinic Holidays</div>
+            <div class="panel-card-sub">Set global holidays for the clinic</div>
+          </div>
+        </div>
 
         <div class="panel-card" onclick="showAdminPanel('add', this)">
           <div class="panel-card-icon"><i data-lucide="user-plus"></i></div>
@@ -577,6 +598,7 @@
           </div>
         </div>
 
+      
       </div>
     </div>
 
@@ -617,12 +639,12 @@
 
         <div id="commonTimeBlock" style="display:none; margin-top:10px;">
           <label><i data-lucide="clock"></i> Common Time Slot</label>
-          <div class="common-time-row" style="display:flex; gap:12px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:120px;">
+          <div class="common-time-row">
+            <div>
               <label for="commonStart" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="play-circle"></i> Start</label>
               <input type="time" id="commonStart" />
             </div>
-            <div style="flex:1; min-width:120px;">
+            <div>
               <label for="commonEnd" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="stop-circle"></i> End</label>
               <input type="time" id="commonEnd" />
             </div>
@@ -676,12 +698,12 @@
 
         <div id="commonTimeBlockEdit" style="display:none; margin-top:10px;">
           <label><i data-lucide="clock"></i> Common Time Slot</label>
-          <div class="common-time-row" style="display:flex; gap:12px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:120px;">
+          <div class="common-time-row">
+            <div>
               <label for="commonStartEdit" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="play-circle"></i> Start</label>
               <input type="time" id="commonStartEdit" />
             </div>
-            <div style="flex:1; min-width:120px;">
+            <div>
               <label for="commonEndEdit" style="font-size:0.82rem; margin-top:0.4rem;"><i data-lucide="stop-circle"></i> End</label>
               <input type="time" id="commonEndEdit" />
             </div>
@@ -819,6 +841,80 @@
       <button type="button" id="fetchBookingsBtn" class="btn btn-primary" style="width:100%; margin-bottom:1rem;">
         <i data-lucide="search"></i> Show Bookings
       </button>
+
+      <div id="viewBookingMsg" style="margin-top:8px; font-size:0.88rem; display:none;"></div>
+
+      <div class="booking-table-wrapper" id="bookingTableWrapper" style="display:none;">
+        <div class="booking-table-header">
+            <h4 style="margin:0; font-size:1rem; color:#024b80;"><i data-lucide="list"></i> Bookings List</h4>
+            <button onclick="prepareAndPrint()" class="btn btn-outline no-print print-btn" style="padding: 0.4rem 0.8rem; font-size:0.82rem;">
+                <i data-lucide="printer"></i> <span class="btn-text">Print List</span>
+            </button>
+        </div>
+        <table class="booking-table">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Patient Name</th>
+              <th>Age</th>
+              <th>Gender</th>
+              <th>Phone</th>
+              <th class="no-print">Action</th>
+            </tr>
+          </thead>
+          <tbody id="adminBookingsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CLINIC HOLIDAY PANEL -->
+    <div id="holidayPanel" class="adminPanel" style="display:none;">
+      <h3><i data-lucide="calendar-off"></i> Manage Clinic Holidays</h3>
+      <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">Mark specific dates as holidays for the entire clinic. This will block all bookings for all doctors.</p>
+      
+      <div style="background:rgba(0,119,182,0.04); padding:1.2rem; border-radius:16px; margin-bottom:2rem; border:1px solid rgba(0,119,182,0.1);">
+        <div class="holiday-grid">
+          <div>
+            <label for="hDate"><i data-lucide="calendar"></i> Holiday Date <span id="startLabel"></span></label>
+            <input type="date" id="hDate" />
+          </div>
+          <div>
+            <label for="hReason"><i data-lucide="message-square"></i> Reason (e.g. Festival)</label>
+            <input type="text" id="hReason" placeholder="Independence Day" />
+          </div>
+        </div>
+        
+        <div id="hRangeRow" style="display:none; margin-bottom:15px;">
+           <label for="hEndDate"><i data-lucide="calendar-days"></i> End Date (Inclusive)</label>
+           <input type="date" id="hEndDate" />
+        </div>
+
+        <div style="margin-bottom:15px; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="hUseRange" onchange="toggleHolidayRange()" style="width:16px; height:16px; cursor:pointer;" />
+            <label for="hUseRange" style="cursor:pointer; font-size:0.85rem; color:#024b80; font-weight:600;">Schedule a Date Range?</label>
+        </div>
+
+        <button id="addHolidayBtn" class="btn btn-primary" onclick="addGlobalHoliday()" style="width:100%;">
+          <i data-lucide="plus-circle"></i> Add Holiday
+        </button>
+      </div>
+
+      <h5 style="margin-bottom:0.8rem;"><i data-lucide="list"></i> Scheduled Global Holidays</h5>
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+          <thead>
+            <tr style="background:rgba(0,119,182,0.07);">
+              <th style="padding:0.6rem; text-align:left; color:#024b80; border-bottom:1.5px solid #d1e9f6;">Date</th>
+              <th style="padding:0.6rem; text-align:left; color:#024b80; border-bottom:1.5px solid #d1e9f6;">Reason</th>
+              <th style="padding:0.6rem; text-align:left; color:#024b80; border-bottom:1.5px solid #d1e9f6;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="holidayTbody">
+             <!-- JS Injected -->
+          </tbody>
+        </table>
+      </div>
+    </div>
 
       <div id="viewBookingMsg" style="margin-top:8px; font-size:0.88rem; display:none;"></div>
 
@@ -1108,6 +1204,10 @@
         document.getElementById('bookPatientPanel').style.display = 'block';
         loadDoctorsForAdminBooking();
       }
+      else if (type === 'holiday') {
+        document.getElementById('holidayPanel').style.display = 'block';
+        loadGlobalHolidays();
+      }
       
       if (btn) btn.classList.add('active');
       localStorage.setItem('activeAdminPanel', type); // Save state
@@ -1266,50 +1366,69 @@
       doctorMsgDiv.style.display='none'; doctorMsgDiv.textContent='';
       const doctorSelect = document.getElementById('doctorSelect');
       const selectedDoctorOption = doctorSelect.selectedOptions[0];
+      const dateVal = this.value;
+
       if (!selectedDoctorOption || !selectedDoctorOption.value) {
         showMessage('doctorMsg','Please select a doctor to view availability.');
         this.value=''; return;
       }
-      const daysStr = selectedDoctorOption.dataset.days || '';
-      workingDays = daysStr ? daysStr.split(',').map(day=>dayMap[day.trim()]) : [];
-      const selectedDate = new Date(this.value);
-      const selectedDay  = selectedDate.getDay();
-      if (!workingDays.includes(selectedDay)) {
-        showMessage('doctorMsg','This doctor is not available on the selected date. Please choose another.');
-        this.value=''; return;
-      }
-      const todayStr  = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
-      const todayDate = new Date(todayStr);
-      if (selectedDate < todayDate) {
-        showMessage('doctorMsg','Appointment dates cannot be set in the past. Please select a future date.');
-        this.value=''; return;
-      }
-      if (this.value === todayStr) {
-        const dayTimes = selectedDoctorOption.dataset.dayTimes ? JSON.parse(selectedDoctorOption.dataset.dayTimes) : {};
-        const weekdayName = Object.keys(dayMap).find(k=>dayMap[k]===selectedDay);
-        const timeRange = dayTimes[weekdayName];
-        if (timeRange) {
-          const parts = timeRange.split('-');
-          const endTimeStr = parts[1] ? parts[1].trim() : null;
-          if (endTimeStr) {
-            const nowStr = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'});
-            if (timeToMinutes(nowStr) > timeToMinutes(endTimeStr)) {
-              showMessage('doctorMsg','Bookings for this doctor have closed for today. Please select another date.');
-              this.value=''; return;
+
+      // 1. Check API first for Global Holiday/Leave Priority
+      try {
+        const res = await fetch(`/api/check_doctor_availability?sheet_url=${encodeURIComponent(selectedDoctorOption.value)}&date=${encodeURIComponent(dateVal)}`);
+        const data = await res.json();
+
+        // ─── ABSOLUTE PRIORITY: Clinic Wide Holiday ───
+        if (data.holiday) {
+          showMessage('doctorMsg', data.reason);
+          this.value = ''; return;
+        }
+
+        // 2. Individual Doctor Availability Logic (Server-side result)
+        if (data.available === false) {
+           showMessage('doctorMsg', data.reason || 'Doctor is not available.');
+           this.value = ''; return;
+        }
+
+        // 3. Local Validations (Past date, working habits, etc.)
+        const daysStr = selectedDoctorOption.dataset.days || '';
+        const workingDays = daysStr ? daysStr.split(',').map(day=>dayMap[day.trim()]) : [];
+        const selectedDate = new Date(dateVal);
+        const selectedDay  = selectedDate.getDay();
+
+        if (!workingDays.includes(selectedDay)) {
+          showMessage('doctorMsg','This doctor is not available on the selected date. Please choose another.');
+          this.value=''; return;
+        }
+
+        const todayStr  = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+        const todayDate = new Date(todayStr);
+        if (selectedDate < todayDate) {
+          showMessage('doctorMsg','Appointment dates cannot be set in the past. Please select a future date.');
+          this.value=''; return;
+        }
+
+        if (dateVal === todayStr) {
+          const dayTimes = selectedDoctorOption.dataset.dayTimes ? JSON.parse(selectedDoctorOption.dataset.dayTimes) : {};
+          const weekdayName = Object.keys(dayMap).find(k=>dayMap[k]===selectedDay);
+          const timeRange = dayTimes[weekdayName];
+          if (timeRange) {
+            const parts = timeRange.split('-');
+            const endTimeStr = parts[1] ? parts[1].trim() : null;
+            if (endTimeStr) {
+              const nowStr = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'});
+              if (timeToMinutes(nowStr) > timeToMinutes(endTimeStr)) {
+                showMessage('doctorMsg','Bookings for this doctor have closed for today. Please select another date.');
+                this.value=''; return;
+              }
             }
           }
         }
+      } catch (err) { 
+        console.error('Availability check failed:', err);
+        showMessage('doctorMsg', 'Error checking availability. Please try again.');
+        this.value = '';
       }
-
-      // Live Availability/Leave Check via API
-      try {
-        const res = await fetch(`/api/check_doctor_availability?sheet_url=${encodeURIComponent(selectedDoctorOption.value)}&date=${encodeURIComponent(this.value)}`);
-        const data = await res.json();
-        if (data.available === false) {
-          showMessage('doctorMsg', data.reason || 'Doctor is not available.');
-          this.value = '';
-        }
-      } catch (err) { console.error('Availability check failed:', err); }
     });
 
     // ─── Edit doctor select ────────────────────────────────────
@@ -1449,6 +1568,121 @@
       finally { btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); }
     });
 
+    // ─── Global Holiday Management ──────────────────────────────
+    async function loadGlobalHolidays() {
+        const tbody = document.getElementById('holidayTbody');
+        if(!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:1.5rem; color:#94a3b8;">Loading...</td></tr>';
+        try {
+            const res = await fetch('/admin_get_holidays');
+            const data = await res.json();
+            if (data.success) {
+                if (data.holidays.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:2rem; color:#94a3b8;"><i data-lucide="calendar" style="width:30px;height:30px;display:block;margin:0 auto 0.5rem;opacity:0.3;"></i>No global holidays scheduled.</td></tr>';
+                } else {
+                    tbody.innerHTML = data.holidays.map(h => `
+                        <tr>
+                            <td style="padding:0.75rem 0.6rem; border-bottom:1px solid #f1f5f9; font-weight:600;">${h.Date}</td>
+                            <td style="padding:0.75rem 0.6rem; border-bottom:1px solid #f1f5f9; color:#64748b;">${h.Reason}</td>
+                            <td style="padding:0.75rem 0.6rem; border-bottom:1px solid #f1f5f9;">
+                                <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.2);" onclick="deleteGlobalHoliday('${h.Date}')">
+                                    <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Remove
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+                lucide.createIcons();
+            }
+        } catch(e) { console.error("Failed to load holidays", e); }
+    }
+
+    window.toggleHolidayRange = function() {
+        const isRange = document.getElementById('hUseRange').checked;
+        document.getElementById('hRangeRow').style.display = isRange ? 'block' : 'none';
+        document.getElementById('startLabel').textContent = isRange ? '(Start)' : '';
+    }
+
+    window.addGlobalHoliday = async function() {
+        const btn = document.getElementById('addHolidayBtn');
+        const date = document.getElementById('hDate').value;
+        const endDate = document.getElementById('hEndDate').value;
+        const useRange = document.getElementById('hUseRange').checked;
+        const reason = document.getElementById('hReason').value.trim();
+        
+        if (!date) { showToast("Please select a date", "error"); return; }
+        if (useRange) {
+            if (!endDate) { showToast("Please select an end date", "error"); return; }
+            if (new Date(endDate) <= new Date(date)) {
+                showToast("End date must be after start date", "error");
+                return;
+            }
+        }
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Adding Holiday...';
+        lucide.createIcons();
+
+        try {
+            const res = await fetch('/admin_add_holiday', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    date, 
+                    endDate: useRange ? endDate : null,
+                    reason: reason || 'General Holiday' 
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.msg, "success");
+                document.getElementById('hReason').value = "";
+                if(useRange) {
+                    document.getElementById('hUseRange').checked = false;
+                    toggleHolidayRange();
+                }
+                loadGlobalHolidays();
+            } else {
+                showToast(data.msg, "error");
+            }
+        } catch(e) { 
+            showToast("Network error", "error"); 
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="plus-circle"></i> Add Holiday';
+            lucide.createIcons();
+        }
+    }
+
+    window.deleteGlobalHoliday = function(date) {
+        openModal(
+            'warning',
+            'Remove Holiday',
+            `Are you sure you want to remove the clinic holiday for <strong>${date}</strong>?`,
+            'Remove Holiday',
+            async () => {
+                try {
+                    const res = await fetch('/admin_delete_holiday', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast(`Holiday removed: ${date}`, "success");
+                        loadGlobalHolidays();
+                        closeModal();
+                    } else {
+                        showToast(data.msg, "error");
+                    }
+                } catch(e) { 
+                    showToast("Network error", "error"); 
+                }
+            },
+            true // isDanger
+        );
+    }
+
     // ─── Book by Dept form ─────────────────────────────────────
     document.getElementById('departmentBookingForm').addEventListener('submit', async e => {
       e.preventDefault();
@@ -1479,72 +1713,91 @@
 
     document.getElementById('specDate').addEventListener('change', async function() {
       const spec         = document.getElementById('specSelect').value;
-      const selectedDate = new Date(this.value);
-      const selectedDay  = selectedDate.getDay();
+      const dateVal      = this.value;
       const messageDiv   = document.getElementById('noDoctorMsg');
       messageDiv.textContent=''; messageDiv.style.display='none';
       updateSpecTimeSelect([],null);
+
       if (!spec || !doctorsBySpecialization[spec]) {
         showMessage('noDoctorMsg','Please select a Specialization before choosing a date.');
         this.value=''; return;
       }
-      const todayStr  = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
-      const todayDate = new Date(todayStr);
-      if (selectedDate < todayDate) {
-        showMessage('noDoctorMsg','Past dates cannot be selected. Please choose a future date.');
-        this.value=''; return;
-      }
-      const weekdayName = Object.keys(dayMap).find(key=>dayMap[key]===selectedDay);
-      let availableDoctors = doctorsBySpecialization[spec].filter(doc => {
-        const daysArr = Array.isArray(doc.Days)?doc.Days:(doc.Days||'').split(',').map(d=>d.trim()).filter(Boolean);
-        return daysArr.includes(weekdayName);
-      });
-      if (availableDoctors.length===0) {
-        showMessage('noDoctorMsg','No doctors available for this specialization on the selected day.');
-        this.value=''; return;
-      }
 
-      // Check for finished times if today
-      if (this.value===todayStr) {
-        const nowStr = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'});
-        availableDoctors = availableDoctors.filter(doc => {
-          const tr = (doc.DayTimes||{})[weekdayName];
-          if (!tr) return false;
-          const endTimeStr = (tr.split('-')[1]||'').trim();
-          if (!endTimeStr) return false;
-          return timeToMinutes(nowStr) <= timeToMinutes(endTimeStr);
+      // 1. Always check API first for Global Holiday Priority
+      try {
+        const allUrls = doctorsBySpecialization[spec].map(d => d.SheetURL).filter(Boolean);
+        const res = await fetch('/api/check_doctor_availability', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({sheet_urls: allUrls, date: dateVal})
         });
-        if (availableDoctors.length===0) {
-          showMessage('noDoctorMsg','All doctors in this specialization have finished for today. Please select another date.');
+        const data = await res.json();
+        const results = data.results || {};
+
+        // ─── ABSOLUTE PRIORITY: Clinic Wide Holiday ───
+        if (data.holiday) {
+          showMessage('noDoctorMsg', data.reason);
           this.value=''; return;
         }
-      }
 
-      // Batch Leave Check via API
-      try {
-        const sheetUrls = availableDoctors.map(d => d.SheetURL).filter(Boolean);
-        if (sheetUrls.length > 0) {
-          const res = await fetch('/api/check_doctor_availability', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({sheet_urls: sheetUrls, date: this.value})
-          });
-          const data = await res.json();
-          const results = data.results || {};
-          
+        // 2. Local Validations (Past date, working day, etc.)
+        const selectedDate = new Date(dateVal);
+        const selectedDay  = selectedDate.getDay();
+        const todayStr  = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
+        const todayDate = new Date(todayStr);
+
+        if (selectedDate < todayDate) {
+          showMessage('noDoctorMsg','Past dates cannot be selected. Please choose a future date.');
+          this.value=''; return;
+        }
+
+        const weekdayName = Object.keys(dayMap).find(key=>dayMap[key]===selectedDay);
+        let availableDoctors = doctorsBySpecialization[spec].filter(doc => {
+          const daysArr = Array.isArray(doc.Days)?doc.Days:(doc.Days||'').split(',').map(d=>d.trim()).filter(Boolean);
+          return daysArr.includes(weekdayName);
+        });
+
+        if (availableDoctors.length===0) {
+          showMessage('noDoctorMsg','No doctors available for this specialization on the selected day.');
+          this.value=''; return;
+        }
+
+        if (dateVal === todayStr) {
+          const nowStr = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'});
           availableDoctors = availableDoctors.filter(doc => {
-            const status = results[doc.SheetURL];
-            return status && status.available !== false;
+            const tr = (doc.DayTimes||{})[weekdayName];
+            if (!tr) return false;
+            const endTimeStr = (tr.split('-')[1]||'').trim();
+            if (!endTimeStr) return false;
+            return timeToMinutes(nowStr) <= timeToMinutes(endTimeStr);
           });
-
-          if (availableDoctors.length === 0) {
-            showMessage('noDoctorMsg', 'All doctors in this specialization are on temporary leave for the selected date.');
-            this.value = ''; return;
+          if (availableDoctors.length===0) {
+            showMessage('noDoctorMsg','All doctors in this specialization have finished for today. Please select another date.');
+            this.value=''; return;
           }
         }
-      } catch (err) { console.error('Batch availability check failed:', err); }
 
-      updateSpecTimeSelect(availableDoctors, weekdayName);
+        // 3. Filter by individual leaves from the already fetched results
+        availableDoctors = availableDoctors.filter(doc => {
+          const status = results[doc.SheetURL];
+          return status && status.available !== false;
+        });
+
+        if (availableDoctors.length === 0) {
+          const firstKey = Object.keys(results)[0];
+          const errMsg = (firstKey && results[firstKey] && results[firstKey].reason) 
+                         ? results[firstKey].reason 
+                         : 'All doctors in this specialization are unavailable for the selected date.';
+          showMessage('noDoctorMsg', errMsg);
+          this.value = ''; return;
+        }
+
+        updateSpecTimeSelect(availableDoctors, weekdayName);
+
+      } catch (err) { 
+        console.error('Availability check failed:', err);
+        showMessage('noDoctorMsg', 'Error checking availability. Please try again.');
+      }
     });
 
     function updateSpecTimeSelect(doctors, weekdayName) {
@@ -1661,12 +1914,12 @@
       if (force) payload.force = true;
       
       const btn = document.querySelector("#adminBookPatientForm button[type='submit']");
-      const originalHtml = btn.innerHTML;
+      const RESET_HTML = '<i data-lucide="check-circle" class="btn-icon"></i> Confirm Booking';
       
       // Force loading state
       btn.disabled = true;
       btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Saving...';
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
       
       try {
         const res = await fetch('/admin_book_patient', {
@@ -1678,7 +1931,12 @@
         const data = await res.json();
         
         if (data.success && data.warning) {
-          // Keep showing "Saving..." on the primary button while the warning is open
+          // IMPORTANT: Reset button BEFORE opening modal 
+          // so if they cancel, the button is already back to normal.
+          btn.disabled = false;
+          btn.innerHTML = RESET_HTML;
+          if (window.lucide) lucide.createIcons();
+
           activeAdminBookingPayload = payload;
           openModal(
             'warning',
@@ -1695,7 +1953,6 @@
         }
         
         if (data.success) {
-          // Standardized Success Modal
           openModal(
             'success',
             'Booking Successful',
@@ -1704,11 +1961,14 @@
             () => { 
                 closeModal(); 
                 document.getElementById('adminBookPatientForm').reset();
+                // Ensure button is back to normal after modal close
+                btn.disabled = false;
+                btn.innerHTML = RESET_HTML;
+                if (window.lucide) lucide.createIcons();
             }
           );
 
-          // Success Feedback - Token Card Injection
-          const modal = document.getElementById('universalModal');
+          // Token Card Injection...
           const tokenCard = document.createElement('div');
           tokenCard.className = 'success-token-card';
           tokenCard.innerHTML = `
@@ -1716,34 +1976,25 @@
             <span class="success-token-value" style="display:block; font-size:2.8rem; font-weight:900; color:#0f172a; margin:0.4rem 0;">${data.token}</span>
             <span style="font-size:0.82rem; color:#0077b6; font-weight:600;">${data.date} | ${data.time}</span>
           `;
-          
           document.getElementById('unvMessage').after(tokenCard);
-          lucide.createIcons();
           
-          // Reset button after success
           btn.disabled = false;
-          btn.innerHTML = originalHtml;
+          btn.innerHTML = RESET_HTML;
         } else {
           showToast(data.msg || 'Booking failed', 'error');
           btn.disabled = false;
-          btn.innerHTML = originalHtml;
+          btn.innerHTML = RESET_HTML;
         }
       } catch (e) {
         showToast('Communication error', 'error');
         btn.disabled = false;
-        btn.innerHTML = originalHtml;
+        btn.innerHTML = RESET_HTML;
       }
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     }
 
     document.getElementById('adminBookPatientForm').addEventListener('submit', async e => {
       e.preventDefault();
-      const btn = e.target.querySelector("button[type='submit']");
-      
-      btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Processing...';
-      lucide.createIcons();
-      
       const payload = {
         sheet_url: document.getElementById('adminBookDoc').value,
         date: document.getElementById('adminBookDate').value,

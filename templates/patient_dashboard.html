@@ -10,6 +10,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PrimeCare">
+  <link rel="apple-touch-icon" href="/static/image/pwa-icon.png">
 
   <style>
     /* ── DASHBOARD-SPECIFIC OVERRIDES ── */
@@ -445,6 +450,23 @@
     }
     .pres-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(0,119,182,0.3); }
     .pres-submit-btn:disabled { opacity: 0.6; transform: none; }
+    #reschedBtn {
+        background: #0077b6; color: #fff; border: none;
+        padding: 0.4rem 0.9rem; border-radius: 10px; font-weight: 600; cursor: pointer;
+        display: inline-flex; gap: 0.4rem; align-items: center; text-decoration: none; font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    #reschedBtn:hover { background: #005f8a; transform: translateY(-1px); }
+    .holiday-alert {
+        background: #fff1f2; border: 1.5px solid #fecaca; border-radius: 12px;
+        padding: 0.8rem 1rem; margin-bottom: 0.8rem; display: flex; align-items: flex-start; gap: 0.6rem;
+        animation: pulseSoft 2s infinite;
+    }
+    @keyframes pulseSoft {
+        0% { border-color: #fecaca; }
+        50% { border-color: #fca5a5; }
+        100% { border-color: #fecaca; }
+    }
   </style>
 </head>
 <body class="bg-image">
@@ -538,8 +560,19 @@
         <div class="item-list">
           {% if upcoming_bookings %}
             {% for b in upcoming_bookings %}
-            <div class="item-card">
+            <div class="item-card" {% if b.is_holiday %}style="border: 2px solid #fca5a5; position: relative;"{% endif %}>
               <div class="item-info">
+                {% if b.is_holiday %}
+                <div class="holiday-alert">
+                  <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#e11d48;flex-shrink:0;"></i>
+                  <div>
+                    <div style="font-weight:800; color:#e11d48; font-size:0.9rem;">Clinic Holiday on this Day</div>
+                    <div style="font-size:0.82rem; color:#991b1b; font-weight:500;">
+                        The clinic is closed for {{ b.holiday_reason }}. Please book for another day.
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
                 <div class="item-title">{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.9rem;">({{ b.specialization }})</span></div>
                 <div class="item-meta">
                   <span class="meta-tag" style="background:#f1f5f9; padding:0.15rem 0.45rem; border-radius:6px; color:#475569;"><i data-lucide="user" style="width:12px;height:12px;"></i> {{ b.patient_name }} {% if b.age and b.age != '-' %}({{ b.age }} y/o){% endif %}</span>
@@ -549,6 +582,9 @@
                 </div>
               </div>
               <div class="item-actions">
+                {% if b.is_holiday %}
+                <a href="/booking" id="reschedBtn"><i data-lucide="calendar-plus"></i> Book Another Day</a>
+                {% endif %}
                 <button class="btn-danger-sm" onclick="cancelBooking('{{ b.sheet_url }}', '{{ b.date }}', '{{ b.token }}', {{ b.id }})" aria-label="Cancel Booking">
                   <i data-lucide="x" style="width:14px;height:14px;"></i> Cancel
                 </button>
@@ -904,6 +940,15 @@
       }, true);
     }
     
+    // ─── PWA Service Worker Registration ───
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js')
+          .then(reg => console.log('Service Worker registered:', reg.scope))
+          .catch(err => console.log('Service Worker registration failed:', err));
+      });
+    }
+
     (function() {
       const banner = document.getElementById('homeTokenBanner');
       const tray = document.getElementById('notifTrayFab');
@@ -973,6 +1018,35 @@
           const data = await res.json();
           
           if (data.success && data.status === 'active') {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            // Check if we need to notify
+            if (isMobile && (typeof Notification !== 'undefined' || 'serviceWorker' in navigator)) {
+              const ahead = data.patients_ahead;
+              const sessionKey = `last_notified_${data.doctor_name}_${data.your_token}`;
+              const lastAhead = sessionStorage.getItem(sessionKey);
+              
+              if (Notification.permission === 'granted' && ahead <= 2 && ahead >= 0 && lastAhead != ahead) {
+                const title = "PrimeCare Clinic";
+                const body = ahead === 0 ? "It's your turn! Please proceed to the doctor." : 
+                             ahead === 1 ? "You are next! Please prepare for consultation." :
+                             "You are 2 tokens away. Please be ready.";
+                
+                // Use Service Worker if available for better background reliability
+                if (navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: title,
+                    body: body,
+                    icon: "/static/image/pwa-icon.png"
+                  });
+                } else {
+                  new Notification(title, { body: body, icon: "/static/image/pwa-icon.png" });
+                }
+                sessionStorage.setItem(sessionKey, ahead);
+              }
+            }
+
             hasNotification = true;
             docName.textContent = data.doctor_name;
             liveTokenEl.textContent = data.current_token;
@@ -988,6 +1062,11 @@
               statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
             } else {
               statusText.textContent = "Live Status";
+            }
+
+            // Notification permission prompt for mobile
+            if (isMobile && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+               statusText.innerHTML += ` <button onclick="Notification.requestPermission()" style="background:none; border:none; color:#0077b6; padding:0; font-size:0.7rem; text-decoration:underline; margin-left:5px; cursor:pointer;"><i data-lucide="bell-ring" style="width:10px;height:10px;vertical-align:middle;"></i> Alert Me</button>`;
             }
 
             if (!isDismissed) {
@@ -1007,9 +1086,44 @@
       }
 
       const userLoggedIn = {{ 'true' if 'user_id' in session else 'false' }};
-      if (userLoggedIn) {
+      const isPatient = {{ 'true' if session.get('user_role') == 'patient' else 'false' }};
+
+      if (userLoggedIn && isPatient) {
           updateTokenBanner();
           setInterval(updateTokenBanner, 5000); 
+      }
+    })();
+
+    // ─── iOS PWA Install Guide ───
+    (function initIOSGuide() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+      
+      if (isIOS && !isStandalone) {
+        // Show a subtle hint after 3 seconds
+        setTimeout(() => {
+          const guide = document.createElement('div');
+          guide.style.cssText = `
+            position: fixed; bottom: 20px; left: 20px; right: 20px;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            padding: 1rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 10000; border: 1px solid rgba(0,119,182,0.1);
+            display: flex; align-items: center; gap: 1rem;
+            animation: slideUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          `;
+          guide.innerHTML = `
+            <div style="background:#0077b6; color:#fff; width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <i data-lucide="share"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:0.9rem; color:#0f172a;">Enable Mobile Alerts</div>
+              <div style="font-size:0.75rem; color:#64748b;">Tap 'Share' then 'Add to Home Screen' for real-time background notifications.</div>
+            </div>
+            <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#94a3b8; padding:5px;"><i data-lucide="x"></i></button>
+          `;
+          document.body.appendChild(guide);
+          if (window.lucide) lucide.createIcons(guide);
+        }, 3000);
       }
     })();
 
