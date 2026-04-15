@@ -228,6 +228,62 @@
     .contact-location .contact-icon { color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.15); }
     .contact-location:hover { box-shadow: 0 25px 50px -12px rgba(244, 63, 94, 0.2); }
 
+    /* ── Notification Tray Icon (Bell) ── */
+    #notifTrayFab {
+      position: fixed; top: 72px; right: 16px; z-index: 8900;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 119, 182, 0.2); cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      color: #0077b6;
+    }
+    #notifTrayFab.show { display: flex; animation: fabPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    #notifTrayFab:hover { transform: scale(1.1); background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.12); }
+    #notifTrayFab span svg, #notifTrayFab i { width: 16px; height: 16px; }
+    #notifTrayFab .notif-badge {
+      position: absolute; top: -1px; right: 0px; width: 10px; height: 10px;
+      background: #ef4444; border-radius: 50%; border: 2px solid #fff;
+      animation: pulse 2s infinite;
+    }
+    @keyframes fabPop { from { transform: scale(0) rotate(-45deg); opacity:0; } to { transform: scale(1) rotate(0); opacity:1; } }
+
+    /* ── Updated Dual-Stat Banner ── */
+    #homeTokenBanner {
+      position: fixed; top: 15px; left: 50%; transform: translateX(-50%) translateY(-150%);
+      width: 92%; max-width: 500px; z-index: 2000;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      border-radius: 28px; padding: 0.9rem 1.2rem;
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,119,182,0.05);
+      display: flex; align-items: center; justify-content: space-between;
+      transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.4s ease;
+      cursor: grab;
+      user-select: none;
+      touch-action: pan-x;
+    }
+    #homeTokenBanner:active { cursor: grabbing; }
+    #homeTokenBanner.show { transform: translateX(-50%) translateY(0); }
+    
+    .banner-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .banner-status { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .banner-status i { color: #ef4444; }
+    .banner-doctor { font-size: 1rem; font-weight: 850; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+    
+    .banner-stats { display: flex; gap: 1rem; align-items: center; padding-left: 1rem; border-left: 1.5px solid rgba(0,0,0,0.06); }
+    .banner-stat-item { display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+    .stat-label { font-size: 0.62rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; white-space: nowrap; }
+    .stat-val { font-size: 1.6rem; font-weight: 950; letter-spacing: -0.02em; line-height: 1; }
+    .stat-live { color: #10b981; }
+    .stat-mine { color: #0077b6; }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+      50% { opacity: 0.6; transform: scale(0.85); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4)); }
+      100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+    }
+    
     /* ── GLOBAL MINIMALIST FOOTER ── */
     .site-footer {
       padding: 3.5rem 1.5rem 1.25rem;
@@ -278,16 +334,42 @@
         flex-direction: row; align-items: center;
         justify-content: space-between; padding: 0.5rem 0.85rem; gap: 0.5rem;
       }
+      .brand { align-items: flex-start; flex-shrink: 1; min-width: 0; }
+      .brand-title { font-size: 1.0rem; }
+      .brand-sub { font-size: 0.65rem; }
+      
+      /* Buttons stack vertically on the RIGHT side */
       .top-actions {
-        display: flex; flex-direction: row; flex-shrink: 0; gap: 0.35rem; align-items: center;
+        display: flex; flex-direction: column; flex-shrink: 0; gap: 0.28rem; align-items: flex-end;
       }
-      .top-actions .btn span { display: none; }
       .top-actions .btn {
-        padding: 0.38rem; margin-top: 0; min-width: unset; width: 34px; height: 34px;
-        display: flex; align-items: center; justify-content: center; border-radius: 10px;
+        font-size: 0.75rem; padding: 0.28rem 0.65rem; margin-top: 0;
+        white-space: nowrap; min-width: 90px;
       }
-      .top-actions .btn svg { width: 16px; height: 16px; }
+      .top-actions .btn svg { width: 12px; height: 12px; }
+      .user-header h1 { font-size: 1.3rem; }
+      .glass-card { padding: 1.2rem 1rem; }
     }
+
+    /* ── MODAL SYSTEM ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(10px);
+      z-index: 10000; align-items: center; justify-content: center;
+      padding: 1.25rem; animation: modalFade 0.3s ease;
+    }
+    .modal-content {
+      background: #fff; padding: 2.2rem 2rem; border-radius: 28px;
+      max-width: 440px; width: 100%; box-shadow: 0 40px 100px rgba(15, 23, 42, 0.35);
+      border: 1px solid #fff; position: relative;
+      animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .pres-modal-content { 
+        background: #fff; padding: 2rem; border-radius: 24px; max-width: 450px; width: 100%; position: relative;
+        animation: modalPop 0.4s ease;
+    }
+    @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes modalPop { from { transform: scale(0.92) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
 
     @media (max-width: 600px) {
       .dashboard-container { padding: 0 0.8rem 3rem; margin-top: 1rem; gap: 1rem; }
@@ -420,6 +502,14 @@
         <a onclick="openPrescriptionModal()" class="quick-nav-btn">
           <i data-lucide="file-plus" style="width:13px;height:13px;"></i> Add Prescription
         </a>
+        <a href="/live-tracking" class="quick-nav-btn" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4);">
+          <i data-lucide="radio" style="width:13px;height:13px;"></i> Live Token Track
+        </a>
+        {% if can_switch %}
+        <a onclick="confirmRoleSwitch()" class="quick-nav-btn" style="background:#10b981; border-color:#10b981;">
+          <i data-lucide="repeat" style="width:13px;height:13px;"></i> Switch to Doctor Account
+        </a>
+        {% endif %}
           
       </div>
     </div>
@@ -594,6 +684,33 @@
     </div>
   </div>
 
+  <!-- Notification Tray FAB -->
+  <button id="notifTrayFab" onclick="restoreBanner()" title="Restore Token Tracking">
+    <div class="notif-badge"></div>
+    <i data-lucide="bell"></i>
+  </button>
+
+  <!-- Live Token Floating Banner (Sync with Home) -->
+  <div id="homeTokenBanner" onclick="window.location.href='/live-tracking?doctor=' + encodeURIComponent(this.dataset.doc) + '&date=' + this.dataset.date">
+    <div class="banner-left">
+      <div class="banner-status">
+        <i data-lucide="radio" class="pulse"></i> 
+        <span id="bannerStatusText">Live Status</span>
+      </div>
+      <div class="banner-doctor" id="bannerDocName">--</div>
+    </div>
+    <div class="banner-stats">
+      <div class="banner-stat-item">
+        <span class="stat-label">Live</span>
+        <span class="stat-val stat-live" id="bannerLiveToken">--</span>
+      </div>
+      <div class="banner-stat-item">
+        <span class="stat-label">Your Token</span>
+        <span class="stat-val stat-mine" id="bannerYourToken">--</span>
+      </div>
+    </div>
+  </div>
+
   <footer class="site-footer" style="background: none;">
     <!-- PREMIUM CONTACT SECTION -->
     <div class="contact-grid">
@@ -667,6 +784,7 @@
       const btn = document.getElementById('unvConfirmBtn');
       btn.textContent = actionText;
       btn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      btn.style.boxShadow = isDanger ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
       
       const container = document.getElementById('unvIconContainer');
       const iconName = isDanger ? 'alert-triangle' : 'help-circle';
@@ -784,6 +902,128 @@
           showToast(data.msg, 'error');
         }
       }, true);
+    }
+    
+    (function() {
+      const banner = document.getElementById('homeTokenBanner');
+      const tray = document.getElementById('notifTrayFab');
+      const docName = document.getElementById('bannerDocName');
+      const liveTokenEl = document.getElementById('bannerLiveToken');
+      const yourTokenEl = document.getElementById('bannerYourToken');
+      const statusText = document.getElementById('bannerStatusText');
+      
+      let isDismissed = localStorage.getItem('tokenBannerDismissed') === 'true';
+      let hasNotification = false;
+
+      // ── Swipe Logic ──
+      let startX = 0;
+      let currentX = 0;
+      let isSwiping = false;
+
+      if (banner) {
+        banner.addEventListener('touchstart', e => {
+          startX = e.touches[0].clientX;
+          isSwiping = true;
+          banner.style.transition = 'none';
+        });
+
+        banner.addEventListener('touchmove', e => {
+          if (!isSwiping) return;
+          currentX = e.touches[0].clientX - startX;
+          banner.style.transform = `translateX(calc(-50% + ${currentX}px)) translateY(0)`;
+          banner.style.opacity = 1 - Math.abs(currentX) / 300;
+        });
+
+        banner.addEventListener('touchend', e => {
+          isSwiping = false;
+          banner.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease';
+          if (Math.abs(currentX) > 120) {
+            dismissBanner();
+          } else {
+            banner.style.transform = 'translateX(-50%) translateY(0)';
+            banner.style.opacity = '1';
+          }
+          currentX = 0;
+        });
+      }
+
+      window.dismissBanner = function() {
+        isDismissed = true;
+        localStorage.setItem('tokenBannerDismissed', 'true');
+        banner.style.transform = currentX > 0 ? 'translateX(100vw)' : 'translateX(-100vw)';
+        banner.style.opacity = '0';
+        setTimeout(() => {
+          banner.classList.remove('show');
+          if (hasNotification) tray.classList.add('show');
+        }, 400);
+      };
+
+      window.restoreBanner = function() {
+        isDismissed = false;
+        localStorage.removeItem('tokenBannerDismissed');
+        tray.classList.remove('show');
+        banner.classList.add('show');
+        banner.style.transform = 'translateX(-50%) translateY(0)';
+        banner.style.opacity = '1';
+      };
+
+      async function updateTokenBanner() {
+        try {
+          const res = await fetch('/my_token_status');
+          const data = await res.json();
+          
+          if (data.success && data.status === 'active') {
+            hasNotification = true;
+            docName.textContent = data.doctor_name;
+            liveTokenEl.textContent = data.current_token;
+            yourTokenEl.textContent = data.your_token;
+            
+            banner.dataset.doc = data.doctor_name;
+            banner.dataset.date = data.date;
+
+            const ahead = data.patients_ahead;
+            if (ahead === 0) {
+              statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
+            } else if (ahead === 1) {
+              statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
+            } else {
+              statusText.textContent = "Live Status";
+            }
+
+            if (!isDismissed) {
+              banner.classList.add('show');
+            } else {
+              tray.classList.add('show');
+            }
+            lucide.createIcons();
+          } else {
+            hasNotification = false;
+            banner.classList.remove('show');
+            tray.classList.remove('show');
+          }
+        } catch(e) {
+          console.error("Live banner update failed", e);
+        }
+      }
+
+      const userLoggedIn = {{ 'true' if 'user_id' in session else 'false' }};
+      if (userLoggedIn) {
+          updateTokenBanner();
+          setInterval(updateTokenBanner, 5000); 
+      }
+    })();
+
+    function confirmRoleSwitch() {
+        openUniversalModal('Switch to Doctor Account', 'Are you sure you want to switch to your doctor dashboard?', 'Switch Now', async () => {
+            const res = await fetch('/switch_active_role', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.msg, 'success');
+                setTimeout(() => window.location.href = data.redirect_url, 1000);
+            } else {
+                showToast(data.msg, 'error');
+            }
+        }, true);
     }
   </script>
 </body>

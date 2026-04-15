@@ -90,6 +90,63 @@
     }
     .btn-outline:hover { background: #e6f4ff; transform: translateY(-1px); }
 
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+      50% { opacity: 0.6; transform: scale(0.85); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4)); }
+      100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+    }
+
+    /* ── Notification Tray Icon (Bell) ── */
+    #notifTrayFab {
+      position: fixed; top: 72px; right: 16px; z-index: 8900;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 119, 182, 0.2); cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      color: #0077b6;
+    }
+    #notifTrayFab.show { display: flex; animation: fabPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    #notifTrayFab:hover { transform: scale(1.1); background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.12); }
+    #notifTrayFab span svg { width: 16px; height: 16px; }
+    #notifTrayFab i { width: 16px; height: 16px; }
+    #notifTrayFab .notif-badge {
+      position: absolute; top: -1px; right: 0px; width: 10px; height: 10px;
+      background: #ef4444; border-radius: 50%; border: 2px solid #fff;
+      animation: pulse 2s infinite;
+    }
+    @keyframes fabPop { from { transform: scale(0) rotate(-45deg); opacity:0; } to { transform: scale(1) rotate(0); opacity:1; } }
+
+    /* ── Updated Dual-Stat Banner ── */
+    #homeTokenBanner {
+      position: fixed; top: 15px; left: 50%; transform: translateX(-50%) translateY(-150%);
+      width: 92%; max-width: 500px; z-index: 1100;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      border-radius: 28px; padding: 0.9rem 1.2rem;
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,119,182,0.05);
+      display: flex; align-items: center; justify-content: space-between;
+      transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.4s ease;
+      cursor: grab;
+      user-select: none;
+      touch-action: pan-x; /* Allow horizontal swipe */
+    }
+    #homeTokenBanner:active { cursor: grabbing; }
+    #homeTokenBanner.show { transform: translateX(-50%) translateY(0); }
+    
+    .banner-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .banner-status { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .banner-status i { color: #ef4444; }
+    .banner-doctor { font-size: 1rem; font-weight: 850; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+    
+    .banner-stats { display: flex; gap: 1rem; align-items: center; padding-left: 1rem; border-left: 1.5px solid rgba(0,0,0,0.06); }
+    .banner-stat-item { display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+    .stat-label { font-size: 0.62rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; white-space: nowrap; }
+    .stat-val { font-size: 1.6rem; font-weight: 950; letter-spacing: -0.02em; line-height: 1; }
+    .stat-live { color: #10b981; }
+    .stat-mine { color: #0077b6; }
+
     /* ── HERO ── */
     .hero {
       max-width: 1200px; margin: 1.4rem auto 0.8rem;
@@ -904,7 +961,7 @@
       </div>
       <div class="top-actions">
         {% if session.get('user_id') %}
-        <button id="profileBtn" class="btn btn-outline" onclick="window.location.href='/patient_dashboard'">
+        <button id="profileBtn" class="btn btn-outline" onclick="window.location.href='{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}'">
           <i data-lucide="user"></i>
           <span>Profile</span>
         </button>
@@ -1048,6 +1105,29 @@
           Didn't receive code? <a id="resendOtpBtn" onclick="handleResendOtp()">Resend OTP</a>
         </div>
         <div class="auth-switch"><a onclick="switchAuthView('login')">Cancel</a></div>
+      </div>
+
+      <!-- ROLE SELECTION VIEW -->
+      <div id="authView-roleSelect" class="view-section">
+        <h3 class="auth-title">Select Portal</h3>
+        <p class="auth-subtitle">Choose which dashboard you'd like to access</p>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:2rem;">
+            <button onclick="selectRole('patient')" style="display:flex; flex-direction:column; align-items:center; gap:0.8rem; padding:1.5rem 1rem; background:#fff; border:2.5px solid #e2e8f0; border-radius:16px; cursor:pointer; transition:all 0.2s; color:#0f172a;" onmouseover="this.style.borderColor='#0077b6'" onmouseout="this.style.borderColor='#e2e8f0'">
+                <div style="background:rgba(0,119,182,0.1); width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; margin-bottom:0.2rem;">
+                    <i data-lucide="user" style="width:32px; height:32px; color:#0077b6;"></i>
+                </div>
+                <span style="font-weight:800; font-size:1rem;">Patient Portal</span>
+            </button>
+            <button onclick="selectRole('doctor')" style="display:flex; flex-direction:column; align-items:center; gap:0.8rem; padding:1.5rem 1rem; background:#fff; border:2.5px solid #e2e8f0; border-radius:16px; cursor:pointer; transition:all 0.2s; color:#0f172a;" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#e2e8f0'">
+                <div style="background:rgba(16,185,129,0.1); width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; margin-bottom:0.2rem;">
+                    <i data-lucide="stethoscope" style="width:32px; height:32px; color:#10b981;"></i>
+                </div>
+                <span style="font-weight:800; font-size:1rem;">Doctor Portal</span>
+            </button>
+        </div>
+        
+        <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:2rem;">You can switch between these at any time from your dashboard.</p>
       </div>
 
       <!-- FORGOT PASSWORD VIEW -->
@@ -1336,8 +1416,10 @@
 
         if (data.success) {
           showToast(data.msg, 'success');
-          if (flow === 'login' || flow === 'reset' || (flow === 'otp' && data.flow === 'register')) {
-            setTimeout(() => window.location.href = '/patient_dashboard', 1000);
+          if (data.require_role_selection) {
+            switchAuthView('roleSelect');
+          } else if (flow === 'login' || flow === 'reset' || (flow === 'otp' && data.flow === 'register')) {
+            setTimeout(() => window.location.href = data.redirect_url || '/patient_dashboard', 1000);
           } else if (flow === 'register' || flow === 'forgot') {
             switchAuthView('otp');
           } else if (flow === 'otp' && data.flow === 'forgot') {
@@ -1352,6 +1434,25 @@
         btn.textContent = ogText;
         btn.disabled = false;
       }
+    }
+
+    async function selectRole(role) {
+        try {
+            const res = await fetch('/select_active_role', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.msg, 'success');
+                setTimeout(() => window.location.href = data.redirect_url, 1000);
+            } else {
+                showToast(data.msg, 'error');
+            }
+        } catch (e) {
+            showToast('Navigation error', 'error');
+        }
     }
 
     async function handleResendOtp() {
@@ -1827,6 +1928,146 @@
       }
     });
   })();
+  </script>
+
+  <!-- Notification Tray FAB -->
+  <button id="notifTrayFab" onclick="restoreBanner()" title="Restore Token Tracking">
+    <div class="notif-badge"></div>
+    <i data-lucide="bell"></i>
+  </button>
+
+  <!-- Live Token Floating Banner (Sync Structure) -->
+  <div id="homeTokenBanner" onclick="window.location.href='/live-tracking?doctor=' + encodeURIComponent(this.dataset.doc) + '&date=' + this.dataset.date">
+    <div class="banner-left">
+      <div class="banner-status">
+        <i data-lucide="radio" class="pulse"></i> 
+        <span id="bannerStatusText">Live Status</span>
+      </div>
+      <div class="banner-doctor" id="bannerDocName">--</div>
+    </div>
+    <div class="banner-stats">
+      <div class="banner-stat-item">
+        <span class="stat-label">Live</span>
+        <span class="stat-val stat-live" id="bannerLiveToken">--</span>
+      </div>
+      <div class="banner-stat-item">
+        <span class="stat-label">Your Token</span>
+        <span class="stat-val stat-mine" id="bannerYourToken">--</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const banner = document.getElementById('homeTokenBanner');
+      const tray = document.getElementById('notifTrayFab');
+      const docName = document.getElementById('bannerDocName');
+      const liveTokenEl = document.getElementById('bannerLiveToken');
+      const yourTokenEl = document.getElementById('bannerYourToken');
+      const statusText = document.getElementById('bannerStatusText');
+      
+      let isDismissed = localStorage.getItem('tokenBannerDismissed') === 'true';
+      let hasNotification = false;
+
+      // ── Swipe Logic ──
+      let startX = 0;
+      let currentX = 0;
+      let isSwiping = false;
+
+      banner.addEventListener('touchstart', e => {
+        startX = e.touches[0].clientX;
+        isSwiping = true;
+        banner.style.transition = 'none';
+      });
+
+      banner.addEventListener('touchmove', e => {
+        if (!isSwiping) return;
+        currentX = e.touches[0].clientX - startX;
+        // Apply resistance or movement
+        banner.style.transform = `translateX(calc(-50% + ${currentX}px)) translateY(0)`;
+        banner.style.opacity = 1 - Math.abs(currentX) / 300;
+      });
+
+      banner.addEventListener('touchend', e => {
+        isSwiping = false;
+        banner.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease';
+        
+        if (Math.abs(currentX) > 120) {
+          // Dismiss
+          dismissBanner();
+        } else {
+          // Reset
+          banner.style.transform = 'translateX(-50%) translateY(0)';
+          banner.style.opacity = '1';
+        }
+        currentX = 0;
+      });
+
+      window.dismissBanner = function() {
+        isDismissed = true;
+        localStorage.setItem('tokenBannerDismissed', 'true');
+        banner.style.transform = currentX > 0 ? 'translateX(100vw)' : 'translateX(-100vw)';
+        banner.style.opacity = '0';
+        setTimeout(() => {
+          banner.classList.remove('show');
+          if (hasNotification) tray.classList.add('show');
+        }, 400);
+      };
+
+      window.restoreBanner = function() {
+        isDismissed = false;
+        localStorage.removeItem('tokenBannerDismissed');
+        tray.classList.remove('show');
+        banner.classList.add('show');
+        banner.style.transform = 'translateX(-50%) translateY(0)';
+        banner.style.opacity = '1';
+      };
+
+      async function updateBanner() {
+        try {
+          const res = await fetch('/my_token_status');
+          const data = await res.json();
+          
+          if(data.success && data.status === 'active') {
+            hasNotification = true;
+            docName.textContent = data.doctor_name;
+            liveTokenEl.textContent = data.current_token;
+            yourTokenEl.textContent = data.your_token;
+            
+            // Interaction data
+            banner.dataset.doc = data.doctor_name;
+            banner.dataset.date = data.date;
+
+            const ahead = data.patients_ahead;
+            if (ahead === 0) {
+              statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
+            } else if (ahead === 1) {
+              statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
+            } else {
+              statusText.textContent = "Live Status";
+            }
+
+            if (!isDismissed) {
+              banner.classList.add('show');
+            } else {
+              tray.classList.add('show');
+            }
+            
+            lucide.createIcons();
+          } else {
+            hasNotification = false;
+            banner.classList.remove('show');
+            tray.classList.remove('show');
+          }
+        } catch(e) { console.error(e); }
+      }
+
+      const userLoggedIn = {{ 'true' if 'user_id' in session else 'false' }};
+      if (userLoggedIn) {
+          updateBanner();
+          setInterval(updateBanner, 5000);
+      }
+    })();
   </script>
 
 </body>

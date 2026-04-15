@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Dashboard - PrimeCare</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  
+  <style>
+    .dashboard-container { 
+        max-width: 800px; 
+        margin: 2rem auto; 
+        padding: 0 1rem 4rem; 
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    /* ── Welcome Card ── */
+    .user-header {
+      background: linear-gradient(135deg, #023e8a, #0077b6);
+      border-radius: 24px; padding: 1.4rem 1.5rem;
+      color: #fff; box-shadow: 0 10px 25px rgba(2,62,138,0.2);
+      position: relative; overflow: hidden;
+    }
+    .user-header::after {
+      content: ''; position: absolute; right: -20px; top: -40px;
+      width: 150px; height: 150px; background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+    }
+    .user-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: rgba(255,255,255,0.2); padding: 0.2rem 0.65rem;
+      border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+      backdrop-filter: blur(4px);
+    }
+    .user-header h1 { margin: 0; font-size: 1.5rem; font-weight: 800; color: #fff; line-height: 1.2; }
+    .user-profile-row { display: flex; align-items: center; gap: 1rem; }
+    .user-avatar {
+      background: rgba(255,255,255,0.2); border-radius: 50%;
+      width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; backdrop-filter: blur(8px);
+    }
+    .user-info { min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+    .user-quick-nav { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+    .quick-nav-btn {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: rgba(255,255,255,0.15); backdrop-filter: blur(6px);
+      color: #fff; font-size: 0.78rem; font-weight: 600;
+      padding: 0.38rem 0.85rem; border-radius: 999px;
+      text-decoration: none; border: 1px solid rgba(255,255,255,0.3);
+      cursor: pointer; transition: background 0.2s;
+    }
+    .quick-nav-btn:hover { background: rgba(255,255,255,0.28); }
+    
+    .status-card {
+        background: rgba(255,255,255,0.85); backdrop-filter: blur(16px);
+        border-radius: 20px; padding: 2rem; text-align: center;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.06); border: 1px solid rgba(255,255,255,1);
+    }
+    
+    .status-badge {
+        display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1rem;
+        border-radius: 999px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;
+        margin-bottom: 1rem;
+    }
+    
+    .status-idle { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
+    .status-active { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+    .status-completed { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+    
+    .token-display {
+        font-size: 5rem; font-weight: 800; color: #023e8a; line-height: 1; margin: 1rem 0;
+        text-shadow: 2px 4px 10px rgba(2, 62, 138, 0.1);
+    }
+    
+    .token-sub { font-size: 1rem; color: #64748b; font-weight: 600; margin-bottom: 2rem; }
+    
+    .control-btn {
+        width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none;
+        cursor: pointer; transition: all 0.2s; color: #fff;
+    }
+    
+    .btn-start { background: linear-gradient(135deg, #0077b6, #0096c7); box-shadow: 0 8px 25px rgba(0,119,182,0.3); }
+    .btn-next { background: linear-gradient(135deg, #10b981, #34d399); box-shadow: 0 8px 25px rgba(16,185,129,0.3); }
+    .btn-skip { background: #f59e0b; box-shadow: 0 8px 25px rgba(245,158,11,0.3); margin-top: 0.8rem !important; }
+    .btn-disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; }
+    
+    .session-timeline {
+        display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem;
+        padding: 1rem; background: rgba(0,0,0,0.03); border-radius: 16px;
+    }
+    .timeline-item { display: flex; flex-direction: column; gap: 0.2rem; }
+    .time-val { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
+    .time-label { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .skipped-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem; margin-top: 1rem;
+    }
+    .skipped-card {
+        background: #fff; padding: 1rem; border-radius: 16px; border: 1px solid #e2e8f0;
+        text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        transition: all 0.2s;
+    }
+    .skipped-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+    .skipped-token { font-size: 1.5rem; font-weight: 850; color: #023e8a; margin-bottom: 0.5rem; }
+    .btn-consult-skipped {
+        width: 100%; padding: 0.5rem; border-radius: 10px; font-size: 0.75rem; font-weight: 700;
+        background: #0077b6; color: #fff; border: none; cursor: pointer;
+    }
+
+    /* ── MODAL SYSTEM ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(8px);
+      z-index: 10000; align-items: center; justify-content: center;
+      padding: 1.2rem;
+    }
+    .modal-content {
+      background: #fff; padding: 2.2rem 2rem; border-radius: 24px;
+      max-width: 420px; width: 100%; box-shadow: 0 32px 64px rgba(15, 23, 42, 0.3);
+      border: 1px solid rgba(255,255,255,1); position: relative;
+      animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes modalPop {
+      from { transform: scale(0.9) translateY(20px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .modal-btns { display: flex; gap: 1rem; margin-top: 2rem; width: 100%; }
+    .modal-btns button { flex: 1; margin-top: 0 !important; }
+
+    /* ── GLOBAL MINIMALIST FOOTER ── */
+    .site-footer {
+      padding: 3.5rem 1.5rem 1.25rem;
+      text-align: center;
+      margin-top: auto;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.6rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .footer-link {
+      color: #334155;
+      text-decoration: none;
+      font-size: 0.86rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .footer-link svg { width: 14px; height: 14px; color: #0077b6; }
+    .footer-link:hover { color: #0077b6; transform: translateY(-1px); }
+    .footer-copy { 
+      font-size: 0.8rem; 
+      color: #94a3b8; 
+      font-weight: 500; 
+      margin: 0;
+      letter-spacing: 0.02em;
+    }
+    @media (max-width: 520px) {
+      .top-bar-inner {
+        flex-direction: row; align-items: center;
+        justify-content: space-between; padding: 0.5rem 0.85rem; gap: 0.5rem;
+      }
+      .brand { align-items: flex-start; flex-shrink: 1; min-width: 0; }
+      .brand-title { font-size: 1.0rem; }
+      .brand-sub { font-size: 0.65rem; }
+      
+      /* Buttons stack vertically on the RIGHT side */
+      .top-actions {
+        display: flex; flex-direction: column; flex-shrink: 0; gap: 0.28rem; align-items: flex-end;
+      }
+      .top-actions .btn {
+        font-size: 0.75rem; padding: 0.28rem 0.65rem; margin-top: 0;
+        white-space: nowrap; min-width: 90px;
+      }
+      .top-actions .btn svg { width: 12px; height: 12px; }
+      .user-header h1 { font-size: 1.3rem; }
+    }
+    
+  </style>
+</head>
+<body class="bg-image">
+  <div id="globalToast"></div>
+  <div class="bg-blur"></div>
+
+  <!-- HEADER -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0; text-decoration: none;">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+             style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
+             alt="PrimeCare Logo" />
+        <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+          <div class="brand-title">PrimeCare Clinic</div>
+          <div class="brand-sub">Quality care · Trusted doctors</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn btn-outline" onclick="window.location.href='/'" style="margin-top:0;" title="Go Home">
+          <i data-lucide="house"></i>
+          <span>Home</span>
+        </button>
+        <button class="btn btn-outline" onclick="confirmLogout()" style="color:#e11d48; border-color:rgba(225,29,72,0.3); margin-top:0;" title="Logout">
+          <i data-lucide="log-out"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-container">
+    <!-- User Welcome Card -->
+    <div class="user-header">
+      <div class="user-profile-row">
+        <div class="user-avatar">
+          <i data-lucide="user-round" style="width: 24px; height: 24px; color:#fff;"></i>
+        </div>
+        <div class="user-info">
+          <div class="user-badge"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Verified Practitioner</div>
+          <h1 style="text-align: start;">{{ doc.doctor_name }}</h1>
+          <p style="font-size: 0.78rem; opacity: 0.7; margin: 0; color:#fff;">{{ session.get('user_email') }}</p>
+        </div>
+      </div>
+      <div class="user-quick-nav">
+        <a href="#statusCard" class="quick-nav-btn">
+          <i data-lucide="radio" style="width:13px;height:13px;"></i> Session Status
+        </a>
+        <a href="/live-tracking" class="quick-nav-btn">
+          <i data-lucide="list-ordered" style="width:13px;height:13px;"></i> View Queue
+        </a>
+        <a href="/" class="quick-nav-btn">
+          <i data-lucide="house" style="width:13px;height:13px;"></i> Home
+        </a>
+        {% if can_switch %}
+        <a onclick="confirmRoleSwitch()" class="quick-nav-btn" style="background:#10b981; border-color:#10b981;">
+          <i data-lucide="repeat" style="width:13px;height:13px;"></i> Switch to Patient Portal
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="status-card" id="statusCard">
+        <p style="color:#64748b; font-weight: 500; margin-bottom: 1.5rem;"><i data-lucide="calendar" style="width:14px;height:14px;display:inline;"></i> Today's Session: {{ doc.session_date }}</p>
+        
+        <div class="session-timeline" id="sessionTimeline" style="display: {% if doc.status == 'idle' %}none{% else %}flex{% endif %};">
+            <div class="timeline-item">
+                <span class="time-label">Started At</span>
+                <span class="time-val" id="startTime">{{ doc.start_time or '--:--' }}</span>
+            </div>
+            <div class="timeline-item" id="endTimeContainer" style="display: {% if doc.status == 'completed' %}flex{% else %}none{% endif %};">
+                <span class="time-label">Ended At</span>
+                <span class="time-val" id="endTime">{{ doc.end_time or '--:--' }}</span>
+            </div>
+        </div>
+
+        <div id="statusBadge" class="status-badge 
+            {% if doc.status == 'idle' %}status-idle{% elif doc.status == 'active' %}status-active{% else %}status-completed{% endif %}">
+            <i data-lucide="{% if doc.status == 'idle' %}clock{% elif doc.status == 'active' %}radio{% else %}check-circle{% endif %}" style="width:16px;height:16px;"></i>
+            <span id="statusText">{{ "Yet to start" if doc.status == 'idle' else ("Live Now" if doc.status == 'active' else "Completed") }}</span>
+        </div>
+        
+        <div class="token-display" id="tokenDisplay">
+            {% if doc.status == 'idle' %}--{% else %}#{{ doc.current_token }}{% endif %}
+        </div>
+        
+        <div class="token-sub" id="tokenSub" style="display: {% if doc.status == 'idle' %}none{% else %}block{% endif %};">of {{ doc.total_tokens }} Total Bookings</div>
+        
+        <div style="margin-top: 2rem;">
+            <button id="sessionBtn" class="control-btn {% if doc.status == 'idle' %}btn-start{% elif doc.status == 'active' %}btn-next{% else %}btn-disabled{% endif %}"
+                {% if doc.status == 'completed' or doc.total_tokens == 0 %}disabled{% endif %}>
+                
+                {% if doc.status == 'idle' %}
+                    <i data-lucide="play"></i> Start Session
+                {% elif doc.status == 'active' %}
+                    <i data-lucide="arrow-right"></i> Next Patient
+                {% else %}
+                    <i data-lucide="check-circle"></i> Session Completed
+                {% endif %}
+            </button>
+            
+            <button id="skipBtn" class="control-btn btn-skip" style="display: {% if doc.status == 'active' %}flex{% else %}none{% endif %};">
+                <i data-lucide="skip-forward"></i> Patient Not Arrived? Skip
+            </button>
+
+            {% if doc.total_tokens == 0 %}
+            <p style="color: #e11d48; font-size: 0.85rem; font-weight: 600; margin-top: 10px;">No bookings found for today.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Skipped Patients Section -->
+    <div id="skippedSection" style="display: {% if doc.skipped_tokens %}block{% else %}none{% endif %}; margin-top: 1.5rem;">
+        <div class="status-card" style="padding: 1.5rem; text-align: left;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.2rem;">
+                <div style="background: #fef3c7; color: #d97706; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="users" style="width:18px;height:18px;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">Skipped Patients</h3>
+                    <p style="margin:0; font-size: 0.75rem; color: #64748b; font-weight: 600;">Patients who weren't available when called.</p>
+                </div>
+            </div>
+            
+            <div class="skipped-grid" id="skippedGrid">
+                {% if doc.skipped_tokens %}
+                    {% for token in doc.skipped_tokens.split(',') %}
+                        <div class="skipped-card" id="skipped-{{ token }}">
+                            <div class="skipped-token">#{{ token }}</div>
+                            <button class="btn-consult-skipped" onclick="consultSkipped('{{ token }}')">
+                                Consult Now
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-links">
+      <a href="/" class="footer-link"><i data-lucide="house"></i> Home</a>
+      <a href="/booking" class="footer-link"><i data-lucide="calendar"></i> Appointments</a>
+      <a href="#statusCard" class="footer-link"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+    </div>
+    <p class="footer-copy">&copy; 2026 PrimeCare Clinic. All rights reserved.</p>
+  </footer>
+
+  <!-- Universal Confirmation Modal -->
+  <div class="modal-overlay" id="universalModal">
+    <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+      <div class="modal-icon-container" id="unvIconContainer" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
+        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+      </div>
+      <h3 id="unvTitle" style="margin: 0 auto 0.5rem auto; color: #0f172a; font-size: 1.4rem; font-weight: 800; text-align: center; width: 100%;">Confirm Action</h3>
+      <p id="unvMessage" style="color: #64748b; font-size: 1.05rem; margin: 0 auto 2.2rem auto; line-height: 1.6; text-align: center; width: 100%;">Are you sure you want to proceed?</p>
+      <div class="modal-btns" style="display: flex; gap: 1.2rem; justify-content: center; width: 100%;">
+        <button class="btn btn-outline" onclick="closeUniversalModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Cancel</button>
+        <button id="unvConfirmBtn" class="btn btn-primary" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    let currentStatus = "{{ doc.status }}";
+    
+    // ── Toast ──
+    function showToast(msg, type='success') {
+      const toast = document.getElementById('globalToast');
+      toast.className = 'toast-' + type;
+      toast.innerHTML = (type === 'success' ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
+      lucide.createIcons();
+      toast.style.display = 'flex';
+      setTimeout(() => toast.style.display = 'none', 3500);
+    }
+    
+    // ── Universal Modal Logic ──
+    let activeModalAction = null;
+    function openUniversalModal(title, message, actionText, actionFn, isDanger = false) {
+      document.getElementById('unvTitle').textContent = title;
+      document.getElementById('unvMessage').textContent = message;
+      const btn = document.getElementById('unvConfirmBtn');
+      btn.textContent = actionText;
+      btn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      btn.style.boxShadow = isDanger ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      
+      const container = document.getElementById('unvIconContainer');
+      const iconName = isDanger ? 'alert-triangle' : 'help-circle';
+      container.innerHTML = `<i data-lucide="${iconName}" style="width: 32px; height: 32px;"></i>`;
+      
+      if(isDanger) {
+         container.style.color = '#e11d48';
+         container.style.background = 'rgba(225, 29, 72, 0.1)';
+      } else {
+         container.style.color = '#0077b6';
+         container.style.background = 'rgba(0, 119, 182, 0.1)';
+      }
+      lucide.createIcons();
+      activeModalAction = actionFn;
+      document.getElementById('universalModal').style.display = 'flex';
+    }
+    
+    function closeUniversalModal() {
+      document.getElementById('universalModal').style.display = 'none';
+      activeModalAction = null;
+    }
+    
+    document.getElementById('unvConfirmBtn').addEventListener('click', () => {
+      if (activeModalAction) activeModalAction();
+      closeUniversalModal();
+    });
+
+    function confirmLogout() {
+      openUniversalModal('Confirm Logout', 'Are you sure you want to securely log out of the doctor portal?', 'Logout', async () => {
+        await fetch('/patient_logout', { method: 'POST' });
+        window.location.href = '/';
+      }, true);
+    }
+
+    function confirmRoleSwitch() {
+      openUniversalModal('Switch Account', 'Are you sure you want to switch to your patient profile? This will close the doctor view.', 'Switch Now', async () => {
+        const res = await fetch('/switch_active_role', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.msg, 'success');
+            setTimeout(() => window.location.href = data.redirect_url, 1000);
+        } else {
+            showToast(data.msg, 'error');
+        }
+      });
+    }
+
+    // ── Session Control ──
+    async function updateSkippedUI(tokensStr) {
+        const grid = document.getElementById('skippedGrid');
+        const section = document.getElementById('skippedSection');
+        if (!tokensStr) {
+            section.style.display = 'none';
+            grid.innerHTML = '';
+            return;
+        }
+        
+        section.style.display = 'block';
+        const tokens = tokensStr.split(',').filter(t => t.trim());
+        grid.innerHTML = tokens.map(token => `
+            <div class="skipped-card" id="skipped-${token}">
+                <div class="skipped-token">#${token}</div>
+                <button class="btn-consult-skipped" onclick="consultSkipped('${token}')">
+                    Consult Now
+                </button>
+            </div>
+        `).join('');
+    }
+
+    window.consultSkipped = async function(token) {
+        try {
+            const res = await fetch('/consult_skipped', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Token #${token} consulted!`, 'success');
+                updateSkippedUI(data.skipped_tokens);
+            } else {
+                showToast(data.msg, 'error');
+            }
+        } catch (e) {
+            showToast('Request failed', 'error');
+        }
+    };
+
+    document.getElementById('skipBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('skipBtn');
+        btn.disabled = true;
+        const ogContent = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Skipping...';
+        lucide.createIcons();
+
+        try {
+            const res = await fetch('/skip_token', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('tokenDisplay').textContent = '#' + data.current_token;
+                updateSkippedUI(data.skipped_tokens);
+                
+                if (data.status === 'completed') {
+                    currentStatus = 'completed';
+                    document.getElementById('statusBadge').className = 'status-badge status-completed';
+                    document.getElementById('statusBadge').innerHTML = '<i data-lucide="check-circle" style="width:16px;height:16px;"></i><span id="statusText">Completed</span>';
+                    
+                    const mainBtn = document.getElementById('sessionBtn');
+                    mainBtn.className = 'control-btn btn-disabled';
+                    mainBtn.innerHTML = '<i data-lucide="check-circle"></i> Session Completed';
+                    mainBtn.disabled = true;
+                    
+                    btn.style.display = 'none';
+                    
+                    if (data.end_time) {
+                        document.getElementById('endTimeContainer').style.display = 'flex';
+                        document.getElementById('endTime').textContent = data.end_time;
+                    }
+                    showToast('Patient skipped. Session completed.', 'success');
+                } else {
+                    showToast('Patient skipped.', 'success');
+                }
+            } else {
+                showToast(data.msg, 'error');
+            }
+        } catch (e) {
+            showToast('Network error', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = ogContent;
+            lucide.createIcons();
+        }
+    });
+
+    document.getElementById('sessionBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('sessionBtn');
+        btn.disabled = true;
+        const ogContent = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Processing...';
+        lucide.createIcons();
+        
+        try {
+            if (currentStatus === 'idle') {
+                const res = await fetch('/start_session', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    currentStatus = 'active';
+                    document.getElementById('statusBadge').className = 'status-badge status-active';
+                    document.getElementById('statusBadge').innerHTML = '<i data-lucide="radio" style="width:16px;height:16px;"></i><span id="statusText">Live Now</span>';
+                    document.getElementById('tokenDisplay').textContent = '#' + data.current_token;
+                    document.getElementById('tokenSub').style.display = 'block';
+                    
+                    document.getElementById('sessionTimeline').style.display = 'flex';
+                    document.getElementById('startTime').textContent = data.start_time;
+                    document.getElementById('skipBtn').style.display = 'flex';
+                    
+                    btn.className = 'control-btn btn-next';
+                    btn.innerHTML = '<i data-lucide="arrow-right"></i> Next Patient';
+                    showToast('Session started successfully!', 'success');
+                } else {
+                    showToast(data.msg, 'error');
+                    btn.innerHTML = ogContent;
+                }
+            } else if (currentStatus === 'active') {
+                const res = await fetch('/next_token', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('tokenDisplay').textContent = '#' + data.current_token;
+                    if (data.status === 'completed') {
+                        currentStatus = 'completed';
+                        document.getElementById('statusBadge').className = 'status-badge status-completed';
+                        document.getElementById('statusBadge').innerHTML = '<i data-lucide="check-circle" style="width:16px;height:16px;"></i><span id="statusText">Completed</span>';
+                        
+                        btn.className = 'control-btn btn-disabled';
+                        btn.innerHTML = '<i data-lucide="check-circle"></i> Session Completed';
+                        btn.disabled = true;
+                        
+                        document.getElementById('skipBtn').style.display = 'none';
+                        if (data.end_time) {
+                            document.getElementById('endTimeContainer').style.display = 'flex';
+                            document.getElementById('endTime').textContent = data.end_time;
+                        }
+                        showToast('Session has ended.', 'success');
+                    } else {
+                        btn.innerHTML = '<i data-lucide="arrow-right"></i> Next Patient';
+                    }
+                } else {
+                    showToast(data.msg, 'error');
+                    btn.innerHTML = ogContent;
+                }
+            }
+        } catch (e) {
+            showToast('Network error', 'error');
+            btn.innerHTML = ogContent;
+        } finally {
+            if (currentStatus !== 'completed') btn.disabled = false;
+            lucide.createIcons();
+        }
+    });
+
+  </script>
+</body>
+</html>

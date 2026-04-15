@@ -588,6 +588,9 @@
         <label for="addDocName"><i data-lucide="user"></i> Doctor Name</label>
         <input id="addDocName" required placeholder="e.g. Dr.Razin Muhammad" />
 
+        <label for="addDocEmail"><i data-lucide="mail"></i> Doctor Email (For Login)</label>
+        <input id="addDocEmail" type="email" required placeholder="e.g. doctor@primecare.com" />
+
         <label for="addDocSpec"><i data-lucide="activity"></i> Specialization</label>
         <input id="addDocSpec" required placeholder="e.g. Cardiology" />
 
@@ -646,6 +649,9 @@
         <select id="editDoctorSelect" required>
           <option value="">-- Select Doctor --</option>
         </select>
+
+        <label for="editDocEmail" style="margin-top:1rem;"><i data-lucide="mail"></i> Update Email</label>
+        <input id="editDocEmail" type="email" placeholder="New login email" />
 
         <label style="margin-top:1rem;"><i data-lucide="calendar-days"></i> Working Days &amp; Time</label>
 
@@ -902,6 +908,21 @@
       </div>
     </div>
   </section>
+ 
+   <!-- Universal Confirmation Modal (Standardized) -->
+   <div class="modal-overlay" id="universalModal">
+     <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+       <div class="modal-icon-container" id="unvIconContainer" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
+         <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+       </div>
+       <h3 id="unvTitle" style="margin: 0 auto 0.5rem auto; color: #0f172a; font-size: 1.4rem; font-weight: 800; text-align: center; width: 100%;">Confirm Action</h3>
+       <p id="unvMessage" style="color: #64748b; font-size: 1.05rem; margin: 0 auto 2.2rem auto; line-height: 1.6; text-align: center; width: 100%;">Are you sure you want to proceed with this action?</p>
+       <div class="modal-btns" style="display: flex; gap: 1.2rem; justify-content: center; width: 100%;">
+         <button class="btn btn-outline" onclick="closeUniversalModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Cancel</button>
+         <button id="unvConfirmBtn" class="btn btn-primary" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Confirm</button>
+       </div>
+     </div>
+   </div>
 
   <script>
     // ─── Lucide icons ───────────────────────────────────────────
@@ -929,13 +950,33 @@
       if (!div) return;
       
       div.style.display = 'block';
-      div.innerHTML = (color === 'green' 
-        ? '<i data-lucide="check-circle" style="width:16px;height:16px;vertical-align:middle;margin-right:8px;"></i> ' 
-        : '<i data-lucide="alert-circle" style="width:16px;height:16px;vertical-align:middle;margin-right:8px;"></i> ') + msg;
+      div.style.fontSize = '0.85rem';
+      div.style.marginTop = '0.5rem';
+      div.style.fontWeight = '500';
+      div.style.padding = '0.4rem 0.6rem';
+      div.style.borderRadius = '8px';
       
-      div.className = color === 'green' ? 'msg-success' : '';
+      // Handle semantic colors or raw hex
+      const semanticMap = {
+          'green': '#16a34a',
+          'red': '#ef4444',
+          'orange': '#f97316'
+      };
+      const finalColor = semanticMap[color] || color;
+
+      div.style.color = finalColor;
+      div.style.background = `${finalColor}10`; // 10% opacity version of background
+      
+      if (divId.includes('adminBookDateMsg')) {
+          div.style.border = `1px solid ${finalColor}30`;
+      }
+
+      div.innerHTML = (color === 'green' 
+        ? '<i data-lucide="check-circle" style="width:15px;height:15px;vertical-align:middle;margin-right:8px;"></i> ' 
+        : '<i data-lucide="alert-circle" style="width:15px;height:15px;vertical-align:middle;margin-right:8px;"></i> ') + msg;
+      
       lucide.createIcons();
-      if (timeout > 0) setTimeout(() => { div.style.display = 'none'; div.innerHTML = ''; }, timeout);
+      if (timeout > 0) setTimeout(() => { div.style.display = 'none'; div.innerHTML = ''; div.style.background='none'; div.style.border='none'; }, timeout);
     }
 
     function showToast(msg, type = 'success') {
@@ -1190,6 +1231,7 @@
           const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
           opt.dataset.days = daysArr.join(',');
           opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
+          opt.dataset.email = d.Email || '';
           
           if (select) select.appendChild(opt.cloneNode(true));
           if (viewSelect) viewSelect.appendChild(opt);
@@ -1282,6 +1324,7 @@
       document.getElementById('commonEndEdit').value='';
       const selectedDays = (selected.dataset.days||'').split(',').map(d=>d.trim()).filter(Boolean);
       const dayTimes = selected.dataset.dayTimes ? JSON.parse(selected.dataset.dayTimes) : {};
+      document.getElementById('editDocEmail').value = selected.dataset.email || '';
       document.querySelectorAll('.day-check-edit').forEach(cb => {
         const day = cb.dataset.day;
         const timeDiv = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
@@ -1581,34 +1624,51 @@
       try {
         const res = await fetch(`/api/check_doctor_availability?sheet_url=${encodeURIComponent(sheet_url)}&date=${encodeURIComponent(date)}`);
         const data = await res.json();
+        
         if (data.available === false) {
-          showMessage('adminBookDateMsg', data.reason || 'Doctor is not available on this date.');
+          showMessage('adminBookDateMsg', data.reason || 'Doctor is not available on this date.', 'red');
           this.value = '';
+        } else {
+          // New: Fetch current booking count specifically
+          const statsRes = await fetch(`/api/get_booking_stats?sheet_url=${encodeURIComponent(sheet_url)}&date=${encodeURIComponent(date)}`);
+          const stats = await statsRes.json();
+          
+          if (stats.success) {
+            let statusColor = 'green';
+            let statusLabel = 'Available: ';
+            
+            if (stats.count >= 25) {
+                statusColor = 'red';
+                statusLabel = 'CAPACITY REACHED: ';
+            } else if (stats.count >= 20) {
+                statusColor = 'orange';
+                statusLabel = 'Limited Space: ';
+            }
+            
+            const msg = `${statusLabel} <strong>${stats.count} / ${stats.total}</strong> bookings filled.`;
+            showMessage('adminBookDateMsg', msg, statusColor, 0); // Keep message visible
+          }
         }
       } catch (err) {
-        console.error('Availability check failed:', err);
+        console.error('Availability/Stats check failed:', err);
       }
     });
 
-    document.getElementById('adminBookPatientForm').addEventListener('submit', async e => {
-      e.preventDefault();
-      const btn = e.target.querySelector("button[type='submit']");
-      const msgDiv = document.getElementById('adminBookResult');
+    // ─── Admin Call-in Patient Booking ────────────────────────────────
+    let activeAdminBookingPayload = null;
+
+    async function submitAdminBooking(payload, force = false) {
+      if (force) payload.force = true;
       
+      const btn = document.querySelector("#adminBookPatientForm button[type='submit']");
+      const originalHtml = btn.innerHTML;
+      
+      // Force loading state
       btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Processing...';
+      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Saving...';
       lucide.createIcons();
       
       try {
-        const payload = {
-          sheet_url: document.getElementById('adminBookDoc').value,
-          date: document.getElementById('adminBookDate').value,
-          name: document.getElementById('adminBookName').value.trim(),
-          age: document.getElementById('adminBookAge').value.trim(),
-          gender: document.getElementById('adminBookGender').value,
-          phone_number: document.getElementById('adminBookPhone').value.trim()
-        };
-        
         const res = await fetch('/admin_book_patient', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -1617,60 +1677,83 @@
         
         const data = await res.json();
         
+        if (data.success && data.warning) {
+          // Keep showing "Saving..." on the primary button while the warning is open
+          activeAdminBookingPayload = payload;
+          openModal(
+            'warning',
+            'Full Capacity Message', 
+            `<div style="text-align:center;">
+               <div style="font-size:1.1rem; color:#0f172a; margin-bottom:0.8rem;">${data.msg}</div>
+               <div style="font-size:0.9rem; color:#64748b;">As an administrator, you are allowed to exceed the 25-patient limit for urgent call-ins.</div>
+             </div>`, 
+            'Save Anyway', 
+            () => submitAdminBooking(activeAdminBookingPayload, true),
+            false
+          );
+          return;
+        }
+        
         if (data.success) {
-          // Success Feedback via Modal instead of redirect
+          // Standardized Success Modal
+          openModal(
+            'success',
+            'Booking Successful',
+            `Appointment for <strong>${data.name}</strong> with <strong>${data.doctor}</strong> is confirmed.`,
+            'Book Another',
+            () => { 
+                closeModal(); 
+                document.getElementById('adminBookPatientForm').reset();
+            }
+          );
+
+          // Success Feedback - Token Card Injection
           const modal = document.getElementById('universalModal');
-          modal.querySelector('h3').textContent = 'Booking Successful';
-          modal.querySelector('p').innerHTML = `Appointment for <strong>${data.name}</strong> with <strong>${data.doctor}</strong> is confirmed.`;
-          
-          // Add a custom token display to the modal
-          const contentP = modal.querySelector('p');
           const tokenCard = document.createElement('div');
           tokenCard.className = 'success-token-card';
           tokenCard.innerHTML = `
             <span style="font-size:0.8rem; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Token Number</span>
-            <span class="success-token-value">${data.token}</span>
+            <span class="success-token-value" style="display:block; font-size:2.8rem; font-weight:900; color:#0f172a; margin:0.4rem 0;">${data.token}</span>
             <span style="font-size:0.82rem; color:#0077b6; font-weight:600;">${data.date} | ${data.time}</span>
           `;
           
-          // Remove if already exists
-          const oldCard = modal.querySelector('.success-token-card');
-          if (oldCard) oldCard.remove();
-          contentP.after(tokenCard);
-          
-          const confirmBtn = modal.querySelector('.btn-primary');
-          confirmBtn.textContent = 'Book Another';
-          confirmBtn.style.background = '#10b981';
-          confirmBtn.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.35)';
-          
-          activeModalAction = () => {
-              modal.style.display = 'none';
-              tokenCard.remove();
-          };
-          
-           modal.style.display = 'flex';
-          
-          // Ensure Icon is correct (Check Circle for success)
-          const iconContainer = modal.querySelector('.modal-icon-container');
-          if (iconContainer) {
-            iconContainer.style.color = '#10b981';
-            iconContainer.style.background = 'rgba(16, 185, 129, 0.1)';
-            const icon = iconContainer.querySelector('i, svg');
-            if (icon) icon.setAttribute('data-lucide', 'check-circle');
-          }
-          
-          e.target.reset();
+          document.getElementById('unvMessage').after(tokenCard);
           lucide.createIcons();
+          
+          // Reset button after success
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
         } else {
-          showMessage('adminBookResult', data.msg || 'Booking failed.');
+          showToast(data.msg || 'Booking failed', 'error');
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
         }
-      } catch (err) {
-        showToast('Communication error. Please retry.', 'error');
-      } finally {
+      } catch (e) {
+        showToast('Communication error', 'error');
         btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="calendar-check"></i> Confirm Booking';
-        lucide.createIcons();
+        btn.innerHTML = originalHtml;
       }
+      lucide.createIcons();
+    }
+
+    document.getElementById('adminBookPatientForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = e.target.querySelector("button[type='submit']");
+      
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Processing...';
+      lucide.createIcons();
+      
+      const payload = {
+        sheet_url: document.getElementById('adminBookDoc').value,
+        date: document.getElementById('adminBookDate').value,
+        name: document.getElementById('adminBookName').value.trim(),
+        age: document.getElementById('adminBookAge').value.trim(),
+        gender: document.getElementById('adminBookGender').value,
+        phone_number: document.getElementById('adminBookPhone').value.trim()
+      };
+      
+      submitAdminBooking(payload);
     });
 
     // ─── Admin login ───────────────────────────────────────────
@@ -1738,51 +1821,7 @@
       }
     });
 
-    let activeModalAction = null;
 
-    function openModal(id, title, message, actionText, actionFn, isDanger = false) {
-      const modal = document.getElementById('universalModal');
-      if (!modal) return;
-      
-      // Cleanup previous custom additions (like the token card)
-      const oldCard = modal.querySelector('.success-token-card');
-      if (oldCard) oldCard.remove();
-
-      modal.querySelector('h3').textContent = title;
-      modal.querySelector('p').textContent = message;
-      
-      const confirmBtn = modal.querySelector('.btn-primary');
-      confirmBtn.textContent = actionText;
-      confirmBtn.style.background = isDanger ? '#e11d48' : '#0077b6';
-      confirmBtn.style.boxShadow = isDanger ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
-      
-      const iconContainer = modal.querySelector('.modal-icon-container');
-      if (iconContainer) {
-        if (id === 'success') {
-          iconContainer.style.color = '#10b981';
-          iconContainer.style.background = 'rgba(16, 185, 129, 0.1)';
-          const icon = iconContainer.querySelector('i, svg');
-          if (icon) icon.setAttribute('data-lucide', 'check-circle');
-        } else {
-          iconContainer.style.color = isDanger ? '#e11d48' : '#0077b6';
-          iconContainer.style.background = isDanger ? 'rgba(225, 29, 72, 0.1)' : 'rgba(0, 119, 182, 0.1)';
-          const icon = iconContainer.querySelector('i, svg');
-          if (icon) {
-            icon.setAttribute('data-lucide', isDanger ? 'log-out' : 'help-circle');
-          }
-        }
-      }
-      
-      activeModalAction = actionFn;
-      modal.style.display = 'flex';
-      if (window.lucide) lucide.createIcons();
-    }
-
-    window.closeModal = function() {
-      const modal = document.getElementById('universalModal');
-      if (modal) modal.style.display = 'none';
-      activeModalAction = null;
-    }
 
     window.handleConfirm = function() {
       console.log("Modal confirmation triggered");
@@ -1863,6 +1902,14 @@
       try {
         const name           = document.getElementById('addDocName').value.trim();
         const specialization = document.getElementById('addDocSpec').value.trim();
+        const email          = document.getElementById('addDocEmail').value.trim();
+
+        if (!email.includes('@') || !email.includes('.')) {
+          showToast('Please provide a valid email format.', 'error');
+          btn.disabled = false; btn.innerHTML = '<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons();
+          return;
+        }
+
         const imageFile      = document.getElementById('addDocImage').files[0];
         const sameTimeAll    = document.getElementById('sameTimeAll');
         const selectedDays=[]; const dayTimes={};
@@ -1886,7 +1933,7 @@
         }
         if(!selectedDays.length) { showToast('Please select at least one working day.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); return; }
         const formData=new FormData();
-        formData.append('name',name); formData.append('specialization',specialization);
+        formData.append('name',name); formData.append('email',email); formData.append('specialization',specialization);
         formData.append('days',selectedDays.join(', ')); formData.append('day_times',JSON.stringify(dayTimes));
         if(imageFile) formData.append('image',imageFile);
         const res=await fetch('/admin_add_doctor',{method:'POST',body:formData});
@@ -1905,7 +1952,10 @@
       btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Saving...'; lucide.createIcons();
       try {
         const combined=document.getElementById('editDoctorSelect').value;
+        const email=document.getElementById('editDocEmail').value.trim();
         if(!combined) { showToast('Please select a doctor to edit.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
+        if(!email) { showToast('Email is required.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
+        if(!email.includes('@') || !email.includes('.')) { showToast('Please provide a valid email format', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
         const sameTimeAll=document.getElementById('sameTimeAllEdit');
         const selectedDays=[]; const day_times={};
         if(sameTimeAll&&sameTimeAll.checked) {
@@ -1927,7 +1977,7 @@
           if(hasError){ btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
         }
         if(!selectedDays.length){ showToast('At least one working day is required.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
-        const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined,days:selectedDays,day_times}) });
+        const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined, email, days:selectedDays,day_times}) });
         const data=await res.json();
         showToast(data.msg, data.success ? 'success' : 'error');
         if(data.success){ e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
@@ -2077,7 +2127,7 @@
       lucide.createIcons();
 
       try {
-        const res = await fetch('/admin_get_bookings', {
+        const res = await fetch('/manage_bookings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ combined, date })
@@ -2089,6 +2139,10 @@
           msgDiv.style.display = 'block';
           return;
         }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="calendar-days"></i> Fetch Bookings';
+        lucide.createIcons();
 
         const bookings = data.bookings || [];
         if (bookings.length === 0) {
@@ -2362,22 +2416,112 @@ function downloadPDF() {
 
   }, 300);
 }
-  </script>
 
-  <!-- Universal Confirmation Modal (Reusable for Logout, Leave, etc.) -->
-  <div class="modal-overlay" id="universalModal">
-    <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-      <div class="modal-icon-container" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
-        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
-      </div>
-      <h3 style="margin: 0 auto 0.5rem auto; color: #0f172a; font-size: 1.4rem; font-weight: 800; text-align: center; width: 100%;">Confirm Action</h3>
-      <p style="color: #64748b; font-size: 1.05rem; margin: 0 auto 2.2rem auto; line-height: 1.6; text-align: center; width: 100%;">Are you sure you want to proceed with this action?</p>
-      <div class="modal-btns" style="display: flex; gap: 1.2rem; justify-content: center; width: 100%;">
-        <button class="btn btn-outline" onclick="closeModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Cancel</button>
-        <button class="btn btn-primary" onclick="handleConfirm()" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Confirm</button>
-      </div>
-    </div>
-  </div>
+    // ─── Set Date Constraints ───
+    (function() {
+      const today = new Date();
+      const istToday = new Date(today.toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+      const minDateStr = istToday.toISOString().split('T')[0];
+      
+      const maxDate = new Date(istToday);
+      maxDate.setDate(istToday.getDate() + 15);
+      const maxDateStr = maxDate.toISOString().split('T')[0];
+      
+      const dDateInput = document.getElementById('doctorDate');
+      const sDateInput = document.getElementById('specDate');
+      
+      [dDateInput, sDateInput].forEach(inp => {
+        if (!inp) return;
+        inp.setAttribute('min', minDateStr);
+        inp.setAttribute('max', maxDateStr);
+        
+        inp.addEventListener('change', () => {
+          const selected = inp.value;
+          if (selected > maxDateStr) {
+            alert('Bookings are only allowed up to 15 days in advance.');
+            inp.value = '';
+          }
+        });
+      });
+    })();
+  
+    /**
+     * Unified Modal System
+
+
+    /**
+     * Unified Modal System
+     * @param {string} id - legacy param or 'success'
+     */
+    window.openModal = function(id, title, message, actionText, actionFn, isDanger = false) {
+      console.log(`[Modal] Opening: ${title}`);
+      
+      const modal = document.getElementById('universalModal');
+      const titleEl = document.getElementById('unvTitle');
+      const msgEl = document.getElementById('unvMessage');
+      const btn = document.getElementById('unvConfirmBtn');
+      const container = document.getElementById('unvIconContainer');
+
+      // Cleanup
+      const oldCard = modal.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+
+      titleEl.textContent = title;
+      msgEl.innerHTML = message;
+      
+      btn.textContent = actionText;
+      btn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      btn.style.boxShadow = isDanger ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      
+      // Icon Logic
+      let iconName = 'help-circle';
+      if (id === 'success') {
+          iconName = 'check-circle';
+          container.style.color = '#10b981';
+          container.style.background = 'rgba(16, 185, 129, 0.1)';
+      } else if (id === 'warning') {
+          iconName = 'alert-circle';
+          container.style.color = '#f59e0b'; // Amber-600
+          container.style.background = 'rgba(245, 158, 11, 0.1)';
+      } else if (isDanger) {
+          iconName = 'alert-triangle';
+          container.style.color = '#e11d48';
+          container.style.background = 'rgba(225, 29, 72, 0.1)';
+      } else {
+          container.style.color = '#0077b6';
+          container.style.background = 'rgba(0, 119, 182, 0.1)';
+      }
+      
+      container.innerHTML = `<i data-lucide="${iconName}" style="width: 32px; height: 32px;"></i>`;
+      
+      activeModalAction = actionFn;
+      modal.style.display = 'flex';
+      if (window.lucide) lucide.createIcons();
+    };
+
+    window.closeModal = function() {
+      const modal = document.getElementById('universalModal');
+      if (modal) modal.style.display = 'none';
+      activeModalAction = null;
+      // Clean up special cards
+      const card = modal.querySelector('.success-token-card');
+      if (card) card.remove();
+    };
+    
+    // Alias for backward compatibility or new calls
+    window.closeUniversalModal = window.closeModal;
+    window.openUniversalModal = window.openModal;
+
+    document.getElementById('unvConfirmBtn').addEventListener('click', () => {
+      console.log("[Modal] Confirmation clicked");
+      if (activeModalAction) activeModalAction();
+      closeModal();
+    });
+
+    window.openLogoutModal = function() {
+      openModal('logout', 'Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
+    };
+  </script>
   <footer class="site-footer">
     <div class="footer-content">
       <p class="footer-copy">© 2026 PrimeCare Clinic. All rights reserved.</p>
