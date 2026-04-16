@@ -1022,48 +1022,57 @@
         banner.style.opacity = '1';
       };
 
+      // ── Unified notification sender via Service Worker postMessage ──
+      async function sendPushNotif(title, body, tag, vibrate, silent) {
+        if (typeof Notification === 'undefined') return;
+        if (Notification.permission !== 'granted') return;
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          reg.active.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title, body, tag,
+            vibrate: vibrate || [],
+            silent: silent !== undefined ? silent : false,
+            renotify: true
+          });
+        } catch(e) {
+          try { new Notification(title, { body, icon: '/static/android-chrome-192x192.png', tag }); } catch(err) {}
+        }
+      }
+
       async function updateTokenBanner() {
         try {
           const res = await fetch('/my_token_status');
           const data = await res.json();
           
           if (data.success && (data.status === 'active' || data.status === 'skipped')) {
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             const isStandaloneMode = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-
-            // ── Push notifications (iOS 16.4+ standalone OR Android) ──
             const supportsNotif = typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
+            // iOS only supports notifications in standalone/installed PWA mode
             const canReceiveNotif = supportsNotif && Notification.permission === 'granted' && (!isIOS || isStandaloneMode);
 
-            if (isMobile && canReceiveNotif) {
+            if (canReceiveNotif) {
               const ahead    = data.patients_ahead;
               const liveDoc  = data.doctor_name;
               const liveTok  = data.current_token;
               const yourTok  = data.your_token;
 
-              // 1️⃣  Persistent (silent) live-tracking notification
+              // 1️⃣  Single live-tracking notification — updates in place (same tag)
               const liveKey  = `live_tok_${liveDoc}_${yourTok}`;
               const lastLive = sessionStorage.getItem(liveKey);
               if (String(liveTok) !== lastLive && data.status === 'active') {
-                sessionStorage.setItem(liveKey, liveTok);
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.ready.then(reg => {
-                    reg.showNotification('🔄 Live Tracking', {
-                      body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`,
-                      icon: '/static/android-chrome-192x192.png',
-                      badge: '/static/favicon-32x32.png',
-                      tag: 'primecare-live', silent: true, renotify: false
-                    }).catch(() => {
-                       try { new Notification('🔄 Live Tracking', { body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`, tag: 'primecare-live', silent: true }); } catch(err) {}
-                    });
-                  }).catch(() => {});
-                } else {
-                   try { new Notification('🔄 Live Tracking', { body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`, tag: 'primecare-live', silent: true }); } catch(err) {}
-                }
+                sessionStorage.setItem(liveKey, String(liveTok));
+                await sendPushNotif(
+                  '🔄 Live Tracking',
+                  `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`,
+                  'primecare-live',
+                  [],
+                  false  // NOT silent — must appear in notification shade
+                );
               }
 
-              // 2️⃣  Alert notification — vibrates only at 2/1/0 tokens ahead
+              // 2️⃣  Alert notification — vibrates at ≤2 ahead
               const alertKey  = `alerted_${liveDoc}_${yourTok}`;
               const lastAlert = sessionStorage.getItem(alertKey);
               if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && data.status === 'active') {
@@ -1072,50 +1081,34 @@
                   ? `It's your turn! Proceed to ${liveDoc} immediately.`
                   : ahead === 1
                   ? `You're next for ${liveDoc}. Please be ready!`
-                  : `2 patients ahead — ${liveDoc}. Get ready soon.`;
-                  
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.ready.then(reg => {
-                    reg.showNotification('Token Alert', {
-                      body: alertBody,
-                      icon: '/static/android-chrome-192x192.png',
-                      badge: '/static/favicon-32x32.png',
-                      vibrate: [300, 100, 300, 100, 500],
-                      tag: 'primecare-alert', renotify: true, silent: false
-                    }).catch(() => {
-                      try { new Notification('Token Alert', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
-                    });
-                  }).catch(() => {});
-                } else {
-                    try { new Notification('Token Alert', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
-                }
+                  : `2 patients ahead — ${liveDoc}. Get ready soon!`;
+                await sendPushNotif(
+                  '🔔 Token Alert',
+                  alertBody,
+                  'primecare-alert',
+                  [300, 100, 300, 100, 500],
+                  false
+                );
               }
               
               // 3️⃣ Skipped notification
               if (data.status === 'skipped') {
-                  const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
-                  if (!sessionStorage.getItem(skipKey)) {
-                      sessionStorage.setItem(skipKey, "1");
-                      const skipBody = "Your token was skipped because of not reaching.";
-                      if ('serviceWorker' in navigator) {
-                          navigator.serviceWorker.ready.then(reg => {
-                              reg.showNotification('Token Skipped', {
-                                  body: skipBody,
-                                  icon: '/static/android-chrome-192x192.png',
-                                  badge: '/static/favicon-32x32.png',
-                                  vibrate: [400, 200, 400],
-                                  tag: 'primecare-alert', renotify: true, silent: false
-                              }).catch(() => { try { new Notification('Token Skipped', { body: skipBody }); } catch(e){} });
-                          }).catch(()=>{});
-                      } else {
-                          try { new Notification('Token Skipped', { body: skipBody }); } catch(e){}
-                      }
-                  }
+                const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
+                if (!sessionStorage.getItem(skipKey)) {
+                  sessionStorage.setItem(skipKey, '1');
+                  await sendPushNotif(
+                    '⚠️ Token Skipped',
+                    'Your token was skipped as you were not present.',
+                    'primecare-alert',
+                    [400, 200, 400],
+                    false
+                  );
+                }
               }
             }
 
-            // Notification permission card (iOS standalone or Android, when not yet granted)
-            if (isMobile && supportsNotif && Notification.permission === 'default' && (!isIOS || isStandaloneMode)) {
+            // Show notification permission card if not yet granted
+            if (supportsNotif && Notification.permission === 'default' && (!isIOS || isStandaloneMode)) {
                showNotifPermCard();
             }
 
@@ -1252,20 +1245,13 @@
         e.stopPropagation();
         const perm = await Notification.requestPermission();
         if (perm === 'granted') {
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(reg => {
-              reg.showNotification('PrimeCare', {
-                body: "Alerts enabled! You will be notified when your turn is near.",
-                icon: '/static/android-chrome-192x192.png',
-                badge: '/static/favicon-32x32.png',
-                vibrate: [200, 100, 200]
-              }).catch(() => {
-                try { new Notification('PrimeCare', { body: "Alerts enabled!", icon: '/static/android-chrome-192x192.png' }); } catch(err) {}
-              });
-            });
-          } else {
-            try { new Notification('PrimeCare', { body: "Alerts enabled! You will be notified.", icon: '/static/android-chrome-192x192.png' }); } catch(err) {}
-          }
+          await sendPushNotif(
+            '✅ Alerts Enabled',
+            'You will be notified when your turn is near.',
+            'primecare-general',
+            [200, 100, 200],
+            false
+          );
         }
         _slideOut(card, 1, 'notifCardDismissed');
         _notifCardShown = false; 
