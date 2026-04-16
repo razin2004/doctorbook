@@ -1,4 +1,4 @@
-const CACHE_NAME = 'primecare-v3';
+const CACHE_NAME = 'primecare-v2';
 const ASSETS_TO_CACHE = [
   '/static/style.css',
   '/static/primecare-logo.svg',
@@ -47,37 +47,28 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      // Focus existing open window
       for (const client of clientList) {
-        if (client.url.includes('/patient_dashboard') || client.url.includes('/') || client.url.includes('/live-tracking')) {
+        if (client.url.includes('/patient_dashboard') || client.url.includes('/')) {
           return client.focus();
         }
       }
+      // No window open — launch the app
       return clients.openWindow('/patient_dashboard');
     })
   );
 });
 
-// Listen for messages from the page — unified notification sender
+// Listen for messages from the page (legacy postMessage support)
 self.addEventListener('message', event => {
-  if (!event.data) return;
-
-  const { type, title, body, tag, vibrate, silent, renotify } = event.data;
-
-  if (type === 'SHOW_NOTIFICATION') {
-    const options = {
-      body: body || '',
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    self.registration.showNotification(event.data.title, {
+      body: event.data.body,
       icon: '/static/android-chrome-192x192.png',
       badge: '/static/favicon-32x32.png',
-      tag: tag || 'primecare-general',
-      renotify: renotify !== undefined ? renotify : true,
-      silent: silent !== undefined ? silent : false,
-      requireInteraction: false,
-    };
-
-    if (vibrate && vibrate.length) {
-      options.vibrate = vibrate;
-    }
-
-    self.registration.showNotification(title || 'PrimeCare', options);
+      vibrate: [200, 100, 200],
+      tag: 'primecare-token',
+      renotify: true
+    });
   }
 });
