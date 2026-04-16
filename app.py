@@ -2827,8 +2827,8 @@ def live_tokens():
         doc_spec = d.get("Specialization")
         
         doc_session = DoctorSession.query.filter(
-            db.func.lower(DoctorSession.doctor_name) == doc_name.lower(),
-            db.func.lower(DoctorSession.specialization) == doc_spec.lower()
+            db.func.lower(db.func.trim(DoctorSession.doctor_name)) == doc_name.lower().strip(),
+            db.func.lower(db.func.trim(DoctorSession.specialization)) == doc_spec.lower().strip()
         ).first()
         
         # Default state
