@@ -3,19 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <title>PrimeCare Clinic – Trusted Healthcare</title>
-  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="description" content="Book appointments at PrimeCare Clinic. Experienced specialists, online token booking, instant confirmation." />
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#0077b6">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="PrimeCare">
-  <link rel="apple-touch-icon" href="/static/image/pwa-icon.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/static/android-chrome-192x192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/static/android-chrome-512x512.png">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+
 
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -2358,8 +2355,26 @@
     // ─── PWA Service Worker Registration ────────────────────────────
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/static/sw.js')
-          .then(reg => console.log('PrimeCare SW registered:', reg.scope))
+        navigator.serviceWorker.register('/static/sw.js', { updateViaCache: 'none' })
+          .then(reg => {
+            console.log('PrimeCare SW registered:', reg.scope);
+            // Force update check to pick up new SW version
+            reg.update();
+            // If a new SW is waiting, activate it immediately
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              }
+            });
+          })
           .catch(err => console.error('SW registration failed:', err));
       });
     }
