@@ -1,33 +1,17 @@
 {
   "name": "PrimeCare Clinic Portal",
   "short_name": "PrimeCare",
-  "description": "Premium patient portal for PrimeCare Clinic - Real-time token tracking and bookings.",
-  "start_url": "/",
-  "scope": "/",
-  "id": "/",
+  "start_url": "/patient_dashboard",
   "display": "standalone",
   "background_color": "#0077b6",
   "theme_color": "#0077b6",
   "orientation": "portrait",
-  "lang": "en",
   "icons": [
     {
-      "src": "/static/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
       "src": "/static/android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/static/android-chrome-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
     },
     {
       "src": "/static/android-chrome-512x512.png",
@@ -40,6 +24,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/static/image/pwa-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "description": "Premium patient portal for PrimeCare Clinic - Real-time token tracking and bookings.",
+  "id": "/patient_dashboard"
 }
