@@ -1209,7 +1209,7 @@
           padding:0.5rem 1rem; border-radius:13px; font-size:0.8rem; font-weight:800;
           cursor:pointer; flex-shrink:0; font-family:inherit;
           box-shadow:0 6px 18px rgba(0,119,182,0.35); white-space:nowrap;
-          letter-spacing:0.01em;
+          letter-spacing:0.01em; margin-top:0 !important; align-self:center;
         ">Enable</button>
       `;
       document.body.appendChild(card);
@@ -1219,6 +1219,16 @@
       document.getElementById('enableNotifBtn').addEventListener('click', async e => {
         e.stopPropagation();
         const perm = await Notification.requestPermission();
+        if (perm === 'granted' && 'serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification('PrimeCare', {
+              body: "Alerts enabled! You will be notified when your turn is near.",
+              icon: '/static/android-chrome-192x192.png',
+              badge: '/static/favicon-32x32.png',
+              vibrate: [200, 100, 200]
+            });
+          });
+        }
         _slideOut(card, 1, perm === 'granted' ? 'notifCardDismissed' : null);
         _notifCardShown = false; // allow re-check next poll if denied
       });
