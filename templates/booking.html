@@ -862,7 +862,7 @@
               <th class="no-print">Action</th>
             </tr>
           </thead>
-          <tbody id="adminBookingsTbody"></tbody>
+          <tbody id="bookingsTbody"></tbody>
         </table>
       </div>
     </div>
@@ -916,30 +916,7 @@
       </div>
     </div>
 
-      <div id="viewBookingMsg" style="margin-top:8px; font-size:0.88rem; display:none;"></div>
 
-      <div class="booking-table-wrapper" id="bookingTableWrapper" style="display:none;">
-        <div class="booking-table-header">
-            <h4 style="margin:0; font-size:1rem; color:#024b80;"><i data-lucide="list"></i> Bookings List</h4>
-            <button onclick="prepareAndPrint()" class="btn btn-outline no-print print-btn" style="padding: 0.4rem 0.8rem; font-size:0.82rem;">
-                <i data-lucide="printer"></i> <span class="btn-text">Print List</span>
-            </button>
-        </div>
-        <table class="booking-table">
-          <thead>
-            <tr>
-              <th>Token</th>
-              <th>Patient Name</th>
-              <th>Age</th>
-              <th>Gender</th>
-              <th>Phone</th>
-              <th class="no-print">Action</th>
-            </tr>
-          </thead>
-          <tbody id="bookingsTbody"></tbody>
-        </table>
-      </div>
-    </div>
 
     <!-- PROFESSIONAL PRINT TEMPLATE (Hidden) -->
     <div id="printReportTemplate" style="display: none;">
@@ -1143,6 +1120,13 @@
           activeDiv.style.display = 'none';
           options.style.display = 'none';
           loginDiv.style.display = 'block';
+          
+          document.querySelectorAll('.adminPanel').forEach(p => {
+            p.style.display = 'none';
+            p.classList.remove('active');
+          });
+          lastActiveAdminPanel = null;
+          localStorage.removeItem('activeAdminPanel');
         }
       } catch(e) { console.error('Session check failed:', e); }
     }

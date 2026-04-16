@@ -701,6 +701,28 @@ def patient_login():
     user = User.query.filter_by(email=email).first()
     if user and check_password_hash(user.password_hash, password):
         doc_session = DoctorSession.query.filter_by(email=email).first()
+        
+        # If not in local DB, check mapping directly from Google Sheets
+        if not doc_session:
+            try:
+                all_docs = get_all_doctors()
+                for sheet_doc in all_docs:
+                    sheet_email = sheet_doc.get("Email", "").strip().lower()
+                    if sheet_email == email:
+                        # Re-sync doctor automatically
+                        doc_session = DoctorSession(
+                            doctor_name=sheet_doc.get("Name", "").strip(),
+                            specialization=sheet_doc.get("Specialization", "").strip(),
+                            email=email
+                        )
+                        db.session.add(doc_session)
+                        if user.role != "doctor":
+                            user.role = "doctor"
+                        db.session.commit()
+                        break
+            except Exception as e:
+                pass
+
         if doc_session:
             session['pending_role_id'] = user.id
             session['pending_role_email'] = user.email
@@ -1138,14 +1160,13 @@ def admin_add_doctor():
             doc_name = (doc.get("Name") or "").strip().lower()
             doc_spec = (doc.get("Specialization") or "").strip().lower()
             doc_email = (doc.get("Email") or "").strip().lower()
-            
-            if doc_name == name.lower() and doc_spec == specialization.lower():
+            if doc_name == name.strip().lower() and doc_spec == specialization.strip().lower():
                 return jsonify({
                     'success': False,
                     'msg': 'Doctor already exists with same name and specialization.'
                 })
             
-            if email and doc_email == email.lower():
+            if email and doc_email == email.strip().lower():
                 return jsonify({
                     'success': False,
                     'msg': 'Email already registered by another doctor.'
@@ -1257,7 +1278,7 @@ def admin_edit_doctor():
             # Check SQLite uniqueness (Safety layer)
             other_session = DoctorSession.query.filter(
                 DoctorSession.email == email_lower,
-                (DoctorSession.doctor_name != name) | (DoctorSession.specialization != spec)
+                (db.func.lower(db.func.trim(DoctorSession.doctor_name)) != name) | (db.func.lower(db.func.trim(DoctorSession.specialization)) != spec)
             ).first()
             if other_session:
                  return jsonify({"success": False, "msg": f"Email is already assigned to {other_session.doctor_name} in system database."})
@@ -1277,9 +1298,9 @@ def admin_edit_doctor():
                     row_dict["Email"] = email_clean
                     
                     # Update SQLite (Finding existing or syncing missing)
-                    doc_session = DoctorSession.query.filter_by(
-                        doctor_name=row_dict.get("Name", "").strip(), 
-                        specialization=row_dict.get("Specialization", "").strip()
+                    doc_session = DoctorSession.query.filter(
+                        db.func.lower(db.func.trim(DoctorSession.doctor_name)) == row_dict.get("Name", "").strip().lower(),
+                        db.func.lower(db.func.trim(DoctorSession.specialization)) == row_dict.get("Specialization", "").strip().lower()
                     ).first()
                     
                     if doc_session:
@@ -1508,8 +1529,8 @@ def admin_delete_leave():
         r_spec = (row_dict.get("Specialization", "") or "").strip()
         r_date = (row_dict.get("Date", "") or "").strip()
 
-        if (r_name.lower() == doctor_name.lower()
-                and r_spec.lower() == specialization.lower()
+        if (r_name.lower() == doctor_name.strip().lower()
+                and r_spec.lower() == specialization.strip().lower()
                 and r_date == date_str):
             removed = True
             continue
@@ -1868,6 +1889,22 @@ def admin_book_patient():
         token = len(sheet.get_all_values())
 
         sheet.append_row([token, name, age, gender, phone_number, date])
+
+        # --- Auto-Update Doctor Session Total Tokens for today ---
+        ist = pytz.timezone('Asia/Kolkata')
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        if date == today_str:
+            try:
+                doc_sess = DoctorSession.query.filter(
+                    db.func.lower(db.func.trim(DoctorSession.doctor_name)) == doctor_info["Name"].lower().strip(),
+                    db.func.lower(db.func.trim(DoctorSession.specialization)) == doctor_info["Specialization"].lower().strip(),
+                    DoctorSession.session_date == today_str
+                ).first()
+                if doc_sess:
+                    doc_sess.total_tokens += 1
+                    db.session.commit()
+            except Exception as e:
+                app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
 
         increment_booking_counter()
         cleanup_old_date_sheets(spreadsheet)

@@ -2055,17 +2055,17 @@
                 sessionStorage.setItem(liveKey, liveTok);
                 if ('serviceWorker' in navigator) {
                   navigator.serviceWorker.ready.then(reg => {
-                    reg.showNotification('Live Tracking', {
+                    reg.showNotification('🔄 Live Tracking', {
                       body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`,
                       icon: '/static/android-chrome-192x192.png',
                       badge: '/static/favicon-32x32.png',
                       tag: 'primecare-live', silent: true, renotify: false
                     }).catch(() => {
-                       try { new Notification('Live Tracking', { body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}` }); } catch(err) {}
+                       try { new Notification('🔄 Live Tracking', { body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`, tag: 'primecare-live', silent: true }); } catch(err) {}
                     });
                   }).catch(() => {});
                 } else {
-                   try { new Notification('Live Tracking', { body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}` }); } catch(err) {}
+                   try { new Notification('🔄 Live Tracking', { body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`, tag: 'primecare-live', silent: true }); } catch(err) {}
                 }
               }
 
