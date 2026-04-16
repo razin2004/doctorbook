@@ -1138,10 +1138,6 @@
               statusText.textContent = "Live Status";
             }
 
-            // Notification permission card (Android PWA only — iOS uses the Install Guide)
-            if (isMobile && !isIOS && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-               showNotifPermCard();
-            }
 
             if (!isDismissed) {
               banner.classList.add('show');
