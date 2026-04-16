@@ -1,7 +1,8 @@
-const CACHE_NAME = 'primecare-v1';
+const CACHE_NAME = 'primecare-v2';
 const ASSETS_TO_CACHE = [
   '/static/style.css',
   '/static/primecare-logo.svg',
+  '/static/android-chrome-192x192.png',
   '/static/image/pwa-icon.png'
 ];
 
@@ -41,33 +42,33 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Handle Notification Click
+// Handle Notification Click — open/focus the app
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      if (clientList.length > 0) {
-        let client = clientList[0];
-        for (let i = 0; i < clientList.length; i++) {
-          if (clientList[i].focused) {
-            client = clientList[i];
-          }
+      // Focus existing open window
+      for (const client of clientList) {
+        if (client.url.includes('/patient_dashboard') || client.url.includes('/')) {
+          return client.focus();
         }
-        return client.focus();
       }
+      // No window open — launch the app
       return clients.openWindow('/patient_dashboard');
     })
   );
 });
 
-// Listen for messages from the page (to trigger background notifications)
+// Listen for messages from the page (legacy postMessage support)
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     self.registration.showNotification(event.data.title, {
       body: event.data.body,
-      icon: event.data.icon,
-      badge: event.data.icon,
-      vibrate: [200, 100, 200]
+      icon: '/static/android-chrome-192x192.png',
+      badge: '/static/favicon-32x32.png',
+      vibrate: [200, 100, 200],
+      tag: 'primecare-token',
+      renotify: true
     });
   }
 });

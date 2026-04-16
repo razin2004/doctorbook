@@ -1029,30 +1029,33 @@
           
           if (data.success && data.status === 'active') {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
-            // Check if we need to notify
-            if (isMobile && (typeof Notification !== 'undefined' || 'serviceWorker' in navigator)) {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            // Send push notification when token is near (Android PWA only)
+            if (isMobile && !isIOS && 'serviceWorker' in navigator && typeof Notification !== 'undefined') {
               const ahead = data.patients_ahead;
               const sessionKey = `last_notified_${data.doctor_name}_${data.your_token}`;
               const lastAhead = sessionStorage.getItem(sessionKey);
-              
+
               if (Notification.permission === 'granted' && ahead <= 2 && ahead >= 0 && lastAhead != ahead) {
-                const title = "PrimeCare Clinic";
-                const body = ahead === 0 ? "It's your turn! Please proceed to the doctor." : 
-                             ahead === 1 ? "You are next! Please prepare for consultation." :
-                             "You are 2 tokens away. Please be ready.";
-                
-                // Use Service Worker if available for better background reliability
-                if (navigator.serviceWorker.controller) {
-                  navigator.serviceWorker.controller.postMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    title: title,
+                const title = 'PrimeCare Clinic';
+                const body = ahead === 0 ? "It's your turn! Please proceed to the doctor." :
+                             ahead === 1 ? 'You are next! Please prepare for consultation.' :
+                             '2 tokens away — please be ready.';
+
+                // Use SW registration directly — reliable in foreground AND background
+                navigator.serviceWorker.ready.then(reg => {
+                  reg.showNotification(title, {
                     body: body,
-                    icon: "/static/image/pwa-icon.png"
+                    icon: '/static/android-chrome-192x192.png',
+                    badge: '/static/favicon-32x32.png',
+                    vibrate: [200, 100, 200],
+                    tag: 'primecare-token',
+                    renotify: true
                   });
-                } else {
-                  new Notification(title, { body: body, icon: "/static/image/pwa-icon.png" });
-                }
+                }).catch(() => {
+                  try { new Notification(title, { body, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
+                });
                 sessionStorage.setItem(sessionKey, ahead);
               }
             }
@@ -1074,8 +1077,8 @@
               statusText.textContent = "Live Status";
             }
 
-            // Notification permission prompt for mobile
-            if (isMobile && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+            // Notification permission card (Android PWA only — iOS uses the Install Guide)
+            if (isMobile && !isIOS && typeof Notification !== 'undefined' && Notification.permission === 'default') {
                showNotifPermCard();
             }
 
