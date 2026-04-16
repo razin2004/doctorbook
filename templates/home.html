@@ -2053,14 +2053,20 @@
               const lastLive = sessionStorage.getItem(liveKey);
               if (String(liveTok) !== lastLive) {
                 sessionStorage.setItem(liveKey, liveTok);
-                navigator.serviceWorker.ready.then(reg => {
-                  reg.showNotification('PrimeCare · Live', {
-                    body: `Dr. ${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`,
-                    icon: '/static/android-chrome-192x192.png',
-                    badge: '/static/favicon-32x32.png',
-                    tag: 'primecare-live', silent: true, renotify: false
-                  });
-                }).catch(() => {});
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification('PrimeCare · Live', {
+                      body: `Dr. ${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`,
+                      icon: '/static/android-chrome-192x192.png',
+                      badge: '/static/favicon-32x32.png',
+                      tag: 'primecare-live', silent: true, renotify: false
+                    }).catch(() => {
+                       try { new Notification('PrimeCare · Live', { body: `Dr. ${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}` }); } catch(err) {}
+                    });
+                  }).catch(() => {});
+                } else {
+                   try { new Notification('PrimeCare · Live', { body: `Dr. ${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}` }); } catch(err) {}
+                }
               }
 
               // 2️⃣  Alert notification — vibrates only at 2/1/0 tokens ahead
@@ -2073,17 +2079,22 @@
                   : ahead === 1
                   ? `You're next for Dr. ${liveDoc}. Please be ready!`
                   : `2 patients ahead — Dr. ${liveDoc}. Get ready soon.`;
-                navigator.serviceWorker.ready.then(reg => {
-                  reg.showNotification('PrimeCare', {
-                    body: alertBody,
-                    icon: '/static/android-chrome-192x192.png',
-                    badge: '/static/favicon-32x32.png',
-                    vibrate: [300, 100, 300, 100, 500],
-                    tag: 'primecare-alert', renotify: true, silent: false
-                  });
-                }).catch(() => {
-                  try { new Notification('PrimeCare', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
-                });
+                  
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification('PrimeCare', {
+                      body: alertBody,
+                      icon: '/static/android-chrome-192x192.png',
+                      badge: '/static/favicon-32x32.png',
+                      vibrate: [300, 100, 300, 100, 500],
+                      tag: 'primecare-alert', renotify: true, silent: false
+                    }).catch(() => {
+                      try { new Notification('PrimeCare', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
+                    });
+                  }).catch(() => {});
+                } else {
+                    try { new Notification('PrimeCare', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
+                }
               }
             }
 
@@ -2165,8 +2176,10 @@
     // ─── Notification Permission Card (premium glass design) ──────────
     let _notifCardShown = false;
     function showNotifPermCard() {
-      if (_notifCardShown || sessionStorage.getItem('notifCardDismissed')) return;
+      if (_notifCardShown) return;
       _notifCardShown = true;
+      if (sessionStorage.getItem('notifCardDismissed')) return;
+
       const card = document.createElement('div');
       card.id = 'notifPermCard';
       card.style.cssText = `
@@ -2210,17 +2223,23 @@
       document.getElementById('enableNotifBtnH').addEventListener('click', async e => {
         e.stopPropagation();
         const perm = await Notification.requestPermission();
-        if (perm === 'granted' && 'serviceWorker' in navigator) {
-          navigator.serviceWorker.ready.then(reg => {
-            reg.showNotification('PrimeCare', {
-              body: "Live alerts enabled! You will be notified when your turn is near.",
-              icon: '/static/android-chrome-192x192.png',
-              badge: '/static/favicon-32x32.png',
-              vibrate: [200, 100, 200]
+        if (perm === 'granted') {
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(reg => {
+              reg.showNotification('PrimeCare', {
+                body: "Live alerts enabled! You will be notified when your turn is near.",
+                icon: '/static/android-chrome-192x192.png',
+                badge: '/static/favicon-32x32.png',
+                vibrate: [200, 100, 200]
+              }).catch(() => {
+                try { new Notification('PrimeCare', { body: "Live alerts enabled!", icon: '/static/android-chrome-192x192.png' }); } catch(err) {}
+              });
             });
-          });
+          } else {
+            try { new Notification('PrimeCare', { body: "Live alerts enabled!", icon: '/static/android-chrome-192x192.png' }); } catch(err) {}
+          }
         }
-        _slideOut(card, 1, perm === 'granted' ? 'notifCardDismissed' : null);
+        _slideOut(card, 1, 'notifCardDismissed');
         _notifCardShown = false;
       });
       _addSwipeDismiss(card, dir => _slideOut(card, dir, 'notifCardDismissed'));
