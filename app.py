@@ -100,6 +100,18 @@ class Prescription(db.Model):
     text_content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class PushSubscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # can be null for guests
+    patient_name = db.Column(db.String(100), nullable=True) # Helps identify unregistered users
+    doctor_name = db.Column(db.String(100), nullable=True) # Optional tracking
+    endpoint = db.Column(db.String(500), unique=True, nullable=False)
+    p256dh = db.Column(db.String(255), nullable=False)
+    auth = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+
 with app.app_context():
     db.create_all()
 
@@ -2595,6 +2607,41 @@ Behaviour rules:
 
 {clinic_context}"""
 
+@app.route('/api/save_subscription', methods=['POST'])
+def save_subscription():
+    sub_data = request.get_json()
+    if not sub_data:
+        return jsonify({'success': False, 'error': 'No subscription data'}), 400
+    
+    endpoint = sub_data.get('endpoint')
+    keys = sub_data.get('keys', {})
+    p256dh = keys.get('p256dh')
+    auth = keys.get('auth')
+    
+    if not endpoint or not p256dh or not auth:
+        return jsonify({'success': False, 'error': 'Invalid subscription structure'}), 400
+
+    user_id = session.get('user_id')
+    patient_name = session.get('user_name') # Store name safely if present
+    
+    existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
+    if existing:
+        # Update user ID if they logged in later on the same device
+        existing.user_id = user_id
+        existing.patient_name = patient_name
+    else:
+        new_sub = PushSubscription(
+            user_id=user_id,
+            patient_name=patient_name,
+            endpoint=endpoint,
+            p256dh=p256dh,
+            auth=auth
+        )
+        db.session.add(new_sub)
+    
+    db.session.commit()
+    return jsonify({'success': True})
+
 @app.route("/ai_triage", methods=["POST"])
 def ai_triage():
     """Gemini-powered symptom triage + clinic Q&A endpoint."""
@@ -2752,6 +2799,12 @@ def start_session():
     doc_session.skipped_tokens = ""
     db.session.commit()
     
+    try:
+        from push_services import trigger_push
+        trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active", app, db, PatientBooking, PushSubscription)
+    except Exception as e:
+        print(f"Push Error: {e}")
+    
     return jsonify(success=True, current_token=1, start_time=doc_session.start_time)
 
 @app.route('/next_token', methods=['POST'])
@@ -2774,6 +2827,13 @@ def next_token():
         doc_session.end_time = datetime.now(ist).strftime("%H:%M %p")
         
     db.session.commit()
+    
+    try:
+        from push_services import trigger_push
+        if doc_session.status == "active":
+            trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active", app, db, PatientBooking, PushSubscription)
+    except Exception as e:
+        print(f"Push Error: {e}")
     
     return jsonify({
         "success": True, 
@@ -2798,6 +2858,7 @@ def skip_token():
     skipped.append(str(doc_session.current_token))
     doc_session.skipped_tokens = ",".join(skipped)
     
+    skipped_tok = doc_session.current_token
     # Move to next token
     doc_session.current_token += 1
     if doc_session.current_token > doc_session.total_tokens:
@@ -2807,6 +2868,17 @@ def skip_token():
         doc_session.end_time = datetime.now(ist).strftime("%H:%M %p")
         
     db.session.commit()
+    
+    try:
+        from push_services import trigger_push
+        # Send skipped notification for the skipped token
+        trigger_push(doc_session.doctor_name, doc_session.session_date, skipped_tok, "skipped", app, db, PatientBooking, PushSubscription)
+        # Send alert for the new current token
+        if doc_session.status == "active":
+            trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active", app, db, PatientBooking, PushSubscription)
+    except Exception as e:
+        print(f"Push Error: {e}")
+
     return jsonify({
         "success": True, 
         "current_token": doc_session.current_token, 

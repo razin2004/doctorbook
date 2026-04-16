@@ -101,3 +101,29 @@ self.addEventListener('message', event => {
     self.skipWaiting();
   }
 });
+
+// ── Web Push Event (Background delivery) ──────────────────────────
+self.addEventListener('push', event => {
+  if (!event.data) return;
+  
+  try {
+    const data = event.data.json();
+    const title = data.title || 'PrimeCare Update';
+    const options = {
+      body: data.body || '',
+      icon: '/static/android-chrome-192x192.png',
+      badge: '/static/favicon-32x32.png',
+      tag: data.tag || 'primecare-token',
+      renotify: true,
+      silent: data.silent === true,
+      data: { url: data.url || '/patient_dashboard' }
+    };
+    if (data.vibrate) options.vibrate = data.vibrate;
+
+    event.waitUntil(
+      self.registration.showNotification(title, options)
+    );
+  } catch (err) {
+    console.error('[SW] Push event error:', err);
+  }
+});
