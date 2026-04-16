@@ -1030,34 +1030,64 @@
           if (data.success && data.status === 'active') {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isStandaloneMode = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
 
-            // Send push notification when token is near (Android PWA only)
-            if (isMobile && !isIOS && 'serviceWorker' in navigator && typeof Notification !== 'undefined') {
-              const ahead = data.patients_ahead;
-              const sessionKey = `last_notified_${data.doctor_name}_${data.your_token}`;
-              const lastAhead = sessionStorage.getItem(sessionKey);
+            // ── Push notifications (iOS 16.4+ standalone OR Android) ──
+            const supportsNotif = typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
+            const canReceiveNotif = supportsNotif && Notification.permission === 'granted' && (!isIOS || isStandaloneMode);
 
-              if (Notification.permission === 'granted' && ahead <= 2 && ahead >= 0 && lastAhead != ahead) {
-                const title = 'PrimeCare Clinic';
-                const body = ahead === 0 ? "It's your turn! Please proceed to the doctor." :
-                             ahead === 1 ? 'You are next! Please prepare for consultation.' :
-                             '2 tokens away — please be ready.';
+            if (isMobile && canReceiveNotif) {
+              const ahead    = data.patients_ahead;
+              const liveDoc  = data.doctor_name;
+              const liveTok  = data.current_token;
+              const yourTok  = data.your_token;
 
-                // Use SW registration directly — reliable in foreground AND background
+              // 1️⃣  Persistent (silent) live-tracking notification — updates when token changes
+              const liveKey  = `live_tok_${liveDoc}_${yourTok}`;
+              const lastLive = sessionStorage.getItem(liveKey);
+              if (String(liveTok) !== lastLive) {
+                sessionStorage.setItem(liveKey, liveTok);
                 navigator.serviceWorker.ready.then(reg => {
-                  reg.showNotification(title, {
-                    body: body,
+                  reg.showNotification('PrimeCare · Live', {
+                    body: `Dr. ${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`,
                     icon: '/static/android-chrome-192x192.png',
                     badge: '/static/favicon-32x32.png',
-                    vibrate: [200, 100, 200],
-                    tag: 'primecare-token',
-                    renotify: true
+                    tag: 'primecare-live',      // replaces previous silently
+                    silent: true,
+                    renotify: false
+                  });
+                }).catch(() => {});
+              }
+
+              // 2️⃣  Alert notification — vibrates only at 2/1/0 tokens ahead
+              const alertKey  = `alerted_${liveDoc}_${yourTok}`;
+              const lastAlert = sessionStorage.getItem(alertKey);
+              if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert) {
+                sessionStorage.setItem(alertKey, String(ahead));
+                const alertBody = ahead === 0
+                  ? `It's your turn! Proceed to Dr. ${liveDoc} immediately.`
+                  : ahead === 1
+                  ? `You're next for Dr. ${liveDoc}. Please be ready!`
+                  : `2 patients ahead — Dr. ${liveDoc}. Get ready soon.`;
+                navigator.serviceWorker.ready.then(reg => {
+                  reg.showNotification('PrimeCare', {
+                    body: alertBody,
+                    icon: '/static/android-chrome-192x192.png',
+                    badge: '/static/favicon-32x32.png',
+                    vibrate: [300, 100, 300, 100, 500],
+                    tag: 'primecare-alert',
+                    renotify: true,
+                    silent: false
                   });
                 }).catch(() => {
-                  try { new Notification(title, { body, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
+                  try { new Notification('PrimeCare', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
                 });
-                sessionStorage.setItem(sessionKey, ahead);
               }
+            }
+
+            // Notification permission card (iOS standalone or Android, when not yet granted)
+            if (isMobile && supportsNotif && Notification.permission === 'default' && (!isIOS || isStandaloneMode)) {
+               showNotifPermCard();
             }
 
             hasNotification = true;
@@ -1107,155 +1137,184 @@
       }
     })();
 
-    // ─── Notification Permission Card (Android / non-iOS) ───────────────────
+    // ─── Shared Swipe Dismiss Helper ───────────────────────────────────
+    function _addSwipeDismiss(el, onDismiss, skipSelector) {
+      let sX = 0, cX = 0, sw = false;
+      el.addEventListener('touchstart', e => {
+        if (skipSelector && e.target.closest(skipSelector)) return;
+        sX = e.touches[0].clientX; sw = true; el.style.transition = 'none';
+      }, {passive:true});
+      el.addEventListener('touchmove', e => {
+        if (!sw) return;
+        cX = e.touches[0].clientX - sX;
+        el.style.transform = `translateX(calc(-50% + ${cX}px))`;
+        el.style.opacity = String(Math.max(0, 1 - Math.abs(cX) / 180));
+      }, {passive:true});
+      el.addEventListener('touchend', () => {
+        sw = false;
+        el.style.transition = 'transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.3s ease';
+        if (Math.abs(cX) > 100) { onDismiss(cX); }
+        else {
+          el.style.transform = 'translateX(-50%)';
+          el.style.opacity = '1';
+        }
+        cX = 0;
+      }, {passive:true});
+    }
+    function _slideOut(el, dir, storageKey) {
+      if (storageKey) sessionStorage.setItem(storageKey, '1');
+      el.style.transition = 'transform 0.45s ease, opacity 0.3s ease';
+      el.style.transform = dir >= 0 ? 'translateX(120vw)' : 'translateX(-120vw)';
+      el.style.opacity = '0';
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 460);
+    }
+
+    // ─── Notification Permission Card (premium glass design) ───────────
     let _notifCardShown = false;
     function showNotifPermCard() {
       if (_notifCardShown || sessionStorage.getItem('notifCardDismissed')) return;
       _notifCardShown = true;
+
       const card = document.createElement('div');
       card.id = 'notifPermCard';
-      card.style.cssText = [
-        'position:fixed;bottom:30px;left:50%;',
-        'transform:translateX(-50%) translateY(200px);',
-        'width:92%;max-width:400px;',
-        'background:rgba(255,255,255,0.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);',
-        'padding:1rem 1.2rem;border-radius:20px;',
-        'box-shadow:0 15px 50px rgba(0,0,0,0.15);',
-        'z-index:9998;border:1px solid rgba(255,255,255,0.5);',
-        'display:flex;align-items:center;gap:1rem;',
-        'transition:transform 0.7s cubic-bezier(0.175,0.885,0.32,1.275),opacity 0.3s ease;',
-        'touch-action:pan-x;user-select:none;'
-      ].join('');
+      card.style.cssText = `
+        position:fixed; bottom:24px; left:50%;
+        transform:translateX(-50%) translateY(180px);
+        width:90%; max-width:390px;
+        background:linear-gradient(135deg,rgba(255,255,255,0.97),rgba(236,248,255,0.97));
+        backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+        padding:1rem 1.1rem; border-radius:22px;
+        box-shadow:0 20px 60px rgba(0,119,182,0.18),0 4px 16px rgba(0,0,0,0.07),
+                   inset 0 0 0 1.5px rgba(255,255,255,0.85);
+        border:1.5px solid rgba(0,119,182,0.14);
+        display:flex; align-items:center; gap:0.95rem;
+        transition:transform 0.65s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.4s ease;
+        touch-action:pan-x; user-select:none; z-index:9998;
+      `;
       card.innerHTML = `
-        <div style="background:linear-gradient(135deg,#0077b6,#00b4d8);color:#fff;
-          width:44px;height:44px;border-radius:14px;flex-shrink:0;
-          display:flex;align-items:center;justify-content:center;
-          box-shadow:0 4px 15px rgba(0,119,182,0.3);animation:ios-pulse 2s infinite;">
-          <i data-lucide="bell-ring" style="width:20px;height:20px;"></i>
+        <div style="
+          background:linear-gradient(140deg,#0077b6,#00b4d8);
+          width:50px; height:50px; border-radius:16px; flex-shrink:0;
+          display:flex; align-items:center; justify-content:center;
+          box-shadow:0 8px 22px rgba(0,119,182,0.38);
+        ">
+          <i data-lucide="bell-ring" style="width:23px;height:23px;color:white;"></i>
         </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:800;font-size:0.92rem;color:#0f172a;margin-bottom:2px;">Enable Token Alerts</div>
-          <div style="font-size:0.75rem;color:#64748b;line-height:1.4;">Get notified when your turn is near. <em>Swipe to dismiss.</em></div>
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:800; font-size:0.95rem; color:#0c1a2e; letter-spacing:-0.01em;">Enable Live Alerts</div>
+          <div style="font-size:0.74rem; color:#64748b; line-height:1.45; margin-top:2px;">Know when your token is near. <span style="color:#94a3b8;font-style:italic;">Swipe to dismiss.</span></div>
         </div>
-        <button id="enableNotifBtn" style="background:#0077b6;color:#fff;border:none;
-          padding:0.45rem 0.85rem;border-radius:10px;font-size:0.78rem;
-          font-weight:700;cursor:pointer;flex-shrink:0;font-family:inherit;
-          box-shadow:0 4px 12px rgba(0,119,182,0.25);white-space:nowrap;">Enable</button>
+        <button id="enableNotifBtn" style="
+          background:linear-gradient(135deg,#0077b6,#0096c7); color:#fff; border:none;
+          padding:0.5rem 1rem; border-radius:13px; font-size:0.8rem; font-weight:800;
+          cursor:pointer; flex-shrink:0; font-family:inherit;
+          box-shadow:0 6px 18px rgba(0,119,182,0.35); white-space:nowrap;
+          letter-spacing:0.01em;
+        ">Enable</button>
       `;
       document.body.appendChild(card);
       if (typeof lucide !== 'undefined') lucide.createIcons(card);
       requestAnimationFrame(() => { card.style.transform = 'translateX(-50%) translateY(0)'; });
 
-      document.getElementById('enableNotifBtn').addEventListener('click', async (e) => {
+      document.getElementById('enableNotifBtn').addEventListener('click', async e => {
         e.stopPropagation();
-        await Notification.requestPermission();
-        _dismissNotifCard(card, 1);
+        const perm = await Notification.requestPermission();
+        _slideOut(card, 1, perm === 'granted' ? 'notifCardDismissed' : null);
+        _notifCardShown = false; // allow re-check next poll if denied
       });
-
-      let _sX = 0, _cX = 0, _sw = false;
-      card.addEventListener('touchstart', e => { _sX = e.touches[0].clientX; _sw = true; card.style.transition = 'none'; }, {passive:true});
-      card.addEventListener('touchmove', e => {
-        if (!_sw) return;
-        _cX = e.touches[0].clientX - _sX;
-        card.style.transform = `translateX(calc(-50% + ${_cX}px)) translateY(0)`;
-        card.style.opacity = String(Math.max(0, 1 - Math.abs(_cX) / 200));
-      }, {passive:true});
-      card.addEventListener('touchend', () => {
-        _sw = false;
-        card.style.transition = 'transform 0.4s ease, opacity 0.3s ease';
-        if (Math.abs(_cX) > 100) { _dismissNotifCard(card, _cX); }
-        else { card.style.transform = 'translateX(-50%) translateY(0)'; card.style.opacity = '1'; }
-        _cX = 0;
-      }, {passive:true});
-    }
-    function _dismissNotifCard(card, dir) {
-      sessionStorage.setItem('notifCardDismissed', 'true');
-      card.style.transition = 'transform 0.4s ease, opacity 0.3s ease';
-      card.style.transform = dir >= 0 ? 'translateX(120vw)' : 'translateX(-120vw)';
-      card.style.opacity = '0';
-      setTimeout(() => { if (card.parentNode) card.remove(); }, 420);
+      _addSwipeDismiss(card, dir => _slideOut(card, dir, 'notifCardDismissed'));
     }
 
-    // ─── iOS PWA Install Guide (no X button — swipe to dismiss) ─────────────
-    (function initIOSGuide() {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    // ─── Unified Install Guide (iOS Share / Android Menu) ────────────
+    (function initInstallGuide() {
+      const isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isAndroid    = /Android/.test(navigator.userAgent);
       const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+      if (isStandalone || sessionStorage.getItem('installGuideDismissed')) return;
+      if (!isIOS && !isAndroid) return;
 
-      if (isIOS && !isStandalone) {
-        setTimeout(() => {
-          const guide = document.createElement('div');
-          guide.style.cssText = `
-            position: fixed; bottom: 30px; left: 50%;
-            transform: translateX(-50%); width: 92%; max-width: 400px;
-            background: rgba(255,255,255,0.92); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            padding: 1.2rem; border-radius: 20px; box-shadow: 0 15px 50px rgba(0,0,0,0.15);
-            z-index: 10000; border: 1px solid rgba(255,255,255,0.4);
-            display: flex; align-items: center; gap: 1.2rem;
-            animation: slideUpCard 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            touch-action: pan-x; user-select: none; cursor: grab;
-          `;
-          guide.innerHTML = `
-            <div id="iosShareBtn" style="
-              background: linear-gradient(135deg, #0077b6, #00b4d8); color: #fff;
-              width: 46px; height: 46px; border-radius: 14px;
-              display: flex; align-items: center; justify-content: center;
-              flex-shrink: 0; cursor: pointer; animation: ios-pulse 2s infinite;
-              box-shadow: 0 4px 15px rgba(0,119,182,0.3);
-            ">
-              <i data-lucide="share" style="width:20px; height:20px;"></i>
-            </div>
-            <div style="flex: 1;">
-              <div style="font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 2px;">Enable Mobile Alerts</div>
-              <div style="font-size: 0.8rem; color: #475569; line-height: 1.4;">Tap the <span style="font-weight:700; color:#0077b6;">Share</span> button then <b>'Add to Home Screen'</b> for real-time background tracking.</div>
-              <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 5px; font-style: italic;">Swipe left or right to dismiss</div>
-            </div>
-          `;
-          document.body.appendChild(guide);
-          if (window.lucide) lucide.createIcons(guide);
-
-          // ─── Share Button ───
-          document.getElementById('iosShareBtn').addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (navigator.share) {
-              try {
-                await navigator.share({
-                  title: 'PrimeCare Clinic',
-                  text: 'Real-time Hospital Token Tracking',
-                  url: window.location.href
-                });
-              } catch (err) { console.log('Share aborted or failed'); }
-            } else {
-              alert("Tap the Share icon in your browser's bottom menu, then choose 'Add to Home Screen'.");
-            }
-          });
-
-          // ─── Swipe to Dismiss ───
-          let _gsX = 0, _gcX = 0, _gsw = false;
-          guide.addEventListener('touchstart', e => {
-            if (e.target.closest('#iosShareBtn')) return;
-            _gsX = e.touches[0].clientX; _gsw = true; guide.style.transition = 'none';
-          }, {passive:true});
-          guide.addEventListener('touchmove', e => {
-            if (!_gsw) return;
-            _gcX = e.touches[0].clientX - _gsX;
-            guide.style.transform = `translateX(calc(-50% + ${_gcX}px))`;
-            guide.style.opacity = String(Math.max(0, 1 - Math.abs(_gcX) / 200));
-          }, {passive:true});
-          guide.addEventListener('touchend', () => {
-            _gsw = false;
-            guide.style.transition = 'transform 0.4s ease, opacity 0.3s ease';
-            if (Math.abs(_gcX) > 100) {
-              guide.style.transform = _gcX > 0 ? 'translateX(120vw)' : 'translateX(-120vw)';
-              guide.style.opacity = '0';
-              setTimeout(() => guide.remove(), 420);
-            } else {
-              guide.style.transform = 'translateX(-50%)';
-              guide.style.opacity = '1';
-            }
-            _gcX = 0;
-          }, {passive:true});
-        }, 3000);
+      // Android: capture deferredPrompt if available
+      let deferredPrompt = null;
+      if (isAndroid) {
+        window.addEventListener('beforeinstallprompt', e => {
+          e.preventDefault(); deferredPrompt = e;
+        });
       }
+
+      setTimeout(() => {
+        const guide = document.createElement('div');
+        guide.style.cssText = `
+          position:fixed; bottom:24px; left:50%;
+          transform:translateX(-50%);
+          width:90%; max-width:390px;
+          background:linear-gradient(135deg,rgba(255,255,255,0.97),rgba(236,248,255,0.97));
+          backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+          padding:1.1rem 1.2rem; border-radius:22px;
+          box-shadow:0 20px 60px rgba(0,119,182,0.16),0 4px 16px rgba(0,0,0,0.07),
+                     inset 0 0 0 1.5px rgba(255,255,255,0.85);
+          border:1.5px solid rgba(0,119,182,0.14);
+          display:flex; align-items:center; gap:1rem;
+          animation:slideUpCard 0.7s cubic-bezier(0.175,0.885,0.32,1.275);
+          touch-action:pan-x; user-select:none; cursor:grab; z-index:10000;
+        `;
+
+        if (isIOS) {
+          guide.innerHTML = `
+            <div id="installActionBtn" style="
+              background:linear-gradient(140deg,#0077b6,#00b4d8); color:#fff;
+              width:50px; height:50px; border-radius:16px; flex-shrink:0;
+              display:flex; align-items:center; justify-content:center;
+              cursor:pointer; box-shadow:0 8px 22px rgba(0,119,182,0.38);
+              animation:ios-pulse 2.5s ease-in-out infinite;
+            ">
+              <i data-lucide="share" style="width:22px;height:22px;"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:800;font-size:0.95rem;color:#0c1a2e;letter-spacing:-0.01em;">Add to Home Screen</div>
+              <div style="font-size:0.78rem;color:#475569;line-height:1.45;margin-top:3px;">Tap <span style="font-weight:800;color:#0077b6;">Share</span> then <b style="color:#0f172a;">'Add to Home Screen'</b> for real-time alerts &amp; live tracking.</div>
+              <div style="font-size:0.7rem;color:#94a3b8;margin-top:5px;font-style:italic;">Swipe to dismiss</div>
+            </div>
+          `;
+        } else {
+          guide.innerHTML = `
+            <div style="
+              width:50px; height:50px; border-radius:16px; flex-shrink:0;
+              overflow:hidden; box-shadow:0 8px 22px rgba(0,119,182,0.3);
+            ">
+              <img src="/static/android-chrome-192x192.png" style="width:100%;height:100%;object-fit:cover;">
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:800;font-size:0.95rem;color:#0c1a2e;letter-spacing:-0.01em;">Add to Home Screen</div>
+              <div id="installActionBtn" style="font-size:0.78rem;color:#475569;line-height:1.45;margin-top:3px;cursor:pointer;">Tap <span style="font-weight:800;color:#0077b6;">⋮ Menu</span> then <b style="color:#0f172a;">'Add to Home Screen'</b> for push alerts &amp; live tracking.</div>
+              <div style="font-size:0.7rem;color:#94a3b8;margin-top:5px;font-style:italic;">Swipe to dismiss</div>
+            </div>
+          `;
+        }
+
+        document.body.appendChild(guide);
+        if (window.lucide) lucide.createIcons(guide);
+
+        // Action button click
+        const btn = guide.querySelector('#installActionBtn');
+        btn && btn.addEventListener('click', async e => {
+          e.stopPropagation();
+          if (isIOS) {
+            if (navigator.share) {
+              try { await navigator.share({ title:'PrimeCare Clinic', text:'Real-time Hospital Token Tracking', url:window.location.href }); }
+              catch(err) {}
+            } else {
+              alert("Tap the Share icon \u2197 in Safari's bottom bar, then choose 'Add to Home Screen'.");
+            }
+          } else if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const result = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            if (result.outcome === 'accepted') _slideOut(guide, 1, 'installGuideDismissed');
+          }
+        });
+
+        _addSwipeDismiss(guide, dir => _slideOut(guide, dir, 'installGuideDismissed'), '#installActionBtn');
+      }, 3000);
     })();
 
     function confirmRoleSwitch() {

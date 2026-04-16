@@ -1186,3 +1186,26 @@ button:active,
 .modal-btns .btn svg {
   margin-right: 6px;
 }
+
+/* ================================
+   PWA CARD ANIMATIONS
+================================= */
+
+/* Slide-up entrance for install guide & notification cards */
+@keyframes slideUpCard {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Subtle pulse glow for the bell / share icon */
+@keyframes ios-pulse {
+  0%   { box-shadow: 0 8px 22px rgba(0,119,182,0.38); }
+  50%  { box-shadow: 0 8px 32px rgba(0,180,216,0.60); }
+  100% { box-shadow: 0 8px 22px rgba(0,119,182,0.38); }
+}
