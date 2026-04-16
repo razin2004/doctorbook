@@ -1027,7 +1027,7 @@
           const res = await fetch('/my_token_status');
           const data = await res.json();
           
-          if (data.success && data.status === 'active') {
+          if (data.success && (data.status === 'active' || data.status === 'skipped')) {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             const isStandaloneMode = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
@@ -1045,50 +1045,72 @@
               // 1️⃣  Persistent (silent) live-tracking notification
               const liveKey  = `live_tok_${liveDoc}_${yourTok}`;
               const lastLive = sessionStorage.getItem(liveKey);
-              if (String(liveTok) !== lastLive) {
+              if (String(liveTok) !== lastLive && data.status === 'active') {
                 sessionStorage.setItem(liveKey, liveTok);
-                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                if ('serviceWorker' in navigator) {
                   navigator.serviceWorker.ready.then(reg => {
-                    reg.showNotification('PrimeCare · Live', {
-                      body: `Dr. ${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`,
+                    reg.showNotification('Live Tracking', {
+                      body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}`,
                       icon: '/static/android-chrome-192x192.png',
                       badge: '/static/favicon-32x32.png',
                       tag: 'primecare-live', silent: true, renotify: false
                     }).catch(() => {
-                       try { new Notification('PrimeCare · Live', { body: `Dr. ${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}` }); } catch(err) {}
+                       try { new Notification('Live Tracking', { body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}` }); } catch(err) {}
                     });
                   }).catch(() => {});
                 } else {
-                   try { new Notification('PrimeCare · Live', { body: `Dr. ${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}` }); } catch(err) {}
+                   try { new Notification('Live Tracking', { body: `${liveDoc}  │  Now: #${liveTok}  │  Your Token: #${yourTok}` }); } catch(err) {}
                 }
               }
 
               // 2️⃣  Alert notification — vibrates only at 2/1/0 tokens ahead
               const alertKey  = `alerted_${liveDoc}_${yourTok}`;
               const lastAlert = sessionStorage.getItem(alertKey);
-              if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert) {
+              if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && data.status === 'active') {
                 sessionStorage.setItem(alertKey, String(ahead));
                 const alertBody = ahead === 0
-                  ? `It's your turn! Proceed to Dr. ${liveDoc} immediately.`
+                  ? `It's your turn! Proceed to ${liveDoc} immediately.`
                   : ahead === 1
-                  ? `You're next for Dr. ${liveDoc}. Please be ready!`
-                  : `2 patients ahead — Dr. ${liveDoc}. Get ready soon.`;
+                  ? `You're next for ${liveDoc}. Please be ready!`
+                  : `2 patients ahead — ${liveDoc}. Get ready soon.`;
                   
-                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                if ('serviceWorker' in navigator) {
                   navigator.serviceWorker.ready.then(reg => {
-                    reg.showNotification('PrimeCare', {
+                    reg.showNotification('Token Alert', {
                       body: alertBody,
                       icon: '/static/android-chrome-192x192.png',
                       badge: '/static/favicon-32x32.png',
                       vibrate: [300, 100, 300, 100, 500],
                       tag: 'primecare-alert', renotify: true, silent: false
                     }).catch(() => {
-                      try { new Notification('PrimeCare', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
+                      try { new Notification('Token Alert', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
                     });
                   }).catch(() => {});
                 } else {
-                    try { new Notification('PrimeCare', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
+                    try { new Notification('Token Alert', { body: alertBody, icon: '/static/android-chrome-192x192.png' }); } catch(e) {}
                 }
+              }
+              
+              // 3️⃣ Skipped notification
+              if (data.status === 'skipped') {
+                  const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
+                  if (!sessionStorage.getItem(skipKey)) {
+                      sessionStorage.setItem(skipKey, "1");
+                      const skipBody = "Your token was skipped because of not reaching.";
+                      if ('serviceWorker' in navigator) {
+                          navigator.serviceWorker.ready.then(reg => {
+                              reg.showNotification('Token Skipped', {
+                                  body: skipBody,
+                                  icon: '/static/android-chrome-192x192.png',
+                                  badge: '/static/favicon-32x32.png',
+                                  vibrate: [400, 200, 400],
+                                  tag: 'primecare-alert', renotify: true, silent: false
+                              }).catch(() => { try { new Notification('Token Skipped', { body: skipBody }); } catch(e){} });
+                          }).catch(()=>{});
+                      } else {
+                          try { new Notification('Token Skipped', { body: skipBody }); } catch(e){}
+                      }
+                  }
               }
             }
 
@@ -1106,7 +1128,9 @@
             banner.dataset.date = data.date;
 
             const ahead = data.patients_ahead;
-            if (ahead === 0) {
+            if (data.status === 'skipped') {
+              statusText.innerHTML = `<span style="color:#ef4444;">Token Skipped</span>`;
+            } else if (ahead === 0) {
               statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
             } else if (ahead === 1) {
               statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
@@ -1192,34 +1216,37 @@
         width:90%; max-width:390px;
         background:linear-gradient(135deg,rgba(255,255,255,0.97),rgba(236,248,255,0.97));
         backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
-        padding:1rem 1.1rem; border-radius:22px;
+        padding:1.1rem; border-radius:23px;
         box-shadow:0 20px 60px rgba(0,119,182,0.18),0 4px 16px rgba(0,0,0,0.07),
                    inset 0 0 0 1.5px rgba(255,255,255,0.85);
         border:1.5px solid rgba(0,119,182,0.14);
-        display:flex; align-items:center; gap:0.95rem;
+        display:flex; flex-direction:column; gap:0.95rem;
         transition:transform 0.65s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.4s ease;
         touch-action:pan-x; user-select:none; z-index:9998;
       `;
       card.innerHTML = `
-        <div style="
-          background:linear-gradient(140deg,#0077b6,#00b4d8);
-          width:50px; height:50px; border-radius:16px; flex-shrink:0;
-          display:flex; align-items:center; justify-content:center;
-          box-shadow:0 8px 22px rgba(0,119,182,0.38);
-        ">
-          <i data-lucide="bell-ring" style="width:23px;height:23px;color:white;"></i>
-        </div>
-        <div style="flex:1; min-width:0;">
-          <div style="font-weight:800; font-size:0.95rem; color:#0c1a2e; letter-spacing:-0.01em;">Enable Live Alerts</div>
-          <div style="font-size:0.74rem; color:#64748b; line-height:1.45; margin-top:2px;">Know when your token is near. <span style="color:#94a3b8;font-style:italic;">Swipe to dismiss.</span></div>
+        <div style="display:flex; align-items:center; gap:0.95rem; width:100%;">
+          <div style="
+            background:linear-gradient(140deg,#0077b6,#00b4d8);
+            width:50px; height:50px; border-radius:16px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            box-shadow:0 8px 22px rgba(0,119,182,0.38);
+          ">
+            <i data-lucide="bell-ring" style="width:23px;height:23px;color:white;"></i>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:800; font-size:1rem; color:#0c1a2e; letter-spacing:-0.01em;">Enable Live Alerts</div>
+            <div style="font-size:0.78rem; color:#64748b; line-height:1.45; margin-top:2px;">Know when your token is near. <span style="color:#94a3b8;font-style:italic;">Swipe to dismiss.</span></div>
+          </div>
         </div>
         <button id="enableNotifBtn" style="
+          width:100%;
           background:linear-gradient(135deg,#0077b6,#0096c7); color:#fff; border:none;
-          padding:0.5rem 1rem; border-radius:13px; font-size:0.8rem; font-weight:800;
-          cursor:pointer; flex-shrink:0; font-family:inherit;
-          box-shadow:0 6px 18px rgba(0,119,182,0.35); white-space:nowrap;
-          letter-spacing:0.01em; margin-top:0 !important; align-self:center;
-        ">Enable</button>
+          padding:0.75rem 1rem; border-radius:14px; font-size:0.95rem; font-weight:800;
+          cursor:pointer; font-family:inherit;
+          box-shadow:0 6px 18px rgba(0,119,182,0.35); text-align:center;
+          letter-spacing:0.01em; margin-top:0 !important;
+        ">Enable Notification</button>
       `;
       document.body.appendChild(card);
       if (typeof lucide !== 'undefined') lucide.createIcons(card);
@@ -1229,7 +1256,7 @@
         e.stopPropagation();
         const perm = await Notification.requestPermission();
         if (perm === 'granted') {
-          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          if ('serviceWorker' in navigator) {
             navigator.serviceWorker.ready.then(reg => {
               reg.showNotification('PrimeCare', {
                 body: "Alerts enabled! You will be notified when your turn is near.",

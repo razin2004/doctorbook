@@ -575,6 +575,37 @@
         }
     });
 
+    // ── Auto Polling for Total Bookings ──
+    let currentTotalTokens = {{ doc.total_tokens }};
+    const sessionDoctorName = "{{ doc.doctor_name }}";
+    
+    setInterval(async () => {
+        try {
+            const res = await fetch('/live_tokens');
+            const data = await res.json();
+            if (data.success && data.data) {
+                const myState = data.data.find(d => d.doctor_name === sessionDoctorName);
+                if (myState && myState.total_tokens > currentTotalTokens) {
+                    currentTotalTokens = myState.total_tokens;
+                    document.getElementById('tokenSub').innerText = `of ${currentTotalTokens} Total Bookings`;
+                    
+                    if (currentStatus === 'idle') {
+                        const btn = document.getElementById('sessionBtn');
+                        if (btn.disabled) {
+                            btn.disabled = false;
+                            btn.className = 'control-btn btn-start';
+                            btn.innerHTML = '<i data-lucide="play"></i> Start Session';
+                            lucide.createIcons();
+                            
+                            const noBookingMsg = document.querySelector('p[style*="No bookings found"]');
+                            if (noBookingMsg) noBookingMsg.style.display = 'none';
+                        }
+                    }
+                }
+            }
+        } catch(e) {}
+    }, 5000);
+
   </script>
 </body>
 </html>

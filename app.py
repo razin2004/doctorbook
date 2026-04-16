@@ -1994,6 +1994,22 @@ def book_department():
 
             date_sheet.append_row([token, name, age, gender, phone_number, date_str])
 
+            # --- Auto-Update Doctor Session Total Tokens for today ---
+            ist = pytz.timezone('Asia/Kolkata')
+            today_str = datetime.now(ist).strftime("%Y-%m-%d")
+            if date_str == today_str:
+                try:
+                    doc_sess = DoctorSession.query.filter(
+                        db.func.lower(db.func.trim(DoctorSession.doctor_name)) == chosen_doc["Name"].lower().strip(),
+                        db.func.lower(db.func.trim(DoctorSession.specialization)) == chosen_doc["Specialization"].lower().strip(),
+                        DoctorSession.session_date == today_str
+                    ).first()
+                    if doc_sess:
+                        doc_sess.total_tokens += 1
+                        db.session.commit()
+                except Exception as e:
+                    app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
+
             user_id = session.get('user_id')
             if user_id:
                 new_booking = PatientBooking(
@@ -2085,6 +2101,22 @@ def book_department():
         time_for_booking = day_times.get(weekday, "")
 
         best_sheet.append_row([token, name, age, gender, phone_number, date_str])
+
+        # --- Auto-Update Doctor Session Total Tokens for today ---
+        ist = pytz.timezone('Asia/Kolkata')
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        if date_str == today_str:
+            try:
+                doc_sess = DoctorSession.query.filter(
+                    db.func.lower(db.func.trim(DoctorSession.doctor_name)) == best_doc["Name"].lower().strip(),
+                    db.func.lower(db.func.trim(DoctorSession.specialization)) == best_doc["Specialization"].lower().strip(),
+                    DoctorSession.session_date == today_str
+                ).first()
+                if doc_sess:
+                    doc_sess.total_tokens += 1
+                    db.session.commit()
+            except Exception as e:
+                app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
 
         user_id = session.get('user_id')
         if user_id:
@@ -2881,6 +2913,14 @@ def my_token_status():
             "success": True,
             "status": "completed",
             "msg": "Session completed"
+        })
+
+    skipped = doc_session.skipped_tokens.strip().split(',') if doc_session.skipped_tokens else []
+    if str(booking.token) in skipped:
+        return jsonify({
+            "success": True,
+            "status": "skipped",
+            "msg": "Your token was skipped because of not reaching"
         })
         
     patients_ahead = booking.token - doc_session.current_token
