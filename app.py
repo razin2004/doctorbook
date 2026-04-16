@@ -2607,6 +2607,15 @@ Behaviour rules:
 
 {clinic_context}"""
 
+from flask import send_from_directory, make_response
+
+@app.route('/sw.js', methods=['GET'])
+def sw():
+    response = make_response(send_from_directory('static', 'sw.js'))
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Service-Worker-Allowed'] = '/'
+    return response
+
 @app.route('/api/save_subscription', methods=['POST'])
 def save_subscription():
     sub_data = request.get_json()
