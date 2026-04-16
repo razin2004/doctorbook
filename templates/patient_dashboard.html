@@ -1076,7 +1076,7 @@
 
             // Notification permission prompt for mobile
             if (isMobile && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-               statusText.innerHTML += ` <button onclick="Notification.requestPermission()" style="background:none; border:none; color:#0077b6; padding:0; font-size:0.7rem; text-decoration:underline; margin-left:5px; cursor:pointer;"><i data-lucide="bell-ring" style="width:10px;height:10px;vertical-align:middle;"></i> Alert Me</button>`;
+               showNotifPermCard();
             }
 
             if (!isDismissed) {
@@ -1104,22 +1104,92 @@
       }
     })();
 
-    // ─── iOS PWA Install Guide ───
+    // ─── Notification Permission Card (Android / non-iOS) ───────────────────
+    let _notifCardShown = false;
+    function showNotifPermCard() {
+      if (_notifCardShown || sessionStorage.getItem('notifCardDismissed')) return;
+      _notifCardShown = true;
+      const card = document.createElement('div');
+      card.id = 'notifPermCard';
+      card.style.cssText = [
+        'position:fixed;bottom:30px;left:50%;',
+        'transform:translateX(-50%) translateY(200px);',
+        'width:92%;max-width:400px;',
+        'background:rgba(255,255,255,0.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);',
+        'padding:1rem 1.2rem;border-radius:20px;',
+        'box-shadow:0 15px 50px rgba(0,0,0,0.15);',
+        'z-index:9998;border:1px solid rgba(255,255,255,0.5);',
+        'display:flex;align-items:center;gap:1rem;',
+        'transition:transform 0.7s cubic-bezier(0.175,0.885,0.32,1.275),opacity 0.3s ease;',
+        'touch-action:pan-x;user-select:none;'
+      ].join('');
+      card.innerHTML = `
+        <div style="background:linear-gradient(135deg,#0077b6,#00b4d8);color:#fff;
+          width:44px;height:44px;border-radius:14px;flex-shrink:0;
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:0 4px 15px rgba(0,119,182,0.3);animation:ios-pulse 2s infinite;">
+          <i data-lucide="bell-ring" style="width:20px;height:20px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:800;font-size:0.92rem;color:#0f172a;margin-bottom:2px;">Enable Token Alerts</div>
+          <div style="font-size:0.75rem;color:#64748b;line-height:1.4;">Get notified when your turn is near. <em>Swipe to dismiss.</em></div>
+        </div>
+        <button id="enableNotifBtn" style="background:#0077b6;color:#fff;border:none;
+          padding:0.45rem 0.85rem;border-radius:10px;font-size:0.78rem;
+          font-weight:700;cursor:pointer;flex-shrink:0;font-family:inherit;
+          box-shadow:0 4px 12px rgba(0,119,182,0.25);white-space:nowrap;">Enable</button>
+      `;
+      document.body.appendChild(card);
+      if (typeof lucide !== 'undefined') lucide.createIcons(card);
+      requestAnimationFrame(() => { card.style.transform = 'translateX(-50%) translateY(0)'; });
+
+      document.getElementById('enableNotifBtn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await Notification.requestPermission();
+        _dismissNotifCard(card, 1);
+      });
+
+      let _sX = 0, _cX = 0, _sw = false;
+      card.addEventListener('touchstart', e => { _sX = e.touches[0].clientX; _sw = true; card.style.transition = 'none'; }, {passive:true});
+      card.addEventListener('touchmove', e => {
+        if (!_sw) return;
+        _cX = e.touches[0].clientX - _sX;
+        card.style.transform = `translateX(calc(-50% + ${_cX}px)) translateY(0)`;
+        card.style.opacity = String(Math.max(0, 1 - Math.abs(_cX) / 200));
+      }, {passive:true});
+      card.addEventListener('touchend', () => {
+        _sw = false;
+        card.style.transition = 'transform 0.4s ease, opacity 0.3s ease';
+        if (Math.abs(_cX) > 100) { _dismissNotifCard(card, _cX); }
+        else { card.style.transform = 'translateX(-50%) translateY(0)'; card.style.opacity = '1'; }
+        _cX = 0;
+      }, {passive:true});
+    }
+    function _dismissNotifCard(card, dir) {
+      sessionStorage.setItem('notifCardDismissed', 'true');
+      card.style.transition = 'transform 0.4s ease, opacity 0.3s ease';
+      card.style.transform = dir >= 0 ? 'translateX(120vw)' : 'translateX(-120vw)';
+      card.style.opacity = '0';
+      setTimeout(() => { if (card.parentNode) card.remove(); }, 420);
+    }
+
+    // ─── iOS PWA Install Guide (no X button — swipe to dismiss) ─────────────
     (function initIOSGuide() {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
       const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-      
+
       if (isIOS && !isStandalone) {
         setTimeout(() => {
           const guide = document.createElement('div');
           guide.style.cssText = `
             position: fixed; bottom: 30px; left: 50%;
             transform: translateX(-50%); width: 92%; max-width: 400px;
-            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(15px);
+            background: rgba(255,255,255,0.92); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             padding: 1.2rem; border-radius: 20px; box-shadow: 0 15px 50px rgba(0,0,0,0.15);
             z-index: 10000; border: 1px solid rgba(255,255,255,0.4);
             display: flex; align-items: center; gap: 1.2rem;
             animation: slideUpCard 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            touch-action: pan-x; user-select: none; cursor: grab;
           `;
           guide.innerHTML = `
             <div id="iosShareBtn" style="
@@ -1134,21 +1204,15 @@
             <div style="flex: 1;">
               <div style="font-weight: 800; font-size: 1rem; color: #0f172a; margin-bottom: 2px;">Enable Mobile Alerts</div>
               <div style="font-size: 0.8rem; color: #475569; line-height: 1.4;">Tap the <span style="font-weight:700; color:#0077b6;">Share</span> button then <b>'Add to Home Screen'</b> for real-time background tracking.</div>
+              <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 5px; font-style: italic;">Swipe left or right to dismiss</div>
             </div>
-            <button id="closeIosGuide" style="
-              background: #f1f5f9; border: none; color: #94a3b8;
-              width: 28px; height: 28px; border-radius: 50%;
-              display: flex; align-items: center; justify-content: center;
-              cursor: pointer; flex-shrink: 0; transition: all 0.2s;
-            " onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
-              <i data-lucide="x" style="width:14px; height:14px;"></i>
-            </button>
           `;
           document.body.appendChild(guide);
           if (window.lucide) lucide.createIcons(guide);
 
-          // ─── Functionality: Share Button ───
-          document.getElementById('iosShareBtn').addEventListener('click', async () => {
+          // ─── Share Button ───
+          document.getElementById('iosShareBtn').addEventListener('click', async (e) => {
+            e.stopPropagation();
             if (navigator.share) {
               try {
                 await navigator.share({
@@ -1156,21 +1220,37 @@
                   text: 'Real-time Hospital Token Tracking',
                   url: window.location.href
                 });
-              } catch (err) {
-                console.log('Share aborted or failed');
-              }
+              } catch (err) { console.log('Share aborted or failed'); }
             } else {
-              alert("Please tap the Share icon in your browser's bottom menu, then choose 'Add to Home Screen'.");
+              alert("Tap the Share icon in your browser's bottom menu, then choose 'Add to Home Screen'.");
             }
           });
 
-          // ─── Functionality: Close Button ───
-          document.getElementById('closeIosGuide').addEventListener('click', () => {
-            guide.style.opacity = '0';
-            guide.style.transform = 'translateY(20px) translateX(-50%)';
-            guide.style.transition = 'all 0.4s ease';
-            setTimeout(() => guide.remove(), 400);
-          });
+          // ─── Swipe to Dismiss ───
+          let _gsX = 0, _gcX = 0, _gsw = false;
+          guide.addEventListener('touchstart', e => {
+            if (e.target.closest('#iosShareBtn')) return;
+            _gsX = e.touches[0].clientX; _gsw = true; guide.style.transition = 'none';
+          }, {passive:true});
+          guide.addEventListener('touchmove', e => {
+            if (!_gsw) return;
+            _gcX = e.touches[0].clientX - _gsX;
+            guide.style.transform = `translateX(calc(-50% + ${_gcX}px))`;
+            guide.style.opacity = String(Math.max(0, 1 - Math.abs(_gcX) / 200));
+          }, {passive:true});
+          guide.addEventListener('touchend', () => {
+            _gsw = false;
+            guide.style.transition = 'transform 0.4s ease, opacity 0.3s ease';
+            if (Math.abs(_gcX) > 100) {
+              guide.style.transform = _gcX > 0 ? 'translateX(120vw)' : 'translateX(-120vw)';
+              guide.style.opacity = '0';
+              setTimeout(() => guide.remove(), 420);
+            } else {
+              guide.style.transform = 'translateX(-50%)';
+              guide.style.opacity = '1';
+            }
+            _gcX = 0;
+          }, {passive:true});
         }, 3000);
       }
     })();
