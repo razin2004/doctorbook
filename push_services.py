@@ -49,23 +49,23 @@ def trigger_push(doctor_name, date_str, current_token, status, app, db, PatientB
                     
                     if status == "skipped" and ahead == 0:
                         # The particular token being evaluated was skipped!
-                        title = "⚠️ Token Skipped"
+                        title = "Token Skipped"
                         body = "Your token was skipped. Please contact the reception."
                         tag = "primecare-skip"
                         vibrate = [400, 200, 400]
                     elif status == "active":
                         if ahead == 0:
-                            title = "🔔 Token Alert"
+                            title = "Token Alert"
                             body = f"It's your turn! Proceed to {doctor_name} immediately."
                             tag = "primecare-alert"
                             vibrate = [300, 100, 300, 100, 500]
                         elif ahead == 1:
-                            title = "🔔 Token Alert"
+                            title = "Token Alert"
                             body = f"You're next for {doctor_name}. Please be ready!"
                             tag = "primecare-alert"
                             vibrate = [300, 100, 300, 100, 500]
                         elif ahead == 2:
-                            title = "🔔 Token Alert"
+                            title = "Token Alert"
                             body = f"2 patients ahead — {doctor_name}. Get ready soon."
                             tag = "primecare-alert"
                             vibrate = [300, 100, 300, 100, 500]

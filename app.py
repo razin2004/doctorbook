@@ -108,6 +108,17 @@ class Prescription(db.Model):
     text_content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class TickerMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String(500), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class AppSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True)
+    value = db.Column(db.String(255))
+
 class PushSubscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # can be null for guests
@@ -607,7 +618,22 @@ def admin_sync_doctors():
 @app.route("/")
 def home():
     doctors = get_all_doctors()
-    return render_template("home.html", doctors=doctors)
+    
+    # Check if logged-in patient has any upcoming bookings
+    has_upcoming = False
+    user_id = session.get('user_id')
+    if user_id and session.get('user_role') == 'patient':
+        ist = pytz.timezone('Asia/Kolkata')
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        
+        # Check if any booking exists for today or future
+        upcoming = PatientBooking.query.filter(
+            PatientBooking.user_id == user_id,
+            PatientBooking.date >= today_str
+        ).first()
+        has_upcoming = upcoming is not None
+        
+    return render_template("home.html", doctors=doctors, has_upcoming=has_upcoming)
 
 
 @app.route("/booking")
@@ -1659,6 +1685,68 @@ def admin_get_holidays():
     holidays.sort(key=lambda x: x.get("Date", ""))
     return jsonify({"success": True, "holidays": holidays})
 
+# ===================== Ticker Management =====================
+
+@app.route("/admin_add_ticker_msg", methods=["POST"])
+def admin_add_ticker_msg():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+    
+    data = request.get_json() or {}
+    msg_content = (data.get("message") or "").strip()
+    if not msg_content:
+        return jsonify({"success": False, "msg": "Message cannot be empty"})
+    
+    new_msg = TickerMessage(content=msg_content)
+    db.session.add(new_msg)
+    db.session.commit()
+    return jsonify({"success": True, "msg": "Announcement added"})
+
+@app.route("/admin_delete_ticker_msg", methods=["POST"])
+def admin_delete_ticker_msg():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+    
+    data = request.get_json() or {}
+    msg_id = data.get("id")
+    msg = TickerMessage.query.get(msg_id)
+    if msg:
+        db.session.delete(msg)
+        db.session.commit()
+    return jsonify({"success": True, "msg": "Announcement deleted"})
+
+@app.route("/admin_toggle_ticker_solo", methods=["POST"])
+def admin_toggle_ticker_solo():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+    
+    data = request.get_json() or {}
+    is_solo = data.get("is_solo", False)
+    
+    setting = AppSettings.query.filter_by(key="ticker_solo_mode").first()
+    if not setting:
+        setting = AppSettings(key="ticker_solo_mode")
+        db.session.add(setting)
+    
+    setting.value = "enabled" if is_solo else "disabled"
+    db.session.commit()
+    return jsonify({"success": True, "is_solo": is_solo})
+
+@app.route("/admin_get_ticker_messages", methods=["GET"])
+def admin_get_ticker_messages():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+    
+    msgs = TickerMessage.query.order_by(TickerMessage.created_at.desc()).all()
+    solo_setting = AppSettings.query.filter_by(key="ticker_solo_mode").first()
+    is_solo = solo_setting.value == "enabled" if solo_setting else False
+    
+    return jsonify({
+        "success": True, 
+        "messages": [{"id": m.id, "content": m.content} for m in msgs],
+        "solo_mode": is_solo
+    })
+
 @app.route("/admin_delete_holiday", methods=["POST"])
 def admin_delete_holiday():
     if session.get("admin_email") != ADMIN_EMAIL:
@@ -1899,6 +1987,9 @@ def book_doctor():
             db.session.add(new_booking)
             db.session.commit()
 
+        # Set flag for celebratory confetti
+        session['justBooked'] = True
+
         increment_booking_counter()
         cleanup_old_date_sheets(spreadsheet)
 
@@ -2029,6 +2120,7 @@ def admin_book_patient():
         increment_booking_counter()
         cleanup_old_date_sheets(spreadsheet)
 
+        session['justBooked'] = True
         return jsonify({
             "success": True,
             "token": token,
@@ -2420,6 +2512,7 @@ def confirmation_page():
     age = request.args.get("age")
     phone = request.args.get("phone")
 
+    show_confetti = session.pop('justBooked', False)
     return render_template(
         "confirmation.html",
         token=token,
@@ -2430,7 +2523,8 @@ def confirmation_page():
         name=name,
         age=age,
         gender=request.args.get("gender"),
-        phone=phone
+        phone=phone,
+        show_confetti=show_confetti
     )
 
 
@@ -3090,61 +3184,86 @@ def consult_skipped():
 @app.route('/live-tracking')
 def live_tracking():
     if not session.get('user_id') and not session.get('admin_logged_in'):
-        return redirect(url_for('home', _anchor='auth'))
+        # Capture the full path including query params
+        next_path = request.full_path if '?' in request.full_path else request.path
+        return redirect(url_for('home', 
+                               trigger_login='true', 
+                               next=next_path, 
+                               msg='Login to view live tracking of doctors'))
     return render_template('live_tracking.html')
 
 @app.route('/live_tokens', methods=['GET'])
 def live_tokens():
     ist = pytz.timezone('Asia/Kolkata')
-    today_str = datetime.now(ist).strftime("%Y-%m-%d")
-    weekday = datetime.now(ist).strftime("%A")
+    now = datetime.now(ist)
+    today_str = now.strftime("%Y-%m-%d")
+    tomorrow_str = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+    weekday = now.strftime("%A")
+
+    # ── Fetch Holidays ──
+    today_holiday = None
+    tomorrow_holiday = None
+    try:
+        holiday_ws = get_holiday_worksheet()
+        all_vals = holiday_ws.get_all_values()
+        if len(all_vals) > 1:
+            for row in all_vals[1:]:
+                if not row: continue
+                d_str = str(row[0]).strip()
+                reason = (row[1] if len(row) > 1 else "Clinic Leave").strip()
+                if d_str == today_str: today_holiday = reason
+                if d_str == tomorrow_str: tomorrow_holiday = reason
+    except: pass
+
+    # ── Fetch Admin Messages ──
+    admin_msgs = [m.content for m in TickerMessage.query.all()]
+    solo_setting = AppSettings.query.filter_by(key="ticker_solo_mode").first()
+    is_solo = solo_setting.value == "enabled" if solo_setting else False
     
-    # Get all working doctors today
+    # ── Fetch Doctor Statuses ──
+    response_data = []
     try:
         all_docs = get_all_doctors()
         working_today = [d for d in all_docs if weekday in d.get("Days", [])]
-    except Exception as e:
-        working_today = []
         
-    response_data = []
-    
-    for d in working_today:
-        doc_name = d.get("Name")
-        doc_spec = d.get("Specialization")
-        
-        doc_session = DoctorSession.query.filter(
-            db.func.lower(db.func.trim(DoctorSession.doctor_name)) == doc_name.lower().strip(),
-            db.func.lower(db.func.trim(DoctorSession.specialization)) == doc_spec.lower().strip()
-        ).first()
-        
-        # Default state
-        status = "Yet to start"
-        current_token = 0
-        total_tokens = 0
-        
-        if doc_session:
-            # If session is from today, use live data
-            if doc_session.session_date == today_str:
-                if doc_session.status == 'idle':
-                    status = "Yet to start"
-                elif doc_session.status == 'active':
-                    status = "Live Now"
-                elif doc_session.status == 'completed':
-                    status = "Completed"
-                    
+        for d in working_today:
+            doc_name = d.get("Name")
+            doc_spec = d.get("Specialization")
+            
+            doc_session = DoctorSession.query.filter(
+                db.func.lower(db.func.trim(DoctorSession.doctor_name)) == doc_name.lower().strip(),
+                db.func.lower(db.func.trim(DoctorSession.specialization)) == doc_spec.lower().strip()
+            ).first()
+            
+            status = "Yet to start"
+            current_token = 0
+            total_tokens = 0
+            
+            if doc_session and doc_session.session_date == today_str:
+                if doc_session.status == 'idle': status = "Yet to start"
+                elif doc_session.status == 'active': status = "Live Now"
+                elif doc_session.status == 'completed': status = "Completed"
                 current_token = doc_session.current_token
                 total_tokens = doc_session.total_tokens
-                
-        response_data.append({
-            "doctor_name": doc_name,
-            "specialization": doc_spec,
-            "time": (d.get("DayTimes") or {}).get(weekday, "Not Set"),
-            "status": status,
-            "current_token": current_token,
-            "total_tokens": total_tokens
-        })
+                    
+            response_data.append({
+                "doctor_name": doc_name,
+                "specialization": doc_spec,
+                "time": (d.get("DayTimes") or {}).get(weekday, "Not Set"),
+                "status": status,
+                "current_token": current_token,
+                "total_tokens": total_tokens
+            })
+    except: pass
         
-    return jsonify({"success": True, "data": response_data})
+    return jsonify({
+        "success": True, 
+        "data": response_data,
+        "today_holiday": today_holiday,
+        "tomorrow_holiday": tomorrow_holiday,
+        "admin_messages": admin_msgs,
+        "solo_mode": is_solo
+    })
 
 @app.route('/my_token_status', methods=['GET'])
 def my_token_status():
@@ -3203,8 +3322,19 @@ def my_token_status():
         "data": results
     })
 
+# ===================== Error Handlers =====================
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    db.session.rollback()
+    return render_template('500.html'), 500
+
 # ===================== Main =====================
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+

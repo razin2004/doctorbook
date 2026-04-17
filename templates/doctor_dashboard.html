@@ -188,9 +188,28 @@
       .user-header h1 { font-size: 1.3rem; }
     }
     
+    #pullIndicator {
+      position: fixed; top: -60px; left: 0; width: 100%; height: 60px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10001; pointer-events: none; transition: transform 0.2s ease, opacity 0.2s ease;
+      opacity: 0;
+    }
+    .pull-indicator-content {
+      background: white; width: 40px; height: 40px; border-radius: 50%;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center;
+      color: #0077b6;
+    }
+    .pull-indicator-content svg { width: 20px; height: 20px; animation: spin 1.5s linear infinite; animation-play-state: paused; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    body.pulling #pullIndicator { opacity: 1; }
+    body.refreshing .pull-indicator-content svg { animation-play-state: running; }
   </style>
 </head>
 <body class="bg-image">
+  <div id="pullIndicator">
+    <div class="pull-indicator-content"><i data-lucide="refresh-cw"></i></div>
+  </div>
   <div id="globalToast"></div>
   <div class="bg-blur"></div>
 
@@ -642,6 +661,49 @@
         } catch(e) {}
     }, 5000);
 
+    // ─── Pull to Refresh Logic ───
+    (function initPullToRefresh() {
+      let touchStart = 0;
+      let touchMove = 0;
+      const indicator = document.getElementById('pullIndicator');
+      const body = document.body;
+      const threshold = 150;
+
+      window.addEventListener('touchstart', e => {
+        if (window.scrollY === 0) {
+          touchStart = e.touches[0].clientY;
+          body.classList.add('pulling');
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchmove', e => {
+        if (touchStart > 0) {
+          touchMove = e.touches[0].clientY - touchStart;
+          if (touchMove > 0) {
+            const pull = Math.min(touchMove * 0.4, threshold);
+            indicator.style.transform = `translateY(${pull}px)`;
+            const rotate = (pull / threshold) * 360;
+            const svg = indicator.querySelector('svg');
+            if (svg) svg.style.transform = `rotate(${rotate}deg)`;
+          }
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchend', () => {
+        if (touchMove > threshold * 2) {
+          body.classList.add('refreshing');
+          indicator.style.transform = `translateY(${threshold / 2}px)`;
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        } else {
+          indicator.style.transform = `translateY(0)`;
+        }
+        body.classList.remove('pulling');
+        touchStart = 0;
+        touchMove = 0;
+      });
+    })();
   </script>
 </body>
 </html>

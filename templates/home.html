@@ -47,7 +47,7 @@
 
     /* ── TOP BAR ── */
     .top-bar {
-      position: sticky; top: 0; z-index: 100;
+      position: sticky; top: 0; z-index: 1000;
       backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
       background: rgba(255,255,255,0.96);
       border-bottom: 1px solid rgba(0,119,182,0.1);
@@ -364,10 +364,10 @@
     }
     .info-modal-overlay.open { display: flex; }
     .info-modal {
-      background: #fff; border-radius: 20px;
-      padding: 1.8rem 2rem; max-width: 440px; width: 100%;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.22); position: relative;
-      animation: mi 0.2s ease;
+      background: #fff; border-radius: 24px;
+      padding: 2.2rem; max-width: 480px; width: 100%;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.25); position: relative;
+      animation: mi 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     @keyframes mi { from { transform: scale(0.94) translateY(8px); opacity:0; } to { transform: scale(1); opacity:1; } }
     .info-modal h3 {
@@ -392,10 +392,11 @@
     }
     .info-modal-steps li:last-child { border-bottom: none; }
     .step-num {
-      width: 24px; height: 24px; border-radius: 50%;
+      width: 28px; height: 28px; border-radius: 10px;
       background: linear-gradient(135deg,#0077b6,#0096c7);
-      color: #fff; font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; margin-top: 1px;
+      color: #fff; font-size: 0.8rem; font-weight: 800; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; margin-top: 2px;
+      box-shadow: 0 4px 12px rgba(0,119,182,0.25);
     }
 
     /* ── RESPONSIVE ── */
@@ -940,6 +941,67 @@
       
       .ai-chat-footer { padding-bottom: 1.2rem; }
     }
+    /* ── LIVE STATUS TICKER ── */
+    .ticker-wrapper {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(0, 119, 182, 0.1);
+      overflow: hidden;
+      height: 48px;
+      display: none; /* Hidden by default, shown by JS if docs exist */
+      align-items: center;
+      position: relative;
+      z-index: 90;
+    }
+    .ticker-container {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker-slide 60s linear infinite;
+      padding-left: 100%; /* Start off-screen */
+    }
+    .ticker-container:hover { animation-play-state: paused; }
+    
+    .ticker-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 40px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      position: relative;
+    }
+    .status-dot.live { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+    .status-dot.upcoming { background: #0077b6; box-shadow: 0 0 10px rgba(0, 119, 182, 0.4); }
+    
+    .status-dot::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: inherit;
+      opacity: 0.4;
+      animation: status-pulse 1.8s ease-out infinite;
+    }
+    
+    @keyframes ticker-slide {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+    @keyframes status-pulse {
+      0% { transform: scale(1); opacity: 0.4; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 600px) {
+        .ticker-wrapper { height: 42px; }
+        .ticker-item { font-size: 0.82rem; padding: 0 25px; }
+    }
   </style>
 </head>
 
@@ -983,6 +1045,13 @@
       </div>
     </div>
   </header>
+  
+  <!-- Who's In Now Live Ticker -->
+  <div class="ticker-wrapper" id="liveTicker">
+    <div class="ticker-container" id="tickerContent">
+      <!-- Injected by JS -->
+    </div>
+  </div>
 
   <!-- HERO -->
   <section class="hero">
@@ -1027,11 +1096,30 @@
       </button>
       <h3><i data-lucide="info"></i> How our booking works</h3>
       <ul class="info-modal-steps">
-        <li><span class="step-num">1</span> Select a doctor or specialization and your preferred date.</li>
-        <li><span class="step-num">2</span> Fill in your name, age, gender and phone number.</li>
-        <li><span class="step-num">3</span> The system assigns your next available token automatically.</li>
-        <li><span class="step-num">4</span> View and save your confirmation with token number.</li>
-        <li><span class="step-num">5</span> Arrive 10–15 minutes early and show your token at the clinic.</li>
+        <li>
+          <span class="step-num">1</span> 
+          <div><strong>Choose Your Path:</strong> Search by doctor or specialization. For multi-specialist slots, choose your preferred timing.</div>
+        </li>
+        <li>
+          <span class="step-num">2</span> 
+          <div><strong>Instant Token:</strong> Provide patient details (Name, Age, Gender) to instantly secure your digital token.</div>
+        </li>
+        <li>
+          <span class="step-num">3</span> 
+          <div><strong>Manage Appointments:</strong> Login any time to your Profile to view booking history, download tokens, or cancel if needed.</div>
+        </li>
+        <li>
+          <span class="step-num">4</span> 
+          <div><strong>Digital Records:</strong> Keep your prescriptions securely saved in your profile for easy access during future consultations.</div>
+        </li>
+        <li>
+          <span class="step-num">5</span> 
+          <div><strong>Live Tracking:</strong> Stay updated! Once consultations begin, track live token status and get push alerts directly from your home screen.</div>
+        </li>
+        <li>
+          <span class="step-num">6</span> 
+          <div><strong>Dedicated Support:</strong> Encountered a problem? Need assistance? Contact our support team directly for instant help.</div>
+        </li>
       </ul>
     </div>
   </div>
@@ -1424,7 +1512,13 @@
           if (data.require_role_selection) {
             switchAuthView('roleSelect');
           } else if (flow === 'login' || flow === 'reset' || (flow === 'otp' && data.flow === 'register')) {
-            setTimeout(() => window.location.href = data.redirect_url || '/patient_dashboard', 1000);
+            const nextUrl = sessionStorage.getItem('auth_next');
+            if (nextUrl) {
+                sessionStorage.removeItem('auth_next');
+                setTimeout(() => window.location.href = nextUrl, 1000);
+            } else {
+                setTimeout(() => window.location.href = data.redirect_url || '/patient_dashboard', 1000);
+            }
           } else if (flow === 'register' || flow === 'forgot') {
             switchAuthView('otp');
           } else if (flow === 'otp' && data.flow === 'forgot') {
@@ -1451,7 +1545,13 @@
             const data = await res.json();
             if (data.success) {
                 showToast(data.msg, 'success');
-                setTimeout(() => window.location.href = data.redirect_url, 1000);
+                const nextUrl = sessionStorage.getItem('auth_next');
+                if (nextUrl) {
+                    sessionStorage.removeItem('auth_next');
+                    setTimeout(() => window.location.href = nextUrl, 1000);
+                } else {
+                    setTimeout(() => window.location.href = data.redirect_url, 1000);
+                }
             } else {
                 showToast(data.msg, 'error');
             }
@@ -1631,6 +1731,24 @@
       lucide.createIcons();
       checkAdminSession();
       
+      // Check URL parameters for login trigger, next redirect & custom msg
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('trigger_login') === 'true') {
+        const nextUrl = params.get('next');
+        const customMsg = params.get('msg');
+        
+        if (nextUrl) sessionStorage.setItem('auth_next', nextUrl);
+        
+        if (customMsg) {
+          const subtitle = document.querySelector('#authView-login .auth-subtitle');
+          if (subtitle) {
+            subtitle.innerHTML = `<div style="background:rgba(0,119,182,0.1); color:#0077b6; padding:10px; border-radius:12px; margin-bottom:10px; font-weight:600;"><i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;margin-right:5px;"></i>${customMsg}</div>`;
+            lucide.createIcons();
+          }
+        }
+        openAuthModal('login');
+      }
+
       // Check if URL hash is #timings to automatically open doctor timings
       if (window.location.hash === '#timings') {
         setTimeout(() => scrollToDoctors(true), 600);
@@ -2316,6 +2434,7 @@
     }
 
     // ─── Unified Install Guide (iOS Share / Android Menu) ─────────
+    {% if has_upcoming %}
     (function initInstallGuide() {
       const isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
       const isAndroid    = /Android/.test(navigator.userAgent);
@@ -2388,6 +2507,7 @@
         _addSwipeDismiss(guide, dir => _slideOut(guide, dir, 'installGuideDismissed'), '#installActionBtn');
       }, 3000);
     })();
+    {% endif %}
 
     // ─── PWA Service Worker Registration ────────────────────────────
     if ('serviceWorker' in navigator) {
@@ -2422,5 +2542,161 @@
     }
   </script>
 
+
+  <script>
+    // ─── Who's In Now Live Ticker Logic ──────────────────────────────
+    (function initLiveTicker() {
+      const tickerWrapper = document.getElementById('liveTicker');
+      const tickerContent = document.getElementById('tickerContent');
+      
+      async function updateTicker() {
+        try {
+          const res = await fetch('/live_tokens');
+          const data = await res.json();
+          
+          if (data.success) {
+            let tickerItems = [];
+
+            // 1. Admin Messages (Always show if present)
+            if (data.admin_messages && data.admin_messages.length > 0) {
+              data.admin_messages.forEach(msg => {
+                tickerItems.push(`
+                  <div class="ticker-item">
+                    <div class="status-dot live" style="background:#f59e0b;"></div>
+                    <span><b>NOTICE:</b> ${msg}</span>
+                  </div>
+                `);
+              });
+            }
+
+            // 2. Holiday Messages + Doctor Statuses (Skip if solo_mode)
+            if (!data.solo_mode) {
+              // 🔴 Today Holiday
+              if (data.today_holiday) {
+                tickerItems.push(`
+                  <div class="ticker-item" style="color:#ef4444;">
+                    <div class="status-dot live" style="background:#ef4444;"></div>
+                    <span><b>Clinic is closed today</span> 
+                  </div>
+                `);
+              }
+
+              // 🟠 Tomorrow Holiday
+              if (data.tomorrow_holiday) {
+                tickerItems.push(`
+                  <div class="ticker-item" style="color:#f97316;">
+                    <div class="status-dot upcoming" style="background:#f97316;"></div>
+                    <span><b>Clinic will be closed tomorrow</b></span>
+                  </div>
+                `);
+              }
+
+              // 🩺 Doctor Statuses (Only show if not Today Holiday)
+              if (!data.today_holiday && data.data && data.data.length > 0) {
+                data.data.forEach(d => {
+                  if (d.status === 'Live Now' || d.status === 'Yet to start') {
+                    const isLive = d.status === 'Live Now';
+                    const dotClass = isLive ? 'live' : 'upcoming';
+                    
+                    const docDisplay = d.doctor_name.toLowerCase().startsWith('dr') ? d.doctor_name : `Dr. ${d.doctor_name}`;
+                    
+                    // Robust Time Parser: Handles both 24h (13:00) and 12h (1:00 PM)
+                    const parseTime = (t) => {
+                      if (!t) return { min: 0, disp: "" };
+                      let h, m, mod;
+                      const clean = t.trim().toUpperCase();
+                      if (clean.includes('AM') || clean.includes('PM')) {
+                        const parts = clean.split(/\s+/);
+                        [h, m] = parts[0].split(':').map(Number);
+                        mod = parts[1];
+                      } else {
+                        [h, m] = clean.split(':').map(Number);
+                        mod = (h >= 12) ? 'PM' : 'AM';
+                      }
+                      if (isNaN(m)) m = 0;
+                      
+                      let calcH = h;
+                      if (mod === 'PM' && h < 12) calcH += 12;
+                      if (mod === 'AM' && h === 12) calcH = 0;
+                      
+                      let dispH = h % 12 || 12;
+                      let dispM = m < 10 ? '0' + m : m;
+                      
+                      return {
+                        min: calcH * 60 + m,
+                        disp: `${dispH}:${dispM} ${mod}`
+                      };
+                    };
+
+                    const now = new Date();
+                    const currentMin = now.getHours() * 60 + now.getMinutes();
+                    
+                    // Time Parsing logic
+                    let timeMsg = "";
+                    try {
+                      // Support both " - " and "-" separators
+                      const times = d.time.split(/\s*-\s*/);
+                      if (times.length === 2) {
+                        const start = parseTime(times[0]);
+                        const end = parseTime(times[1]);
+                        
+                        // SKIP if not live and more than 60 minutes away
+                        const minDiff = start.min - currentMin;
+                        if (!isLive && minDiff > 60) return;
+
+                        const isDelayed = !isLive && (currentMin > (start.min + 5));
+                        
+                        if (isDelayed) {
+                          timeMsg = `will start consultation shortly`;
+                        } else {
+                          timeMsg = isLive ? `is consulting up to ${end.disp}` : `is starting consultation at ${start.disp}`;
+                        }
+                      } else {
+                        const single = parseTime(d.time);
+                        const minDiffSingle = single.min - currentMin;
+                        if (!isLive && minDiffSingle > 60) return;
+
+                        timeMsg = isLive ? `is currently Consulting` : `is starting consultation at ${single.disp}`;
+                      }
+                    } catch(e) { timeMsg = d.status; }
+
+                    tickerItems.push(`
+                      <div class="ticker-item">
+                        <div class="status-dot ${dotClass}"></div>
+                        <span>${docDisplay} ${timeMsg}</span>
+                      </div>
+                    `);
+                  }
+                });
+              }
+            }
+
+            if (tickerItems.length > 0) {
+              tickerWrapper.style.display = 'flex';
+              
+              const html = tickerItems.join('');
+              // Triple the content to ensure smooth seamless looping
+              tickerContent.innerHTML = html + html + html;
+              
+              // Adjust animation speed based on content length
+              const duration = tickerItems.length * 12; // ~12s per item
+              tickerContent.style.animationDuration = `${Math.max(duration, 30)}s`;
+            } else {
+              tickerWrapper.style.display = 'none';
+            }
+          } else {
+            tickerWrapper.style.display = 'none';
+          }
+        } catch (err) {
+          console.error("Ticker update failed:", err);
+          tickerWrapper.style.display = 'none';
+        }
+      }
+
+      updateTicker();
+      // Refresh status every 5 minutes
+      setInterval(updateTicker, 300000);
+    })();
+  </script>
 </body>
 </html>

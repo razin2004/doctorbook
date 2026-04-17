@@ -75,11 +75,17 @@ self.addEventListener('message', event => {
   if (event.data.type === 'SHOW_NOTIFICATION') {
     const d = event.data;
 
+    // Map tags to specific professional icons
+    let notifIcon = '/static/android-chrome-192x192.png';
+    if (d.tag === 'primecare-live') notifIcon = '/static/image/live_notif.png';
+    else if (d.tag === 'primecare-alert') notifIcon = '/static/image/alert_notif.png';
+    else if (d.tag === 'primecare-skip') notifIcon = '/static/image/skip_notif.png';
+
     // IMPORTANT: never use silent:true for live-tracking on Android — it hides in shade
     // Use silent:false always; rely on tag+renotify to avoid sound spam
     const options = {
       body:     d.body,
-      icon:     '/static/android-chrome-192x192.png',
+      icon:     notifIcon,
       badge:    '/static/favicon-32x32.png',
       tag:      d.tag || 'primecare-token',
       renotify: d.renotify !== false,   // true = update shows new entry in shade
@@ -109,9 +115,14 @@ self.addEventListener('push', event => {
   try {
     const data = event.data.json();
     const title = data.title || 'PrimeCare Update';
+    let notifIcon = '/static/android-chrome-192x192.png';
+    if (data.tag === 'primecare-live') notifIcon = '/static/image/live_notif.png';
+    else if (data.tag === 'primecare-alert') notifIcon = '/static/image/alert_notif.png';
+    else if (data.tag === 'primecare-skip') notifIcon = '/static/image/skip_notif.png';
+
     const options = {
       body: data.body || '',
-      icon: '/static/android-chrome-192x192.png',
+      icon: notifIcon,
       badge: '/static/favicon-32x32.png',
       tag: data.tag || 'primecare-token',
       renotify: true,

@@ -477,9 +477,99 @@
         50% { border-color: #fca5a5; }
         100% { border-color: #fecaca; }
     }
+    #pullIndicator {
+      position: fixed; top: -60px; left: 0; width: 100%; height: 60px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10001; pointer-events: none; transition: transform 0.2s ease, opacity 0.2s ease;
+      opacity: 0;
+    }
+    .pull-indicator-content {
+      background: white; width: 40px; height: 40px; border-radius: 50%;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center;
+      color: #0077b6;
+    }
+    .pull-indicator-content svg { width: 20px; height: 20px; animation: spin 1.5s linear infinite; animation-play-state: paused; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    body.pulling #pullIndicator { opacity: 1; }
+    body.refreshing .pull-indicator-content svg { animation-play-state: running; }
+    /* ── MEDICAL VAULT TIMELINE ── */
+    .vault-timeline {
+      position: relative; padding: 1rem 0 0 1rem;
+      margin-top: 1rem;
+    }
+    .vault-timeline::before {
+      content: ''; position: absolute; left: 16px; top: 0; bottom: 0;
+      width: 2px; background: linear-gradient(to bottom, #0077b610, #0077b6, #0077b610);
+      border-radius: 999px;
+    }
+    .vault-entry {
+      position: relative; padding-left: 2.5rem; margin-bottom: 2rem;
+      transition: all 0.3s ease;
+    }
+    .vault-entry:last-child { margin-bottom: 0.5rem; }
+    .vault-dot {
+      position: absolute; left: 0; top: 8px; width: 34px; height: 34px;
+      background: white; border-radius: 12px; display: flex; align-items: center;
+      justify-content: center; z-index: 2; color: #0077b6;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); border: 1px solid #f1f5f9;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .vault-entry:hover .vault-dot {
+      transform: scale(1.1) rotate(5deg); background: #0077b6; color: white;
+      box-shadow: 0 8px 20px rgba(0, 119, 182, 0.3);
+    }
+    .vault-card {
+      background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px);
+      border-radius: 20px; padding: 1.2rem;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+    .vault-entry.manual .vault-dot { color: #10b981; }
+    .vault-entry.manual:hover .vault-dot { background: #10b981; color: white; }
+    
+    .vault-date {
+      font-size: 0.75rem; font-weight: 800; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.05em; display: flex;
+      align-items: center; gap: 0.4rem;
+    }
+    .vault-doctor {
+      font-size: 1.05rem; font-weight: 850; color: #0f172a;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .vault-doctor span { color: #0077b6; }
+    .vault-patient { font-size: 0.85rem; color: #64748b; font-weight: 600; }
+    
+    .vault-actions {
+      display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.2rem;
+      padding-top: 0.8rem; border-top: 1px solid #f1f5f9;
+    }
+    .vault-btn {
+      flex: 1; min-width: 100px; padding: 0.5rem 0.8rem; border-radius: 12px;
+      font-size: 0.8rem; font-weight: 700; display: flex; align-items: center;
+      justify-content: center; gap: 0.4rem; cursor: pointer; border: none;
+      transition: all 0.2s; text-decoration: none;
+    }
+    .btn-vault-view { background: #0077b6; color: white; box-shadow: 0 4px 12px rgba(0,119,182,0.2); }
+    .btn-vault-dl { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-vault-view:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,119,182,0.3); }
+    .btn-vault-dl:hover { background: #f1f5f9; }
+
+    @media (max-width: 480px) {
+      .vault-timeline { padding-left: 0.5rem; }
+      .vault-timeline::before { left: 14px; }
+      .vault-dot { width: 30px; height: 30px; }
+      .vault-card { padding: 1rem; }
+      .vault-doctor { font-size: 0.95rem; }
+      .vault-btn { font-size: 0.75rem; padding: 0.45rem 0.6rem; }
+    }
   </style>
 </head>
 <body class="bg-image">
+  <div id="pullIndicator">
+    <div class="pull-indicator-content"><i data-lucide="refresh-cw"></i></div>
+  </div>
   <div id="globalToast"></div>
   <div class="bg-blur"></div>
 
@@ -526,13 +616,13 @@
           <i data-lucide="calendar" style="width:13px;height:13px;"></i> My Bookings
         </a>
         <a href="#prescriptionsSection" class="quick-nav-btn">
-          <i data-lucide="file-text" style="width:13px;height:13px;"></i> Prescriptions
+          <i data-lucide="shield-plus" style="width:13px;height:13px;"></i> Medical Vault
         </a>
         <a href="/booking" class="quick-nav-btn">
           <i data-lucide="calendar-plus" style="width:13px;height:13px;"></i> New Booking
         </a>
-        <a onclick="openPrescriptionModal()" class="quick-nav-btn">
-          <i data-lucide="file-plus" style="width:13px;height:13px;"></i> Add Prescription
+        <a onclick="openPrescriptionModal()" class="quick-nav-btn" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: #065f46;">
+          <i data-lucide="upload-cloud" style="width:13px;height:13px;"></i> Add Record
         </a>
         <a href="/live-tracking" class="quick-nav-btn" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4);">
           <i data-lucide="radio" style="width:13px;height:13px;"></i> Live Token Track
@@ -638,37 +728,71 @@
       </div>
     </div>
 
-    <!-- PRESCRIPTIONS SECTION -->
+    <!-- MEDICAL VAULT (Timeline View) -->
     <div class="glass-card" id="prescriptionsSection">
       <div class="section-header">
-        <h2><i data-lucide="file-text" style="width:18px;height:18px;"></i> My Prescriptions</h2>
-        <button class="section-action-btn" onclick="openPrescriptionModal()"><i data-lucide="upload" style="width:14px;height:14px;"></i> <span>Upload</span></button>
+        <h2><i data-lucide="shield-plus" style="width:18px;height:18px;color:#10b981;"></i> Medical Vault</h2>
+        <button class="section-action-btn" onclick="openPrescriptionModal()" style="background:#10b981; box-shadow:0 4px 12px rgba(16,185,129,0.2);">
+          <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> <span>Add Record</span>
+        </button>
       </div>
-      <div class="item-list" id="prescriptionsList">
+
+      <div class="vault-timeline" id="prescriptionsList">
         {% if prescriptions %}
           {% for p in prescriptions %}
-          <div class="item-card" style="margin-top: 5px;">
-            <div class="item-info">
-              <div class="item-title"><i data-lucide="file-text" style="width:14px;height:14px;color:#0077b6;display:inline;vertical-align:-2px;margin-right:0.3rem;"></i>{{ p.patient_name }}</div>
-              <div class="item-meta">
-                <span class="meta-tag"><i data-lucide="calendar-days" style="width:13px;height:13px;"></i> {{ p.consultation_date }}</span>
-                {% if p.doctor_name %}<span class="meta-tag"><i data-lucide="stethoscope" style="width:13px;height:13px;"></i> {{ p.doctor_name }}</span>{% endif %}
-              </div>
-            </div>
-            <div class="item-actions">
-              {% if p.file_path %}
-              <a href="{{ p.file_path }}" target="_blank" class="btn-view" style="color:#0077b6; background:#e0f2fe;"><i data-lucide="eye" style="width:14px;height:14px;"></i> View</a>
+          <div class="vault-entry {% if not p.doctor_name %}manual{% endif %}">
+            <div class="vault-dot">
+              {% if p.doctor_name %}
+                <i data-lucide="stethoscope" style="width:18px;height:18px;"></i>
+              {% else %}
+                <i data-lucide="file-text" style="width:18px;height:18px;"></i>
               {% endif %}
-              <button class="btn-danger-sm" onclick="confirmDeletePrescription({{ p.id }})" aria-label="Delete">
-                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-              </button>
+            </div>
+            
+            <div class="vault-card">
+              <div class="vault-date">
+                <i data-lucide="calendar"></i> {{ p.consultation_date }}
+                {% if not p.doctor_name %}
+                  <span style="margin-left:auto; background:#10b98120; color:#10b981; padding:2px 8px; border-radius:6px; font-size:0.65rem;">Manual Upload</span>
+                {% endif %}
+              </div>
+              
+              <div class="vault-doctor">
+                {% if p.doctor_name %}
+                  <i data-lucide="stethoscope"></i> <span>{{ p.doctor_name }}</span>
+                {% else %}
+                  Medical Record: <span>{{ p.patient_name }}</span>
+                {% endif %}
+              </div>
+              
+              {% if p.doctor_name %}
+                <div class="vault-patient">Patient: {{ p.patient_name }}</div>
+              {% endif %}
+
+              <div class="vault-actions">
+                {% if p.file_path %}
+                  <a href="{{ p.file_path }}" target="_blank" class="vault-btn btn-vault-view">
+                    <i data-lucide="eye"></i> View Record
+                  </a>
+               
+                {% endif %}
+                <button class="vault-btn" onclick="confirmDeletePrescription({{ p.id }})" style="flex:0; min-width:40px; background:#fff1f2; color:#e11d48; border:1px solid #fecaca;">
+                  <i data-lucide="trash-2"></i>
+                </button>
+              </div>
             </div>
           </div>
           {% endfor %}
         {% else %}
-          <div class="empty-state">
-            <i data-lucide="file-minus" style="width:40px;height:40px;"></i>
-            <p>No prescriptions stored yet.</p>
+          <div class="empty-state" style="padding: 3rem 1rem;">
+            <div style="background:rgba(16,185,129,0.05); width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem;">
+               <i data-lucide="file-digit" style="width:40px;height:40px;color:#10b981;opacity:0.6;"></i>
+            </div>
+            <h3 style="color:#0f172a; margin-bottom:0.5rem;">Your Vault is Empty</h3>
+            <p style="font-size:0.9rem; color:#64748b; margin-bottom:1.5rem;">Securely store your prescriptions, lab reports, and medical history in one place.</p>
+            <button class="section-action-btn" onclick="openPrescriptionModal()" style="background:#10b981; padding:0.6rem 1.5rem; height:auto; width:auto;">
+               <i data-lucide="upload-cloud"></i> Start Your Vault
+            </button>
           </div>
         {% endif %}
       </div>
@@ -1102,46 +1226,46 @@
               const lastLive = sessionStorage.getItem(liveKey);
               if (String(liveTok) !== lastLive && data.status === 'active') {
                 sessionStorage.setItem(liveKey, String(liveTok));
-                sendSwNotif(
-                  '🔄 Live Tracking',
-                  `${liveDoc}  ·  Now: #${liveTok}  ·  Your Token: #${yourTok}`,
-                  'primecare-live',
-                  null,   // silent — no vibration for routine updates
-                  false   // renotify false — silently update existing notification
-                );
-              }
-
-              // 2️⃣  Alert: vibrate at 2 / 1 / 0 tokens ahead
-              const alertKey  = `alerted_${liveDoc}_${yourTok}`;
-              const lastAlert = sessionStorage.getItem(alertKey);
-              if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && data.status === 'active') {
-                sessionStorage.setItem(alertKey, String(ahead));
-                const alertBody = ahead === 0
-                  ? `It's your turn! Proceed to ${liveDoc} immediately.`
-                  : ahead === 1
-                  ? `You're next for ${liveDoc}. Please be ready!`
-                  : `2 patients ahead — ${liveDoc}. Get ready soon.`;
-                sendSwNotif(
-                  '🔔 Token Alert',
-                  alertBody,
-                  'primecare-alert',
-                  [300, 100, 300, 100, 500],
-                  true
-                );
-              }
-
-              // 3️⃣  Skipped notification
-              if (data.status === 'skipped') {
-                const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
-                if (!sessionStorage.getItem(skipKey)) {
-                  sessionStorage.setItem(skipKey, '1');
                   sendSwNotif(
-                    '⚠️ Token Skipped',
-                    `Your token was skipped. Please contact the reception.`,
-                    'primecare-skip',
-                    [400, 200, 400],
+                    'Live Tracking',
+                    `${liveDoc}  ·  Now: #${liveTok}  ·  Your Token: #${yourTok}`,
+                    'primecare-live',
+                    null,   // silent — no vibration for routine updates
+                    false   // renotify false — silently update existing notification
+                  );
+                }
+  
+                // 2️⃣  Alert: vibrate at 2 / 1 / 0 tokens ahead
+                const alertKey  = `alerted_${liveDoc}_${yourTok}`;
+                const lastAlert = sessionStorage.getItem(alertKey);
+                if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && data.status === 'active') {
+                  sessionStorage.setItem(alertKey, String(ahead));
+                  const alertBody = ahead === 0
+                    ? `It's your turn! Proceed to ${liveDoc} immediately.`
+                    : ahead === 1
+                    ? `You're next for ${liveDoc}. Please be ready!`
+                    : `2 patients ahead — ${liveDoc}. Get ready soon.`;
+                  sendSwNotif(
+                    'Token Alert',
+                    alertBody,
+                    'primecare-alert',
+                    [300, 100, 300, 100, 500],
                     true
                   );
+                }
+  
+                // 3️⃣  Skipped notification
+                if (data.status === 'skipped') {
+                  const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
+                  if (!sessionStorage.getItem(skipKey)) {
+                    sessionStorage.setItem(skipKey, '1');
+                    sendSwNotif(
+                      'Token Skipped',
+                      `Your token was skipped. Please contact the reception.`,
+                      'primecare-skip',
+                      [400, 200, 400],
+                      true
+                    );
                 }
               }
             }
@@ -1339,6 +1463,14 @@
       if (isStandalone || sessionStorage.getItem('installGuideDismissed')) return;
       if (!isIOS && !isAndroid) return;
 
+      // Only show after booking is done (contextual check)
+      const hasUpcoming = {{ 'true' if upcoming_bookings else 'false' }};
+      const justBooked = document.referrer.includes('/confirmation') || sessionStorage.getItem('justBooked');
+      
+      // We show it if they have a booking AND they've either just booked or are in an active tracking session
+      if (!hasUpcoming || (!justBooked && !window.location.search.includes('source=tracking'))) return;
+
+
       // Android: capture deferredPrompt if available
       let deferredPrompt = null;
       if (isAndroid) {
@@ -1435,6 +1567,50 @@
             }
         }, true);
     }
+
+    // ─── Pull to Refresh Logic ───
+    (function initPullToRefresh() {
+      let touchStart = 0;
+      let touchMove = 0;
+      const indicator = document.getElementById('pullIndicator');
+      const body = document.body;
+      const threshold = 150;
+
+      window.addEventListener('touchstart', e => {
+        if (window.scrollY === 0) {
+          touchStart = e.touches[0].clientY;
+          body.classList.add('pulling');
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchmove', e => {
+        if (touchStart > 0) {
+          touchMove = e.touches[0].clientY - touchStart;
+          if (touchMove > 0) {
+            const pull = Math.min(touchMove * 0.4, threshold);
+            indicator.style.transform = `translateY(${pull}px)`;
+            const rotate = (pull / threshold) * 360;
+            const svg = indicator.querySelector('svg');
+            if (svg) svg.style.transform = `rotate(${rotate}deg)`;
+          }
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchend', () => {
+        if (touchMove > threshold * 2) {
+          body.classList.add('refreshing');
+          indicator.style.transform = `translateY(${threshold / 2}px)`;
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        } else {
+          indicator.style.transform = `translateY(0)`;
+        }
+        body.classList.remove('pulling');
+        touchStart = 0;
+        touchMove = 0;
+      });
+    })();
   </script>
 </body>
 </html>

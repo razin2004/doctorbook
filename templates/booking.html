@@ -20,6 +20,23 @@
   <link rel="apple-touch-icon" href="/static/image/pwa-icon.png">
 
   <style>
+    /* ── Switch Component for Admin ── */
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #cbd5e1; transition: .4s;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+      background-color: white; transition: .4s;
+    }
+    input:checked + .slider { background-color: #10b981; }
+    input:focus + .slider { box-shadow: 0 0 1px #10b981; }
+    input:checked + .slider:before { transform: translateX(20px); }
+    .slider.round { border-radius: 24px; }
+    .slider.round:before { border-radius: 50%; }
+
     /* ── Booking page: single header button stays inline on all sizes ── */
     /* ── Header: buttons stack vertically on mobile to match homepage ── */
     @media (max-width: 520px) {
@@ -566,6 +583,14 @@
             <div class="panel-card-sub">View tokens & manage cancellations</div>
           </div>
         </div>
+
+        <div class="panel-card" onclick="showAdminPanel('ticker', this)">
+          <div class="panel-card-icon" style="background:rgba(16,185,129,0.1); color:#10b981;"><i data-lucide="radio"></i></div>
+          <div class="panel-card-text">
+            <div class="panel-card-label">Live Ticker</div>
+            <div class="panel-card-sub">Broadcast messages to Home page</div>
+          </div>
+        </div>
   <div class="panel-card" onclick="showAdminPanel('holiday', this)">
           <div class="panel-card-icon" style="background:rgba(249,115,22,0.1); color:#f97316;"><i data-lucide="calendar-off"></i></div>
           <div class="panel-card-text">
@@ -603,6 +628,61 @@
     </div>
 
     <!-- ADD DOCTOR PANEL -->
+    <!-- Ticker Management Panel -->
+    <div id="tickerPanel" class="adminPanel" style="display:none;">
+      <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem;">
+        <div style="width:42px; height:42px; background:rgba(16,185,129,0.1); color:#10b981; border-radius:12px; display:flex; align-items:center; justify-content:center;">
+          <i data-lucide="radio" style="width:24px; height:24px;"></i>
+        </div>
+        <div>
+          <h3 style="margin:0; font-size:1.2rem; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Live Ticker Management</h3>
+          <p style="margin:0; font-size:0.8rem; color:#64748b;">Broadcasting center for clinic-wide announcements</p>
+        </div>
+      </div>
+
+      <!-- Mode Selection Card -->
+      <div class="card" style="margin-bottom:1.25rem; padding:1.25rem; border:1px solid rgba(16,185,129,0.2); background:linear-gradient(to bottom right, rgba(255,255,255,0.95), rgba(240,253,244,0.7)); border-radius:20px; box-shadow:0 10px 25px -5px rgba(16,185,129,0.05);">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1.2rem;">
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+               <span style="font-weight:700; color:#065f46; font-size:0.95rem;">Solo Mode (Override)</span>
+               <span id="soloStatus" style="font-size:0.65rem; padding:0.15rem 0.5rem; border-radius:20px; background:#e2e8f0; color:#64748b; font-weight:600; text-transform:uppercase;">Inactive</span>
+            </div>
+            <div style="font-size:0.78rem; color:#475569; line-height:1.4;">When active, all automated doctor schedules are hidden to show ONLY your custom broadcasts.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="tickerSoloToggle" onchange="handleSoloToggle(this.checked)">
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Add Message Section -->
+      <div class="card" style="margin-bottom:2rem; padding:1.25rem; background:white; border:1px solid rgba(0,0,0,0.05); border-radius:20px;">
+        <h4 style="margin-top:0; margin-bottom:1rem; font-size:0.88rem; color:#475569; display:flex; align-items:center; gap:0.5rem;">
+          <i data-lucide="megaphone" style="width:16px; color:#10b981;"></i> New Announcement
+        </h4>
+        <div style="display:flex; flex-direction:column; gap:0.8rem;">
+          <textarea id="newTickerMsg" placeholder="Type your message for the home page ticker..." 
+                    style="width:100%; min-height:80px; padding:1rem; border-radius:14px; border:1px solid rgba(0,0,0,0.1); background:#f8fafc; font-size:0.9rem; resize:none; transition:all 0.3s ease;"
+                    onfocus="this.style.border='1px solid #10b981'; this.style.background='white';"></textarea>
+          <button class="btn btn-primary" onclick="addTickerMsg()" style="width:100%; padding:0.8rem; border-radius:14px; display:flex; align-items:center; justify-content:center; gap:0.6rem; font-weight:600;">
+            <i data-lucide="send" style="width:18px;"></i> Broadcast Message
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Broadcasts Header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; padding:0 0.5rem;">
+         <div style="font-size:0.85rem; font-weight:700; color:#1e293b; text-transform:uppercase; letter-spacing:0.05em;">Live Broadcasts</div>
+         <div id="msgCountCount" style="font-size:0.75rem; color:#64748b;">0 active</div>
+      </div>
+
+      <div id="activeMessagesList" style="display:flex; flex-direction:column; gap:0.9rem; margin-bottom:2rem;">
+        <!-- Loaded by JS with premium list items -->
+      </div>
+    </div>
+
     <div id="addDoctorPanel" class="adminPanel" style="display:none;">
       <h3><i data-lucide="user-plus"></i> Add Doctor</h3>
       <form id="adminAddDoctorForm" enctype="multipart/form-data">
@@ -984,7 +1064,7 @@
  
    <!-- Universal Confirmation Modal (Standardized) -->
    <div class="modal-overlay" id="universalModal">
-     <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+     <div class="modal-content" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
        <div class="modal-icon-container" id="unvIconContainer" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
          <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
        </div>
@@ -1192,10 +1272,110 @@
         document.getElementById('holidayPanel').style.display = 'block';
         loadGlobalHolidays();
       }
+      else if (type === 'ticker') {
+        document.getElementById('tickerPanel').style.display = 'block';
+        loadTickerMessages();
+      }
       
       if (btn) btn.classList.add('active');
       localStorage.setItem('activeAdminPanel', type); // Save state
       lucide.createIcons();
+    }
+
+    // ─── Ticker Management Logic ───────────────────────────────
+    async function loadTickerMessages() {
+        try {
+            const res = await fetch('/admin_get_ticker_messages');
+            const data = await res.json();
+            if(!data.success) return;
+
+            const list = document.getElementById('activeMessagesList');
+            const soloToggle = document.getElementById('tickerSoloToggle');
+            const soloStatus = document.getElementById('soloStatus');
+            const msgCount = document.getElementById('msgCountCount');
+            
+            soloToggle.checked = data.solo_mode;
+            soloStatus.textContent = data.solo_mode ? "Active" : "Inactive";
+            soloStatus.style.background = data.solo_mode ? "#dcfce7" : "#e2e8f0";
+            soloStatus.style.color = data.solo_mode ? "#166534" : "#64748b";
+            msgCount.textContent = `${data.messages.length} active`;
+
+            if (data.messages.length === 0) {
+                list.innerHTML = `
+                <div style="text-align:center; padding:2rem 1.5rem; background:rgba(248,250,252,0.5); border:1px dashed rgba(0,0,0,0.1); border-radius:16px;">
+                    <i data-lucide="inbox" style="width:32px; height:32px; color:#cbd5e1; margin-bottom:0.75rem;"></i>
+                    <div style="color:#94a3b8; font-size:0.85rem;">No active broadcasts. Your ticker will show automated doctor schedules.</div>
+                </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            list.innerHTML = data.messages.map(m => `
+                <div class="card" style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.2rem; background:white; border:1px solid rgba(0,0,0,0.06); border-radius:16px; transition:all 0.3s ease; box-shadow:0 4px 6px -1px rgba(0,0,0,0.02);">
+                    <div style="display:flex; gap:0.75rem;">
+                        <div style="margin-top:0.2rem; color:#10b981;"><i data-lucide="check-circle-2" style="width:16px;"></i></div>
+                        <div style="font-size:0.9rem; color:#1e293b; line-height:1.5; font-weight:500;">${m.content}</div>
+                    </div>
+                    <button onclick="deleteTickerMsg(${m.id})" style="background:rgba(239,68,68,0.05); border:none; color:#ef4444; cursor:pointer; padding:8px; border-radius:10px; flex-shrink:0; transition:all 0.2s ease;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='rgba(239,68,68,0.05)'">
+                        <i data-lucide="trash-2" style="width:16px;"></i>
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        } catch(e) { console.error("Failed to load messages:", e); }
+    }
+
+    async function addTickerMsg() {
+        const input = document.getElementById('newTickerMsg');
+        const message = input.value.trim();
+        if (!message) return;
+
+        try {
+            const res = await fetch('/admin_add_ticker_msg', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+            const data = await res.json();
+            if (data.success) {
+                input.value = '';
+                loadTickerMessages();
+            } else { alert(data.msg); }
+        } catch(e) { alert('Failed to add message'); }
+    }
+
+    function deleteTickerMsg(id) {
+        openUniversalModal('delete', 'Delete Announcement', 'Are you sure you want to permanently delete this broadcast message? This action cannot be revoked.', 'Delete Now', async () => {
+            try {
+                const res = await fetch('/admin_delete_ticker_msg', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadTickerMessages();
+                    showToast('Announcement deleted successfully', 'success');
+                }
+            } catch(e) {
+                showToast('Failed to delete announcement', 'error');
+            }
+        }, true);
+    }
+
+    async function handleSoloToggle(is_solo) {
+        const soloStatus = document.getElementById('soloStatus');
+        soloStatus.textContent = is_solo ? "Active" : "Inactive";
+        soloStatus.style.background = is_solo ? "#dcfce7" : "#e2e8f0";
+        soloStatus.style.color = is_solo ? "#166534" : "#64748b";
+        
+        try {
+            await fetch('/admin_toggle_ticker_solo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_solo })
+            });
+        } catch(e) {}
     }
 
     // ─── Load doctors ──────────────────────────────────────────
@@ -1961,6 +2141,67 @@
             <span style="font-size:0.82rem; color:#0077b6; font-weight:600;">${data.date} | ${data.time}</span>
           `;
           document.getElementById('unvMessage').after(tokenCard);
+
+          // ── WhatsApp Share Injection for Admin Booking (FULL-WIDTH BELOW BUTTONS) ──
+          if (data.phone && data.phone !== "-" && data.phone.trim() !== "") {
+            const modal = document.getElementById('universalModal');
+            const btnsContainer = modal.querySelector('.modal-btns');
+            
+            // Create WA Block Button if it doesn't exist
+            let waBtn = document.getElementById('adminWhatsAppBtn');
+            if (!waBtn) {
+              waBtn = document.createElement('button');
+              waBtn.id = 'adminWhatsAppBtn';
+              // Premium Block Style
+              Object.assign(waBtn.style, {
+                width: '100%',
+                marginTop: '1.2rem',
+                background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '16px',
+                padding: '1rem',
+                fontSize: '0.95rem',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                cursor: 'pointer',
+                boxShadow: '0 8px 15px rgba(37, 211, 102, 0.3)',
+                transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              });
+
+              waBtn.onmouseover = () => { 
+                waBtn.style.transform = 'translateY(-2px)';
+                waBtn.style.boxShadow = '0 12px 20px rgba(37, 211, 102, 0.4)';
+              };
+              waBtn.onmouseout = () => { 
+                waBtn.style.transform = 'translateY(0)';
+                waBtn.style.boxShadow = '0 8px 15px rgba(37, 211, 102, 0.3)';
+              };
+              
+              btnsContainer.after(waBtn);
+            }
+            
+            // WhatsApp Icon (SVG) + Lucide Share Icon
+            waBtn.innerHTML = `
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="flex-shrink:0;">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              <span>Share</span>
+              <i data-lucide="share-2" style="width:14px;height:14px;"></i>
+            `;
+            
+            waBtn.onclick = (e) => {
+                e.stopPropagation();
+                const cleanPhone = data.phone.replace(/\D/g, '');
+                const rawMsg = `\u{1F3E5} *PrimeCare Clinic - Booking Confirmed!*\n━━━━━━━━━━━━━━\n\u{1F464} *Patient:* ${data.name}\n\u{1F3AB} *Token:* #${data.token}\n\u{1F468}\u{200D}\u{2695}\u{FE0F} *Doctor:* ${data.doctor}\n\u{1F5D3}\u{FE0F} *Date:* ${data.date}\n\u{23F0} *Time:* ${data.time}\n━━━━━━━━━━━━━━\n\u{1F517} *Track Live:* ${window.location.origin}/live-tracking`;
+                const waUrl = `https://wa.me/${cleanPhone}/?text=${encodeURIComponent(rawMsg)}`;
+                window.open(waUrl, '_blank');
+            };
+            if (window.lucide) lucide.createIcons();
+          }
           
           btn.disabled = false;
           btn.innerHTML = RESET_HTML;
@@ -2741,6 +2982,9 @@ function downloadPDF() {
       // Clean up special cards
       const card = modal.querySelector('.success-token-card');
       if (card) card.remove();
+      
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
     };
     
     // Alias for backward compatibility or new calls

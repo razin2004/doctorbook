@@ -373,6 +373,9 @@
         <button type="button" class="btn-pill btn-ghost" id="saveImageBtn">
           <i data-lucide="download"></i> Save as Image
         </button>
+        <button type="button" class="btn-pill btn-ghost" id="whatsappShareBtn" style="color: #25d366; border-color: rgba(37, 211, 102, 0.3);">
+          <i data-lucide="message-circle"></i> Share via WhatsApp
+        </button>
       </div>
 
       <div class="button-group">
@@ -450,6 +453,8 @@
     document.addEventListener('DOMContentLoaded', function () {
       lucide.createIcons();
       checkAdminSession();
+      // Flag to show PWA guide on next dashboard visit
+      sessionStorage.setItem('justBooked', 'true');
     });
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -616,6 +621,24 @@
         a.click();
       });
     });
+
+    // ── WhatsApp Share Logic ──
+    const waBtn = document.getElementById('whatsappShareBtn');
+    if (waBtn) {
+      waBtn.addEventListener('click', () => {
+        const name = '{{ name or "" }}';
+        const token = '{{ token or "" }}';
+        const doctor = '{{ doctor or "" }}';
+        const date = '{{ date or "" }}';
+        const time = '{{ time or "" }}';
+        const appUrl = window.location.origin;
+
+        const rawMsg = `\u{1F3E5} *PrimeCare Clinic - Booking Confirmed!*\n━━━━━━━━━━━━━━\n\u{1F464} *Patient:* ${name}\n\u{1F3AB} *Token:* #${token}\n\u{1F468}\u{200D}\u{2695}\u{FE0F} *Doctor:* ${doctor}\n\u{1F5D3}\u{FE0F} *Date:* ${date}\n\u{23F0} *Time:* ${time}\n━━━━━━━━━━━━━━\n\u{1F517} *Track Live:* ${appUrl}/live-tracking`;
+        
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(rawMsg)}`;
+        window.open(waUrl, '_blank');
+      });
+    }
   </script>
   <!-- Global Toast Container -->
   <div id="globalToast"></div>
@@ -639,5 +662,26 @@
       <p class="footer-copy">© 2026 PrimeCare Clinic. All rights reserved.</p>
     </div>
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script>
+    {% if show_confetti %}
+    window.addEventListener('load', () => {
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+      function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+      const interval = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) return clearInterval(interval);
+
+        const particleCount = 50 * (timeLeft / duration);
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+        confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+      }, 250);
+    });
+    {% endif %}
+  </script>
 </body>
 </html>
