@@ -2033,138 +2033,144 @@
           const res = await fetch('/my_token_status');
           const data = await res.json();
           
-          if(data.success && (data.status === 'active' || data.status === 'skipped')) {
+          if (data.success && data.data && data.data.length > 0) {
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            const isAndroid = /Android/.test(navigator.userAgent);
             const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-
-            // ── Push Notifications (Android & iOS PWA) ──────────────────
+            const isAndroid = /Android/.test(navigator.userAgent);
             const supportsNotif = typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
+            const canReceiveNotif = supportsNotif && Notification.permission === 'granted' && (isAndroid || isStandalone);
 
-
-            // iOS requires standalone (installed PWA). Android Chrome can notify from browser too.
-            const canReceiveNotif = supportsNotif && Notification.permission === 'granted' &&
-                                    (isAndroid || isStandalone);
-
-            if (canReceiveNotif) {
-              const ahead   = data.patients_ahead;
-              const liveDoc = data.doctor_name;
-              const liveTok = data.current_token;
-              const yourTok = data.your_token;
-
-              // Robust: send via SW postMessage (works reliably on Chrome Android + iOS PWA)
-              function sendSwNotif(title, body, tag, vibrate, renotify) {
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.ready.then(reg => {
-                    if (reg.active) {
-                      // SW always uses silent:false — visible in notification shade
-                      reg.active.postMessage({
-                        type: 'SHOW_NOTIFICATION',
-                        title, body, tag,
-                        vibrate: vibrate || null,
-                        renotify: renotify !== false,
-                        url: '/patient_dashboard'
-                      });
-                    } else {
-                      // Fallback: direct showNotification — silent:false for shade visibility
-                      reg.showNotification(title, {
-                        body, tag, icon: '/static/android-chrome-192x192.png',
-                        badge: '/static/favicon-32x32.png',
-                        vibrate: vibrate || undefined,
-                        renotify: renotify !== false,
-                        silent: false,
-                        data: { url: '/patient_dashboard' }
-                      }).catch(() => {});
-                    }
-                  }).catch(() => {});
-                }
-              }
-
-              // 1️⃣  Persistent live-tracking: replace/update single notification
-              const liveKey  = `live_tok_${liveDoc}_${yourTok}`;
-              const lastLive = sessionStorage.getItem(liveKey);
-              if (String(liveTok) !== lastLive && data.status === 'active') {
-                sessionStorage.setItem(liveKey, String(liveTok));
-                sendSwNotif(
-                  '🔄 Live Tracking',
-                  `${liveDoc}  ·  Now: #${liveTok}  ·  Your Token: #${yourTok}`,
-                  'primecare-live',
-                  null,   // silent — no vibration for routine updates
-                  false   // renotify false — update existing notification silently
-                );
-              }
-
-              // 2️⃣  Alert: vibrate at 2 / 1 / 0 tokens ahead
-              const alertKey  = `alerted_${liveDoc}_${yourTok}`;
-              const lastAlert = sessionStorage.getItem(alertKey);
-              if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && data.status === 'active') {
-                sessionStorage.setItem(alertKey, String(ahead));
-                const alertBody = ahead === 0
-                  ? `It's your turn! Proceed to ${liveDoc} immediately.`
-                  : ahead === 1
-                  ? `You're next for ${liveDoc}. Please be ready!`
-                  : `2 patients ahead — ${liveDoc}. Get ready soon.`;
-                sendSwNotif(
-                  '🔔 Token Alert',
-                  alertBody,
-                  'primecare-alert',
-                  [300, 100, 300, 100, 500],
-                  true
-                );
-              }
-
-              // 3️⃣  Skipped notification
-              if (data.status === 'skipped') {
-                const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
-                if (!sessionStorage.getItem(skipKey)) {
-                  sessionStorage.setItem(skipKey, '1');
-                  sendSwNotif(
-                    '⚠️ Token Skipped',
-                    `Your token was skipped. Please contact the reception.`,
-                    'primecare-skip',
-                    [400, 200, 400],
-                    true
-                  );
-                }
+            // ── Push Notification Helper ──
+            function sendSwNotif(title, body, tag, vibrate, renotify) {
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(reg => {
+                  if (reg.active) {
+                    reg.active.postMessage({
+                      type: 'SHOW_NOTIFICATION',
+                      title, body, tag,
+                      vibrate: vibrate || null,
+                      renotify: renotify !== false,
+                      url: '/patient_dashboard'
+                    });
+                  } else {
+                    reg.showNotification(title, {
+                      body, tag, icon: '/static/android-chrome-192x192.png',
+                      badge: '/static/favicon-32x32.png',
+                      vibrate: vibrate || undefined,
+                      renotify: renotify !== false,
+                      silent: false,
+                      data: { url: '/patient_dashboard' }
+                    }).catch(() => {});
+                  }
+                }).catch(() => {});
               }
             }
 
-            // Show permission card if not yet granted
+            let bestForBanner = null;
+
+            data.data.forEach(item => {
+              if (item.status === 'idle' || item.status === 'completed') return;
+
+              // ── Push Notifications for EVERY doctor ──
+              if (canReceiveNotif) {
+                const ahead = item.patients_ahead;
+                const liveDoc = item.doctor_name;
+                const liveTok = item.current_token;
+                const yourTok = item.your_token;
+
+                // 1. Live Tracking
+                const liveKey = `live_tok_${liveDoc}_${yourTok}`;
+                const lastLive = sessionStorage.getItem(liveKey);
+                if (String(liveTok) !== lastLive && item.status === 'active') {
+                  sessionStorage.setItem(liveKey, String(liveTok));
+                  sendSwNotif(
+                    '🔄 Live Tracking',
+                    `${liveDoc}  ·  Now: #${liveTok}  ·  Your Token: #${yourTok}`,
+                    `primecare-live-${liveDoc}`,
+                    null,
+                    false
+                  );
+                }
+
+                // 2. Alert (2/1/0 ahead)
+                const alertKey = `alerted_${liveDoc}_${yourTok}`;
+                const lastAlert = sessionStorage.getItem(alertKey);
+                if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && item.status === 'active') {
+                  sessionStorage.setItem(alertKey, String(ahead));
+                  const alertBody = ahead === 0
+                    ? `It's your turn! Proceed to ${liveDoc} immediately.`
+                    : ahead === 1
+                    ? `You're next for ${liveDoc}. Please be ready!`
+                    : `2 patients ahead — ${liveDoc}. Get ready soon.`;
+                  sendSwNotif(
+                    '🔔 Token Alert',
+                    alertBody,
+                    `primecare-alert-${liveDoc}`,
+                    [300, 100, 300, 100, 500],
+                    true
+                  );
+                }
+
+                // 3. Skipped
+                if (item.status === 'skipped') {
+                  const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
+                  if (!sessionStorage.getItem(skipKey)) {
+                    sessionStorage.setItem(skipKey, '1');
+                    sendSwNotif(
+                      '⚠️ Token Skipped',
+                      `Your token with ${liveDoc} was skipped.`,
+                      `primecare-skip-${liveDoc}`,
+                      [400, 200, 400],
+                      true
+                    );
+                  }
+                }
+              }
+
+              // ── Select the best one for the UI banner ──
+              // Priority: Active over Skipped; Smallest patients_ahead (including 0)
+              if (item.status === 'active') {
+                if (!bestForBanner || item.patients_ahead < bestForBanner.patients_ahead) {
+                  bestForBanner = item;
+                }
+              }
+            });
+
+            // ── Update Browser Permission Card ──
             if (isMobile && supportsNotif && Notification.permission === 'default' && (isAndroid || isStandalone)) {
               showNotifPermCard();
             }
 
+            // ── Render Banner ──
+            if (bestForBanner) {
+              hasNotification = true;
+              docName.textContent = bestForBanner.doctor_name;
+              liveTokenEl.textContent = bestForBanner.current_token;
+              yourTokenEl.textContent = bestForBanner.your_token;
 
-            hasNotification = true;
-            docName.textContent = data.doctor_name;
-            liveTokenEl.textContent = data.current_token;
-            yourTokenEl.textContent = data.your_token;
+              banner.dataset.doc = bestForBanner.doctor_name;
+              banner.dataset.date = bestForBanner.date;
 
-            banner.dataset.doc = data.doctor_name;
-            banner.dataset.date = data.date;
+              const ahead = bestForBanner.patients_ahead;
+              if (ahead === 0) {
+                statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
+              } else if (ahead === 1) {
+                statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
+              } else {
+                statusText.textContent = "Live Status";
+              }
 
-            const ahead = data.patients_ahead;
-            // Skipped: only send to mobile notification (done above); hide banner
-            if (data.status === 'skipped') {
+              if (!isDismissed) {
+                banner.classList.add('show');
+              } else {
+                tray.classList.add('show');
+              }
+              lucide.createIcons();
+            } else {
+              hasNotification = false;
               banner.classList.remove('show');
               tray.classList.remove('show');
-              hasNotification = false;
-              return; // don't render banner for skipped state
-            } else if (ahead === 0) {
-              statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
-            } else if (ahead === 1) {
-              statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
-            } else {
-              statusText.textContent = "Live Status";
             }
-
-            if (!isDismissed) {
-              banner.classList.add('show');
-            } else {
-              tray.classList.add('show');
-            }
-            lucide.createIcons();
           } else {
             hasNotification = false;
             banner.classList.remove('show');

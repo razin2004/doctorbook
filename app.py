@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, jsonify, url_for
+from flask import Flask, render_template, request, redirect, session, jsonify, url_for, send_from_directory, make_response
 import gspread
 from datetime import datetime, timedelta
 import pytz
@@ -41,11 +41,19 @@ WHATSAPP_ENABLE = os.environ.get("WHATSAPP_ENABLE", "false").lower() == "true"
 app = Flask(__name__)
 app.secret_key = 'YOUR_SECRET_KEY'
 
-# Configure SQLite Database
-db_path = os.path.join(app.instance_path, 'primecare.db')
-if not os.path.exists(app.instance_path):
-    os.makedirs(app.instance_path)
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+# Configure Database (Cloud Database First, Local SQLite Fallback)
+db_url = os.environ.get('DATABASE_URL')
+if db_url:
+    # Render and Heroku use 'postgres://' which is deprecated in SQLAlchemy 1.4+
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+else:
+    db_path = os.path.join(app.instance_path, 'primecare.db')
+    if not os.path.exists(app.instance_path):
+        os.makedirs(app.instance_path)
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -577,9 +585,22 @@ def verify_admin_otp():
 
     if code_entered == correct_code:
         session['admin_logged_in'] = True
-        return jsonify(success=True, msg="Admin logged in successfully")
+        # Trigger an automatic sync on successful admin login
+        sync_doctors_from_sheet()
+        return jsonify(success=True, msg="Admin logged in successfully and doctor data synchronized")
     else:
         return jsonify(success=False, msg="Invalid OTP. Try again.")
+
+@app.route("/admin_sync_doctors", methods=["POST"])
+def admin_sync_doctors():
+    if not session.get("admin_logged_in"):
+        return jsonify(success=False, msg="Unauthorized"), 403
+    
+    success = sync_doctors_from_sheet()
+    if success:
+        return jsonify(success=True, msg="Doctor synchronization successful.")
+    else:
+        return jsonify(success=False, msg="Synchronization failed. Check server logs.")
 
 # ===================== Basic routes =====================
 
@@ -1698,6 +1719,81 @@ def get_doctor_pairs():
     unique_pairs.sort()
     return jsonify(unique_pairs)
 
+def sync_doctors_from_sheet():
+    """
+    Synchronizes the Google Sheets 'Doctors' worksheet with the local SQLite database.
+    Ensures DoctorSession names, specializations, and emails are up to date.
+    Also ensures User roles are correctly set to 'doctor' for matching emails.
+    """
+    try:
+        print("--- Starting Doctor Login Data Synchronization ---")
+        # 1. Fetch current data from Google Sheets (The Source of Truth)
+        all_rows = doctors_ws.get_all_values()
+        if not all_rows:
+            print("Error: Doctors sheet is empty.")
+            return False
+        
+        headers = all_rows[0]
+        rows = all_rows[1:]
+        
+        processed_emails = set()
+        for r in rows:
+            r_dict = dict(zip(headers, r))
+            name = (r_dict.get("Name") or "").strip()
+            spec = (r_dict.get("Specialization") or "").strip()
+            email = (r_dict.get("Email") or "").strip().lower()
+            
+            if not email or not name:
+                continue
+            
+            processed_emails.add(email)
+                
+            # Match by name AND specialization
+            doc_session = DoctorSession.query.filter_by(doctor_name=name, specialization=spec).first()
+            
+            if doc_session:
+                # Clear any other session that might be using this email
+                squatter = DoctorSession.query.filter_by(email=email).first()
+                if squatter and (squatter.doctor_name != name or squatter.specialization != spec):
+                    squatter.email = f"TEMP_OLD_{squatter.id}@example.com"
+                    db.session.flush()
+
+                if doc_session.email != email:
+                    doc_session.email = email
+                db.session.flush()
+            else:
+                new_session = DoctorSession(doctor_name=name, specialization=spec, email=email)
+                db.session.add(new_session)
+                db.session.flush()
+
+            # Reconcile User roles
+            user = User.query.filter_by(email=email).first()
+            if user and user.role != "doctor":
+                user.role = "doctor"
+                db.session.flush()
+
+        # ─── Cleanup Step (Automatic Demotion) ───
+        # Find all doctors in DB who are NOT in the Google Sheet anymore
+        stale_users = User.query.filter(User.role == "doctor", User.email.notin_(processed_emails)).all()
+        for u in stale_users:
+            print(f"  Cleanup: Demoting {u.email} to patient (no longer in Sheet).")
+            u.role = "patient"
+        
+        stale_sessions = DoctorSession.query.filter(DoctorSession.email.notin_(processed_emails)).all()
+        for s in stale_sessions:
+            # We don't delete immediately to be safe, but we mark them inactive or rename if needed.
+            # However, the user asked for cleanup, so deleting the stale session is appropriate.
+            print(f"  Cleanup: Removing stale DoctorSession for {s.doctor_name} ({s.email}).")
+            db.session.delete(s)
+
+        db.session.commit()
+        print("--- Synchronization & Cleanup Completed Successfully ---")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"--- FAILED TO SYNC DOCTORS: {e} ---")
+        return False
+
 # ===================== Booking helpers & routes =====================
 
 def get_or_create_date_sheet(sheet, date_str):
@@ -1859,6 +1955,18 @@ def admin_book_patient():
         if weekday not in doctor_info["Days"]:
              return jsonify({"success": False, "msg": f"{doctor_info['Name']} not available on {weekday}."}), 400
         
+        # ─── 15-Day Booking Window Check (Consistently applied to Admin too) ───
+        ist = pytz.timezone('Asia/Kolkata')
+        target_date_obj = datetime.strptime(date, "%Y-%m-%d")
+        today = datetime.now(ist).date()
+        target_date = target_date_obj.date()
+        days_diff = (target_date - today).days
+        
+        if days_diff < 0:
+            return jsonify({"success": False, "msg": "Cannot book for a past date."}), 400
+        if days_diff > 15:
+            return jsonify({"success": False, "msg": "Bookings are only allowed up to 15 days in advance."}), 400
+
         # Leave check (Includes Clinic Holiday check)
         on_leave, leave_msg = is_doctor_on_leave(doctor_info["Name"], doctor_info["Specialization"], date)
         if on_leave:
@@ -2355,19 +2463,55 @@ def cleanup_old_date_sheets(spreadsheet, keep_last_n=4):
         print(f"[ERROR] Failed to cleanup old sheets: {e}")
 
 
-@app.route('/api/get_booking_stats', methods=['GET'])
-def get_booking_stats():
-    sheet_url = request.args.get('sheet_url')
-    date = request.args.get('date')
-    if not sheet_url or not date:
-        return jsonify({"success": False, "msg": "Missing parameters"}), 400
+@app.route('/api/doctor_stats', methods=['GET'])
+def get_doctor_stats():
+    user_email = session.get('user_email')
+    user_role = session.get('user_role')
+    
+    if not user_email or user_role != 'doctor':
+        return jsonify({"success": False, "msg": "Unauthorized"}), 403
+        
     try:
-        ss = client.open_by_url(sheet_url)
-        ws = get_or_create_date_sheet(ss, date)
-        count = get_filled_booking_count(ws)
-        return jsonify({"success": True, "count": count, "total": 25})
+        doc_session = DoctorSession.query.filter_by(email=user_email).first()
+        if not doc_session:
+            return jsonify({"success": False, "msg": "Doctor session not found"}), 404
+            
+        ist = pytz.timezone('Asia/Kolkata')
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        
+        # Find sheet URL
+        doctors = get_all_doctors()
+        sheet_url = next((d.get("SheetURL") for d in doctors if d.get("Name") == doc_session.doctor_name), None)
+        
+        total_booked = 0
+        empty_slots = []
+        total_tokens = 0
+        
+        if sheet_url:
+            dt_formatted = datetime.strptime(today_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+            s = client.open_by_url(sheet_url)
+            try:
+                ws = s.worksheet(dt_formatted)
+                records = ws.get_all_records()
+                total_tokens = len(records)
+                for r in records:
+                    if str(r.get("Name", "")).strip():
+                        total_booked += 1
+                    else:
+                        empty_slots.append(r.get("Token"))
+            except gspread.exceptions.WorksheetNotFound:
+                pass
+                
+        return jsonify({
+            "success": True,
+            "total_tokens": total_tokens,
+            "total_booked": total_booked,
+            "empty_slots": empty_slots
+        })
     except Exception as e:
-        return jsonify({"success": False, "msg": get_friendly_error_message(e)}), 500
+        return jsonify({"success": False, "msg": str(e)}), 500
+
+@app.route('/api/get_booking_stats', methods=['GET'])
 
 @app.route("/manage_bookings", methods=["POST"])
 def admin_get_bookings():
@@ -2509,7 +2653,14 @@ def build_clinic_context(user_id=None):
     except Exception:
         doctors = []
 
-    lines = []
+    ist = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(ist)
+    lines = [
+        f"--- SYSTEM TIME & STATUS ---",
+        f"Current Time: {now.strftime('%A, %B %d, %Y, %H:%M:%S')} IST",
+        f"Clinic Status: Open for inquiries",
+        ""
+    ]
     
 # 1. USER'S PERSONAL BOOKINGS (if logged in)
     if user_id:
@@ -2597,6 +2748,8 @@ Your core roles:
 Behaviour rules:
 - Always be concise, warm, and professional.
 - For symptoms, end your response with a recommendation like: "➡️ Recommended: [Specialization]" on its own line.
+- If you cannot identify a specific specialization or the symptoms are vague, ask the user: "Could you tell me more about your symptoms so I can recommend the right doctor?"
+- If the requested specialization (like Dermatology) is NOT in the clinic data, politely say: "I apologize, but we don't have a [Specialization] at PrimeCare today. However, you can consult our General Medicine doctor for an initial evaluation."
 - For clinic queries, give direct, factual answers based on the provided data.
 - If the user asks for the clinic's location, provide the name "Koorachundu" and include the clickable Google Maps link: [Koorachundu](https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z/data=!3m1!4b1!4m4!3m3!8m2!3d11.5384625!4d75.8455156?entry=ttu).
 - If a patient asks when they should reach/arrive for their booking, always tell them to arrive 10 minutes before their scheduled time, and explicitly mention their appointment start time (e.g., "Your appointment is at 10:00 AM, so please reach the clinic by 09:50 AM.").
@@ -2700,28 +2853,30 @@ def ai_triage():
                         max_output_tokens=600,
                     )
                 )
+                if not response or not response.text:
+                    reply_text = "I apologize, but I cannot provide medical diagnosis for those specific symptoms. Please consult a doctor in person or describe your symptoms differently."
+                    break
                 reply_text = response.text.strip()
                 break # Success!
             except APIError as e:
-                # Check for 429 Resource Exhausted
                 if e.code == 429 and attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
                     continue
                 else:
-                    raise e # Re-raise if not 429 or max retries hit
+                    reply_text = "The AI assistant is momentarily unreachable. Please try again in a few seconds."
+                    break
             except Exception as e:
-                raise e # Re-raise other exceptions
+                app.logger.error(f"Generate error: {e}")
+                reply_text = "I'm having trouble understanding that. Could you please rephrase your request?"
+                break
 
         return jsonify({"success": True, "reply": reply_text})
 
     except Exception as e:
-        # We still log the real error to the terminal so YOU can see it
-        app.logger.error(f"AI Triage error: {e}")
-        
-        # But we send a short, polite message to the patient
+        app.logger.error(f"AI Triage outer error: {e}")
         return jsonify({
             "success": False, 
-            "reply": "Sorry, the clinic's AI assistant is currently busy. Please try again later."
+            "reply": "Sorry, I'm having trouble connecting to the clinic information system right now."
         })
 # ===================== Admin session check =====================
 
@@ -2759,7 +2914,9 @@ def doctor_dashboard():
         doc_session.skipped_tokens = ""
         db.session.commit()
     
-    # Calculate total bookings for today
+    # Calculate total bookings and empty slots for today
+    total_booked = 0
+    empty_slots = []
     try:
         doctors = get_all_doctors()
         sheet_url = None
@@ -2775,13 +2932,24 @@ def doctor_dashboard():
                 ws = s.worksheet(dt_formatted)
                 records = ws.get_all_records()
                 doc_session.total_tokens = len(records)
+                
+                for r in records:
+                    if str(r.get("Name", "")).strip():
+                        total_booked += 1
+                    else:
+                        empty_slots.append(r.get("Token"))
+                
             except gspread.exceptions.WorksheetNotFound:
                 doc_session.total_tokens = 0
             db.session.commit()
     except Exception as e:
         app.logger.error(f"Could not calculate total tokens for {doc_session.doctor_name}: {e}")
         
-    return render_template('doctor_dashboard.html', doc=doc_session, can_switch=True)
+    return render_template('doctor_dashboard.html', 
+                           doc=doc_session, 
+                           total_booked=total_booked, 
+                           empty_slots=empty_slots,
+                           can_switch=True)
 
 @app.route('/start_session', methods=['POST'])
 def start_session():
@@ -2995,66 +3163,44 @@ def my_token_status():
     # Debug: Print incoming status request details
     print(f"\n[DEBUG] Token Status Request for user_id: {user_id} on {today_str}")
     
-    # Find patient's booking for today
-    booking = PatientBooking.query.filter_by(user_id=user_id, date=today_str).first()
-    if not booking:
-        print(f"[DEBUG] No booking found for user_id: {user_id} on {today_str}")
-        return jsonify({"success": False, "msg": "No booking today"})
+    # Find all patient's bookings for today
+    bookings = PatientBooking.query.filter_by(user_id=user_id, date=today_str).all()
+    if not bookings:
+        return jsonify({"success": False, "msg": "No booking today", "data": []})
     
-    print(f"[DEBUG] Found booking: {booking.doctor_name} | {booking.specialization} | Token: {booking.token}")
+    results = []
+    for booking in bookings:
+        # Find active doctor session
+        doc_session = DoctorSession.query.filter(
+            db.func.lower(db.func.trim(DoctorSession.doctor_name)) == booking.doctor_name.lower().strip(),
+            db.func.lower(db.func.trim(DoctorSession.specialization)) == booking.specialization.lower().strip()
+        ).first()
         
-    # Find active doctor session with robust trimming and case-insensitive matching
-    doc_session = DoctorSession.query.filter(
-        db.func.lower(db.func.trim(DoctorSession.doctor_name)) == booking.doctor_name.lower().strip(),
-        db.func.lower(db.func.trim(DoctorSession.specialization)) == booking.specialization.lower().strip()
-    ).first()
-    
-    if not doc_session:
-        print(f"[DEBUG] No DoctorSession record found for: {booking.doctor_name} - {booking.specialization}")
-        return jsonify({
-            "success": True, 
-            "status": "idle",
-            "msg": "Doctor session record not found"
-        })
+        if not doc_session:
+            continue
 
-    print(f"[DEBUG] Found DoctorSession: Date={doc_session.session_date}, Status={doc_session.status}, CurrentToken={doc_session.current_token}")
-    
-    if doc_session.session_date != today_str or doc_session.status == 'idle':
-        return jsonify({
-            "success": True, 
+        item = {
+            "doctor_name": booking.doctor_name,
+            "specialization": booking.specialization,
+            "your_token": booking.token,
+            "current_token": doc_session.current_token,
             "status": "idle",
-            "msg": "Doctor session not started yet"
-        })
-        
-    if doc_session.status == 'completed':
-        return jsonify({
-            "success": True,
-            "status": "completed",
-            "msg": "Session completed"
-        })
+            "patients_ahead": booking.token - doc_session.current_token,
+            "msg": ""
+        }
 
-    skipped = doc_session.skipped_tokens.strip().split(',') if doc_session.skipped_tokens else []
-    if str(booking.token) in skipped:
-        return jsonify({
-            "success": True,
-            "status": "skipped",
-            "msg": "Your token was skipped because of not reaching"
-        })
+        if doc_session.session_date == today_str:
+            item["status"] = doc_session.status
+            
+            skipped = doc_session.skipped_tokens.strip().split(',') if doc_session.skipped_tokens else []
+            if str(booking.token) in skipped:
+                item["status"] = "skipped"
         
-    patients_ahead = booking.token - doc_session.current_token
-    
-    # Logic for home page banner:
-    # 0 = "In Consultation (Now You)"
-    # 1 = "Next You (Prepare for Consultation)"
-    # < 0 = Finished
-    
+        results.append(item)
+
     return jsonify({
         "success": True,
-        "status": "active",
-        "doctor_name": booking.doctor_name,
-        "current_token": doc_session.current_token,
-        "your_token": booking.token,
-        "patients_ahead": patients_ahead
+        "data": results
     })
 
 # ===================== Main =====================
