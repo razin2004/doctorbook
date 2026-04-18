@@ -2640,7 +2640,10 @@
                         const start = parseTime(times[0]);
                         const end = parseTime(times[1]);
                         
-                        // SKIP if not live and more than 60 minutes away
+                        // 1. SKIP if current time is past the end time (e.g. shift over)
+                        if (currentMin > end.min) return;
+
+                        // 2. SKIP if not live and more than 60 minutes away
                         const minDiff = start.min - currentMin;
                         if (!isLive && minDiff > 60) return;
 
