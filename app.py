@@ -1129,7 +1129,7 @@ def patient_dashboard():
                            past_bookings=past_bookings,
                            prescriptions=prescriptions, 
                            all_doctors=all_doctors,
-                           is_doctor=is_doctor)
+                           can_switch=is_doctor)
 
 @app.route('/cancel_own_booking', methods=['POST'])
 def cancel_own_booking():
