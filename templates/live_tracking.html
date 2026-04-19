@@ -388,7 +388,42 @@
             filtered = filtered.filter(d => d.doctor_name === docValue);
         }
         
+        // ── Sort Doctors Logic ──
+        sortDoctors(filtered);
+        
         renderCards(filtered);
+    }
+    
+    function sortDoctors(data) {
+        data.sort((a, b) => {
+            // 1. Status Weights
+            const statusOrder = { 'Live Now': 10, 'Yet to start': 20, 'Completed': 30 };
+            let weightA = statusOrder[a.status] || 40;
+            let weightB = statusOrder[b.status] || 40;
+
+            // 2. Patient Priority (User Token)
+            const aKey = `${a.doctor_name.toLowerCase().trim()}|${a.specialization.toLowerCase().trim()}`;
+            const bKey = `${b.doctor_name.toLowerCase().trim()}|${b.specialization.toLowerCase().trim()}`;
+            if (userTokens[aKey]) weightA -= 5;
+            if (userTokens[bKey]) weightB -= 5;
+
+            if (weightA !== weightB) return weightA - weightB;
+
+            // 3. Tie-breakers within groups
+            if (a.status === 'Live Now') {
+                // Last started first
+                return (b.session_start || "").localeCompare(a.session_start || "");
+            }
+            if (a.status === 'Yet to start') {
+                // Starts soonest first
+                return (a.sched_start || "99:99").localeCompare(b.sched_start || "99:99");
+            }
+            if (a.status === 'Completed') {
+                // Recently completed first (first completed last)
+                return (b.session_end || "").localeCompare(a.session_end || "");
+            }
+            return 0;
+        });
     }
     
     function renderCards(data) {
@@ -437,17 +472,20 @@
     function renderUserToken(doc) {
         // Use JS methods for strings
         const jsKey = `${doc.doctor_name.toLowerCase().trim()}|${doc.specialization.toLowerCase().trim()}`;
-        const myToken = userTokens[jsKey];
+        const tokens = userTokens[jsKey]; // Now an array
         
-        if (!myToken) return '';
+        if (!tokens || tokens.length === 0) return '';
+        
+        const label = tokens.length > 1 ? "Your Tokens" : "Your Token";
+        const tokenList = tokens.map(t => `#${t}`).join(', ');
         
         return `
             <div class="your-token-box">
                 <div style="display:flex; align-items:center; gap:0.6rem;">
                    <i data-lucide="ticket" style="width:18px;height:18px;color:#0077b6;"></i>
-                   <span class="your-token-label">Your Token</span>
+                   <span class="your-token-label">${label}</span>
                 </div>
-                <span class="your-token-val">#${myToken}</span>
+                <span class="your-token-val" style="font-size: ${tokens.length > 2 ? '1.1rem' : '1.3rem'}">${tokenList}</span>
             </div>
         `;
     }

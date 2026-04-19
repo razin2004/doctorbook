@@ -650,11 +650,74 @@ def booking():
             bookings = PatientBooking.query.filter_by(user_id=user_id).order_by(PatientBooking.date.desc()).all()
             
             # Split into upcoming and past
-            ist = pytz.timezone('Asia/Kolkata')
-            today_str = datetime.now(ist).strftime("%Y-%m-%d")
+            # Fetch all doctors to check schedules
+            all_docs = get_all_doctors()
+            docs_map = { d.get("Name","").lower().strip(): d for d in all_docs }
             
-            upcoming_bookings = [b for b in bookings if (b.date or "") >= today_str]
-            past_bookings = [b for b in bookings if (b.date or "") < today_str]
+            ist = pytz.timezone('Asia/Kolkata')
+            now_ist = datetime.now(ist)
+            today_str = now_ist.strftime("%Y-%m-%d")
+            weekday = now_ist.strftime("%A")
+            current_time_str = now_ist.strftime("%H:%M")
+            
+            for b in bookings:
+                b_date = b.date or ""
+                is_past = False
+                
+                if b_date < today_str:
+                    is_past = True
+                elif b_date == today_str:
+                    # Check Session Status
+                    doc_session = DoctorSession.query.filter(
+                        db.func.lower(db.func.trim(DoctorSession.doctor_name)) == b.doctor_name.lower().strip(),
+                        db.func.lower(db.func.trim(DoctorSession.specialization)) == b.specialization.lower().strip()
+                    ).first()
+                    
+                    if doc_session and doc_session.session_date == today_str:
+                        # Attach dynamic data for live sync on the dashboard
+                        b.live_token = doc_session.current_token
+                        b.live_status = doc_session.status
+                        
+                        # Time-aware logic: Get scheduled start
+                        doc_data = docs_map.get(b.doctor_name.lower().strip())
+                        b.sched_start = "00:00"
+                        if doc_data:
+                            day_times = doc_data.get("DayTimes", {})
+                            time_range = day_times.get(weekday, "")
+                            if " - " in time_range:
+                                b.sched_start = time_range.split(" - ")[0].strip()
+                        
+                        # Flag if schedule has begun
+                        b.is_start_time_passed = (current_time_str >= b.sched_start)
+                        
+                        if doc_session.status == 'completed':
+                            is_past = True
+                        elif doc_session.current_token > b.token:
+                            is_past = True
+                    
+                    # Check End Time
+                    doc_data = docs_map.get(b.doctor_name.lower().strip())
+                    if not is_past and doc_data:
+                        day_times = doc_data.get("DayTimes", {})
+                        time_range = day_times.get(weekday, "")
+                        if " - " in time_range:
+                            try:
+                                end_time_str = time_range.split(" - ")[1].strip()
+                                # Compare HH:MM strings directly
+                                if current_time_str > end_time_str:
+                                    is_past = True
+                            except: pass
+                
+                if is_past:
+                    past_bookings.append(b)
+                else:
+                    upcoming_bookings.append(b)
+
+            # Note: bookings are already ordered by date DESC from the query
+            # but we want upcoming to be soonest first (and they are already sorted by date desc)
+            # Sort: Upcoming (First coming first), Past (Most recent first)
+            upcoming_bookings.sort(key=lambda x: (x.date or "", x.token or 0))
+            past_bookings.sort(key=lambda x: (x.date or "", x.token or 0), reverse=True)
         except Exception as e:
             print(f"[ERROR] Failed to fetch user bookings: {e}")
 
@@ -1011,11 +1074,36 @@ def patient_dashboard():
                 return (h.get("Reason") or "General Holiday").strip()
         return None
 
+    weekday = datetime.now(ist).strftime("%A")
+    current_time_str = datetime.now(ist).strftime("%H:%M")
+    docs_map = { d.get("Name","").lower().strip(): d for d in all_doctors }
+
     final_upcoming = []
     for b in upcoming_bookings:
         reason = get_holiday_reason(b.date)
         b.is_holiday = reason is not None
         b.holiday_reason = reason
+        
+        # Dashboard Sync Logic
+        if b.date == today_str:
+            doc_session = DoctorSession.query.filter(
+                db.func.lower(db.func.trim(DoctorSession.doctor_name)) == b.doctor_name.lower().strip(),
+                db.func.lower(db.func.trim(DoctorSession.specialization)) == b.specialization.lower().strip()
+            ).first()
+            
+            if doc_session:
+                b.live_token = doc_session.current_token
+                b.live_status = doc_session.status
+                
+                # Sched start for time-aware logic
+                doc_data = docs_map.get(b.doctor_name.lower().strip())
+                b.sched_start = "00:00"
+                if doc_data:
+                    tr = doc_data.get("DayTimes", {}).get(weekday, "")
+                    if " - " in tr: b.sched_start = tr.split(" - ")[0].strip()
+                
+                b.is_start_time_passed = (current_time_str >= b.sched_start)
+
         final_upcoming.append(b)
 
     return render_template('patient_dashboard.html', 
@@ -1320,11 +1408,12 @@ def admin_edit_doctor():
     data = request.get_json()
     combined = data.get("combined", "").strip()
     email = data.get("email", "").strip()
+    new_spec = data.get("specialization", "").strip()
     days = data.get("days", [])
     day_times = data.get("day_times", {})  # {"Monday": "09:00-11:00", ...}
 
-    if not combined or not days or not isinstance(day_times, dict) or not email:
-        return jsonify({"success": False, "msg": "Missing or invalid fields. Email is required."})
+    if not combined or not days or not isinstance(day_times, dict) or not email or not new_spec:
+        return jsonify({"success": False, "msg": "Missing fields. Email and Specialization are required."})
 
     if "@" not in email or "." not in email:
         return jsonify({"success": False, "msg": "Invalid email structure."})
@@ -1332,7 +1421,7 @@ def admin_edit_doctor():
     if " - " not in combined:
         return jsonify({"success": False, "msg": "Invalid doctor format"})
 
-    name, spec = [x.strip().lower() for x in combined.split(" - ", 1)]
+    name, old_spec = [x.strip().lower() for x in combined.split(" - ", 1)]
 
     day_names = ["Monday", "Tuesday", "Wednesday", "Thursday",
                  "Friday", "Saturday", "Sunday"]
@@ -1348,22 +1437,53 @@ def admin_edit_doctor():
         # Email uniqueness check (excluding currently edited doctor)
         if email:
             email_lower = email.lower().strip()
-            
-            # Check Spreadsheet uniqueness
             for r in rows:
                 r_dict = dict(zip(headers, r))
                 r_name = r_dict.get("Name", "").strip().lower()
                 r_spec = r_dict.get("Specialization", "").strip().lower()
                 r_email = r_dict.get("Email", "").strip().lower()
                 
-                if r_email == email_lower and (r_name != name or r_spec != spec):
-                    return jsonify({"success": False, "msg": "Email already registered by another doctor in spreadsheet"})
+                if r_email == email_lower and (r_name != name or r_spec != old_spec):
+                    return jsonify({"success": False, "msg": "Email already registered by another doctor"})
 
-            # Check SQLite uniqueness (Safety layer)
-            other_session = DoctorSession.query.filter(
-                DoctorSession.email == email_lower,
-                (db.func.lower(db.func.trim(DoctorSession.doctor_name)) != name) | (db.func.lower(db.func.trim(DoctorSession.specialization)) != spec)
-            ).first()
+        # Update Spreadsheet
+        found_idx = -1
+        for i, r in enumerate(rows):
+            r_dict = dict(zip(headers, r))
+            if r_dict.get("Name", "").strip().lower() == name and r_dict.get("Specialization", "").strip().lower() == old_spec:
+                found_idx = i + 2 # +1 for header, +1 for 1-indexing
+                break
+        
+        if found_idx == -1:
+            return jsonify({"success": False, "msg": "Doctor not found in registry"})
+
+        # Build update record
+        # Headers: Name, Specialization, Email, Days, DayTimes, TimeSlot, ImageURL
+        cols_to_update = {
+            "Specialization": new_spec,
+            "Email": email,
+            "Days": ", ".join(days),
+            "DayTimes": json.dumps(day_times)
+        }
+        
+        # update row
+        for col_name, val in cols_to_update.items():
+            if col_name in headers:
+                col_idx = headers.index(col_name) + 1
+                doctors_ws.update_cell(found_idx, col_idx, val)
+
+        # Update SQLite DB (DoctorSession)
+        doc_session = DoctorSession.query.filter(
+            db.func.lower(db.func.trim(DoctorSession.doctor_name)) == name,
+            db.func.lower(db.func.trim(DoctorSession.specialization)) == old_spec
+        ).first()
+
+        if doc_session:
+            doc_session.email = email.lower().strip()
+            doc_session.specialization = new_spec # Apply rename
+            db.session.commit()
+            
+        return jsonify({"success": True, "msg": "Doctor profile updated successfully"})
             if other_session:
                  return jsonify({"success": False, "msg": f"Email is already assigned to {other_session.doctor_name} in system database."})
 
@@ -3271,13 +3391,31 @@ def live_tokens():
                 current_token = doc_session.current_token
                 total_tokens = doc_session.total_tokens
                     
+            day_times_map = (d.get("DayTimes") or {})
+            time_range_str = day_times_map.get(weekday, "Not Set")
+            
+            sched_start = "99:99"
+            if " - " in time_range_str:
+                try:
+                    sched_start = time_range_str.split(" - ")[0].strip()
+                except: pass
+
+            session_start = ""
+            session_end = ""
+            if doc_session and doc_session.session_date == today_str:
+                session_start = doc_session.start_time or ""
+                session_end = doc_session.end_time or ""
+
             response_data.append({
                 "doctor_name": doc_name,
                 "specialization": doc_spec,
-                "time": (d.get("DayTimes") or {}).get(weekday, "Not Set"),
+                "time": time_range_str,
                 "status": status,
                 "current_token": current_token,
-                "total_tokens": total_tokens
+                "total_tokens": total_tokens,
+                "session_start": session_start,
+                "session_end": session_end,
+                "sched_start": sched_start
             })
     except: pass
         
@@ -3290,7 +3428,13 @@ def live_tokens():
             for b in my_bookings:
                 # Key by lowered (doctor, spec) for robust matching
                 key = f"{b.doctor_name.lower().strip()}|{b.specialization.lower().strip()}"
-                user_tokens[key] = b.token
+                if key not in user_tokens:
+                    user_tokens[key] = []
+                user_tokens[key].append(b.token)
+            
+            # Sort each doctor's token list
+            for k in user_tokens:
+                user_tokens[k].sort()
         except: pass
 
     return jsonify({
