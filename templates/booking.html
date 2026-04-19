@@ -386,6 +386,7 @@
   </header>
 
   <!-- 3-PANEL CARD NAV -->
+ 
   <div class="panel-nav">
     <div class="panel-card" id="panelDoctor" onclick="showSection('bookDoctor', this)">
       <div class="panel-card-icon"><i data-lucide="user-round-search"></i></div>
@@ -401,6 +402,16 @@
         <div class="panel-card-sub">Choose by department</div>
       </div>
     </div>
+    {% if not is_admin_view %}
+    <div class="panel-card" id="panelMyBookings" onclick="showSection('mybookings', this)">
+      <div class="panel-card-icon"><i data-lucide="calendar-heart"></i></div>
+      <div class="panel-card-text">
+        <div class="panel-card-label">My Bookings</div>
+        <div class="panel-card-sub">Manage your bookings</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if is_admin_view %}
     <div class="panel-card" id="panelAdmin" onclick="showSection('admin', this)">
       <div class="panel-card-icon"><i data-lucide="shield-check"></i></div>
       <div class="panel-card-text">
@@ -408,12 +419,97 @@
         <div class="panel-card-sub">Manage doctors &amp; schedule</div>
       </div>
     </div>
+    {% endif %}
   </div>
 
+{% if is_admin_view  %}
   <div class="helper-text">
     <i data-lucide="mouse-pointer-2" style="width:14px;height:14px;"></i>
     <span>Select a panel above to book an appointment or manage records</span>
   </div>
+ {% endif %}
+ {% if not is_admin_view  %}
+  <div class="helper-text">
+    <i data-lucide="mouse-pointer-2" style="width:14px;height:14px;"></i>
+    <span>Select a panel above to book an appointment or manage bookings</span>
+  </div>
+  
+{% endif %}
+
+  <!-- ==================== MY BOOKINGS (Patient Only) ==================== -->
+  <section id="mybookings" class="booking-section container" style="display:none;">
+    {% if not user_id %}
+    <div class="myclass" style="text-align:center; padding: 3rem 1.5rem; background:rgba(255,255,255,0.4); border-radius:30px; border:1px solid rgba(255,255,255,0.7); backdrop-filter:blur(10px);">
+      <div style="background:rgba(0,119,182,0.1); width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem;">
+        <i data-lucide="lock" style="width:30px;height:30px;color:#0077b6;"></i>
+      </div>
+      <h2 style="margin-bottom:0.5rem; color:#0f172a; font-weight:800;">Log-in Required</h2>
+      <p style="color:#64748b; margin-bottom:1.8rem; font-weight:500;">To see your bookings and manage your health records, please sign in to your account.</p>
+      <button class="btn" onclick="window.location.href='/?trigger_login=true&msg=To see your bookings, you need to login'" style="padding:0.75rem 2rem;">
+        <i data-lucide="log-in"></i>
+        Sign In Now
+      </button>
+    </div>
+    {% else %}
+    <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:2px solid rgba(0,119,182,0.1); padding-bottom:0.8rem;">
+      <h2 style="margin:0;"><i data-lucide="calendar-check" style="width:20px;height:20px;"></i> My Bookings</h2>
+    </div>
+
+    <!-- Upcoming / Past Tabs -->
+    <div class="booking-tabs" style="display:flex; gap:0.5rem; margin-bottom:1.5rem;">
+      <button class="booking-tab active" id="tab-upcoming" onclick="switchBookingTab('upcoming')" style="flex:1; padding:0.6rem; border-radius:12px; border:none; background:rgba(0,119,182,0.06); color:#0077b6; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+        <i data-lucide="clock" style="width:16px;height:16px;"></i> Upcoming ({{ upcoming_bookings|length }})
+      </button>
+      <button class="booking-tab" id="tab-past" onclick="switchBookingTab('past')" style="flex:1; padding:0.6rem; border-radius:12px; border:none; background:transparent; color:#64748b; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem;">
+        <i data-lucide="history" style="width:16px;height:16px;"></i> Past ({{ past_bookings|length }})
+      </button>
+    </div>
+
+    <div class="tab-panel active" id="panel-upcoming">
+      <div class="item-list" style="display:flex; flex-direction:column; gap:1rem;">
+        {% if upcoming_bookings %}
+          {% for b in upcoming_bookings %}
+          <div class="item-card" style="background:#fff; border-radius:16px; padding:1.2rem; box-shadow:0 4px 15px rgba(0,0,0,0.03); border:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+            <div class="item-info">
+              <div class="item-title" style="font-weight:700; color:#0f172a; font-size:1rem;">{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.85rem;">({{ b.specialization }})</span></div>
+              <div class="item-meta" style="display:flex; flex-wrap:wrap; gap:0.6rem; font-size:0.8rem; color:#64748b; margin-top:0.3rem;">
+                <span class="meta-tag"><i data-lucide="calendar" style="width:13px;height:13px;"></i> {{ b.date }}</span>
+                <span class="meta-tag"><i data-lucide="clock" style="width:13px;height:13px;"></i> {{ b.time }}</span>
+                <span style="background:#e0f2fe; color:#0284c7; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem;">Token #{{ b.token }}</span>
+              </div>
+            </div>
+            <div class="item-actions">
+               <button class="btn-view" style="background:#f0fdf4; color:#16a34a; border:none; padding:0.4rem 0.8rem; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer;" onclick="window.location.href='/patient_dashboard'">Dashboard Details</button>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="text-align:center; padding:2rem; color:#94a3b8;">No upcoming bookings found.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="tab-panel" id="panel-past" style="display:none;">
+      <div class="item-list" style="display:flex; flex-direction:column; gap:1rem;">
+        {% if past_bookings %}
+          {% for b in past_bookings %}
+          <div class="item-card" style="background:#fff; border-radius:16px; padding:1.2rem; box-shadow:0 4px 15px rgba(0,0,0,0.03); border:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; opacity:0.8;">
+            <div class="item-info">
+              <div class="item-title" style="font-weight:700; color:#0f172a; font-size:1rem;">{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.85rem;">({{ b.specialization }})</span></div>
+              <div class="item-meta" style="display:flex; flex-wrap:wrap; gap:0.6rem; font-size:0.8rem; color:#64748b; margin-top:0.3rem;">
+                <span class="meta-tag"><i data-lucide="calendar" style="width:13px;height:13px;"></i> {{ b.date }}</span>
+                <span style="background:#f1f5f9; color:#64748b; padding:0.15rem 0.5rem; border-radius:6px; font-weight:700; font-size:0.75rem;">Completed</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="text-align:center; padding:2rem; color:#94a3b8;">No past bookings found.</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </section>
 
   <!-- ==================== BOOK BY DOCTOR ==================== -->
   <section id="bookDoctor" class="booking-section container" style="display:none;">
@@ -508,13 +604,14 @@
     </div>
   </section>
 
+  {% if is_admin_view %}
   <!-- ==================== ADMIN ==================== -->
-  <section id="admin" class="admin-section container" style="display:none;">
+  <section id="admin" class="admin-section container" style="display:block;">
 
     <!-- Login Form – glass panel matching other booking panels -->
     <div id="adminLoginDiv">
       <!-- Simplified Session Re-entry (Hidden by default) -->
-      <div id="adminActiveSessionDiv" class="myclass" style="display:none; max-width:460px; margin:0 auto; text-align:center; padding:2.5rem 2rem;">
+      <div id="adminActiveSessionDiv" class="myclass" style="{% if admin_email %}display:block;{% else %}display:none;{% endif %} max-width:460px; margin:0 auto; text-align:center; padding:2.5rem 2rem;">
         <div style="background: rgba(16, 185, 129, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #10b981;">
           <i data-lucide="shield-check" style="width: 32px; height: 32px;"></i>
         </div>
@@ -526,7 +623,8 @@
       </div>
 
       <!-- Standard Login Form -->
-      <div id="adminLoginFormDiv" class="myclass" style="max-width:460px; margin:0 auto;">
+       
+      <div id="adminLoginFormDiv" class="myclass" style="{% if not admin_email %}display:block;{% else %}display:none;{% endif %} max-width:460px; margin:0 auto;">
         <h2 style="margin-top:0;"><i data-lucide="shield-check"></i> Admin Login</h2>
         <p style="font-size:0.85rem; color:#6b7280; margin:-0.4rem 0 1rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.35rem;">
           <span style="display:flex; align-items:center; gap:0.4rem;">
@@ -694,7 +792,30 @@
         <input id="addDocEmail" type="email" required placeholder="e.g. doctor@primecare.com" />
 
         <label for="addDocSpec"><i data-lucide="activity"></i> Specialization</label>
-        <input id="addDocSpec" required placeholder="e.g. Cardiology" />
+        <input id="addDocSpec" required placeholder="Type or select specialization" list="specializationSuggestions" />
+        
+        <datalist id="specializationSuggestions">
+          <option value="General Physician">
+          <option value="Cardiologist">
+          <option value="Pediatrician">
+          <option value="Dermatologist">
+          <option value="Orthopedics">
+          <option value="Neurologist">
+          <option value="ENT (Ear, Nose, Throat)">
+          <option value="Gynecologist">
+          <option value="Ophthalmologist">
+          <option value="Psychiatrist">
+          <option value="Oncologist">
+          <option value="Urologist">
+          <option value="Gastroenterologist">
+          <option value="Endocrinology">
+          <option value="Radiologist">
+          <option value="Anesthesiology">
+          <option value="Dentist">
+          <option value="Physiotherapist">
+          <option value="General Surgeon">
+          <option value="Psychologist">
+        </datalist>
 
         <label style="margin-top:1rem;"><i data-lucide="calendar-days"></i> Working Days &amp; Time</label>
 
@@ -1061,7 +1182,8 @@
       </div>
     </div>
   </section>
- 
+  {% endif %}
+
    <!-- Universal Confirmation Modal (Standardized) -->
    <div class="modal-overlay" id="universalModal">
      <div class="modal-content" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
@@ -1148,6 +1270,7 @@
     const sectionPanelMap = {
       bookDoctor: 'panelDoctor',
       bookDept:   'panelDept',
+      mybookings: 'panelMyBookings',
       admin:      'panelAdmin'
     };
 
@@ -1165,6 +1288,24 @@
         checkAdminSession();
       }
       localStorage.setItem('activeSection', id); // Save state
+    }
+
+    function switchBookingTab(tab) {
+      document.querySelectorAll('.booking-tab').forEach(t => {
+          t.classList.remove('active');
+          t.style.background = 'transparent';
+          t.style.color = '#64748b';
+          t.style.fontWeight = '600';
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+      
+      const activeTab = document.getElementById('tab-' + tab);
+      activeTab.classList.add('active');
+      activeTab.style.background = 'rgba(0,119,182,0.06)';
+      activeTab.style.color = '#0077b6';
+      activeTab.style.fontWeight = '700';
+      
+      document.getElementById('panel-' + tab).style.display = 'block';
       lucide.createIcons();
     }
 
@@ -1447,6 +1588,7 @@
       const res = await fetch('/get_doctor_pairs');
       const pairs = await res.json();
       const select = document.getElementById('deleteDoctorSelect');
+      if (!select) return;
       select.innerHTML = "<option value=''>-- Select Doctor --</option>";
       if (!pairs || pairs.length === 0) {
         const opt = document.createElement('option');
@@ -1510,7 +1652,7 @@
     }
 
     // ─── Doctor select → date ──────────────────────────────────
-    document.getElementById('doctorSelect').addEventListener('change', function () {
+    document.getElementById('doctorSelect')?.addEventListener('change', function () {
       const selectedOption = this.selectedOptions[0];
       const doctorMsgDiv = document.getElementById('doctorMsg');
       const dateInput    = document.getElementById('doctorDate');
@@ -1525,7 +1667,7 @@
       workingDays = daysStr ? daysStr.split(',').map(day=>dayMap[day.trim()]) : [];
     });
 
-    document.getElementById('doctorDate').addEventListener('change', async function () {
+    document.getElementById('doctorDate')?.addEventListener('change', async function () {
       const doctorMsgDiv = document.getElementById('doctorMsg');
       doctorMsgDiv.style.display='none'; doctorMsgDiv.textContent='';
       const doctorSelect = document.getElementById('doctorSelect');
@@ -1596,7 +1738,7 @@
     });
 
     // ─── Edit doctor select ────────────────────────────────────
-    document.getElementById('editDoctorSelect').addEventListener('change', function () {
+    document.getElementById('editDoctorSelect')?.addEventListener('change', function () {
       const selected = this.selectedOptions[0];
       if (!selected) return;
       document.querySelectorAll('.day-check-edit').forEach(cb => cb.checked=false);
@@ -1696,13 +1838,13 @@
                 .split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
     }
 
-    document.getElementById('addDocSpec').addEventListener('blur', e => { e.target.value = capitalizeWords(e.target.value); });
-    document.getElementById('addDocName').addEventListener('blur', e => {
+    document.getElementById('addDocSpec')?.addEventListener('blur', e => { e.target.value = capitalizeWords(e.target.value); });
+    document.getElementById('addDocName')?.addEventListener('blur', e => {
       let name = e.target.value.replace(/^Dr\.?\s*/i,'');
       e.target.value = `Dr. ${capitalizeWords(name)}`;
     });
-    document.getElementById('depName').addEventListener('blur', e => { e.target.value = capitalizeWords(e.target.value); });
-    document.getElementById('docName').addEventListener('blur', e => { e.target.value = capitalizeWords(e.target.value); });
+    document.getElementById('depName')?.addEventListener('blur', e => { e.target.value = capitalizeWords(e.target.value); });
+    document.getElementById('docName')?.addEventListener('blur', e => { e.target.value = capitalizeWords(e.target.value); });
 
     function cleanAgeInput(id) {
       const f = document.getElementById(id);
@@ -1710,7 +1852,7 @@
     }
 
     // ─── Book by Doctor form ───────────────────────────────────
-    document.getElementById('doctorBookingForm').addEventListener('submit', async e => {
+    document.getElementById('doctorBookingForm')?.addEventListener('submit', async e => {
       e.preventDefault();
       cleanAgeInput('docAge');
       const btn = e.target.querySelector("button[type='submit']");
@@ -1848,7 +1990,7 @@
     }
 
     // ─── Book by Dept form ─────────────────────────────────────
-    document.getElementById('departmentBookingForm').addEventListener('submit', async e => {
+    document.getElementById('departmentBookingForm')?.addEventListener('submit', async e => {
       e.preventDefault();
       cleanAgeInput('depAge');
       const btn = e.target.querySelector("button[type='submit']");
@@ -1875,7 +2017,7 @@
       finally { btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); }
     });
 
-    document.getElementById('specDate').addEventListener('change', async function() {
+    document.getElementById('specDate')?.addEventListener('change', async function() {
       const spec         = document.getElementById('specSelect').value;
       const dateVal      = this.value;
       const messageDiv   = document.getElementById('noDoctorMsg');
@@ -2022,7 +2164,7 @@
       dateInput.setAttribute('min', today);
     }
 
-    document.getElementById('adminBookDate').addEventListener('change', async function() {
+    document.getElementById('adminBookDate')?.addEventListener('change', async function() {
       const msgDiv = document.getElementById('adminBookDateMsg');
       if (msgDiv) { msgDiv.style.display = 'none'; msgDiv.textContent = ''; }
       
@@ -2218,7 +2360,7 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    document.getElementById('adminBookPatientForm').addEventListener('submit', async e => {
+    document.getElementById('adminBookPatientForm')?.addEventListener('submit', async e => {
       e.preventDefault();
       const payload = {
         sheet_url: document.getElementById('adminBookDoc').value,
@@ -2234,9 +2376,9 @@
 
     // ─── Admin login ───────────────────────────────────────────
 
-    document.getElementById('sendOtpBtn').addEventListener('click', async () => {
+    document.getElementById('sendOtpBtn')?.addEventListener('click', async () => {
       const btn  = document.getElementById('sendOtpBtn');
-      const email = document.getElementById('adminEmail').value.trim();
+      const email = document.getElementById('adminEmail')?.value?.trim();
       if (!email) { showToast('Please enter your admin email address.', 'error'); return; }
       btn.disabled = true;
       btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Sending...'; lucide.createIcons();
@@ -2259,7 +2401,7 @@
       }
     });
 
-    document.getElementById('adminLoginForm').addEventListener('submit', async(e) => {
+    document.getElementById('adminLoginForm')?.addEventListener('submit', async(e) => {
       e.preventDefault();
       const btn = e.target.querySelector("button[type='submit']");
       const otp = document.getElementById('adminOtp').value.trim();
@@ -2371,7 +2513,7 @@
     // document.getElementById('logoutBtn').addEventListener('click', openLogoutModal); // Fixed: logoutBtn id does not exist, use headerLogoutBtn instead (already handled in DOMContentLoaded)
 
     // ─── Add doctor ────────────────────────────────────────────
-    document.getElementById('adminAddDoctorForm').addEventListener('submit', async e => {
+    document.getElementById('adminAddDoctorForm')?.addEventListener('submit', async e => {
       e.preventDefault();
       const btn=e.target.querySelector("button[type='submit']");
       btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Adding...'; lucide.createIcons();
@@ -2422,7 +2564,7 @@
     });
 
     // ─── Edit doctor ───────────────────────────────────────────
-    document.getElementById('adminEditDoctorForm').addEventListener('submit', async e => {
+    document.getElementById('adminEditDoctorForm')?.addEventListener('submit', async e => {
       e.preventDefault();
       const btn=e.target.querySelector("button[type='submit']");
       btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Saving...'; lucide.createIcons();
@@ -2462,7 +2604,7 @@
     });
 
     // ─── Delete doctor ─────────────────────────────────────────
-    document.getElementById('adminDeleteDoctorForm').addEventListener('submit', async e => {
+    document.getElementById('adminDeleteDoctorForm')?.addEventListener('submit', async e => {
       e.preventDefault();
       const btn=e.target.querySelector("button[type='submit']");
       btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Deleting...'; lucide.createIcons();
@@ -2546,7 +2688,7 @@
       } catch(err){ showMessage('leaveMsg',"Couldn't load leave dates. Please try again."); }
     }
 
-    document.getElementById('addLeaveBtn').addEventListener('click', async()=>{
+    document.getElementById('addLeaveBtn')?.addEventListener('click', async()=>{
       const combined=document.getElementById('editDoctorSelect').value;
       const date=document.getElementById('leaveDate').value;
       const reason=document.getElementById('leaveReason').value.trim();
@@ -2991,7 +3133,7 @@ function downloadPDF() {
     window.closeUniversalModal = window.closeModal;
     window.openUniversalModal = window.openModal;
 
-    document.getElementById('unvConfirmBtn').addEventListener('click', () => {
+    document.getElementById('unvConfirmBtn')?.addEventListener('click', () => {
       console.log("[Modal] Confirmation clicked");
       if (activeModalAction) activeModalAction();
       closeModal();
@@ -3000,6 +3142,7 @@ function downloadPDF() {
     window.openLogoutModal = function() {
       openModal('logout', 'Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
     };
+
   </script>
   <footer class="site-footer">
     <div class="footer-content">

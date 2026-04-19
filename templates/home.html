@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -139,6 +139,22 @@
     }
     #homeTokenBanner:active { cursor: grabbing; }
     #homeTokenBanner.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── FLOATING LIVE TICKER OVERLAY (NON-STICKY) ── */
+    #liveTicker {
+      position: relative; top: 0; left: 0; right: 0;
+      z-index: 90; height: 32px;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      background: rgba(3, 4, 94, 0.7);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: none; align-items: center;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-top: 0;
+    }
+    #liveTicker .ticker-item { color: #fff; font-weight: 500; font-size: 0.78rem; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+    #liveTicker .status-dot.live { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    
     
     .banner-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
     .banner-status { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -151,6 +167,216 @@
     .stat-val { font-size: 1.6rem; font-weight: 950; letter-spacing: -0.02em; line-height: 1; }
     .stat-live { color: #10b981; }
     .stat-mine { color: #0077b6; }
+
+    /* ── MOBILE-PRO PREMIUM SYSTEM ── */
+    :root {
+      --primary: #0077b6;
+      --primary-dark: #03045e;
+      --primary-soft: #caf0f8;
+      --accent: #f59e0b;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --surface: #ffffff;
+      --glass: rgba(255, 255, 255, 0.85);
+      --border-light: rgba(0, 119, 182, 0.1);
+      --shadow-premium: 0 15px 35px -12px rgba(3, 4, 94, 0.1);
+      --radius-lg: 20px;
+    }
+
+    .home-section { 
+      padding: 5rem 1.5rem; 
+      max-width: 1200px; 
+      margin: 0 auto;
+      position: relative;
+    }
+    .section-tag {
+      display: inline-block;
+      color: var(--primary);
+      background: var(--primary-soft);
+      padding: 0.35rem 0.85rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+    }
+
+    /* ── HERO PRO ── */
+    .hero-premium {
+      min-height: 80vh;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-start; /* Move content upward */
+      padding-top: clamp(60px, 12vh, 120px);
+      background: #023e8a;
+      border-bottom: 5px solid var(--accent);
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background: url('/static/image/hero_premium.png') center/cover no-repeat;
+      opacity: 0.7;
+      filter: brightness(0.9);
+    }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(110deg, rgba(3, 4, 94, 0.95) 0%, rgba(3, 4, 94, 0.6) 100%);
+    }
+    .hero-content {
+      position: relative; z-index: 10;
+      width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 2rem;
+      color: #fff;
+      text-align: left; /* Strict left alignment */
+    }
+    .hero-content h1 {
+      font-size: clamp(2rem, 5vw, 4.5rem);
+      font-weight: 900; line-height: 1.1; margin-bottom: 1.2rem;
+      max-width: 800px;
+    }
+    .hero-content h1 span { color: var(--accent); }
+    .hero-content p {
+      font-size: clamp(1rem, 1.8vw, 1.25rem);
+      max-width: 600px; opacity: 0.9; margin-bottom: 2.5rem; line-height: 1.6;
+    }
+
+    /* ── TRUST STRIP ── */
+    .trust-strip {
+      max-width: 1050px; margin: -50px auto 3rem;
+      background: var(--glass);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1.5px solid rgba(255,255,255,0.6);
+      padding: 1.8rem; border-radius: var(--radius-lg);
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+      box-shadow: var(--shadow-premium); position: relative; z-index: 20;
+    }
+    .trust-item { text-align: center; border-right: 1px solid rgba(0,0,0,0.05); }
+    .trust-item:last-child { border-right: none; }
+    .trust-val { display: block; font-size: 1.8rem; font-weight: 900; color: var(--primary-dark); }
+    .trust-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+
+    /* ── HERITAGE ── */
+    .heritage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+    .heritage-text h2 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 850; color: var(--primary-dark); margin-bottom: 1.2rem; }
+    .heritage-text p { font-size: 1rem; line-height: 1.7; color: var(--text-muted); margin-bottom: 2rem; }
+    
+    /* ── LEADERSHIP ── */
+    .leadership-bg { background: #fdfdfd; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+    .leadership-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2.5rem; }
+    .leader-card {
+      background: #fff; border-radius: var(--radius-lg); padding: 2rem;
+      border: 1px solid #f1f5f9; display: flex; gap: 1.5rem; align-items: center;
+      transition: transform 0.3s ease;
+    }
+    .leader-card:hover { transform: translateY(-5px); border-color: var(--primary-soft); }
+    .leader-img { width: 110px; height: 110px; border-radius: 16px; overflow: hidden; flex-shrink: 0; background: #eee; }
+    .leader-img img { width: 100%; height: 100%; object-fit: cover; }
+    .leader-info h3 { font-size: 1.2rem; color: var(--primary-dark); margin-bottom: 0.2rem; }
+    .leader-role { display: block; color: var(--accent); font-weight: 800; font-size: 0.72rem; text-transform: uppercase; margin-bottom: 0.6rem; letter-spacing: 0.05em; }
+    .leader-bio { font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── VISIT ── */
+    .visit-card {
+      background: var(--primary-dark); border-radius: 32px; padding: 3.5rem;
+      color: #fff; display: grid; grid-template-columns: 1fr 1.2fr; gap: 4rem;
+    }
+    .visit-info h2 { font-size: 2.2rem; margin-bottom: 1.8rem; }
+    .c-row { display: flex; gap: 1.2rem; margin-bottom: 1.8rem; align-items: center; }
+    .c-icon { width: 44px; height: 44px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .c-text h4 { font-size: 0.8rem; opacity: 0.7; text-transform: uppercase; margin-bottom: 2px; }
+    .c-text p { font-size: 1.05rem; font-weight: 600; }
+
+    /* ── DEPARTMENTS ── */
+    .dept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; margin-top: 2.5rem; }
+    .dept-card {
+      background: #fff; padding: 2rem; border-radius: var(--radius-lg); border: 1.5px solid #f1f5f9; cursor: pointer; transition: all 0.3s ease;
+    }
+    .dept-card:hover { border-color: var(--primary); background: #f0f9ff; }
+    .dept-icon { width: 50px; height: 50px; background: #f0f9ff; color: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.2rem; }
+    .dept-card h4 { font-size: 1.15rem; color: var(--primary-dark); margin-bottom: 0.4rem; }
+    .dept-card p { font-size: 0.88rem; color: var(--text-muted); }
+
+    /* ── ACTION PILLS ── */
+    .action-pill {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+      padding: 0.8rem 1.4rem; border-radius: 14px; font-weight: 750; font-size: 0.88rem;
+      text-decoration: none; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border: 1.5px solid rgba(255,255,255,0.2); cursor: pointer;
+    }
+    .pill-directions { background: #fff; color: var(--primary-dark); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .pill-directions:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.18); background: var(--primary-soft); }
+    .pill-whatsapp { background: #25d366; color: #fff; border-color: rgba(0,0,0,0.05); }
+    .pill-whatsapp:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(37,211,102,0.3); background: #22c35e; }
+
+    /* ── FOOTER PRO (ULTIMATE EDGE-TO-EDGE) ── */
+    .site-footer-pro {
+      background: #020617; color: #fff; padding: 5rem 0 0; margin-top: 5rem;
+      width: 100vw; position: relative; left: 50%; right: 50%;
+      margin-left: -50vw; margin-right: -50vw;
+      margin-bottom: 0 !important;
+    }
+    .f-content { margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr; gap: 4rem; width: 100%; max-width: 1200px; padding: 0 2rem 4rem; }
+    .f-col h4 { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--accent); margin-bottom: 1.5rem; }
+    .f-links { list-style: none; padding: 0; margin: 0; }
+    .f-links li { margin-bottom: 0.8rem; }
+    .f-links a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+    .f-links a:hover { color: #fff; }
+
+    /* ── MOBILE OVERRIDES (Correct Scaling) ── */
+    @media (max-width: 968px) {
+      .f-content { grid-template-columns: 1fr 1fr; gap: 3rem; }
+    }
+    @media (max-width: 768px) {
+      .heritage-grid, .leadership-grid, .visit-card { grid-template-columns: 1fr; gap: 2.5rem; }
+      .trust-strip { grid-template-columns: 1fr 1fr; padding: 1.2rem; margin-top: -95px; }
+      .visit-card { padding: 2.2rem 1.2rem; }
+      .hero-content { padding: 0 1.2rem; text-align: left; }
+      .hero-content h1 { font-size: 2.1rem; }
+      .hero-content p { margin: 0 0 2rem; }
+    }
+    @media (max-width: 600px) {
+      .dept-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+      .dept-card { padding: 1.2rem 0.8rem; }
+      .dept-icon { width: 40px; height: 40px; margin-bottom: 0.8rem; }
+      .dept-card h4 { font-size: 0.95rem; }
+      .dept-card p { font-size: 0.75rem; }
+    }
+    @media (max-width: 500px) {
+      .home-section { padding: 3.5rem 1.25rem; }
+      .trust-item { border-right: none; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+      .trust-item:nth-child(even) { border-left: 1px solid rgba(0,0,0,0.05); border-bottom: 1px solid rgba(0,0,0,0.05); }
+      .leader-card { flex-direction: column; text-align: center; padding: 1.5rem; }
+      .leader-img { width: 90px; height: 90px; }
+      .f-content { 
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2.5rem 1.5rem; 
+        width: 100%; 
+        text-align: left; 
+      }
+      .f-col.f-brand { grid-column: span 2; }
+      .site-footer-pro { 
+        padding: 4rem 0 0; 
+        width: 100vw; margin-left: -50vw;
+      }
+
+      /* Force side-by-side buttons/pills on small mobile */
+      .hero-content .hero-btns, .visit-info .action-pill-container {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0.6rem !important;
+      }
+      .hero-content .btn, .visit-info .action-pill {
+        flex: 1;
+        padding: 0 0.8rem !important;
+        font-size: 0.75rem !important;
+        height: 48px !important;
+        min-width: 0 !important;
+        white-space: nowrap;
+      }
+      .action-pill i, .action-pill svg { width: 14px !important; height: 14px !important; }
+    }
 
     /* ── HERO ── */
     .hero {
@@ -214,7 +440,7 @@
     /* ── DOCTORS HEADING ── */
     .doctors-heading {
       position: sticky;
-      top: 4.1rem;       /* header is ~4rem tall, tiny gap */
+      top: 3.8rem;       /* header is ~4rem tall, synced with active design */
       width: 100%;
       background: rgba(0,119,182,0.97);
       color: #fff;
@@ -239,7 +465,7 @@
       padding: 0 1.5rem 2.5rem;
     }
 
-    #first-spec { scroll-margin-top: 8rem; }
+    #first-spec, .spec-section { scroll-margin-top: 9.5rem; }
 
     .spec-section { margin-top: 2.2rem; }
     .spec-heading {
@@ -248,6 +474,7 @@
       display: flex; align-items: center; gap: 0.45rem;
       padding-bottom: 0.35rem;
       border-bottom: 2.5px solid rgba(0,119,182,0.18);
+      scroll-margin-top: 9.5rem;
     }
     .spec-heading svg { width: 20px; height: 20px; }
 
@@ -1046,45 +1273,171 @@
     </div>
   </header>
   
-  <!-- Who's In Now Live Ticker -->
+  <!-- Who's In Now Live Ticker (Non-Sticky) -->
   <div class="ticker-wrapper" id="liveTicker">
     <div class="ticker-container" id="tickerContent">
       <!-- Injected by JS -->
     </div>
   </div>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-left">
-      <h1>Care you can <span>trust</span>,<br>when you need it.</h1>
-      <p class="hero-tagline">
-        Consult experienced specialists at PrimeCare Clinic. Book your visit in a few clicks —
-        no phone calls, no waiting in long queues.
-      </p>
-
-      <div class="hero-highlights">
-        <div class="pill"><i data-lucide="shield-check"></i> Experienced specialists</div>
-        <div class="pill"><i data-lucide="ticket"></i> Online token booking</div>
-        <div class="pill"><i data-lucide="list-ordered"></i> Fair department allocation</div>
-        <div class="pill"><i data-lucide="clock"></i> Organised daily schedule</div>
+  <!-- MOBILE-PRO PREMIUM CONTENT -->
+  <section class="hero-premium">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content" style="margin-top: -30px;" >
+      <span style="background:rgba(255,255,255,0.15); padding: 0.4rem 1rem; border-radius: 99px; font-size: 0.8rem; font-weight: 700; display: inline-block; margin-bottom: 1.5rem;">
+        <i data-lucide="shield-check" style="width:14px; height:14px; vertical-align: middle; margin-right: 4px;"></i> Quality Patient Care Since 2012
+      </span>
+      <h1>Trusted Care For <br><span>Healthy Living.</span></h1>
+      <p>Consult with world-class specialists at PrimeCare Clinic. We combine decades of medical heritage with modern diagnostic technology for your wellness.</p>
+      <div class="hero-btns" style="display:flex; gap:1rem; flex-wrap: wrap; justify-content: inherit;">
+        <button class="btn btn-primary" style="height: 52px; padding: 0 2rem; min-width: auto;" onclick="window.location.href='/booking'">
+          Book Appointment
+        </button>
+        <button class="btn btn-outline" style="height: 52px; padding: 0 2rem; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: #fff; min-width: auto;" onclick="document.getElementById('services-grid').scrollIntoView({behavior:'smooth'})">
+          Our Services
+        </button>
       </div>
+    </div>
+  </section>
 
-      <div class="hero-cta">
-        <div class="hero-cta-btns">
-          <button class="btn btn-primary" onclick="window.location.href='/booking'">
-            <i data-lucide="calendar-plus"></i>
-            Book an Appointment
-          </button>
+  <div class="trust-strip">
+    <div class="trust-item">
+      <span class="trust-val">25+</span>
+      <span class="trust-label">Specialists</span>
+    </div>
+    <div class="trust-item">
+      <span class="trust-val">50k+</span>
+      <span class="trust-label">Patients</span>
+    </div>
+    <div class="trust-item">
+      <span class="trust-val">2012</span>
+      <span class="trust-label">Since</span>
+    </div>
+    <div class="trust-item">
+      <span class="trust-val">ISO</span>
+      <span class="trust-label">Certified</span>
+    </div>
+  </div>
 
-          <button class="btn-info" id="howItWorksBtn" title="How booking works" aria-label="How booking works">
-            <i data-lucide="info"></i>
-          </button>
+  <section class="home-section" id="heritage-section">
+    <div class="heritage-grid">
+      <div class="heritage-text">
+        <span class="section-tag">Clinical Heritage</span>
+        <h2>Over 15 Years of <br>Medical Excellence</h2>
+        <p>PrimeCare Clinic was founded with a clear mission: to bring institutional-grade healthcare to our local community. Today, we stand as a beacon of clinical excellence, serving thousands with surgical precision and primary compassion.</p>
+        <div style="display:flex; gap:2rem;">
+          <div style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 900; color: var(--primary);">10+</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Departments</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 900; color: var(--primary);">24/7</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Support</div>
+          </div>
         </div>
-        <span class="hero-note">
-          <i data-lucide="zap"></i>
-          Instant token &middot; No waiting in queues
-        </span>
       </div>
+      <div class="heritage-visual" style="height: 380px; background: url('/static/image/background11.jpeg') center/cover no-repeat; border-radius: var(--radius-lg); position: relative;">
+        <div style="position: absolute; bottom: 18px; left: 18px; background: #fff; padding: 1rem; border-radius: 16px; border: 1px solid var(--primary-soft); box-shadow: 0 10px 20px rgba(0,0,0,0.05);">
+          <i data-lucide="award" style="color: var(--primary); margin-bottom: 4px;"></i>
+          <h4 style="margin:0; font-size: 0.85rem; color: var(--primary-dark);">National Safety Award</h4>
+          <p style="margin:0; font-size: 0.7rem; color: var(--text-muted);">2025 Clinical Excellence Winner</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="leadership-bg">
+    <div class="home-section">
+      <div style="text-align: center; margin-bottom: 3rem;">
+        <span class="section-tag">Governance</span>
+        <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--primary-dark); font-weight: 900;">Our Leadership</h2>
+      </div>
+      <div class="leadership-grid">
+        <div class="leader-card">
+          <div class="leader-img"><img src="/static/doctor_images/Dr_Sooppy_K_K.jpg" alt="CMO"></div>
+          <div class="leader-info">
+            <h3>Dr. Sooppy K K</h3>
+            <span class="leader-role">Founder & Chief Medical Officer</span>
+            <p class="leader-bio">Former Chief of Medicine with over 20 years of clinical and surgical experience.</p>
+          </div>
+        </div>
+        <div class="leader-card">
+          <div class="leader-img"><img src="/static/doctor_images/Dr_Hafis_Muhammad.jpg" alt="GM"></div>
+          <div class="leader-info">
+            <h3>Dr. Hafis Muhammad</h3>
+            <span class="leader-role">Clinic Manager</span>
+            <p class="leader-bio">Leading our patient-first transformation with 5 years in healthcare operations.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section" id="visit-section" style="scroll-margin-top: 5rem;">
+    <div id="contact-section" style="position: absolute; top: -100px;"></div>
+    <div class="visit-card" style="box-shadow: 0 25px 60px -15px rgba(3, 4, 94, 0.25);">
+      <div class="visit-info">
+        <span class="section-tag" style="background:rgba(255,255,255,0.15); color:#fff; border: 1px solid rgba(255,255,255,0.2);">Our Facility</span>
+        <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); margin-bottom: 2rem; font-weight: 900; letter-spacing: -0.02em;">Central Facility <br>in Koorachundu</h2>
+        
+        <div class="c-row">
+          <div class="c-icon"><i data-lucide="map-pin"></i></div>
+          <div class="c-text">
+            <h4>Location</h4>
+            <p>Main Road, Koorachundu, Kerala 673627</p>
+          </div>
+        </div>
+        
+        <div class="c-row" style="margin-bottom: 2.5rem;">
+          <div style="display:flex; gap:2rem; flex-wrap: wrap;">
+            <div style="display:flex; gap:0.6rem; align-items:center;">
+              <i data-lucide="clock" style="width:16px; opacity:0.6;"></i>
+              <span style="font-size:0.9rem; font-weight:600;">08:00 AM - 09:00 PM</span>
+            </div>
+            <div style="display:flex; gap:0.6rem; align-items:center;">
+              <i data-lucide="phone-call" style="width:16px; opacity:0.6;"></i>
+              <span style="font-size:0.9rem; font-weight:600;">+91 85920 31725</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-pill-container" style="display:flex; gap:1rem; flex-wrap: wrap;">
+          <a href="https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z/data=!3m1!4b1!4m4!3m3!8m2!3d11.5384625!4d75.8455156?entry=ttu" target="_blank" class="action-pill pill-directions">
+            <i data-lucide="navigation"></i> Get Directions
+          </a>
+          <a href="https://wa.me/918592031725?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" class="action-pill pill-whatsapp">
+            <svg style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp Enquiry
+          </a>
+        </div>
+      </div>
+      <div class="visit-visual" style="border-radius: 20px; overflow: hidden; position: relative; min-height: 280px;">
+        <div style="width:100%; height:100%; background: url('/static/image/hero_premium.png') center/cover; opacity: 0.6; filter: grayscale(20%);"></div>
+        <div style="position: absolute; inset: 0; background: linear-gradient(to right, var(--primary-dark) 0%, transparent 100%);"></div>
+        <div style="position: absolute; bottom: 30px; left: 30px; color:#fff;">
+          <div style="display:flex; align-items:center; gap:0.5rem; opacity:0.8; font-size: 0.8rem; margin-bottom: 0.2rem;">
+            <i data-lucide="shield-check" style="width:14px;"></i> Verified Facility
+          </div>
+          <div style="font-weight:900; font-size: 1.4rem;">PrimeCare Clinic</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section" id="services-grid" style="scroll-margin-top: 5rem;">
+    <div id="services-section" style="position: absolute; top: -100px;"></div>
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--primary-dark); font-weight: 900;">Our Departments</h2>
+    </div>
+    <div class="dept-grid">
+      {% set icons = {'General Physician':'heart-pulse','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
+      {% for group in doctors | groupby('Specialization') %}
+      <div class="dept-card" onclick="scrollToSpec('{{ group.grouper }}')">
+        <div class="dept-icon"><i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i></div>
+        <h4>{{ group.grouper }}</h4>
+        <p>{{ group.list | length }} Doctors</p>
+      </div>
+      {% endfor %}
     </div>
   </section>
 
@@ -1258,12 +1611,13 @@
     </div>
   </div>
 
-  <!-- DOCTORS HEADING (sticky) -->
-  <div id="doctors-anchor" style="scroll-margin-top: 0px;"></div>
-  <h2 class="doctors-heading" id="doctors-section">
-    <i data-lucide="stethoscope"></i>
-    Our Doctors
-  </h2>
+  <!-- DOCTORS SECTION (Bounded Sticky Scope) -->
+  <div id="doctors-full-section">
+    <div id="doctors-anchor" style="scroll-margin-top: 4.5rem;"></div>
+    <h2 class="doctors-heading" id="doctors-section">
+      <i data-lucide="stethoscope"></i>
+      Our Doctors
+    </h2>
 
   <main class="content-inner">
     {% if not doctors %}
@@ -1275,8 +1629,7 @@
       {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
 
       {% for group in doctors | groupby('Specialization') %}
-        {% set spec_index = loop.index0 %}
-        <section class="spec-section" {% if loop.first %}id="first-spec"{% endif %} >
+        <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}" style="scroll-margin-top: 8rem;" >
           <h2 class="spec-heading">
             <i data-lucide="activity"></i>
             {{ group.grouper }}
@@ -1350,68 +1703,63 @@
         </section>
       {% endfor %}
     {% endif %}
+  </div>
 
-  <footer class="site-footer" style="background: none;">
-    <!-- PREMIUM CONTACT SECTION (MOVED) -->
-    <div class="contact-grid">
-      <!-- Phone Card -->
-      <a href="tel:+918592031725" class="contact-card contact-phone">
-        <div class="contact-icon"><i data-lucide="phone"></i></div>
-        <h4>Call Us</h4>
-        <p class="contact-text-primary">8592031725</p>
-        <p class="contact-text-sub">Enquiries & Cancellation</p>
-      </a>
-
-      <!-- WhatsApp Card -->
-      <a href="https://wa.me/918592031725" target="_blank" class="contact-card contact-whatsapp">
-        <div class="contact-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-          </svg>
+  <footer class="site-footer-pro">
+    <div class="f-content">
+      <div class="f-col f-brand">
+        <h2 style="color: #fff; margin-bottom: 1rem;">PrimeCare Clinic</h2>
+        <p style="color: #94a3b8; line-height: 1.6; font-size: 0.95rem;">Providing institutional-grade healthcare since 2012. Your trust is our foundation, and your health is our mission.</p>
+        <div style="display:flex; gap:1rem; margin-top:2rem; color: rgba(255,255,255,0.4);">
+          <i data-lucide="instagram"></i>
+          <i data-lucide="facebook"></i>
+          <i data-lucide="twitter"></i>
         </div>
-        <h4>WhatsApp</h4>
-        <p class="contact-text-primary">8592031725</p>
-        <p class="contact-text-sub">WhatsApp Enquiry</p>
-      </a>
-
-      <!-- Location Card -->
-      <a href="https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z/data=!3m1!4b1!4m4!3m3!8m2!3d11.5384625!4d75.8455156?entry=ttu" 
-         target="_blank" class="contact-card contact-location">
-        <div class="contact-icon"><i data-lucide="map-pin"></i></div>
-        <h4>Location</h4>
-        <p class="contact-text-primary">Koorachundu</p>
-        <p class="contact-text-sub">Get Directions</p>
-      </a>
+      </div>
+      <div class="f-col">
+        <h4>Navigation</h4>
+        <ul class="f-links">
+          <li><a href="/">Home</a></li>
+          {% if user %}
+            <li><a href="/patient_dashboard">My Profile</a></li>
+          {% else %}
+            <li><a href="#" onclick="openAuthModal('login')">Login</a></li>
+          {% endif %}
+          <li><a href="/booking?view=admin" id="adminLoginDiv">Admin Login</a></li>
+          <li><a href="#doctors-anchor">Doctors</a></li>
+          <li><a href="#contact-section">Contact</a></li>          
+          <li><a href="#heritage-section">About Us</a></li>
+        </ul>
+      </div>
+ 
+      <div class="f-col">
+        <h4>Contact Us</h4>
+        <div style="color: #94a3b8; font-size: 0.9rem; line-height: 1.7;">
+          PrimeCare Clinic<br>
+          Main Road, Koorachundu<br>
+          Kerala, India 673627<br><br>
+          Phone: +91 85920 31725
+        </div>
+      </div>
     </div>
-
-    <div class="footer-links" style="margin-top: 2rem;">
-      <a href="/booking" class="footer-link">
-        <i data-lucide="calendar-plus"></i> Book Appointment
-      </a>
-      <a href="javascript:void(0)" onclick="scrollToDoctors()" class="footer-link">
-        <i data-lucide="users"></i> Our Doctors
-      </a>
-      <a href="javascript:void(0)" class="footer-link" onclick="scrollToDoctors(true)" style="cursor: pointer;">
-        <i data-lucide="clock"></i> Doctor Timings
-      </a>
-      {% if session.get('user_id') %}
-      <a href="/patient_dashboard" class="footer-link">
-        <i data-lucide="user"></i> My Profile
-      </a>
-      {% else %}
-      <a href="javascript:void(0)" class="footer-link" onclick="openAuthModal('login')" style="cursor: pointer;">
-        <i data-lucide="shield-check"></i> Patient Login
-      </a>
-      {% endif %}
-    </div>
-    <div class="footer-content">
-      <p class="footer-copy">© 2026 PrimeCare Clinic. All rights reserved.</p>
+    <div style="width: 100%; padding: 2rem 1.5rem 2.5rem; border-top: 1px solid rgba(255,255,255,0.05); text-align: center; color: #475569; font-size: 0.85rem; margin-top: 0;">
+      <p style="margin-bottom: 0;">© 2026 PrimeCare Clinic. Delivering Excellence for 25+ Years.</p>
     </div>
   </footer>
 
   <script>
     // Init Lucide icons
     lucide.createIcons();
+
+    // --- NAVIGATION LOGIC ---
+    function scrollToSpec(specName) {
+      const slug = specName.replace(/\s+/g, '-').toLowerCase();
+      const target = document.getElementById('dept-' + slug);
+      if (target) {
+        // Ensure doctors section is visible first if it was hidden
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
 
     // --- PATIENT AUTH LOGIC ---
     function openAuthModal(view = 'login') {

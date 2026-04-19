@@ -638,7 +638,32 @@ def home():
 
 @app.route("/booking")
 def booking():
-    return render_template("booking.html", admin_email=session.get("admin_email"))
+    is_admin_view = (request.args.get('view') == 'admin')
+    user_id = session.get('user_id')
+    
+    upcoming_bookings = []
+    past_bookings = []
+    
+    if user_id:
+        try:
+            # Get local bookings
+            bookings = PatientBooking.query.filter_by(user_id=user_id).order_by(PatientBooking.date.desc()).all()
+            
+            # Split into upcoming and past
+            ist = pytz.timezone('Asia/Kolkata')
+            today_str = datetime.now(ist).strftime("%Y-%m-%d")
+            
+            upcoming_bookings = [b for b in bookings if (b.date or "") >= today_str]
+            past_bookings = [b for b in bookings if (b.date or "") < today_str]
+        except Exception as e:
+            print(f"[ERROR] Failed to fetch user bookings: {e}")
+
+    return render_template("booking.html", 
+                           admin_email=session.get("admin_email"),
+                           is_admin_view=is_admin_view,
+                           user_id=user_id,
+                           upcoming_bookings=upcoming_bookings,
+                           past_bookings=past_bookings)
 
 
 

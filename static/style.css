@@ -927,8 +927,9 @@ button:active,
   max-width: 900px;
   margin: 1.2rem auto 0;
   padding: 0 1.2rem;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
@@ -949,6 +950,8 @@ button:active,
   gap: 0.4rem;
   color: #0b3a60;
   user-select: none;
+  flex: 1 1 240px;
+  max-width: 280px;
 }
 
 .panel-card:hover {
