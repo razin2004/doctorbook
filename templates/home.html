@@ -1430,7 +1430,6 @@
       <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--primary-dark); font-weight: 900;">Our Departments</h2>
     </div>
     <div class="dept-grid">
-      {% set icons = {'General Physician':'heart-pulse','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
       {% for group in doctors | groupby('Specialization') %}
       <div class="dept-card" onclick="scrollToSpec('{{ group.grouper }}')">
         <div class="dept-icon"><i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i></div>
@@ -1626,13 +1625,14 @@
         Doctor list is currently unavailable. Please contact the clinic or try again later.
       </div>
     {% else %}
+      {% set icons = {'General Physician':'heart-pulse','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
       {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
 
       {% for group in doctors | groupby('Specialization') %}
         {% set spec_index = loop.index %}
         <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}" style="scroll-margin-top: 8rem;" >
           <h2 class="spec-heading">
-            <i data-lucide="activity"></i>
+            <i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i>
             {{ group.grouper }}
           </h2>
           <div class="doctor-grid">
