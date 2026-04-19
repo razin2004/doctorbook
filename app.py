@@ -1484,74 +1484,10 @@ def admin_edit_doctor():
             db.session.commit()
             
         return jsonify({"success": True, "msg": "Doctor profile updated successfully"})
-            if other_session:
-                 return jsonify({"success": False, "msg": f"Email is already assigned to {other_session.doctor_name} in system database."})
-
-        updated = False
-        new_rows = []
-
-        for row in rows:
-            row_dict = dict(zip(headers, row))
-
-            if (row_dict.get("Name", "").strip().lower() == name and
-                    row_dict.get("Specialization", "").strip().lower() == spec):
-
-                row_dict["Days"] = ", ".join(days)
-                if email:
-                    email_clean = email.lower().strip()
-                    row_dict["Email"] = email_clean
-                    
-                    # Update SQLite (Finding existing or syncing missing)
-                    doc_session = DoctorSession.query.filter(
-                        db.func.lower(db.func.trim(DoctorSession.doctor_name)) == row_dict.get("Name", "").strip().lower(),
-                        db.func.lower(db.func.trim(DoctorSession.specialization)) == row_dict.get("Specialization", "").strip().lower()
-                    ).first()
-                    
-                    if doc_session:
-                        doc_session.email = email_clean
-                    else:
-                        new_doc_session = DoctorSession(
-                            doctor_name=row_dict.get("Name", "").strip(), 
-                            specialization=row_dict.get("Specialization", "").strip(), 
-                            email=email_clean
-                        )
-                        db.session.add(new_doc_session)
-                        
-                    # Sync User roles
-                    existing_user = User.query.filter_by(email=email_clean).first()
-                    if existing_user:
-                        existing_user.role = "doctor"
-                        
-                    try:
-                        db.session.commit()
-                    except Exception as db_err:
-                        db.session.rollback()
-                        app.logger.error(f"DB Auth Sync Error: {db_err}")
-                        return jsonify({"success": False, "msg": "Failed to sync credentials to system database."})
-
-                for day in day_names:
-                    col_name = f"{day}Time"
-                    if col_name in row_dict:
-                        row_dict[col_name] = day_times.get(day, "")
-
-                updated = True
-
-            new_rows.append([row_dict.get(h, "") for h in headers])
-
-        if not updated:
-            return jsonify({"success": False, "msg": "Doctor metadata not found in sheet"})
-
-        doctors_ws.clear()
-        doctors_ws.append_row(headers)
-        for i, row in enumerate(new_rows):
-            row[0] = str(i + 1)  # keep serial numbers
-            doctors_ws.append_row(row)
-
-        return jsonify({"success": True, "msg": "Doctor updated and credentials synchronized successfully"})
 
     except Exception as e:
+        app.logger.exception("Error in admin_edit_doctor")
         return jsonify({"success": False, "msg": get_friendly_error_message(e)})
-
 
 @app.route("/admin_delete_doctor", methods=["POST"])
 def admin_delete_doctor():
