@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -1233,6 +1233,8 @@
 </head>
 
 <body>
+  {% set icons = {'General Physician':'activity','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
+
   <!-- Global Toast Container -->
   <div id="globalToast"></div>
 
@@ -1625,7 +1627,6 @@
         Doctor list is currently unavailable. Please contact the clinic or try again later.
       </div>
     {% else %}
-      {% set icons = {'General Physician':'activity pulse','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
       {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
 
       {% for group in doctors | groupby('Specialization') %}
