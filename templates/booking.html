@@ -913,9 +913,6 @@
         <label for="editDocEmail" style="margin-top:1rem;"><i data-lucide="mail"></i> Update Email</label>
         <input id="editDocEmail" type="email" placeholder="New login email" />
 
-        <label for="editDocSpec" style="margin-top:1rem;"><i data-lucide="activity"></i> Update Specialization</label>
-        <input id="editDocSpec" list="specialization-list" placeholder="Update medical department" />
-
         <label style="margin-top:1rem;"><i data-lucide="calendar-days"></i> Working Days &amp; Time</label>
 
         <div id="editDayTimes">
@@ -1790,7 +1787,6 @@
       const selectedDays = (selected.dataset.days||'').split(',').map(d=>d.trim()).filter(Boolean);
       const dayTimes = selected.dataset.dayTimes ? JSON.parse(selected.dataset.dayTimes) : {};
       document.getElementById('editDocEmail').value = selected.dataset.email || '';
-      document.getElementById('editDocSpec').value = selected.dataset.specialization || '';
       document.querySelectorAll('.day-check-edit').forEach(cb => {
         const day = cb.dataset.day;
         const timeDiv = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
@@ -2612,12 +2608,8 @@
       try {
         const combined=document.getElementById('editDoctorSelect').value;
         const email=document.getElementById('editDocEmail').value.trim();
-        const specialization=document.getElementById('editDocSpec').value.trim();
-        
         if(!combined) { showToast('Please select a doctor to edit.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
         if(!email) { showToast('Email is required.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
-        if(!specialization) { showToast('Specialization is required.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
-        
         if(!email.includes('@') || !email.includes('.')) { showToast('Please provide a valid email format', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
         const sameTimeAll=document.getElementById('sameTimeAllEdit');
         const selectedDays=[]; const day_times={};
@@ -2640,7 +2632,7 @@
           if(hasError){ btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
         }
         if(!selectedDays.length){ showToast('At least one working day is required.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
-        const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined, email, specialization, days:selectedDays,day_times}) });
+        const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined, email, days:selectedDays,day_times}) });
         const data=await res.json();
         showToast(data.msg, data.success ? 'success' : 'error');
         if(data.success){ e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }

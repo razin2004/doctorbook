@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -1629,6 +1629,7 @@
       {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
 
       {% for group in doctors | groupby('Specialization') %}
+        {% set spec_index = loop.index %}
         <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}" style="scroll-margin-top: 8rem;" >
           <h2 class="spec-heading">
             <i data-lucide="activity"></i>
