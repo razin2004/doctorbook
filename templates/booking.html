@@ -2931,8 +2931,18 @@
     }
 
     document.addEventListener('DOMContentLoaded', async ()=> {
-      // 1. Restore last active section from localStorage
-      const savedSection = localStorage.getItem('activeSection') || 'bookDoctor';
+      // 1. Determine the appropriate initial section
+      const urlParams = new URLSearchParams(window.location.search);
+      const isParamAdmin = urlParams.get('view') === 'admin';
+
+      let savedSection = localStorage.getItem('activeSection') || 'bookDoctor';
+      
+      // Override saved state if Admin Access is explicitly requested
+      if (isParamAdmin) {
+        savedSection = 'admin';
+        localStorage.setItem('activeSection', 'admin');
+      }
+
       showSection(savedSection, null);
       
       const panelId = sectionPanelMap[savedSection];

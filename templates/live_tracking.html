@@ -127,6 +127,16 @@
     .token-label { font-size: 0.82rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 0.6rem; letter-spacing: 1.2px; }
     .token-number { font-size: 3.5rem; font-weight: 900; color: #0f172a; line-height: 1; letter-spacing: -2px; }
     .token-total { font-size: 0.9rem; color: #94a3b8; font-weight: 600; margin-top: 0.6rem; }
+
+    /* Your Token Badge */
+    .your-token-box {
+        margin-top: 1rem; padding: 1rem; border-radius: 18px;
+        background: linear-gradient(135deg, rgba(0, 119, 182, 0.08), rgba(0, 150, 199, 0.04));
+        border: 1px solid rgba(0, 119, 182, 0.15);
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .your-token-label { font-size: 0.8rem; font-weight: 700; color: #0077b6; text-transform: uppercase; letter-spacing: 0.5px; }
+    .your-token-val { font-size: 1.4rem; font-weight: 900; color: #0077b6; }
     
     .skeleton-card {
         height: 240px; background: rgba(255,255,255,0.6); border-radius: 24px;
@@ -325,6 +335,7 @@
   <script>
     lucide.createIcons();
     let allTokensData = [];
+    let userTokens = {};
     let isInitialLoad = true;
     
     function getStatusBadgeParams(status) {
@@ -415,11 +426,30 @@
                     <div class="token-number">${tokenDisp}</div>
                     <div class="token-total" style="display: ${doc.status === 'Yet to start' ? 'none' : 'block'}">out of ${doc.total_tokens || 0} total</div>
                 </div>
+                ${renderUserToken(doc)}
             `;
             grid.appendChild(card);
         });
         
         lucide.createIcons();
+    }
+
+    function renderUserToken(doc) {
+        // Use JS methods for strings
+        const jsKey = `${doc.doctor_name.toLowerCase().trim()}|${doc.specialization.toLowerCase().trim()}`;
+        const myToken = userTokens[jsKey];
+        
+        if (!myToken) return '';
+        
+        return `
+            <div class="your-token-box">
+                <div style="display:flex; align-items:center; gap:0.6rem;">
+                   <i data-lucide="ticket" style="width:18px;height:18px;color:#0077b6;"></i>
+                   <span class="your-token-label">Your Token</span>
+                </div>
+                <span class="your-token-val">#${myToken}</span>
+            </div>
+        `;
     }
     
     async function fetchLiveTokens() {
@@ -429,6 +459,8 @@
             
             if (data.success && data.data) {
                 allTokensData = data.data;
+                userTokens = data.user_tokens || {};
+                
                 if (isInitialLoad) {
                     populateFilters(allTokensData);
                     isInitialLoad = false;

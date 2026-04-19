@@ -3281,9 +3281,22 @@ def live_tokens():
             })
     except: pass
         
+    # ── Fetch User's Own Tokens Today ──
+    user_tokens = {}
+    user_id = session.get('user_id')
+    if user_id:
+        try:
+            my_bookings = PatientBooking.query.filter_by(user_id=user_id, date=today_str).all()
+            for b in my_bookings:
+                # Key by lowered (doctor, spec) for robust matching
+                key = f"{b.doctor_name.lower().strip()}|{b.specialization.lower().strip()}"
+                user_tokens[key] = b.token
+        except: pass
+
     return jsonify({
         "success": True, 
         "data": response_data,
+        "user_tokens": user_tokens,
         "today_holiday": today_holiday,
         "tomorrow_holiday": tomorrow_holiday,
         "admin_messages": admin_msgs,
