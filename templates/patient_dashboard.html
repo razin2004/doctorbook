@@ -1,0 +1,2611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>User Dashboard – PrimeCare Clinic</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PrimeCare">
+  <link rel="apple-touch-icon" href="/static/image/pwa-icon.png">
+
+  <style>
+    /* ── DASHBOARD WORKSPACE DESIGN SYSTEM ── */
+    :root {
+      --primary: #0077b6;
+      --primary-dark: #023e8a;
+      --primary-light: #0096c7;
+      --accent: #10b981;
+      --accent-light: #ecfdf5;
+      --danger: #e11d48;
+      --danger-light: #fff1f2;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-400: #94a3b8;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-900: #0f172a;
+    }
+
+    body {
+      background-attachment: fixed;
+    }
+
+    /* Layout Wrapper */
+    .admin-workspace {
+      display: flex;
+      min-height: calc(100vh - 65px);
+      position: relative;
+    }
+
+    /* Glass Card Premium */
+    .glass-card-premium {
+      background: rgba(255, 255, 255, 0.55);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.05);
+      border-radius: 24px;
+      padding: 1.8rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card-premium:hover {
+      border-color: rgba(0, 119, 182, 0.15);
+      box-shadow: 0 25px 55px rgba(0, 119, 182, 0.07);
+    }
+
+    /* Sidebar Navigation */
+    .admin-sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-right: 1px solid rgba(0, 119, 182, 0.08);
+      position: fixed;
+      top: 60px;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 0.8rem 0.6rem;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      z-index: 900; /* Sits below the header (1000) */
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+    }
+    .admin-sidebar::-webkit-scrollbar {
+      display: none;
+    }
+    .admin-sidebar-header {
+      display: none;
+    }
+    .admin-sidebar-logo-text {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #0077b6;
+      letter-spacing: 0.02em;
+    }
+    
+    /* User Profile Inside Sidebar */
+    .sidebar-user-profile {
+      padding: 1rem 0.8rem;
+      background: linear-gradient(135deg, rgba(0, 119, 182, 0.06), rgba(0, 180, 216, 0.03));
+      border: 1px solid rgba(0, 119, 182, 0.08);
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+    .sidebar-user-row {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .sidebar-user-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
+    }
+    .sidebar-user-info {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .sidebar-user-info h4 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sidebar-user-info p {
+      margin: 0;
+      font-size: 0.75rem;
+      color: var(--slate-600);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .sidebar-user-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(16, 185, 129, 0.1);
+      color: #047857;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      align-self: flex-start;
+    }
+
+    /* Sidebar Navigation Links */
+    .admin-sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .admin-sidebar-nav-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .admin-sidebar-nav-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary-dark);
+      margin-bottom: 0.4rem;
+      padding-left: 0.5rem;
+    }
+    .admin-sidebar-nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 0;
+      margin: 0;
+    }
+    .admin-sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.55rem 0.8rem;
+      border-radius: 12px;
+      color: var(--slate-900) !important;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      background: transparent;
+      margin-top: 0;
+      box-shadow: none;
+    }
+    .admin-sidebar-nav-item i,
+    .admin-sidebar-nav-item svg {
+      width: 17px;
+      height: 17px;
+      opacity: 0.8;
+      transition: transform 0.2s;
+    }
+    .admin-sidebar-nav-item:hover {
+      background: rgba(0, 119, 182, 0.08) !important;
+      color: var(--primary) !important;
+      padding-left: 1.1rem;
+    }
+    .admin-sidebar-nav-item:hover i,
+    .admin-sidebar-nav-item:hover svg {
+      opacity: 1;
+      transform: scale(1.08);
+    }
+    .admin-sidebar-nav-item.active {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 15px rgba(0, 119, 182, 0.18) !important;
+    }
+    .admin-sidebar-nav-item.active i,
+    .admin-sidebar-nav-item.active svg {
+      opacity: 1;
+    }
+    .admin-sidebar-nav-item.active:hover {
+      padding-left: 0.8rem;
+    }
+    .nav-badge-count {
+      margin-left: auto;
+      background: var(--slate-100);
+      color: var(--slate-600);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 99px;
+      transition: all 0.2s;
+    }
+    .admin-sidebar-nav-item.active .nav-badge-count {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .admin-sidebar-footer {
+      margin-top: 1.5rem;
+      border-top: 1px solid rgba(0, 119, 182, 0.08);
+      padding-top: 1rem;
+    }
+    .logout-item {
+      color: var(--danger) !important;
+    }
+    .logout-item:hover {
+      background: rgba(225, 29, 72, 0.05) !important;
+      color: var(--danger) !important;
+    }
+
+    /* Sidebar Mobile Backdrop */
+    .admin-sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.2);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 1050; /* Sits above the header (1000) but below the drawer (1100) */
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .admin-sidebar-backdrop.open {
+      display: block;
+      opacity: 1;
+    }
+
+    /* Main Content Area */
+    .admin-content {
+      flex-grow: 1;
+      padding: 1.5rem 2rem;
+      max-width: calc(100% - 280px);
+      min-width: 0;
+    }
+
+    /* Content Area Topbar */
+    .admin-topbar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid rgba(0, 119, 182, 0.06);
+    }
+    
+    .admin-sidebar-toggle-btn {
+      display: none;
+      background: rgba(0, 119, 182, 0.06);
+      color: var(--primary);
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+      transition: all 0.2s;
+    }
+    .admin-sidebar-toggle-btn:hover {
+      background: rgba(0, 119, 182, 0.12);
+      color: var(--primary-light);
+      transform: scale(1.03);
+    }
+    .admin-sidebar-toggle-btn i,
+    .admin-sidebar-toggle-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Breadcrumbs */
+    .admin-breadcrumb {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      font-size: 0.88rem;
+      color: var(--slate-600);
+      font-weight: 500;
+    }
+    .breadcrumb-root { color: var(--slate-400); }
+    .breadcrumb-separator {
+      display: flex;
+      align-items: center;
+      color: var(--slate-300);
+    }
+    .breadcrumb-separator svg,
+    .breadcrumb-separator i {
+      width: 13px;
+      height: 13px;
+      stroke-width: 3px !important;
+    }
+    .breadcrumb-active {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    /* Welcome Workspace Banner */
+    .workspace-welcome-banner {
+      background: linear-gradient(135deg, #023e8a 0%, #0077b6 100%);
+      color: white;
+      border-radius: 24px;
+      padding: 1.8rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(2, 62, 138, 0.2);
+      margin-bottom: 1.5rem;
+    }
+    .workspace-welcome-banner::after {
+      content: ''; position: absolute; right: -30px; top: -50px;
+      width: 180px; height: 180px; background: rgba(255,255,255,0.06);
+      border-radius: 50%; pointer-events: none;
+    }
+    .workspace-welcome-banner::before {
+      content: ''; position: absolute; left: -20px; bottom: -40px;
+      width: 120px; height: 120px; background: rgba(255,255,255,0.03);
+      border-radius: 50%; pointer-events: none;
+    }
+    .welcome-greet {
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.85;
+      margin-bottom: 0.3rem;
+    }
+    .welcome-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin: 0;
+      line-height: 1.25;
+      text-shadow: none;
+      color: white;
+      text-align: left;
+    }
+    .welcome-subtitle {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      margin-top: 0.4rem;
+      margin-bottom: 0;
+      font-weight: 500;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card-premium {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      border-radius: 20px;
+      padding: 1.25rem 1.4rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.02);
+      display: flex;
+      align-items: center;
+      gap: 1.1rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .stat-card-premium:hover {
+      transform: translateY(-4px);
+      background: white;
+      border-color: rgba(0, 119, 182, 0.2);
+      box-shadow: 0 15px 30px rgba(0, 119, 182, 0.08);
+    }
+    .stat-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .stat-card-info {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stat-card-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--slate-400);
+    }
+    .stat-card-value {
+      font-size: 1.4rem;
+      font-weight: 850;
+      color: var(--slate-900);
+      line-height: 1.1;
+    }
+    .stat-card-subtext {
+      font-size: 0.72rem;
+      color: var(--slate-600);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Stats themes */
+    .stat-appointments .stat-card-icon { background: rgba(0, 119, 182, 0.08); color: var(--primary); }
+    .stat-vault .stat-card-icon { background: rgba(16, 185, 129, 0.08); color: var(--accent); }
+    .stat-tracking .stat-card-icon { background: rgba(99, 102, 241, 0.08); color: #6366f1; }
+
+    /* Actions Grid */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.2rem;
+      margin-bottom: 2rem;
+    }
+    .action-card-premium {
+      background: white;
+      border: 1px solid rgba(0, 0, 0, 0.04);
+      border-radius: 20px;
+      padding: 1.4rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.01);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1.5rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .action-card-premium:hover {
+      transform: translateY(-5px);
+      border-color: rgba(0, 119, 182, 0.15);
+      box-shadow: 0 15px 30px rgba(0, 119, 182, 0.08);
+    }
+    .action-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .action-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .action-card-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 750;
+      color: var(--slate-900);
+    }
+    .action-card-desc {
+      margin: 0.4rem 0 0;
+      font-size: 0.78rem;
+      color: var(--slate-600);
+      line-height: 1.45;
+      font-weight: 500;
+    }
+    .action-card-link {
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: all 0.2s;
+    }
+    
+    /* Action themes */
+    .act-booking .action-card-icon { background: rgba(0, 119, 182, 0.08); color: var(--primary); }
+    .act-booking .action-card-link { color: var(--primary); }
+    
+    .act-vault .action-card-icon { background: rgba(16, 185, 129, 0.08); color: var(--accent); }
+    .act-vault .action-card-link { color: var(--accent); }
+    
+    .act-tracking .action-card-icon { background: rgba(249, 115, 22, 0.08); color: #f97316; }
+    .act-tracking .action-card-link { color: #f97316; }
+
+    /* Next Appointment Preview Card */
+    .next-appointment-box {
+      margin-bottom: 2rem;
+    }
+    .next-appointment-title {
+      font-size: 0.9rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--slate-700);
+      margin-bottom: 0.8rem;
+      padding-left: 0.25rem;
+    }
+
+    /* Tab panels */
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* New Booking Button styling */
+    .section-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--primary);
+      color: #fff !important;
+      border: none;
+      padding: 0.5rem 0.9rem;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
+    }
+    .section-action-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 119, 182, 0.3);
+    }
+
+    /* Admin Footer */
+    .admin-footer {
+      margin-top: auto;
+      padding: 2.5rem 0 1.5rem;
+      border-top: 1px solid rgba(0, 119, 182, 0.06);
+      width: 100%;
+      text-align: center;
+    }
+    .admin-footer-copy {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      margin: 0;
+    }
+
+    /* Home Buttons styling */
+    .desktop-home-btn { display: inline-flex !important; }
+    .mobile-home-btn { display: none !important; }
+
+    /* Responsive adjustments */
+    @media (max-width: 991px) {
+      .admin-sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        bottom: 0;
+        height: 100vh;
+        z-index: 1100;
+        box-shadow: 20px 0 45px rgba(0,0,0,0.12);
+        background: rgba(255, 255, 255, 0.98);
+        transform: translateX(0);
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 1.5rem));
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .admin-sidebar.open {
+        transform: translateX(280px);
+      }
+      .admin-sidebar-header {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between !important;
+        width: 100%;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid rgba(0, 119, 182, 0.08);
+        margin-bottom: 1.25rem;
+        position: sticky;
+        top: -0.8rem;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.98);
+        margin-top: -0.8rem;
+        padding-top: 0.8rem;
+      }
+      .admin-sidebar-logo-text {
+        font-size: 1.25rem !important;
+        font-weight: 800 !important;
+        color: #0077b6 !important;
+        letter-spacing: 0.02em !important;
+        background: none !important;
+        -webkit-text-fill-color: initial !important;
+        text-fill-color: initial !important;
+        white-space: nowrap;
+      }
+      .admin-sidebar-close-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: transparent !important;
+        border: none !important;
+        color: #0077b6 !important;
+        cursor: pointer;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        width: auto !important;
+        height: auto !important;
+        transition: transform 0.2s;
+        -webkit-tap-highlight-color: transparent !important;
+        outline: none !important;
+      }
+      .admin-sidebar-close-btn:hover,
+      .admin-sidebar-close-btn:focus,
+      .admin-sidebar-close-btn:active {
+        background: transparent !important;
+        color: #0096c7 !important;
+        transform: scale(1.1);
+        box-shadow: none !important;
+        outline: none !important;
+      }
+      .admin-sidebar-close-btn svg,
+      .admin-sidebar-close-btn i {
+        width: 24px !important;
+        height: 24px !important;
+        stroke-width: 3px !important;
+      }
+      .admin-content {
+        max-width: 100%;
+        padding: 1rem 1.25rem;
+      }
+      .admin-sidebar-toggle-btn {
+        display: flex !important;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.8rem;
+      }
+      .stat-card-premium {
+        padding: 0.8rem 1rem;
+        gap: 0.7rem;
+      }
+      .stat-card-value {
+        font-size: 1.25rem !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .desktop-home-btn { display: none !important; }
+      .mobile-home-btn { 
+        display: flex !important;
+        border-radius: 10px !important;
+        background: rgba(0, 119, 182, 0.06) !important;
+        color: #0077b6 !important;
+        height: 36px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+    }
+
+    @media (min-width: 992px) {
+      .admin-content {
+        margin-left: 280px;
+      }
+    }
+
+    /* Dynamic page height overrides */
+    .dashboard-container {
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .adminPanel {
+      display: none;
+      animation: panelFadeIn 0.4s ease;
+    }
+    .adminPanel.active {
+      display: block;
+    }
+    @keyframes panelFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Booking Tabs Styling Overhaul */
+    .booking-tabs {
+      background: rgba(0, 119, 182, 0.05);
+      padding: 4px;
+      border-radius: 14px;
+      border: 1px solid rgba(0, 119, 182, 0.05);
+      display: flex;
+    }
+    .booking-tab {
+      flex: 1;
+      padding: 0.65rem 0.8rem;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--slate-600);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      transition: all 0.25s ease;
+      box-shadow: none !important;
+      margin-top: 0 !important;
+    }
+    .booking-tab:hover {
+      color: var(--primary);
+    }
+    .booking-tab.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05) !important;
+    }
+    .booking-tab .tab-count {
+      background: rgba(0, 119, 182, 0.08);
+      color: var(--primary);
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 99px;
+      min-width: 18px;
+    }
+    .booking-tab.active .tab-count {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* Refined Timeline Dot styles */
+    .vault-dot {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white !important;
+      border: 2px solid white;
+      box-shadow: 0 4px 10px rgba(0, 119, 182, 0.25);
+    }
+    .vault-entry.manual .vault-dot {
+      background: linear-gradient(135deg, var(--accent) 0%, #34d399 100%);
+      box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+    }
+    .vault-entry:hover .vault-dot {
+      transform: scale(1.15) rotate(5deg) !important;
+      box-shadow: 0 8px 18px rgba(0, 119, 182, 0.35) !important;
+    }
+    .vault-entry.manual:hover .vault-dot {
+      box-shadow: 0 8px 18px rgba(16, 185, 129, 0.35) !important;
+    }
+
+    /* ── DASHBOARD-SPECIFIC OVERRIDES ── */
+    .dashboard-container {
+      max-width: 800px; margin: 2rem auto; padding: 0 1rem 4rem;
+      display: flex; flex-direction: column; gap: 1.5rem;
+    }
+
+    /* ── Item Cards ── */
+    .item-list { display: flex; flex-direction: column; gap: 1rem; }
+    .item-card {
+      background: #fff; border-radius: 16px; padding: 1.2rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #f1f5f9;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 1rem; flex-wrap: wrap; transition: transform 0.2s;
+    }
+    .item-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,119,182,0.08); }
+    .item-info { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 0.3rem; }
+    .item-title { font-weight: 700; color: #0f172a; font-size: 1.05rem; }
+    .item-meta { display: flex; flex-wrap: wrap; gap: 0.6rem; font-size: 0.85rem; color: #64748b; font-weight: 500; }
+    .meta-tag { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .token-badge { background: #e0f2fe; color: #0284c7; padding: 0.2rem 0.6rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; }
+    .item-actions { display: flex; gap: 0.5rem; }
+    .btn-view {
+      background: #f0fdf4; color: #16a34a; border: none;
+      padding: 0.4rem 0.9rem; border-radius: 10px; font-weight: 600; cursor: pointer;
+      display: inline-flex; gap: 0.4rem; align-items: center;
+      transition: all 0.2s; text-decoration: none; font-size: 0.85rem; margin-top: 0;
+    }
+    .btn-view:hover { background: #16a34a; color: #fff; }
+    .btn-danger-sm {
+      background: #fff1f2; color: #e11d48; border: none;
+      padding: 0.4rem 0.9rem; border-radius: 10px; cursor: pointer;
+      display: inline-flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; margin-top: 0;
+      transition: all 0.2s;
+    }
+    .btn-danger-sm:hover { background: #e11d48; color: #fff; }
+    .empty-state { text-align: center; padding: 2rem 1rem; color: #94a3b8; font-weight: 500; }
+    .empty-state svg { margin-bottom: 0.5rem; opacity: 0.5; }
+    .empty-state-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 1rem;
+      background: #0077b6; color: #fff; border: none; padding: 0.6rem 1.3rem;
+      border-radius: 12px; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,119,182,0.2);
+    }
+    .empty-state-btn:hover { background: #005f8a; transform: translateY(-1px); }
+
+    /* Live Tracking Badge for Dashboard */
+    .live-sync-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(239, 68, 68, 0.08); color: #ef4444;
+      padding: 0.3rem 0.7rem; border-radius: 10px;
+      font-size: 0.78rem; font-weight: 800;
+      border: 1px solid rgba(239, 68, 68, 0.15);
+      margin-top: 0.3rem;
+    }
+    .live-sync-badge.idle {
+      background: rgba(100, 116, 139, 0.08); color: #64748b;
+      border-color: rgba(100, 116, 139, 0.15);
+    }
+    .blinking-dot-small {
+      width: 7px; height: 7px; background: #ef4444; border-radius: 50%;
+      animation: blink-live 1.2s infinite;
+    }
+    @keyframes blink-live {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Notification Tray Icon (Bell) ── */
+    #notifTrayFab {
+      position: fixed; top: 72px; right: 16px; z-index: 8900;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 119, 182, 0.2); cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      color: #0077b6;
+    }
+    #notifTrayFab.show { display: flex; animation: fabPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    #notifTrayFab:hover { transform: scale(1.1); background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.12); }
+    #notifTrayFab span svg, #notifTrayFab i { width: 16px; height: 16px; }
+    #notifTrayFab .notif-badge {
+      position: absolute; top: -1px; right: 0px; width: 10px; height: 10px;
+      background: #ef4444; border-radius: 50%; border: 2px solid #fff;
+      animation: pulse 2s infinite;
+    }
+    @keyframes fabPop { from { transform: scale(0) rotate(-45deg); opacity:0; } to { transform: scale(1) rotate(0); opacity:1; } }
+
+    /* ── Updated Dual-Stat Banner ── */
+    #homeTokenBanner {
+      position: fixed; top: 15px; left: 50%; transform: translateX(-50%) translateY(-150%);
+      width: 92%; max-width: 500px; z-index: 2000;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      border-radius: 28px; padding: 0.9rem 1.2rem;
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,119,182,0.05);
+      display: flex; align-items: center; justify-content: space-between;
+      transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.4s ease;
+      cursor: grab;
+      user-select: none;
+      touch-action: pan-x;
+    }
+    #homeTokenBanner:active { cursor: grabbing; }
+    #homeTokenBanner.show { transform: translateX(-50%) translateY(0); }
+    
+    .banner-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .banner-status { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .banner-status i { color: #ef4444; }
+    .banner-doctor { font-size: 1rem; font-weight: 850; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+    
+    .banner-stats { display: flex; gap: 1rem; align-items: center; padding-left: 1rem; border-left: 1.5px solid rgba(0,0,0,0.06); }
+    .banner-stat-item { display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+    .stat-label { font-size: 0.62rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; white-space: nowrap; }
+    .stat-val { font-size: 1.6rem; font-weight: 950; letter-spacing: -0.02em; line-height: 1; }
+    .stat-live { color: #10b981; }
+    .stat-mine { color: #0077b6; }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+      50% { opacity: 0.6; transform: scale(0.85); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4)); }
+      100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+    }
+
+    /* ── Header: icon-only on mobile ── */
+    @media (max-width: 520px) {
+      .top-bar-inner {
+        flex-direction: row; align-items: center;
+        justify-content: space-between; padding: 0.5rem 0.85rem; gap: 0.5rem;
+      }
+      .brand { align-items: flex-start; flex-shrink: 1; min-width: 0; }
+      .brand-title { font-size: 1.0rem; }
+      .brand-sub { font-size: 0.65rem; }
+      
+      .top-actions {
+        display: flex; flex-direction: row; flex-shrink: 0; gap: 0.28rem; align-items: center;
+      }
+      .top-actions .btn {
+        font-size: 0.75rem; padding: 0.35rem 0.5rem; margin-top: 0 !important;
+        white-space: nowrap; width: auto; min-width: auto;
+        background: transparent !important; border: none !important; box-shadow: none !important;
+        color: #0077b6 !important; -webkit-tap-highlight-color: transparent !important;
+      }
+      .top-actions .btn svg { width: 14px; height: 14px; }
+      .top-actions .btn span { display: none; }
+      .user-header h1 { font-size: 1.3rem; }
+    }
+
+    /* ── MODAL SYSTEM ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(10px);
+      z-index: 10000; align-items: center; justify-content: center;
+      padding: 1.25rem; animation: modalFade 0.3s ease;
+    }
+    .modal-content {
+      background: #fff; padding: 2.2rem 2rem; border-radius: 28px;
+      max-width: 440px; width: 100%; box-shadow: 0 40px 100px rgba(15, 23, 42, 0.35);
+      border: 1px solid #fff; position: relative;
+      animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes modalPop { from { transform: scale(0.92) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+    .top-bar {
+      z-index: 1000 !important;
+    }
+
+    @media (max-width: 600px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+      }
+      .stat-card-premium {
+        padding: 0.7rem 0.6rem !important;
+        gap: 0.5rem !important;
+        border-radius: 14px !important;
+      }
+      .stat-card-icon {
+        width: 30px !important;
+        height: 30px !important;
+      }
+      .stat-card-icon svg {
+        width: 16px !important;
+        height: 16px !important;
+      }
+      .stat-card-label {
+        font-size: 0.65rem !important;
+        line-height: 1.2 !important;
+      }
+      .stat-card-value {
+        font-size: 1rem !important;
+      }
+      .stat-card-subtext {
+        font-size: 0.6rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .dashboard-container { padding: 0 0.8rem 3rem; margin-top: 1rem; gap: 1rem; }
+      .user-avatar { width: 40px; height: 40px; }
+      .user-avatar svg { width: 20px !important; height: 20px !important; }
+      .item-card { flex-direction: column; align-items: flex-start; gap: 0.8rem; }
+      .item-actions { width: 100%; }
+      .btn-danger-sm, .btn-view { flex: 1; justify-content: center; }
+      .quick-nav-btn { font-size: 0.72rem; padding: 0.3rem 0.7rem; }
+      .booking-tab { font-size: 0.78rem; padding: 0.45rem 0.5rem; }
+      .section-header .section-action-btn span {
+        display: none !important;
+      }
+      .section-header .section-action-btn {
+        padding: 0.5rem !important;
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 10px !important;
+      }
+    }
+
+    /* ── Premium Prescription Modal ── */
+    .pres-modal-content {
+      background: #fff; border-radius: 24px; padding: 2rem 1.8rem;
+      max-width: 480px; width: 92%; position: relative;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.15);
+      animation: slideUp 0.35s ease;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pres-modal-header {
+      display: flex; align-items: center; gap: 0.7rem;
+      margin-bottom: 1.5rem; padding-bottom: 1rem;
+      border-bottom: 2px solid #f1f5f9;
+    }
+    .pres-modal-header .icon-circle {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, #0077b6, #0096c7);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; flex-shrink: 0;
+    }
+    .pres-modal-header h3 { margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a; }
+    .pres-modal-header p { margin: 0.15rem 0 0; font-size: 0.8rem; color: #94a3b8; font-weight: 500; }
+    .pres-close-btn {
+      position: absolute; top: 1rem; right: 1rem;
+      background: #f8fafc; border: 1px solid #e2e8f0; width: 32px; height: 32px;
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #64748b; transition: all 0.2s;
+    }
+    .pres-close-btn:hover { background: #fee2e2; color: #e11d48; border-color: #fecaca; }
+    .pres-form-group { margin-bottom: 1rem; }
+    .pres-form-group label {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 0.4rem;
+    }
+    .pres-form-group label svg { width: 13px; height: 13px; color: #0077b6; }
+    .pres-form-group input, .pres-form-group select {
+      width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid #e2e8f0;
+      border-radius: 12px; font-size: 0.92rem; font-family: inherit;
+      box-sizing: border-box; background: #f8fafc; transition: border-color 0.2s; color: #0f172a;
+    }
+    .pres-form-group input:focus, .pres-form-group select:focus {
+      outline: none; border-color: #0077b6; background: #fff;
+      box-shadow: 0 0 0 3px rgba(0,119,182,0.1);
+    }
+    .pres-form-group input[type="file"] { padding: 0.5rem 0.9rem; cursor: pointer; }
+    .pres-submit-btn {
+      width: 100%; padding: 0.8rem; margin-top: 0.8rem;
+      background: linear-gradient(135deg, #0077b6, #0096c7);
+      color: #fff; border: none; border-radius: 14px;
+      font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      box-shadow: 0 8px 20px rgba(0,119,182,0.25); transition: all 0.2s;
+    }
+    .pres-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(0,119,182,0.3); }
+    .pres-submit-btn:disabled { opacity: 0.6; transform: none; }
+    #reschedBtn {
+        background: #0077b6; color: #fff; border: none;
+        padding: 0.4rem 0.9rem; border-radius: 10px; font-weight: 600; cursor: pointer;
+        display: inline-flex; gap: 0.4rem; align-items: center; text-decoration: none; font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    #reschedBtn:hover { background: #005f8a; transform: translateY(-1px); }
+    .holiday-alert {
+        background: #fff1f2; border: 1.5px solid #fecaca; border-radius: 12px;
+        padding: 0.8rem 1rem; margin-bottom: 0.8rem; display: flex; align-items: flex-start; gap: 0.6rem;
+        animation: pulseSoft 2s infinite;
+    }
+    @keyframes pulseSoft {
+        0% { border-color: #fecaca; }
+        50% { border-color: #fca5a5; }
+        100% { border-color: #fecaca; }
+    }
+    #pullIndicator {
+      position: fixed; top: -60px; left: 0; width: 100%; height: 60px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10001; pointer-events: none; transition: transform 0.2s ease, opacity 0.2s ease;
+      opacity: 0;
+    }
+    .pull-indicator-content {
+      background: white; width: 40px; height: 40px; border-radius: 50%;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center;
+      color: #0077b6;
+    }
+    .pull-indicator-content svg { width: 20px; height: 20px; animation: spin 1.5s linear infinite; animation-play-state: paused; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    body.pulling #pullIndicator { opacity: 1; }
+    body.refreshing .pull-indicator-content svg { animation-play-state: running; }
+    
+    /* ── MEDICAL VAULT TIMELINE ── */
+    .vault-timeline {
+      position: relative; padding: 1rem 0 0 1rem;
+      margin-top: 1rem;
+    }
+    .vault-timeline::before {
+      content: ''; position: absolute; left: 16px; top: 0; bottom: 0;
+      width: 2px; background: linear-gradient(to bottom, #0077b610, #0077b6, #0077b610);
+      border-radius: 999px;
+    }
+    .vault-entry {
+      position: relative; padding-left: 2.5rem; margin-bottom: 2rem;
+      transition: all 0.3s ease;
+    }
+    .vault-entry:last-child { margin-bottom: 0.5rem; }
+    .vault-dot {
+      position: absolute; left: 0; top: 8px; width: 34px; height: 34px;
+      background: white; border-radius: 12px; display: flex; align-items: center;
+      justify-content: center; z-index: 2; color: #0077b6;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); border: 1px solid #f1f5f9;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .vault-card {
+      background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px);
+      border-radius: 20px; padding: 1.2rem;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+      display: flex; flex-direction: column; gap: 0.8rem;
+    }
+    .vault-entry.manual .vault-dot { color: #10b981; }
+    
+    .vault-date {
+      font-size: 0.75rem; font-weight: 800; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.05em; display: flex;
+      align-items: center; gap: 0.4rem;
+    }
+    .vault-doctor {
+      font-size: 1.05rem; font-weight: 850; color: #0f172a;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .vault-doctor span { color: #0077b6; }
+    .vault-patient { font-size: 0.85rem; color: #64748b; font-weight: 600; }
+    
+    .vault-actions {
+      display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.2rem;
+      padding-top: 0.8rem; border-top: 1px solid #f1f5f9;
+    }
+    .vault-btn {
+      flex: 1; min-width: 100px; padding: 0.5rem 0.8rem; border-radius: 12px;
+      font-size: 0.8rem; font-weight: 700; display: flex; align-items: center;
+      justify-content: center; gap: 0.4rem; cursor: pointer; border: none;
+      transition: all 0.2s; text-decoration: none;
+    }
+    .btn-vault-view { background: #0077b6; color: white; box-shadow: 0 4px 12px rgba(0,119,182,0.2); }
+    .btn-vault-dl { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+    .btn-vault-view:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,119,182,0.3); }
+    .btn-vault-dl:hover { background: #f1f5f9; }
+
+    @media (max-width: 480px) {
+      .vault-timeline { padding-left: 0.5rem; }
+      .vault-timeline::before { left: 14px; }
+      .vault-dot { width: 30px; height: 30px; }
+      .vault-card { padding: 1rem; }
+      .vault-doctor { font-size: 0.95rem; }
+      .vault-btn { font-size: 0.75rem; padding: 0.45rem 0.6rem; }
+    }
+  </style>
+</head>
+<body class="bg-image">
+  <div id="pullIndicator">
+    <div class="pull-indicator-content"><i data-lucide="refresh-cw"></i></div>
+  </div>
+  <div id="globalToast"></div>
+  <div class="bg-blur"></div>
+
+  <!-- HEADER -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex-shrink:1;">
+        <button id="headerSidebarToggle" class="admin-sidebar-toggle-btn" onclick="toggleSidebar(true)" aria-label="Toggle Sidebar" style="margin-top:0;">
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0; text-decoration: none;">
+          <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+               style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
+               alt="PrimeCare Logo" />
+          <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+            <div class="brand-title">PrimeCare Clinic</div>
+            <div class="brand-sub">Quality care · Trusted doctors</div>
+          </div>
+        </div>
+      </div>
+      <div class="top-actions" style="margin-left:auto;">
+        <button class="btn btn-outline desktop-home-btn" onclick="goHome()" style="margin-top:0;" title="Go Home">
+          <i data-lucide="house"></i>
+          <span>Home</span>
+        </button>
+        <button class="admin-sidebar-toggle-btn mobile-home-btn" onclick="goHome()" style="margin-top:0; width:auto; padding:0 8px; gap:2px;">
+          <i data-lucide="arrow-left" style="width:18px;height:18px; stroke-width:3px;"></i>
+          <i data-lucide="house" style="width:18px;height:18px; stroke-width:3px;"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- WORKSPACE WRAPPER -->
+  <div class="admin-workspace">
+    <!-- LEFT SIDEBAR -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="admin-sidebar-top">
+        <div class="admin-sidebar-header">
+          <div class="admin-sidebar-logo-text">PrimeCare Clinic</div>
+          <button class="admin-sidebar-close-btn" onclick="toggleSidebar(false)" aria-label="Close sidebar">
+            <i data-lucide="chevron-left"></i>
+          </button>
+        </div>
+        
+        <!-- Sidebar Patient Profile -->
+        <div class="sidebar-user-profile">
+          <div class="sidebar-user-row">
+            <div class="sidebar-user-avatar">
+              <i data-lucide="user-round" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div class="sidebar-user-info">
+              <span class="sidebar-user-badge"><i data-lucide="shield-check" style="width:10px;height:10px;"></i>Verified User Account</span>
+              <h4>{{ session.get('user_name', 'User') }}</h4>
+              <p>{{ session.get('user_email') }}</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Sidebar Navigation -->
+        <div class="admin-sidebar-nav">
+          <div class="admin-sidebar-nav-group">
+            <div class="admin-sidebar-nav-title">Menu Navigation</div>
+            <ul class="admin-sidebar-nav-list">
+              <li>
+                <div class="admin-sidebar-nav-item active" data-panel="overview" onclick="showAdminPanel('overview', this)">
+                  <i data-lucide="layout-dashboard"></i>
+                  <span>Dashboard Overview</span>
+                </div>
+              </li>
+              <li>
+                <div class="admin-sidebar-nav-item" data-panel="bookings" onclick="showAdminPanel('bookings', this)">
+                  <i data-lucide="calendar"></i>
+                  <span>My Appointments</span>
+                  <span class="nav-badge-count">{{ active_upcoming_count }}</span>
+                </div>
+              </li>
+              <li>
+                <div class="admin-sidebar-nav-item" data-panel="vault" onclick="showAdminPanel('vault', this)">
+                  <i data-lucide="shield-plus"></i>
+                  <span>Medical Vault</span>
+                  <span class="nav-badge-count">{{ prescriptions|length }}</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="admin-sidebar-nav-group">
+            <div class="admin-sidebar-nav-title">Operations</div>
+            <ul class="admin-sidebar-nav-list">
+              <li>
+                <a href="/booking" class="admin-sidebar-nav-item" style="text-decoration:none;">
+                  <i data-lucide="calendar-plus"></i>
+                  <span>Book Appointment</span>
+                </a>
+              </li>
+              <li>
+                <a href="/live-tracking" class="admin-sidebar-nav-item" style="text-decoration:none;">
+                  <i data-lucide="radio"></i>
+                  <span>Live Token Track</span>
+                </a>
+              </li>
+              {% if can_switch %}
+              <li>
+                <div class="admin-sidebar-nav-item" onclick="confirmRoleSwitch()">
+                  <i data-lucide="repeat"></i>
+                  <span>Switch to Doctor</span>
+                </div>
+              </li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <div class="admin-sidebar-footer">
+        <div class="admin-sidebar-nav-item logout-item" onclick="confirmLogout()">
+          <i data-lucide="log-out"></i>
+          <span>Logout Account</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Sidebar Mobile Backdrop -->
+    <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop" onclick="toggleSidebar(false)"></div>
+
+    <!-- RIGHT CONTENT AREA -->
+    <main class="admin-content">
+      <!-- Content Topbar -->
+      <div class="admin-topbar">
+        <div class="admin-breadcrumb">
+          <span class="breadcrumb-root">Dashboard</span>
+          <span class="breadcrumb-separator"><i data-lucide="chevron-right"></i></span>
+          <span class="breadcrumb-active" id="currentBreadcrumbActive">Overview</span>
+        </div>
+      </div>
+
+      <!-- DYNAMIC PANELS WRAPPER -->
+      <div class="admin-panels-wrapper">
+        
+        <!-- PANEL 1: OVERVIEW -->
+        <div id="overviewPanel" class="adminPanel active">
+          <!-- Premium Welcome Banner -->
+          <div class="workspace-welcome-banner">
+            <div class="welcome-greet" id="greetingText">Welcome back,</div>
+            <h1 class="welcome-title">{{ session.get('user_name', 'User') }}</h1>
+            <p class="welcome-subtitle">
+              <span class="sidebar-user-badge" style="background: rgba(255,255,255,0.2); color:white;"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Verified User Account</span>
+              &nbsp;·&nbsp;{{ session.get('user_email') }}
+            </p>
+          </div>
+
+          <!-- Quick Stats Grid -->
+          <div class="stats-grid">
+            <div class="stat-card-premium stat-appointments" onclick="showAdminPanel('bookings')">
+              <div class="stat-card-icon">
+                <i data-lucide="calendar"></i>
+              </div>
+              <div class="stat-card-info">
+                <span class="stat-card-label">Appointments</span>
+                <span class="stat-card-value">{{ active_upcoming_count }}</span>
+                <span class="stat-card-subtext">Upcoming visits</span>
+              </div>
+            </div>
+
+            <div class="stat-card-premium stat-vault" onclick="showAdminPanel('vault')">
+              <div class="stat-card-icon">
+                <i data-lucide="shield-plus"></i>
+              </div>
+              <div class="stat-card-info">
+                <span class="stat-card-label">Medical Records</span>
+                <span class="stat-card-value">{{ prescriptions|length }}</span>
+                <span class="stat-card-subtext">Vault documents</span>
+              </div>
+            </div>
+
+            <!-- Active Tracker Live Status -->
+            <div class="stat-card-premium stat-tracking" onclick="window.location.href='/live-tracking'">
+              <div class="stat-card-icon">
+                <i data-lucide="radio"></i>
+              </div>
+              <div class="stat-card-info">
+                <span class="stat-card-label">Live Queue Status</span>
+                <span class="stat-card-value" id="statsLiveQueue">--</span>
+                <span class="stat-card-subtext" id="statsLiveSub">No active session</span>
+              </div>
+            </div>
+
+            <!-- Past Visits -->
+            <div class="stat-card-premium" onclick="switchBookingTab('past'); showAdminPanel('bookings')" style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.85);">
+              <div class="stat-card-icon" style="color: #64748b; background: #f1f5f9;">
+                <i data-lucide="history"></i>
+              </div>
+              <div class="stat-card-info">
+                <span class="stat-card-label">Past Visits</span>
+                <span class="stat-card-value">{{ past_bookings|length }}</span>
+                <span class="stat-card-subtext">Completed consults</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions Grid -->
+          <div class="next-appointment-title">Quick Actions</div>
+          <div class="actions-grid">
+            <div class="action-card-premium act-booking" onclick="window.location.href='/booking'">
+              <div class="action-card-header">
+                <div class="action-card-icon"><i data-lucide="calendar-plus"></i></div>
+                <span class="action-card-link">Book <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+              </div>
+              <div>
+                <h4 class="action-card-title">New Appointment</h4>
+                <p class="action-card-desc">Schedule a consult with one of our trusted doctors.</p>
+              </div>
+            </div>
+
+            <div class="action-card-premium act-vault" onclick="openPrescriptionModal()">
+              <div class="action-card-header">
+                <div class="action-card-icon"><i data-lucide="upload-cloud"></i></div>
+                <span class="action-card-link">Add <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+              </div>
+              <div>
+                <h4 class="action-card-title">Upload Record</h4>
+                <p class="action-card-desc">Store lab results, prescriptions, and health summaries.</p>
+              </div>
+            </div>
+
+            <div class="action-card-premium act-tracking" onclick="window.location.href='/live-tracking'">
+              <div class="action-card-header">
+                <div class="action-card-icon"><i data-lucide="radio"></i></div>
+                <span class="action-card-link">Track <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+              </div>
+              <div>
+                <h4 class="action-card-title">Live Token Track</h4>
+                <p class="action-card-desc">Check active queues and view real-time patient calls.</p>
+              </div>
+            </div>
+          </div>
+
+          {% set next_active = namespace(b=none) %}
+          {% for b in upcoming_bookings %}
+            {% if next_active.b is none and b.status != 'cancelled' %}
+              {% set next_active.b = b %}
+            {% endif %}
+          {% endfor %}
+          {% if next_active.b is not none %}
+          <!-- Next Appointment Box (Borderless & Integrated without card container) -->
+          <div class="next-appointment-box">
+            <div class="next-appointment-title">Next Appointment Details</div>
+            {% set next_b = next_active.b %}
+            <div class="next-appointment-details-flat" style="display:flex; justify-content:space-between; align-items:center; gap:1.2rem; flex-wrap:wrap; padding: 1.4rem 1.6rem; border-left: 4px solid var(--primary); background: rgba(0, 119, 182, 0.04); border-radius: 16px; {% if next_b.status == 'cancelled' %}opacity:0.65; border-left-color: var(--danger); background: rgba(225, 29, 72, 0.02);{% elif next_b.is_holiday %}border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.03);{% endif %}">
+              <div class="item-info" style="display:flex; flex-direction:column; gap:0.4rem; flex: 1;">
+                {% if next_b.is_holiday %}
+                <div class="holiday-alert" style="margin-bottom:0.6rem; background: transparent; border: none; padding: 0;">
+                  <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#f59e0b;flex-shrink:0;"></i>
+                  <div>
+                    <div style="font-weight:800; color:#d97706; font-size:0.9rem;">Clinic Closed (Holiday)</div>
+                    <div style="font-size:0.82rem; color:#b45309; font-weight:500;">
+                        {{ next_b.holiday_reason }}. Please book another day.
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+                <div style="font-weight:800; color:var(--slate-900); font-size:1.15rem; display:flex; align-items:center; gap:0.5rem;">
+                  <i data-lucide="stethoscope" style="width:18px;height:18px;color:var(--primary);"></i>
+                  {{ next_b.doctor_name }} 
+                  <span style="font-weight:500;color:var(--slate-600);font-size:0.9rem;">({{ next_b.specialization }})</span>
+                </div>
+                <div class="item-meta" style="display:flex; flex-wrap:wrap; gap:0.8rem; font-size:0.85rem; color:var(--slate-600); margin-top:0.3rem;">
+                  <span class="meta-tag" style="background:var(--slate-100); padding:0.2rem 0.6rem; border-radius:8px; color:var(--slate-700); font-weight:700;"><i data-lucide="user" style="width:12px;height:12px;"></i> {{ next_b.patient_name }}</span>
+                  <span class="meta-tag" style="display:flex; align-items:center; gap:0.25rem;"><i data-lucide="calendar" style="width:14px;height:14px;color:var(--primary);"></i> {{ next_b.date }}</span>
+                  <span class="meta-tag" style="display:flex; align-items:center; gap:0.25rem;"><i data-lucide="clock" style="width:14px;height:14px;color:var(--primary);"></i> {{ next_b.time }}</span>
+                  
+                  {% if next_b.status == 'cancelled' %}
+                  <span style="background:#fee2e2; color:#ef4444; padding:0.2rem 0.6rem; border-radius:8px; font-weight:800; font-size:0.75rem;"><i data-lucide="ban" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> Cancelled</span>
+                  {% else %}
+                  <span class="token-badge" style="padding:0.25rem 0.65rem;">Token #{{ next_b.token }}</span>
+                  {% endif %}
+                  {% if next_b.is_skipped %}
+                  <span style="background:#fef3c7; color:#d97706; padding:0.2rem 0.6rem; border-radius:8px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
+                  {% endif %}
+                  
+                  {% if next_b.status != 'cancelled' and next_b.live_status %}
+                  <div class="live-sync-badge {% if next_b.live_status == 'idle' %}idle{% endif %}" 
+                       data-live-doctor="{{ next_b.doctor_name|lower|trim }}" 
+                       data-live-spec="{{ next_b.specialization|lower|trim }}"
+                       data-sched-start="{{ next_b.sched_start }}">
+                    {% if next_b.live_status == 'active' %}
+                      <span class="blinking-dot-small"></span>
+                      <span class="live-text">Live: Calling #{{ next_b.live_token }}</span>
+                    {% elif next_b.live_status == 'idle' and next_b.is_start_time_passed %}
+                      <i data-lucide="clock" style="width:11px;height:11px;"></i>
+                      <span class="live-text">Awaiting Start</span>
+                    {% elif next_b.live_status == 'idle' %}
+                      <i data-lucide="calendar" style="width:11px;height:11px;"></i>
+                      <span class="live-text">Starts at {{ next_b.sched_start }}</span>
+                    {% endif %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="item-actions" style="flex-shrink:0;">
+                {% if next_b.is_holiday %}
+                <a href="/booking" id="reschedBtn" class="btn btn-primary" style="border-radius:12px; padding:0.5rem 1rem;"><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Reschedule</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- PANEL 2: APPOINTMENTS (Single Large Glass Container Panel) -->
+        <div id="bookingsPanel" class="adminPanel glass-card-premium">
+          <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid rgba(0,119,182,0.1); padding-bottom: 0.8rem; margin-bottom: 1.2rem;">
+            <h2 style="margin:0; text-align:left; justify-content:flex-start;"><i data-lucide="calendar" style="width:18px;height:18px;"></i> My Appointments</h2>
+            <a href="/booking" class="btn btn-primary section-action-btn" style="margin:0; min-width:auto; border-radius:12px; padding:0.5rem 0.9rem;"><i data-lucide="plus" style="width:14px;height:14px;"></i> <span>New Booking</span></a>
+          </div>
+
+          <!-- Upcoming / Past Tabs -->
+          <div class="booking-tabs" style="margin-bottom: 1.5rem;">
+            <button class="booking-tab active" onclick="switchBookingTab('upcoming')" id="tab-upcoming">
+              <i data-lucide="clock" style="width:14px;height:14px;"></i> Upcoming
+              <span class="tab-count">{{ active_upcoming_count }}</span>
+            </button>
+            <button class="booking-tab" onclick="switchBookingTab('past')" id="tab-past">
+              <i data-lucide="history" style="width:14px;height:14px;"></i> Past
+              <span class="tab-count">{{ past_bookings|length }}</span>
+            </button>
+          </div>
+
+          <!-- Upcoming Panel -->
+          <div class="tab-panel active" id="panel-upcoming">
+            <div class="item-list">
+              {% if upcoming_bookings %}
+                {% for b in upcoming_bookings %}
+                <div class="item-card" style="{% if b.status == 'cancelled' %}opacity:0.65; background:#fafafa; border:1px solid #fee2e2;{% elif b.is_holiday %}border: 2px solid #fca5a5; position: relative;{% endif %}">
+                  <div class="item-info">
+                    {% if b.is_holiday %}
+                    <div class="holiday-alert">
+                      <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#e11d48;flex-shrink:0;"></i>
+                      <div>
+                        <div style="font-weight:800; color:#e11d48; font-size:0.9rem;">Clinic Holiday on this Day</div>
+                        <div style="font-size:0.82rem; color:#991b1b; font-weight:500;">
+                            The clinic is closed for {{ b.holiday_reason }}. Please book for another day.
+                        </div>
+                      </div>
+                    </div>
+                    {% endif %}
+                    <div class="item-title">{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.9rem;">({{ b.specialization }})</span></div>
+                    <div class="item-meta">
+                      <span class="meta-tag" style="background:#f1f5f9; padding:0.15rem 0.45rem; border-radius:6px; color:#475569;"><i data-lucide="user" style="width:12px;height:12px;"></i> {{ b.patient_name }} {% if b.age and b.age != '-' %}({{ b.age }} y/o){% endif %}</span>
+                      <span class="meta-tag"><i data-lucide="calendar-days" style="width:13px;height:13px;"></i> {{ b.date }}</span>
+                      <span class="meta-tag"><i data-lucide="clock" style="width:13px;height:13px;"></i> {{ b.time }}</span>
+                      
+                      {% if b.status == 'cancelled' %}
+                      <span style="background:#fee2e2; color:#ef4444; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem;"><i data-lucide="ban" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> {% if b.cancelled_by == 'admin' %}Cancelled by Admin{% else %}Cancelled{% endif %}</span>
+                      {% else %}
+                      <span class="token-badge">Token #{{ b.token }}</span>
+                      {% endif %}
+                      {% if b.is_skipped %}
+                      <span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
+                      {% endif %}
+                      
+                      {% if b.status != 'cancelled' and b.live_status %}
+                      <div class="live-sync-badge {% if b.live_status == 'idle' %}idle{% endif %}" 
+                           data-live-doctor="{{ b.doctor_name|lower|trim }}" 
+                           data-live-spec="{{ b.specialization|lower|trim }}"
+                           data-sched-start="{{ b.sched_start }}">
+                        {% if b.live_status == 'active' %}
+                          <span class="blinking-dot-small"></span>
+                          <span class="live-text">Live: Calling #{{ b.live_token }}</span>
+                        {% elif b.live_status == 'idle' and b.is_start_time_passed %}
+                          <i data-lucide="clock" style="width:11px;height:11px;"></i>
+                          <span class="live-text">Awaiting Start</span>
+                        {% elif b.live_status == 'idle' %}
+                          <i data-lucide="calendar" style="width:11px;height:11px;"></i>
+                          <span class="live-text">Starts at {{ b.sched_start }}</span>
+                        {% endif %}
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="item-actions">
+                    {% if b.is_holiday %}
+                    <a href="/booking" id="reschedBtn"><i data-lucide="calendar-plus"></i> Book Another Day</a>
+                    {% endif %}
+                    {% if b.status == 'cancelled' %}
+                    <button class="btn-danger-sm" disabled style="opacity:0.5; cursor:not-allowed; background:#e2e8f0; color:#94a3b8; border-color:#cbd5e1;">
+                      <i data-lucide="ban" style="width:14px;height:14px;"></i> Cancelled
+                    </button>
+                    {% else %}
+                    <button class="btn-danger-sm" onclick="cancelBooking('{{ b.sheet_url }}', '{{ b.date }}', '{{ b.token }}', {{ b.id }})" aria-label="Cancel Booking">
+                      <i data-lucide="x" style="width:14px;height:14px;"></i> Cancel
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="empty-state">
+                  <i data-lucide="calendar-check" style="width:40px;height:40px;"></i>
+                  <p>No upcoming bookings</p>
+                  <a href="/booking" class="empty-state-btn"><i data-lucide="calendar-plus" style="width:15px;height:15px;"></i> Book Now</a>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Past Panel -->
+          <div class="tab-panel" id="panel-past">
+            <div class="item-list">
+              {% if past_bookings %}
+                {% for b in past_bookings %}
+                <div class="item-card" style="{% if b.status == 'cancelled' %}opacity:0.6; background:#fafafa; border:1px solid #fee2e2;{% else %}opacity:0.75;{% endif %}">
+                  <div class="item-info">
+                    <div class="item-title">{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.9rem;">({{ b.specialization }})</span></div>
+                    <div class="item-meta">
+                      <span class="meta-tag" style="background:#f1f5f9; padding:0.15rem 0.45rem; border-radius:6px; color:#475569;"><i data-lucide="user" style="width:12px;height:12px;"></i> {{ b.patient_name }} {% if b.age and b.age != '-' %}({{ b.age }} y/o){% endif %}</span>
+                      <span class="meta-tag"><i data-lucide="calendar-days" style="width:13px;height:13px;"></i> {{ b.date }}</span>
+                      <span class="meta-tag"><i data-lucide="clock" style="width:13px;height:13px;"></i> {{ b.time }}</span>
+                      <span class="token-badge">Token #{{ b.token }}</span>
+                      {% if b.status == 'cancelled' %}
+                      <span style="background:#fee2e2; color:#ef4444; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem;"><i data-lucide="ban" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> {% if b.cancelled_by == 'admin' %}Cancelled by Admin{% else %}Cancelled{% endif %}</span>
+                      {% endif %}
+                      {% if b.is_skipped %}
+                      <span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="empty-state">
+                  <i data-lucide="archive" style="width:40px;height:40px;"></i>
+                  <p>No past bookings</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 3: MEDICAL VAULT (Single Large Glass Container Panel) -->
+        <div id="vaultPanel" class="adminPanel glass-card-premium">
+          <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid rgba(0,119,182,0.1); padding-bottom: 0.8rem; margin-bottom: 1.25rem;">
+            <h2 style="margin:0; text-align:left; justify-content:flex-start;"><i data-lucide="shield-plus" style="width:18px;height:18px;color:#10b981;"></i> Medical Vault</h2>
+            <button class="btn btn-primary section-action-btn" onclick="openPrescriptionModal()" style="margin:0; min-width:auto; border-radius:12px; padding:0.5rem 0.9rem; background:#10b981; box-shadow:0 4px 12px rgba(16,185,129,0.2);">
+              <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> <span>Add Record</span>
+            </button>
+          </div>
+
+          <div class="vault-timeline" id="prescriptionsList">
+            {% if prescriptions %}
+              {% for p in prescriptions %}
+              <div class="vault-entry {% if not p.doctor_name %}manual{% endif %}">
+                <div class="vault-dot">
+                  {% if p.doctor_name %}
+                    <i data-lucide="stethoscope" style="width:18px;height:18px;"></i>
+                  {% else %}
+                    <i data-lucide="file-text" style="width:18px;height:18px;"></i>
+                  {% endif %}
+                </div>
+                
+                <div class="vault-card">
+                  <div class="vault-date">
+                    <i data-lucide="calendar"></i> {{ p.consultation_date }}
+                    {% if not p.doctor_name %}
+                      <span style="margin-left:auto; background:#10b98120; color:#10b981; padding:2px 8px; border-radius:6px; font-size:0.65rem;">Manual Upload</span>
+                    {% endif %}
+                  </div>
+                  
+                  <div class="vault-doctor">
+                    {% if p.doctor_name %}
+                      <i data-lucide="stethoscope"></i> <span>{{ p.doctor_name }}</span>
+                    {% else %}
+                      Medical Record: <span>{{ p.patient_name }}</span>
+                    {% endif %}
+                  </div>
+                  
+                  {% if p.doctor_name %}
+                    <div class="vault-patient">Patient: {{ p.patient_name }}</div>
+                  {% endif %}
+
+                  <div class="vault-actions">
+                    {% if p.file_path %}
+                      <a href="{{ p.file_path }}" target="_blank" class="vault-btn btn-vault-view">
+                        <i data-lucide="eye"></i> View Record
+                      </a>
+                    {% endif %}
+                    <button class="vault-btn" onclick="confirmDeletePrescription({{ p.id }})" style="flex:0; min-width:40px; background:#fff1f2; color:#e11d48; border:1px solid #fecaca; margin:0;">
+                      <i data-lucide="trash-2"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-state" style="padding: 3rem 1rem;">
+                <div style="background:rgba(16,185,129,0.05); width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem;">
+                   <i data-lucide="file-digit" style="width:40px;height:40px;color:#10b981;opacity:0.6;"></i>
+                </div>
+                <p style="color:#0f172a; margin-bottom:0.5rem; text-align: center; font-weight: 700; font-size: 1.15rem; margin-top: 1rem;">Your Vault is Empty</p>
+                <p style="font-size:0.9rem; color:#64748b; margin-bottom:1.5rem;">Securely store your prescriptions, lab reports, and medical history in one place.</p>
+                <button class="section-action-btn" onclick="openPrescriptionModal()" style="background:#10b981; padding:0.6rem 1.5rem; height:auto; width:auto; margin:0 auto;">
+                   <i data-lucide="upload-cloud"></i> Start Your Vault
+                </button>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+      
+      <!-- CENTERED SIMPLE COPYRIGHT FOOTER -->
+      <footer class="admin-footer">
+        <p class="admin-footer-copy">&copy; 2026 PrimeCare Clinic. All rights reserved.</p>
+      </footer>
+    </main>
+  </div>
+
+  <!-- ADD PRESCRIPTION MODAL -->
+  <div class="modal-overlay" id="presModal">
+    <div class="pres-modal-content">
+      <button class="pres-close-btn" onclick="closePrescriptionModal()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+      <div class="pres-modal-header">
+        <div class="icon-circle"><i data-lucide="file-plus" style="width:20px;height:20px;"></i></div>
+        <div>
+          <h3>Add Prescription</h3>
+          <p>Upload and store your medical document</p>
+        </div>
+      </div>
+      <form id="presForm" onsubmit="handlePrescriptionSubmit(event)">
+        <div class="pres-form-group">
+          <label><i data-lucide="user"></i> Patient Name</label>
+          <input type="text" id="pres-name" required placeholder="Full Name" />
+        </div>
+        <div class="pres-form-group">
+          <label><i data-lucide="calendar"></i> Consultation Date</label>
+          <input type="date" id="pres-date" required />
+        </div>
+        <div class="pres-form-group">
+          <label><i data-lucide="stethoscope"></i> Doctor (Optional)</label>
+          <select id="pres-doc">
+            <option value="">Select Doctor</option>
+            {% for doc in all_doctors %}
+            <option value="{{ doc.Name }}">{{ doc.Name }} — {{ doc.Specialization }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="pres-form-group">
+          <label><i data-lucide="paperclip"></i> Upload Document</label>
+          <input type="file" id="pres-file" accept="image/*,application/pdf" required />
+        </div>
+        <button type="submit" class="pres-submit-btn" id="presSubmitBtn">
+          <i data-lucide="upload" style="width:16px;height:16px;"></i> Upload & Save
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Universal Confirmation Modal -->
+  <div class="modal-overlay" id="universalModal">
+    <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+      <div class="modal-icon-container" id="unvIconContainer" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
+        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+      </div>
+      <h3 id="unvTitle" style="margin: 0 auto 0.5rem auto; color: #0f172a; font-size: 1.4rem; font-weight: 800; text-align: center; width: 100%;">Confirm Action</h3>
+      <p id="unvMessage" style="color: #64748b; font-size: 1.05rem; margin: 0 auto 2.2rem auto; line-height: 1.6; text-align: center; width: 100%;">Are you sure you want to proceed?</p>
+      <div class="modal-btns" style="display: flex; gap: 1.2rem; justify-content: center; width: 100%;">
+        <button class="btn btn-outline" onclick="closeUniversalModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Cancel</button>
+        <button id="unvConfirmBtn" class="btn btn-primary" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Tray FAB -->
+  <button id="notifTrayFab" onclick="restoreBanner()" title="Restore Token Tracking">
+    <div class="notif-badge"></div>
+    <i data-lucide="bell"></i>
+  </button>
+
+  <!-- Live Token Floating Banner (Sync with Home) -->
+  <div id="homeTokenBanner" onclick="window.location.href='/live-tracking?doctor=' + encodeURIComponent(this.dataset.doc) + '&date=' + this.dataset.date">
+    <div class="banner-left">
+      <div class="banner-status">
+        <i data-lucide="radio" class="pulse"></i> 
+        <span id="bannerStatusText">Live Status</span>
+      </div>
+      <div class="banner-doctor" id="bannerDocName">--</div>
+    </div>
+    <div class="banner-stats">
+      <div class="banner-stat-item">
+        <span class="stat-label">Live</span>
+        <span class="stat-val stat-live" id="bannerLiveToken">--</span>
+      </div>
+      <div class="banner-stat-item">
+        <span class="stat-label">Your Token</span>
+        <span class="stat-val stat-mine" id="bannerYourToken">--</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // ── Sidebar Toggle Mobile ──
+    function toggleSidebar(isOpen) {
+      const sidebar = document.getElementById('adminSidebar');
+      const backdrop = document.getElementById('adminSidebarBackdrop');
+      if (sidebar && backdrop) {
+        if (isOpen) {
+          sidebar.classList.add('open');
+          backdrop.classList.add('open');
+          document.body.style.overflow = 'hidden';
+        } else {
+          sidebar.classList.remove('open');
+          backdrop.classList.remove('open');
+          document.body.style.overflow = '';
+        }
+      }
+    }
+
+    // ── Switch Panels ──
+    function showAdminPanel(panelName, sidebarItem) {
+      document.querySelectorAll('.adminPanel').forEach(p => p.classList.remove('active'));
+      
+      const targetPanel = document.getElementById(panelName + 'Panel');
+      if (targetPanel) {
+        targetPanel.classList.add('active');
+      }
+      
+      document.querySelectorAll('.admin-sidebar-nav-item').forEach(item => item.classList.remove('active'));
+      
+      if (sidebarItem) {
+        sidebarItem.classList.add('active');
+      } else {
+        const match = document.querySelector(`.admin-sidebar-nav-item[data-panel="${panelName}"]`);
+        if (match) match.classList.add('active');
+      }
+      
+      const breadcrumbActive = document.getElementById('currentBreadcrumbActive');
+      if (breadcrumbActive) {
+        let titleText = "Overview";
+        if (panelName === 'bookings') titleText = "My Appointments";
+        else if (panelName === 'vault') titleText = "Medical Vault";
+        breadcrumbActive.textContent = titleText;
+      }
+      
+      toggleSidebar(false);
+      localStorage.setItem('patientActivePanel', panelName);
+      
+      if (panelName === 'overview') {
+        history.replaceState(null, null, ' ');
+      } else {
+        history.replaceState(null, null, '#' + panelName);
+      }
+    }
+
+    // Hash routing & Persistence on Load
+    function handleHashRouting() {
+      const hash = window.location.hash.substring(1);
+      const savedPanel = localStorage.getItem('patientActivePanel') || 'overview';
+      
+      if (hash === 'bookingsSection' || hash === 'bookings') {
+        showAdminPanel('bookings');
+      } else if (hash === 'prescriptionsSection' || hash === 'vault') {
+        showAdminPanel('vault');
+      } else if (hash === 'overview') {
+        showAdminPanel('overview');
+      } else if (savedPanel) {
+        showAdminPanel(savedPanel);
+      } else {
+        showAdminPanel('overview');
+      }
+    }
+
+    function goHome() {
+      window.location.href = '/';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Dynamic time greeting logic
+      const hour = new Date().getHours();
+      let greet = "Welcome back";
+      if (hour < 12) greet = "Good morning";
+      else if (hour < 17) greet = "Good afternoon";
+      else greet = "Good evening";
+      const greetingEl = document.getElementById('greetingText');
+      if (greetingEl) greetingEl.textContent = greet + ',';
+
+      handleHashRouting();
+    });
+
+    // ── Booking Tabs ──
+    function switchBookingTab(tab) {
+      document.querySelectorAll('.booking-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.getElementById('panel-' + tab).classList.add('active');
+    }
+
+    // ── Universal Modal ──
+    let activeModalAction = null;
+    function openUniversalModal(title, message, actionText, actionFn, isDanger = false) {
+      document.getElementById('unvTitle').textContent = title;
+      document.getElementById('unvMessage').textContent = message;
+      const btn = document.getElementById('unvConfirmBtn');
+      btn.textContent = actionText;
+      btn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      btn.style.boxShadow = isDanger ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      
+      const container = document.getElementById('unvIconContainer');
+      const iconName = isDanger ? 'alert-triangle' : 'help-circle';
+      container.innerHTML = `<i data-lucide="${iconName}" style="width: 32px; height: 32px;"></i>`;
+      
+      if(isDanger) {
+         container.style.color = '#e11d48';
+         container.style.background = 'rgba(225, 29, 72, 0.1)';
+      } else {
+         container.style.color = '#0077b6';
+         container.style.background = 'rgba(0, 119, 182, 0.1)';
+      }
+      lucide.createIcons();
+      activeModalAction = actionFn;
+      document.getElementById('universalModal').style.display = 'flex';
+    }
+    function closeUniversalModal() {
+      document.getElementById('universalModal').style.display = 'none';
+      activeModalAction = null;
+    }
+    document.getElementById('unvConfirmBtn').addEventListener('click', () => {
+      if (activeModalAction) activeModalAction();
+      closeUniversalModal();
+    });
+
+    // ── Toast ──
+    function showToast(msg, type='success') {
+      const toast = document.getElementById('globalToast');
+      toast.className = 'toast-' + type;
+      toast.innerHTML = (type === 'success' ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
+      lucide.createIcons();
+      toast.style.display = 'flex';
+      setTimeout(() => toast.style.display = 'none', 3500);
+    }
+
+    // ── Logout ──
+    function confirmLogout() {
+      openUniversalModal('Confirm Logout', 'Are you sure you want to securely log out of your session?', 'Logout', async () => {
+        await fetch('/patient_logout', { method: 'POST' });
+        window.location.href = '/';
+      }, true);
+    }
+
+    // ── Cancel Booking ──
+    function cancelBooking(sheetUrl, dateStr, tokenStr, dbId) {
+      openUniversalModal('Cancel Booking', `Are you sure you want to cancel Token #${tokenStr} on ${dateStr}? This action cannot be undone.`, 'Cancel Booking', async () => {
+        const res = await fetch('/cancel_own_booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sheet_url: sheetUrl, date: dateStr, token: tokenStr, id: dbId })
+        });
+        const data = await res.json();
+        if(data.success) {
+          showToast(data.msg, 'success');
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          showToast(data.msg, 'error');
+        }
+      }, true);
+    }
+
+    // ── Prescription Modal ──
+    function openPrescriptionModal() {
+      document.getElementById('presModal').style.display = 'flex';
+      lucide.createIcons();
+    }
+    function closePrescriptionModal() {
+      document.getElementById('presModal').style.display = 'none';
+      document.getElementById('presForm').reset();
+    }
+
+    async function handlePrescriptionSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('presSubmitBtn');
+      btn.innerHTML = '<i data-lucide="loader" style="width:16px;height:16px;"></i> Uploading...';
+      btn.disabled = true;
+
+      const fd = new FormData();
+      fd.append('patient_name', document.getElementById('pres-name').value);
+      fd.append('consultation_date', document.getElementById('pres-date').value);
+      fd.append('doctor_name', document.getElementById('pres-doc').value);
+      fd.append('file', document.getElementById('pres-file').files[0]);
+
+      try {
+        const res = await fetch('/add_prescription', { method: 'POST', body: fd });
+        const data = await res.json();
+        if(data.success) {
+          showToast('Prescription added!', 'success');
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          showToast(data.msg || 'Error adding prescription', 'error');
+        }
+      } catch (err) {
+        showToast('Network error', 'error');
+      } finally {
+        btn.innerHTML = '<i data-lucide="upload" style="width:16px;height:16px;"></i> Upload & Save';
+        btn.disabled = false;
+        lucide.createIcons();
+      }
+    }
+
+    // ── Delete Prescription ──
+    function confirmDeletePrescription(id) {
+      openUniversalModal('Delete Document', 'Are you sure you want to delete this prescription? It will be permanently removed.', 'Delete', async () => {
+        const res = await fetch('/delete_prescription', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if(data.success) {
+          showToast('Deleted', 'success');
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          showToast(data.msg, 'error');
+        }
+      }, true);
+    }
+    
+    // ─── PWA Service Worker Registration ───
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then(reg => {
+            console.log('Service Worker registered:', reg.scope);
+            if (Notification.permission === 'granted') {
+              try {
+                const vapidPublicKey = 'BOoeVMyifl6JFZhRdmlSNpg5vvdTAUAXZqrAMX3ONaZoffmW48-ohbJFUzZzhxkvxxm_z7gwmpf0-xqoe6dMpEU';
+                const padding = '='.repeat((4 - vapidPublicKey.length % 4) % 4);
+                const base64 = (vapidPublicKey + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+                
+                reg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: outputArray
+                }).then(subscription => {
+                    fetch('/api/save_subscription', {
+                      method: 'POST',
+                      body: JSON.stringify(subscription),
+                      headers: { 'Content-Type': 'application/json' }
+                    });
+                }).catch(e => {});
+              } catch(e) {}
+            }
+          })
+          .catch(err => console.log('Service Worker registration failed:', err));
+      });
+    }
+
+    (function() {
+      const banner = document.getElementById('homeTokenBanner');
+      const tray = document.getElementById('notifTrayFab');
+      const docName = document.getElementById('bannerDocName');
+      const liveTokenEl = document.getElementById('bannerLiveToken');
+      const yourTokenEl = document.getElementById('bannerYourToken');
+      const statusText = document.getElementById('bannerStatusText');
+      
+      let isDismissed = localStorage.getItem('tokenBannerDismissed') === 'true';
+      let hasNotification = false;
+
+      // ── Swipe Logic ──
+      let startX = 0;
+      let currentX = 0;
+      let isSwiping = false;
+
+      if (banner) {
+        banner.addEventListener('touchstart', e => {
+          startX = e.touches[0].clientX;
+          isSwiping = true;
+          banner.style.transition = 'none';
+        });
+
+        banner.addEventListener('touchmove', e => {
+          if (!isSwiping) return;
+          currentX = e.touches[0].clientX - startX;
+          banner.style.transform = `translateX(calc(-50% + ${currentX}px)) translateY(0)`;
+          banner.style.opacity = 1 - Math.abs(currentX) / 300;
+        });
+
+        banner.addEventListener('touchend', e => {
+          isSwiping = false;
+          banner.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease';
+          if (Math.abs(currentX) > 120) {
+            dismissBanner();
+          } else {
+            banner.style.transform = 'translateX(-50%) translateY(0)';
+            banner.style.opacity = '1';
+          }
+          currentX = 0;
+        });
+      }
+
+      window.dismissBanner = function() {
+        isDismissed = true;
+        localStorage.setItem('tokenBannerDismissed', 'true');
+        banner.style.transform = currentX > 0 ? 'translateX(100vw)' : 'translateX(-100vw)';
+        banner.style.opacity = '0';
+        setTimeout(() => {
+          banner.classList.remove('show');
+          if (hasNotification) tray.classList.add('show');
+        }, 400);
+      };
+
+      window.restoreBanner = function() {
+        isDismissed = false;
+        localStorage.removeItem('tokenBannerDismissed');
+        tray.classList.remove('show');
+        banner.classList.add('show');
+        banner.style.transform = 'translateX(-50%) translateY(0)';
+        banner.style.opacity = '1';
+      };
+
+      async function updateTokenBanner() {
+        try {
+          const res = await fetch('/my_token_status');
+          const data = await res.json();
+          
+          if (data.success && (data.status === 'active' || data.status === 'skipped')) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isAndroid = /Android/.test(navigator.userAgent);
+            const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+            // ── Push Notifications (Android & iOS PWA) ──────────────────
+            const supportsNotif = typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
+            const canReceiveNotif = supportsNotif && Notification.permission === 'granted' && (isAndroid || isStandalone);
+
+            if (canReceiveNotif) {
+              const ahead   = data.patients_ahead;
+              const liveDoc = data.doctor_name;
+              const liveTok = data.current_token;
+              const yourTok = data.your_token;
+
+              function sendSwNotif(title, body, tag, vibrate, renotify) {
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.ready.then(reg => {
+                    if (reg.active) {
+                      reg.active.postMessage({
+                        type: 'SHOW_NOTIFICATION',
+                        title, body, tag,
+                        vibrate: vibrate || null,
+                        renotify: renotify !== false,
+                        url: '/patient_dashboard'
+                      });
+                    } else {
+                      reg.showNotification(title, {
+                        body, tag, icon: '/static/android-chrome-192x192.png',
+                        badge: '/static/favicon-32x32.png',
+                        vibrate: vibrate || undefined,
+                        renotify: renotify !== false,
+                        silent: false,
+                        data: { url: '/patient_dashboard' }
+                      }).catch(() => {});
+                    }
+                  }).catch(() => {});
+                }
+              }
+
+              // 1️⃣ Persistent live-tracking notification
+              const liveKey  = `live_tok_${liveDoc}_${yourTok}`;
+              const lastLive = sessionStorage.getItem(liveKey);
+              if (String(liveTok) !== lastLive && data.status === 'active') {
+                sessionStorage.setItem(liveKey, String(liveTok));
+                sendSwNotif(
+                  'Live Tracking',
+                  `${liveDoc}  ·  Now: #${liveTok}  ·  Your Token: #${yourTok}`,
+                  'primecare-live',
+                  null,
+                  false
+                );
+              }
+  
+              // 2️⃣ Alert: vibrate at 2 / 1 / 0 tokens ahead
+              const alertKey  = `alerted_${liveDoc}_${yourTok}`;
+              const lastAlert = sessionStorage.getItem(alertKey);
+              if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && data.status === 'active') {
+                sessionStorage.setItem(alertKey, String(ahead));
+                const alertBody = ahead === 0
+                  ? `It's your turn! Proceed to ${liveDoc} immediately.`
+                  : ahead === 1
+                  ? `You're next for ${liveDoc}. Please be ready!`
+                  : `2 patients ahead — ${liveDoc}. Get ready soon.`;
+                sendSwNotif(
+                  'Token Alert',
+                  alertBody,
+                  'primecare-alert',
+                  [300, 100, 300, 100, 500],
+                  true
+                );
+              }
+  
+              // 3️⃣ Skipped notification
+              if (data.status === 'skipped') {
+                const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
+                if (!sessionStorage.getItem(skipKey)) {
+                  sessionStorage.setItem(skipKey, '1');
+                  sendSwNotif(
+                    'Token Skipped',
+                    `Your token was skipped. Please contact the reception.`,
+                    'primecare-skip',
+                    [400, 200, 400],
+                    true
+                  );
+                }
+              }
+            }
+
+            // Show permission card if not yet granted
+            if (isMobile && supportsNotif && Notification.permission === 'default' && (isAndroid || isStandalone)) {
+              showNotifPermCard();
+            }
+
+            hasNotification = true;
+            docName.textContent = data.doctor_name;
+            liveTokenEl.textContent = data.current_token;
+            yourTokenEl.textContent = data.your_token;
+            
+            banner.dataset.doc = data.doctor_name;
+            banner.dataset.date = data.date;
+
+            // Sync with stats panel in Overview
+            const statsLiveQueue = document.getElementById('statsLiveQueue');
+            const statsLiveSub = document.getElementById('statsLiveSub');
+            if (statsLiveQueue && statsLiveSub) {
+              statsLiveQueue.textContent = `#${data.current_token}`;
+              statsLiveSub.innerHTML = `<span style="font-weight:750;color:var(--primary);">${data.doctor_name}</span> (Your: #${data.your_token})`;
+            }
+
+            const ahead = data.patients_ahead;
+            if (data.status === 'skipped') {
+              banner.classList.remove('show');
+              tray.classList.remove('show');
+              hasNotification = false;
+              return;
+            } else if (ahead === 0) {
+              statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
+            } else if (ahead === 1) {
+              statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
+            } else {
+              statusText.textContent = "Live Status";
+            }
+
+            if (!isDismissed) {
+              banner.classList.add('show');
+            } else {
+              tray.classList.add('show');
+            }
+            lucide.createIcons();
+          } else {
+            hasNotification = false;
+            banner.classList.remove('show');
+            tray.classList.remove('show');
+            
+            // Revert queue stats card in overview panel
+            const statsLiveQueue = document.getElementById('statsLiveQueue');
+            const statsLiveSub = document.getElementById('statsLiveSub');
+            if (statsLiveQueue && statsLiveSub) {
+              statsLiveQueue.textContent = "--";
+              statsLiveSub.textContent = "No active session";
+            }
+          }
+        } catch(e) {
+          console.error("Live banner update failed", e);
+        }
+      }
+
+      const userLoggedIn = {{ 'true' if 'user_id' in session else 'false' }};
+      const isPatient = {{ 'true' if session.get('user_role') == 'patient' else 'false' }};
+
+      if (userLoggedIn && isPatient) {
+          updateTokenBanner();
+          setInterval(updateTokenBanner, 5000); 
+      }
+    })();
+
+    // ─── Shared Swipe Dismiss Helper ───
+    function _addSwipeDismiss(el, onDismiss, skipSelector) {
+      let sX = 0, cX = 0, sw = false;
+      el.addEventListener('touchstart', e => {
+        if (skipSelector && e.target.closest(skipSelector)) return;
+        sX = e.touches[0].clientX; sw = true; el.style.transition = 'none';
+      }, {passive:true});
+      el.addEventListener('touchmove', e => {
+        if (!sw) return;
+        cX = e.touches[0].clientX - sX;
+        el.style.transform = `translateX(calc(-50% + ${cX}px))`;
+        el.style.opacity = String(Math.max(0, 1 - Math.abs(cX) / 180));
+      }, {passive:true});
+      el.addEventListener('touchend', () => {
+        sw = false;
+        el.style.transition = 'transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.3s ease';
+        if (Math.abs(cX) > 100) { onDismiss(cX); }
+        else {
+          el.style.transform = 'translateX(-50%)';
+          el.style.opacity = '1';
+        }
+        cX = 0;
+      }, {passive:true});
+    }
+    function _slideOut(el, dir, storageKey) {
+      if (storageKey) sessionStorage.setItem(storageKey, '1');
+      el.style.transition = 'transform 0.45s ease, opacity 0.3s ease';
+      el.style.transform = dir >= 0 ? 'translateX(120vw)' : 'translateX(-120vw)';
+      el.style.opacity = '0';
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 460);
+    }
+
+    // ─── Notification Permission Card ───
+    let _notifCardShown = false;
+    function showNotifPermCard() {
+      if (_notifCardShown) return;
+      _notifCardShown = true;
+      if (sessionStorage.getItem('notifCardDismissed')) return;
+
+      const card = document.createElement('div');
+      card.id = 'notifPermCard';
+      card.style.cssText = `
+        position:fixed; bottom:24px; left:50%;
+        transform:translateX(-50%) translateY(180px);
+        width:90%; max-width:390px;
+        background:linear-gradient(135deg,rgba(255,255,255,0.97),rgba(236,248,255,0.97));
+        backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+        padding:1.1rem; border-radius:23px;
+        box-shadow:0 20px 60px rgba(0,119,182,0.18),0 4px 16px rgba(0,0,0,0.07),
+                   inset 0 0 0 1.5px rgba(255,255,255,0.85);
+        border:1.5px solid rgba(0,119,182,0.14);
+        display:flex; flex-direction:column; gap:0.95rem;
+        transition:transform 0.65s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.4s ease;
+        touch-action:pan-x; user-select:none; z-index:9998;
+      `;
+      card.innerHTML = `
+        <div style="display:flex; align-items:center; gap:0.95rem; width:100%;">
+          <div style="
+            background:linear-gradient(140deg,#0077b6,#00b4d8);
+            width:50px; height:50px; border-radius:16px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            box-shadow:0 8px 22px rgba(0,119,182,0.38);
+          ">
+            <i data-lucide="bell-ring" style="width:23px;height:23px;color:white;"></i>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:800; font-size:1rem; color:#0c1a2e; letter-spacing:-0.01em;">Enable Live Alerts</div>
+            <div style="font-size:0.78rem; color:#64748b; line-height:1.45; margin-top:2px;">Know when your token is near. <span style="color:#94a3b8;font-style:italic;">Swipe to dismiss.</span></div>
+          </div>
+        </div>
+        <button id="enableNotifBtn" style="
+          width:100%;
+          background:linear-gradient(135deg,#0077b6,#0096c7); color:#fff; border:none;
+          padding:0.75rem 1rem; border-radius:14px; font-size:0.95rem; font-weight:800;
+          cursor:pointer; font-family:inherit;
+          box-shadow:0 6px 18px rgba(0,119,182,0.35); text-align:center;
+          letter-spacing:0.01em; margin-top:0 !important;
+        ">Enable Notification</button>
+      `;
+      document.body.appendChild(card);
+      if (typeof lucide !== 'undefined') lucide.createIcons(card);
+      requestAnimationFrame(() => { card.style.transform = 'translateX(-50%) translateY(0)'; });
+
+      document.getElementById('enableNotifBtn').addEventListener('click', async e => {
+        e.stopPropagation();
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(async reg => {
+              try {
+                const vapidPublicKey = 'BOoeVMyifl6JFZhRdmlSNpg5vvdTAUAXZqrAMX3ONaZoffmW48-ohbJFUzZzhxkvxxm_z7gwmpf0-xqoe6dMpEU';
+                const padding = '='.repeat((4 - vapidPublicKey.length % 4) % 4);
+                const base64 = (vapidPublicKey + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+                
+                const subscription = await reg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: outputArray
+                });
+                
+                await fetch('/api/save_subscription', {
+                  method: 'POST',
+                  body: JSON.stringify(subscription),
+                  headers: { 'Content-Type': 'application/json' }
+                });
+              } catch (err) {
+                console.error("Web Push Subscription Error:", err);
+              }
+
+              reg.showNotification('PrimeCare', {
+                body: "Alerts enabled! You will be notified when your turn is near.",
+                icon: '/static/android-chrome-192x192.png',
+                badge: '/static/favicon-32x32.png',
+                vibrate: [200, 100, 200]
+              }).catch(() => {
+                try { new Notification('PrimeCare', { body: "Alerts enabled!", icon: '/static/android-chrome-192x192.png' }); } catch(err) {}
+              });
+            });
+          } else {
+            try { new Notification('PrimeCare', { body: "Alerts enabled! You will be notified.", icon: '/static/android-chrome-192x192.png' }); } catch(err) {}
+          }
+        }
+        _slideOut(card, 1, 'notifCardDismissed');
+        _notifCardShown = false; 
+      });
+      _addSwipeDismiss(card, dir => _slideOut(card, dir, 'notifCardDismissed'));
+    }
+
+    // ─── Unified Install Guide ───
+    (function initInstallGuide() {
+      const isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isAndroid    = /Android/.test(navigator.userAgent);
+      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+      if (isStandalone || sessionStorage.getItem('installGuideDismissed')) return;
+      if (!isIOS && !isAndroid) return;
+
+      const hasUpcoming = {{ 'true' if active_upcoming_count > 0 else 'false' }};
+      const justBooked = document.referrer.includes('/confirmation') || sessionStorage.getItem('justBooked');
+      
+      if (!hasUpcoming || (!justBooked && !window.location.search.includes('source=tracking'))) return;
+
+      let deferredPrompt = null;
+      if (isAndroid) {
+        window.addEventListener('beforeinstallprompt', e => {
+          e.preventDefault(); deferredPrompt = e;
+        });
+      }
+
+      setTimeout(() => {
+        const guide = document.createElement('div');
+        guide.style.cssText = `
+          position:fixed; bottom:24px; left:50%;
+          transform:translateX(-50%);
+          width:90%; max-width:390px;
+          background:linear-gradient(135deg,rgba(255,255,255,0.97),rgba(236,248,255,0.97));
+          backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+          padding:1.1rem 1.2rem; border-radius:22px;
+          box-shadow:0 20px 60px rgba(0,119,182,0.16),0 4px 16px rgba(0,0,0,0.07),
+                     inset 0 0 0 1.5px rgba(255,255,255,0.85);
+          border:1.5px solid rgba(0,119,182,0.14);
+          display:flex; align-items:center; gap:1rem;
+          animation:slideUpCard 0.7s cubic-bezier(0.175,0.885,0.32,1.275);
+          touch-action:pan-x; user-select:none; cursor:grab; z-index:10000;
+        `;
+
+        if (isIOS) {
+          guide.innerHTML = `
+            <div id="installActionBtn" style="
+              background:linear-gradient(140deg,#0077b6,#00b4d8); color:#fff;
+              width:50px; height:50px; border-radius:16px; flex-shrink:0;
+              display:flex; align-items:center; justify-content:center;
+              cursor:pointer; box-shadow:0 8px 22px rgba(0,119,182,0.38);
+              animation:ios-pulse 2.5s ease-in-out infinite;
+            ">
+              <i data-lucide="share" style="width:22px;height:22px;"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:800;font-size:0.95rem;color:#0c1a2e;letter-spacing:-0.01em;">Add to Home Screen</div>
+              <div style="font-size:0.78rem;color:#475569;line-height:1.45;margin-top:3px;">Tap <span style="font-weight:800;color:#0077b6;">Share</span> then <b style="color:#0f172a;">'Add to Home Screen'</b> for real-time alerts &amp; live tracking.</div>
+              <div style="font-size:0.7rem;color:#94a3b8;margin-top:5px;font-style:italic;">Swipe to dismiss</div>
+            </div>
+          `;
+        } else {
+          guide.innerHTML = `
+            <div style="
+              width:50px; height:50px; border-radius:16px; flex-shrink:0;
+              overflow:hidden; box-shadow:0 8px 22px rgba(0,119,182,0.3);
+            ">
+              <img src="/static/android-chrome-192x192.png" style="width:100%;height:100%;object-fit:cover;">
+            </div>
+            <div style="flex:1;">
+              <div style="font-weight:800;font-size:0.95rem;color:#0c1a2e;letter-spacing:-0.01em;">Add to Home Screen</div>
+              <div id="installActionBtn" style="font-size:0.78rem;color:#475569;line-height:1.45;margin-top:3px;cursor:pointer;">Tap <span style="font-weight:800;color:#0077b6;">⋮ Menu</span> then <b style="color:#0f172a;">'Add to Home Screen'</b> for push alerts &amp; live tracking.</div>
+              <div style="font-size:0.7rem;color:#94a3b8;margin-top:5px;font-style:italic;">Swipe to dismiss</div>
+            </div>
+          `;
+        }
+
+        document.body.appendChild(guide);
+        if (window.lucide) lucide.createIcons(guide);
+
+        const btn = guide.querySelector('#installActionBtn');
+        btn && btn.addEventListener('click', async e => {
+          e.stopPropagation();
+          if (isIOS) {
+            if (navigator.share) {
+              try { await navigator.share({ title:'PrimeCare Clinic', text:'Real-time Hospital Token Tracking', url:window.location.href }); }
+              catch(err) {}
+            } else {
+              alert("Tap the Share icon \u2197 in Safari's bottom bar, then choose 'Add to Home Screen'.");
+            }
+          } else if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const result = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            if (result.outcome === 'accepted') _slideOut(guide, 1, 'installGuideDismissed');
+          }
+        });
+
+        _addSwipeDismiss(guide, dir => _slideOut(guide, dir, 'installGuideDismissed'), '#installActionBtn');
+      }, 3000);
+    })();
+
+    function confirmRoleSwitch() {
+        openUniversalModal('Switch Account', 'Are you sure you want to switch from User to Doctor?', 'Switch Now', async () => {
+            const res = await fetch('/switch_active_role', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.msg, 'success');
+                setTimeout(() => window.location.href = data.redirect_url, 1000);
+            } else {
+                showToast(data.msg, 'error');
+            }
+        }, true);
+    }
+
+    // ─── Pull to Refresh Logic ───
+    (function initPullToRefresh() {
+      let touchStart = 0;
+      let touchMove = 0;
+      const indicator = document.getElementById('pullIndicator');
+      const body = document.body;
+      const threshold = 150;
+
+      window.addEventListener('touchstart', e => {
+        if (window.scrollY === 0) {
+          touchStart = e.touches[0].clientY;
+          body.classList.add('pulling');
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchmove', e => {
+        if (touchStart > 0) {
+          touchMove = e.touches[0].clientY - touchStart;
+          if (touchMove > 0) {
+            const pull = Math.min(touchMove * 0.4, threshold);
+            indicator.style.transform = `translateY(${pull}px)`;
+            const rotate = (pull / threshold) * 360;
+            const svg = indicator.querySelector('svg');
+            if (svg) svg.style.transform = `rotate(${rotate}deg)`;
+          }
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchend', () => {
+        if (touchMove > threshold * 2) {
+          body.classList.add('refreshing');
+          indicator.style.transform = `translateY(${threshold / 2}px)`;
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        } else {
+          indicator.style.transform = `translateY(0)`;
+        }
+        body.classList.remove('pulling');
+        touchStart = 0;
+        touchMove = 0;
+      });
+    })();
+
+    // ─── Universal Dashboard Sync Poller ───
+    async function syncDashboardLiveStatus() {
+      const badges = document.querySelectorAll('.live-sync-badge');
+      if (badges.length === 0) return;
+
+      const now = new Date();
+      const currentHHMM = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+      try {
+        const res = await fetch('/live_tokens');
+        const data = await res.json();
+        if (!data.success) return;
+
+        badges.forEach(badge => {
+          const docName = badge.dataset.liveDoctor;
+          const docSpec = badge.dataset.liveSpec;
+          const schedStart = badge.dataset.schedStart || "00:00";
+          
+          const liveData = data.data.find(d => 
+            d.doctor_name.toLowerCase().trim() === docName && 
+            d.specialization.toLowerCase().trim() === docSpec
+          );
+
+          if (liveData) {
+            if (liveData.status_raw === 'active') {
+              badge.classList.remove('idle');
+              if (!badge.querySelector('.blinking-dot-small')) {
+                badge.innerHTML = '<span class="blinking-dot-small"></span><span class="live-text"></span>';
+              }
+              badge.querySelector('.live-text').textContent = `Live: Calling #${liveData.current_token}`;
+            } else if (liveData.status_raw === 'idle') {
+              badge.classList.add('idle');
+              if (currentHHMM >= schedStart) {
+                badge.innerHTML = '<i data-lucide="clock" style="width:11px;height:11px;"></i><span class="live-text">Awaiting Start</span>';
+              } else {
+                badge.innerHTML = `<i data-lucide="calendar" style="width:11px;height:11px;"></i><span class="live-text">Starts at ${schedStart}</span>`;
+              }
+              lucide.createIcons();
+            } else if (liveData.status_raw === 'completed') {
+              badge.classList.add('idle');
+              badge.innerHTML = '<i data-lucide="check-circle" style="width:11px;height:11px;"></i><span class="live-text">Completed</span>';
+              lucide.createIcons();
+            }
+          }
+        });
+      } catch (e) { console.error("Dashboard Sync Failed", e); }
+    }
+
+    setInterval(syncDashboardLiveStatus, 5000);
+  </script>
+</body>
+</html>

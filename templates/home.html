@@ -1,0 +1,3421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PrimeCare Clinic – Trusted Healthcare</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="description" content="Book appointments at PrimeCare Clinic. Experienced specialists, online token booking, instant confirmation." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PrimeCare">
+  <link rel="apple-touch-icon" href="/static/image/pwa-icon.png">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      height: 100%; margin: 0; padding: 0; overflow-x: hidden;
+      font-family: 'Inter', system-ui, sans-serif; color: #222;
+      -webkit-font-smoothing: antialiased;
+    }
+    body { background: #f0f4f8; }
+
+    /* Background */
+    .bg-image {
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover; background-repeat: no-repeat;
+      background-position: center; background-attachment: fixed;
+      position: fixed; inset: 0; z-index: -3;
+    }
+    .bg-blur {
+      position: fixed; inset: 0;
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover; background-repeat: no-repeat;
+      background-position: center; background-attachment: fixed;
+      filter: blur(8px); z-index: -2;
+    }
+    .bg-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,0.68); z-index: -1;
+    }
+
+    /* ── TOP BAR ── */
+    .top-bar {
+      position: sticky; top: 0; z-index: 1000;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      background: rgba(255,255,255,0.96);
+      border-bottom: 1px solid rgba(0,119,182,0.1);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .top-bar-inner {
+      max-width: 1200px; margin: 0 auto;
+      padding: 0.6rem 1.5rem;
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 0.75rem;
+    }
+    .brand { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex-shrink: 1; }
+    .brand-title {
+      font-size: 1.35rem; font-weight: 800; color: #0077b6;
+      letter-spacing: 0.02em; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .brand-sub {
+      font-size: 0.74rem; color: #6b7280; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .top-actions {
+      display: flex; gap: 0.45rem; align-items: center;
+      flex-shrink: 0; flex-wrap: nowrap;
+    }
+    .btn {
+      border: none; cursor: pointer; border-radius: 999px;
+      padding: 0.42rem 1.1rem; font-size: 0.86rem; font-weight: 600;
+      font-family: inherit;
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.35rem;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+      white-space: nowrap; text-decoration: none;
+      min-width: 105px; /* Standardize size for header buttons */
+    }
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .btn-primary {
+      background: linear-gradient(135deg,#0077b6,#0096c7);
+      color: #fff; box-shadow: 0 4px 12px rgba(0,119,182,0.28);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,119,182,0.42); }
+    .btn-outline {
+      background: #fff; color: #0077b6;
+      border: 1.5px solid rgba(0,119,182,0.28);
+    }
+    .btn-outline:hover { background: #e6f4ff; transform: translateY(-1px); }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+      50% { opacity: 0.6; transform: scale(0.85); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4)); }
+      100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
+    }
+
+    /* ── Notification Tray Icon (Bell) ── */
+    #notifTrayFab {
+      position: fixed; top: 72px; right: 16px; z-index: 8900;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 119, 182, 0.2); cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      color: #0077b6;
+    }
+    #notifTrayFab.show { display: flex; animation: fabPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    #notifTrayFab:hover { transform: scale(1.1); background: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.12); }
+    #notifTrayFab span svg { width: 16px; height: 16px; }
+    #notifTrayFab i { width: 16px; height: 16px; }
+    #notifTrayFab .notif-badge {
+      position: absolute; top: -1px; right: 0px; width: 10px; height: 10px;
+      background: #ef4444; border-radius: 50%; border: 2px solid #fff;
+      animation: pulse 2s infinite;
+    }
+    @keyframes fabPop { from { transform: scale(0) rotate(-45deg); opacity:0; } to { transform: scale(1) rotate(0); opacity:1; } }
+
+    /* ── Updated Dual-Stat Banner ── */
+    #homeTokenBanner {
+      position: fixed; top: 15px; left: 50%; transform: translateX(-50%) translateY(-150%);
+      width: 92%; max-width: 500px; z-index: 1100;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      border-radius: 28px; padding: 0.9rem 1.2rem;
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,119,182,0.05);
+      display: flex; align-items: center; justify-content: space-between;
+      transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.4s ease;
+      cursor: grab;
+      user-select: none;
+      touch-action: pan-x; /* Allow horizontal swipe */
+    }
+    #homeTokenBanner:active { cursor: grabbing; }
+    #homeTokenBanner.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── FLOATING LIVE TICKER OVERLAY (NON-STICKY) ── */
+    #liveTicker {
+      position: relative; top: 0; left: 0; right: 0;
+      z-index: 90; height: 32px;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      background: rgba(3, 4, 94, 0.7);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: none; align-items: center;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-top: 0;
+    }
+    #liveTicker .ticker-item { color: #fff; font-weight: 500; font-size: 0.78rem; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+    #liveTicker .status-dot.live { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    
+    
+    .banner-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .banner-status { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .banner-status i { color: #ef4444; }
+    .banner-doctor { font-size: 1rem; font-weight: 850; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+    
+    .banner-stats { display: flex; gap: 1rem; align-items: center; padding-left: 1rem; border-left: 1.5px solid rgba(0,0,0,0.06); }
+    .banner-stat-item { display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+    .stat-label { font-size: 0.62rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; white-space: nowrap; }
+    .stat-val { font-size: 1.6rem; font-weight: 950; letter-spacing: -0.02em; line-height: 1; }
+    .stat-live { color: #10b981; }
+    .stat-mine { color: #0077b6; }
+
+    /* ── MOBILE-PRO PREMIUM SYSTEM ── */
+    :root {
+      --primary: #0077b6;
+      --primary-dark: #03045e;
+      --primary-soft: #caf0f8;
+      --accent: #f59e0b;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --surface: #ffffff;
+      --glass: rgba(255, 255, 255, 0.85);
+      --border-light: rgba(0, 119, 182, 0.1);
+      --shadow-premium: 0 15px 35px -12px rgba(3, 4, 94, 0.1);
+      --radius-lg: 20px;
+    }
+
+    .home-section { 
+      padding: 5rem 1.5rem; 
+      max-width: 1200px; 
+      margin: 0 auto;
+      position: relative;
+    }
+    .section-tag {
+      display: inline-block;
+      color: var(--primary);
+      background: var(--primary-soft);
+      padding: 0.35rem 0.85rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+    }
+
+    /* ── HERO PRO ── */
+    .hero-premium {
+      min-height: 80vh;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-start; /* Move content upward */
+      padding-top: clamp(60px, 12vh, 120px);
+      background: #023e8a;
+      border-bottom: 5px solid var(--accent);
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background: url('/static/image/hero_premium.png') center/cover no-repeat;
+      opacity: 0.7;
+      filter: brightness(0.9);
+    }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(110deg, rgba(3, 4, 94, 0.95) 0%, rgba(3, 4, 94, 0.6) 100%);
+    }
+    .hero-content {
+      position: relative; z-index: 10;
+      width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 2rem;
+      color: #fff;
+      text-align: left; /* Strict left alignment */
+    }
+    .hero-content h1 {
+      font-size: clamp(2rem, 5vw, 4.5rem);
+      font-weight: 900; line-height: 1.1; margin-bottom: 1.2rem;
+      max-width: 800px;
+    }
+    .hero-content h1 span { color: var(--accent); }
+    .hero-content p {
+      font-size: clamp(1rem, 1.8vw, 1.25rem);
+      max-width: 600px; opacity: 0.9; margin-bottom: 2.5rem; line-height: 1.6;
+    }
+
+    /* ── TRUST STRIP ── */
+    .trust-strip {
+      max-width: 1050px; margin: -50px auto 3rem;
+      background: var(--glass);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1.5px solid rgba(255,255,255,0.6);
+      padding: 1.8rem; border-radius: var(--radius-lg);
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+      box-shadow: var(--shadow-premium); position: relative; z-index: 20;
+    }
+    .trust-item { text-align: center; border-right: 1px solid rgba(0,0,0,0.05); }
+    .trust-item:last-child { border-right: none; }
+    .trust-val { display: block; font-size: 1.8rem; font-weight: 900; color: var(--primary-dark); }
+    .trust-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+
+    /* ── HERITAGE ── */
+    .heritage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+    .heritage-text h2 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 850; color: var(--primary-dark); margin-bottom: 1.2rem; }
+    .heritage-text p { font-size: 1rem; line-height: 1.7; color: var(--text-muted); margin-bottom: 2rem; }
+    
+    /* ── LEADERSHIP ── */
+    .leadership-bg { background: #fdfdfd; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+    .leadership-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2.5rem; }
+    .leader-card {
+      background: #fff; border-radius: var(--radius-lg); padding: 2rem;
+      border: 1px solid #f1f5f9; display: flex; gap: 1.5rem; align-items: center;
+      transition: transform 0.3s ease;
+    }
+    .leader-card:hover { transform: translateY(-5px); border-color: var(--primary-soft); }
+    .leader-img { width: 110px; height: 110px; border-radius: 16px; overflow: hidden; flex-shrink: 0; background: #eee; }
+    .leader-img img { width: 100%; height: 100%; object-fit: cover; }
+    .leader-info h3 { font-size: 1.2rem; color: var(--primary-dark); margin-bottom: 0.2rem; }
+    .leader-role { display: block; color: var(--accent); font-weight: 800; font-size: 0.72rem; text-transform: uppercase; margin-bottom: 0.6rem; letter-spacing: 0.05em; }
+    .leader-bio { font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; }
+
+    /* ── VISIT ── */
+    .visit-card {
+      background: var(--primary-dark); border-radius: 32px; padding: 3.5rem;
+      color: #fff; display: grid; grid-template-columns: 1fr 1.2fr; gap: 4rem;
+    }
+    .visit-info h2 { font-size: 2.2rem; margin-bottom: 1.8rem; }
+    .c-row { display: flex; gap: 1.2rem; margin-bottom: 1.8rem; align-items: center; }
+    .c-icon { width: 44px; height: 44px; background: rgba(255,255,255,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .c-text h4 { font-size: 0.8rem; opacity: 0.7; text-transform: uppercase; margin-bottom: 2px; }
+    .c-text p { font-size: 1.05rem; font-weight: 600; }
+
+    /* ── DEPARTMENTS ── */
+    .dept-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; margin-top: 2.5rem; }
+    .dept-card {
+      background: #fff; padding: 2rem; border-radius: var(--radius-lg); border: 1.5px solid #f1f5f9; cursor: pointer; transition: all 0.3s ease;
+    }
+    .dept-card:hover { border-color: var(--primary); background: #f0f9ff; }
+    .dept-icon { width: 50px; height: 50px; background: #f0f9ff; color: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.2rem; }
+    .dept-card h4 { font-size: 1.15rem; color: var(--primary-dark); margin-bottom: 0.4rem; }
+    .dept-card p { font-size: 0.88rem; color: var(--text-muted); }
+
+    /* ── ACTION PILLS ── */
+    .action-pill {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+      padding: 0.8rem 1.4rem; border-radius: 14px; font-weight: 750; font-size: 0.88rem;
+      text-decoration: none; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border: 1.5px solid rgba(255,255,255,0.2); cursor: pointer;
+    }
+    .pill-directions { background: #fff; color: var(--primary-dark); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .pill-directions:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.18); background: var(--primary-soft); }
+    .pill-whatsapp { background: #25d366; color: #fff; border-color: rgba(0,0,0,0.05); }
+    .pill-whatsapp:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(37,211,102,0.3); background: #22c35e; }
+
+    /* ── FOOTER PRO (ULTIMATE EDGE-TO-EDGE) ── */
+    .site-footer-pro {
+      background: #020617; color: #fff; padding: 5rem 0 0; margin-top: 5rem;
+      width: 100vw; position: relative; left: 50%; right: 50%;
+      margin-left: -50vw; margin-right: -50vw;
+      margin-bottom: 0 !important;
+    }
+    .f-content { margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr; gap: 4rem; width: 100%; max-width: 1200px; padding: 0 2rem 4rem; }
+    .f-col h4 { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--accent); margin-bottom: 1.5rem; }
+    .f-links { list-style: none; padding: 0; margin: 0; }
+    .f-links li { margin-bottom: 0.8rem; }
+    .f-links a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+    .f-links a:hover { color: #fff; }
+
+    /* ── MOBILE OVERRIDES (Correct Scaling) ── */
+    @media (max-width: 968px) {
+      .f-content { grid-template-columns: 1fr 1fr; gap: 3rem; }
+    }
+    @media (max-width: 768px) {
+      .heritage-grid, .leadership-grid, .visit-card { grid-template-columns: 1fr; gap: 2.5rem; }
+      .trust-strip { grid-template-columns: 1fr 1fr; padding: 1.2rem; margin-top: -95px; }
+      .visit-card { padding: 2.2rem 1.2rem; }
+      .hero-content { padding: 0 1.2rem; text-align: left; }
+      .hero-content h1 { font-size: 2.1rem; }
+      .hero-content p { margin: 0 0 2rem; }
+    }
+    @media (max-width: 600px) {
+      .dept-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+      .dept-card { padding: 1.2rem 0.8rem; }
+      .dept-icon { width: 40px; height: 40px; margin-bottom: 0.8rem; }
+      .dept-card h4 { font-size: 0.95rem; }
+      .dept-card p { font-size: 0.75rem; }
+    }
+    @media (max-width: 500px) {
+      .home-section { padding: 3.5rem 1.25rem; }
+      .trust-item { border-right: none; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+      .trust-item:nth-child(even) { border-left: 1px solid rgba(0,0,0,0.05); border-bottom: 1px solid rgba(0,0,0,0.05); }
+      .leader-card { flex-direction: column; text-align: center; padding: 1.5rem; }
+      .leader-img { width: 90px; height: 90px; }
+      .f-content { 
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2.5rem 1.5rem; 
+        width: 100%; 
+        text-align: left; 
+      }
+      .f-col.f-brand { grid-column: span 2; }
+      .site-footer-pro { 
+        padding: 4rem 0 0; 
+        width: 100vw; margin-left: -50vw;
+      }
+
+      /* Force side-by-side buttons/pills on small mobile */
+      .hero-content .hero-btns, .visit-info .action-pill-container {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0.6rem !important;
+      }
+      .hero-content .btn, .visit-info .action-pill {
+        flex: 1;
+        padding: 0 0.8rem !important;
+        font-size: 0.75rem !important;
+        height: 48px !important;
+        min-width: 0 !important;
+        white-space: nowrap;
+      }
+      .action-pill i, .action-pill svg { width: 14px !important; height: 14px !important; }
+    }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 1200px; margin: 1.4rem auto 0.8rem;
+      padding: 1.2rem 1.5rem 0.5rem;
+      display: grid;
+      grid-template-columns: minmax(0,1.7fr) minmax(0,1.2fr);
+      gap: 2rem; align-items: start;
+    }
+    .hero-left h1 {
+      font-size: 2.3rem; margin: 0 0 0.45rem;
+      color: #023e8a; font-weight: 800; line-height: 1.2;
+    }
+    .hero-left h1 span { color: #0077b6; }
+    .hero-tagline { margin: 0 0 1rem; font-size: 0.97rem; color: #555; line-height: 1.6; }
+
+    .hero-highlights {
+      display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0.6rem 0 1.1rem;
+    }
+    .pill {
+      padding: 0.28rem 0.75rem; border-radius: 999px;
+      background: rgba(0,119,182,0.07);
+      border: 1px solid rgba(0,119,182,0.18);
+      font-size: 0.8rem; color: #135f8c;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+    }
+    .pill svg { width: 13px; height: 13px; }
+
+    .hero-cta {
+      display: flex;
+      flex-direction: column;   /* buttons row on top, note below */
+      gap: 0.5rem;
+      align-items: flex-start;
+    }
+    .hero-cta-btns {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .hero-note {
+      font-size: 0.8rem;
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .hero-note svg { width: 13px; height: 13px; color: #0077b6; flex-shrink: 0; }
+
+    /* info button */
+    .btn-info {
+      background: none; border: none; cursor: pointer;
+      color: #0077b6; padding: 0.2rem;
+      display: inline-flex; align-items: center;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .btn-info:hover { background: rgba(0,119,182,0.08); }
+    .btn-info svg { width: 20px; height: 20px; }
+
+    /* ── DOCTORS HEADING ── */
+    .doctors-heading {
+      position: sticky;
+      top: 3.8rem;       /* header is ~4rem tall, synced with active design */
+      width: 100%;
+      background: rgba(0,119,182,0.97);
+      color: #fff;
+      padding: 0.65rem 1.5rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-align: center;
+      z-index: 20;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: 'Inter', sans-serif;
+    }
+    .doctors-heading svg { width: 20px; height: 20px; }
+
+    /* ── CONTENT ── */
+    .content-inner {
+      max-width: 1200px; margin: 0 auto 3rem;
+      padding: 0 1.5rem 2.5rem;
+    }
+
+    #first-spec, .spec-section { scroll-margin-top: 9.5rem; }
+
+    .spec-section { margin-top: 2.2rem; }
+    .spec-heading {
+      color: #0077b6; font-size: 1.45rem; font-weight: 700;
+      margin: 0 0 0.85rem;
+      display: flex; align-items: center; gap: 0.45rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 2.5px solid rgba(0,119,182,0.18);
+      scroll-margin-top: 9.5rem;
+    }
+    .spec-heading svg { width: 20px; height: 20px; }
+
+    /* ── DOCTOR CARDS ── */
+    .doctor-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 22px; margin-bottom: 1.5rem;
+    }
+    .doctor-card {
+      position: relative;
+      display: flex; flex-direction: column;
+      background: rgba(255,255,255,0.97);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.09);
+      border: 1px solid rgba(0,0,0,0.04);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .doctor-card:hover { box-shadow: 0 16px 36px rgba(0,0,0,0.14); transform: translateY(-2px); }
+    .doctor-img {
+      width: 100%; aspect-ratio: 4 / 5; overflow: hidden;
+      background: #e0edf7;
+      border-top-left-radius: 14px; border-top-right-radius: 14px;
+    }
+    .doctor-img img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      border-bottom: 3px solid #0077b6;
+    }
+    .doctor-info { padding: 0.7rem 0.85rem 0.9rem; }
+    .doctor-info h4 {
+      margin: 0 0 0.3rem; font-size: 1rem; color: #023e8a; font-weight: 700;
+      display: block;
+    }
+    .doctor-meta {
+      font-size: 0.82rem; margin: 0.1rem 0; color: #555;
+      display: flex; align-items: flex-start; gap: 0.3rem; line-height: 1.4;
+    }
+    .doctor-meta svg { width: 13px; height: 13px; color: #0077b6; margin-top: 2px; flex-shrink: 0; }
+    .doctor-meta strong { color: #333; }
+
+    .btn-timing {
+      margin-top: 0.5rem;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 999px;
+      border: 1.5px solid rgba(0,119,182,0.28);
+      background: rgba(0,119,182,0.05);
+      color: #005f8c; cursor: pointer; font-family: inherit;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-weight: 600;
+      transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-timing svg { width: 13px; height: 13px; }
+    .btn-timing:hover {
+      background: rgba(0,119,182,0.12);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
+    }
+
+    /* ── TIMING POPUP ── */
+    .card-timing-popup {
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0.98);
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+      border: 1px solid rgba(0,0,0,0.06);
+      padding: 0.6rem 0.7rem;
+      font-size: 0.82rem;
+      opacity: 0; pointer-events: none;
+      transform: scale(0.97);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 15;
+    }
+    .card-timing-popup.show { opacity: 1; pointer-events: auto; transform: scale(1); }
+    .card-timing-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+    .card-timing-title {
+      font-weight: 700; color: #024b80; font-size: 0.84rem;
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .card-timing-title svg { width: 14px; height: 14px; }
+    .close-timing {
+      border: none; background: transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #666; padding: 0.2rem; border-radius: 4px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .close-timing:hover { background: rgba(0,0,0,0.08); color: #222; }
+    .close-timing svg { width: 16px; height: 16px; }
+    .timing-list {
+      list-style: none; margin: 0.1rem 0 0; padding: 0;
+      max-height: 185px; overflow-y: auto;
+    }
+    .timing-list li {
+      display: flex; justify-content: space-between; gap: 0.5rem;
+      padding: 0.22rem 0.1rem; border-bottom: 1px solid rgba(0,0,0,0.05);
+      align-items: center;
+    }
+    .timing-list li:last-child { border-bottom: none; }
+    .timing-day { font-weight: 600; color: #024b80; font-size: 0.82rem; display: flex; align-items: center; gap: 0.25rem; }
+    .timing-day svg { width: 12px; height: 12px; color: #0077b6; }
+    .timing-time { font-family: 'Consolas','Courier New',monospace; font-size: 0.8rem; color: #333; }
+    .timing-na { color: #bbb; font-style: italic; font-size: 0.8rem; }
+
+    .no-doctors { text-align: center; margin: 2rem 0 3rem; font-size: 0.95rem; color: #666; }
+
+    /* ── INFO MODAL ── */
+    .info-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.48); z-index: 200;
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+    .info-modal-overlay.open { display: flex; }
+    .info-modal {
+      background: #fff; border-radius: 24px;
+      padding: 2.2rem; max-width: 480px; width: 100%;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.25); position: relative;
+      animation: mi 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes mi { from { transform: scale(0.94) translateY(8px); opacity:0; } to { transform: scale(1); opacity:1; } }
+    .info-modal h3 {
+      font-size: 1.05rem; color: #0b3a60;
+      margin: 0 0 1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .info-modal h3 svg { width: 18px; height: 18px; color: #0077b6; }
+    .info-modal-close {
+      position: absolute; top: 1rem; right: 1rem;
+      background: none; border: none; cursor: pointer;
+      color: #6b7280; padding: 0.25rem; border-radius: 6px;
+      display: flex; align-items: center; transition: background 0.15s;
+    }
+    .info-modal-close:hover { background: rgba(0,0,0,0.07); color: #111; }
+    .info-modal-close svg { width: 19px; height: 19px; }
+    .info-modal-steps { list-style: none; padding: 0; margin: 0; }
+    .info-modal-steps li {
+      display: flex; align-items: flex-start; gap: 0.7rem;
+      padding: 0.55rem 0; border-bottom: 1px solid #f0f4f8;
+      font-size: 0.9rem; color: #374151; line-height: 1.5;
+    }
+    .info-modal-steps li:last-child { border-bottom: none; }
+    .step-num {
+      width: 28px; height: 28px; border-radius: 10px;
+      background: linear-gradient(135deg,#0077b6,#0096c7);
+      color: #fff; font-size: 0.8rem; font-weight: 800; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; margin-top: 2px;
+      box-shadow: 0 4px 12px rgba(0,119,182,0.25);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1200px) {
+      .doctor-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: minmax(0,1fr); gap: 1.3rem; }
+      .doctor-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .doctors-heading { top: 3.8rem; font-size: 1.15rem; }
+      #first-spec { scroll-margin-top: 9rem; }
+    }
+    @media (max-width: 768px) {
+      .top-bar-inner { padding: 0.5rem 1rem; }
+      .brand-title { font-size: 1.12rem; }
+      .brand-sub { font-size: 0.7rem; }
+      .hero { padding-inline: 1rem; padding-top: 1rem; gap: 1rem; }
+      .hero-left h1 { font-size: 1.8rem; }
+      .doctors-heading { top: 3.9rem; font-size: 1.1rem; }
+      #first-spec { scroll-margin-top: 8.5rem; }
+      .content-inner { padding-inline: 1rem; }
+    }
+    @media (max-width: 520px) {
+      .top-bar-inner {
+        flex-direction: row;        /* brand LEFT, buttons RIGHT — stays as a row */
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.85rem;
+        gap: 0.5rem;
+      }
+      .brand { align-items: flex-start; flex-shrink: 1; min-width: 0; }
+      .brand-title { font-size: 1.0rem; }
+      .brand-sub { font-size: 0.65rem; }
+      .hero-left h1 { font-size: 1.6rem; }
+      .doctor-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 13px; }
+      .doctor-info { padding: 0.55rem 0.65rem 0.7rem; }
+      .doctor-info h4 { font-size: 0.93rem; }
+      .spec-heading { font-size: 1.25rem; }
+      .btn-timing { font-size: 0.76rem; padding: 0.25rem 0.55rem; }
+      
+      /* Buttons stack vertically on the RIGHT side — Doctors above Book Now */
+      .top-actions {
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        gap: 0.28rem;
+        align-items: flex-end;
+      }
+      .top-actions .btn {
+        font-size: 0.75rem;
+        padding: 0.28rem 0.65rem;
+        margin-top: 0;
+        white-space: nowrap;
+        min-width: 90px;
+      }
+      .top-actions .btn svg { width: 12px; height: 12px; }
+      
+      .doctors-heading { font-size: 1rem; top: 3.9rem; }
+      #first-spec { scroll-margin-top: 8.5rem; }
+    }
+
+    /* day name display */
+    .timing-day .full-day { display: inline; }
+    .timing-day .short-day { display: none; }
+    @media (max-width: 520px) {
+      .timing-day .full-day { display: none; }
+      .timing-day .short-day { display: inline; }
+    }
+    /* ── HIGH-FIDELITY MODAL ── */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 10000;
+      animation: modalFade 0.3s ease;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 2.8rem 2.2rem;
+      border-radius: 32px;
+      max-width: 460px;
+      width: 94%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      box-shadow: 0 35px 80px rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255,255,255,1);
+      animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+    @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes modalPop  { from { transform: scale(0.92) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+    .modal-btns {
+      display: flex; gap: 1.2rem; margin-top: 2rem; justify-content: center; width: 100%;
+    }
+    .modal-btns .btn { margin-top: 0; min-width: 140px; font-weight: 600; }
+
+    /* ── AUTH MODAL ── */
+    .auth-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(8px);
+      z-index: 10000; align-items: center; justify-content: center;
+      animation: modalFade 0.3s ease; padding: 1rem;
+    }
+    .auth-modal-overlay.open { display: flex; }
+    .auth-modal {
+      background: #fff; padding: 2.2rem 2rem; border-radius: 24px;
+      max-width: 420px; width: 100%; box-shadow: 0 35px 80px rgba(15, 23, 42, 0.35);
+      border: 1px solid rgba(255,255,255,1); position: relative;
+      animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .auth-modal-close {
+      position: absolute; top: 1.2rem; right: 1.2rem; background: rgba(0,0,0,0.04); border: none;
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #555; transition: background 0.2s;
+    }
+    .auth-modal-close:hover { background: rgba(0,0,0,0.08); }
+    .auth-title { font-size: 1.4rem; color: #023e8a; margin: 0 0 1.2rem; text-align: center; font-weight: 800; }
+    .auth-subtitle { text-align: center; font-size: 0.9rem; color: #64748b; margin-top: -0.8rem; margin-bottom: 1.2rem; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 0.4rem; }
+    .form-control {
+      width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #e2e8f0;
+      border-radius: 12px; font-size: 0.95rem; font-family: inherit;
+      transition: all 0.2s ease; background: #f8fafc;
+    }
+    .form-control:focus { outline: none; border-color: #0077b6; background: #fff; box-shadow: 0 0 0 4px rgba(0,119,182,0.1); }
+    .auth-btn {
+      width: 100%; border: none; background: linear-gradient(135deg,#0077b6,#0096c7);
+      color: #fff; padding: 0.85rem; border-radius: 12px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; margin-top: 0.5rem; transition: transform 0.2s, box-shadow 0.2s;
+      min-height: 44px;
+    }
+    .auth-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,119,182,0.25); }
+    .auth-switch { text-align: center; margin-top: 1.2rem; font-size: 0.85rem; color: #64748b; }
+    .auth-switch a { color: #0077b6; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .auth-switch a:hover { text-decoration: underline; }
+    
+    .view-section { display: none; }
+    .view-section.active { display: block; animation: modalFade 0.3s ease; }
+    
+    .otp-inputs { display: flex; gap: 8px; justify-content: center; margin-bottom: 1rem; }
+    .otp-input { width: 44px; height: 50px; text-align: center; font-size: 1.5rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #f8fafc; }
+    .otp-input:focus { border-color: #0077b6; outline: none; background: #fff; }
+
+    /* ── PREMIUM TOAST ISLAND ── */
+    #globalToast {
+      position: fixed; top: 24px; left: 50%;
+      transform: translateX(-50%); z-index: 10001;
+      padding: 16px 32px; border-radius: 24px;
+      font-weight: 600; font-size: 1rem;
+      display: none; align-items: center; gap: 14px;
+      box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(14px);
+      color: #fff;
+      transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+    @media (max-width: 600px) {
+      #globalToast {
+        width: 95%; top: 16px; padding: 14px 22px; border-radius: 20px; font-size: 0.92rem;
+      }
+    }
+    .toast-success { background: rgba(5, 150, 105, 0.95); }
+    .toast-error   { background: rgba(225, 29, 72, 0.95); }
+
+    /* ── PREMIUM CONTACT SECTION (ULTRA-MODERN) ── */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 2rem;
+    }
+    .contact-card {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 1.4rem 0.8rem;
+      text-align: center;
+      box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.05),
+        0 10px 15px -3px rgba(0, 0, 0, 0.08),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.7rem;
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+      overflow: hidden;
+    }
+    .contact-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.4), transparent);
+      opacity: 0.5; pointer-events: none;
+    }
+    .contact-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
+    }
+    .contact-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      background: white;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+      transition: transform 0.3s ease;
+    }
+    .contact-card:hover .contact-icon { transform: rotate(8deg) scale(1.1); }
+    .contact-icon svg { width: 24px; height: 24px; }
+    
+    .contact-card h4 { 
+      margin: 0.2rem 0 0.1rem; 
+      font-size: 0.95rem; 
+      font-weight: 800; 
+      color: #0f172a; 
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .contact-text-primary { 
+      font-size: 0.82rem; 
+      font-weight: 700; 
+      color: #334155; 
+      margin: 0;
+    }
+    .contact-text-sub { 
+      font-size: 0.68rem; 
+      font-weight: 600; 
+      color: #64748b; 
+      margin: 0;
+      opacity: 0.85;
+    }
+    
+    /* Premium Themes */
+    .contact-phone .contact-icon { color: #0077b6; border: 1px solid rgba(0, 119, 182, 0.15); }
+    .contact-phone:hover { box-shadow: 0 25px 50px -12px rgba(0, 119, 182, 0.2); }
+    
+    .contact-whatsapp .contact-icon { color: #25d366; border: 1px solid rgba(37, 211, 102, 0.15); }
+    .contact-whatsapp:hover { box-shadow: 0 25px 50px -12px rgba(37, 211, 102, 0.2); }
+    
+    .contact-location .contact-icon { color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.15); }
+    .contact-location:hover { box-shadow: 0 25px 50px -12px rgba(244, 63, 94, 0.2); }
+
+    /* ── GLOBAL MINIMALIST FOOTER ── */
+    .site-footer {
+      padding: 3.5rem 1.5rem 1.25rem;
+      text-align: center;
+      margin-top: auto;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.6rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .footer-link {
+      color: #334155;
+      text-decoration: none;
+      font-size: 0.86rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .footer-link svg { width: 14px; height: 14px; color: #0077b6; }
+    .footer-link:hover { color: #0077b6; transform: translateY(-1px); }
+    .footer-copy { 
+      font-size: 0.8rem; 
+      color: #94a3b8; 
+      font-weight: 500; 
+      margin: 0;
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width: 600px) {
+      .contact-grid { gap: 8px; }
+      .contact-card { padding: 0.85rem 0.35rem; border-radius: 14px; }
+      .contact-card h4 { font-size: 0.78rem; font-weight: 800; }
+      .contact-card p { font-size: 0.64rem; font-weight: 600; }
+      .contact-icon { width: 34px; height: 34px; border-radius: 10px; }
+      .contact-icon svg { width: 18px; height: 18px; }
+      .footer-links { gap: 1.1rem; }
+      .footer-link { font-size: 0.8rem; }
+    }
+
+    /* AI Chat Overlay */
+    .ai-chat-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      z-index: 9000; display: none;
+      animation: modalFade 0.3s ease;
+    }
+    .ai-chat-overlay.open { display: block; }
+
+    /* ── PREMIUM AI TRIAGE CHAT ── */
+    #aiChatFab {
+      position: fixed; bottom: 32px; right: 28px; z-index: 9000;
+      width: 64px; height: 64px; border-radius: 50%;
+      background: linear-gradient(135deg, #023e8a 0%, #0077b6 100%);
+      border: 2px solid rgba(255,255,255,0.2); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 12px 32px rgba(0,119,182,0.45), 0 4px 12px rgba(0,0,0,0.1);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: fabPulse 4s ease-in-out infinite;
+    }
+    #aiChatFab:hover {
+      transform: scale(1.12) translateY(-4px);
+      box-shadow: 0 16px 44px rgba(0,119,182,0.55);
+      background: linear-gradient(135deg, #0077b6 0%, #0096c7 100%);
+    }
+    #aiChatFab svg { width: 30px; height: 30px; color: #fff; }
+    #aiChatFab .fab-badge {
+      position: absolute; top: -5px; right: -5px;
+      background: #ef4444; color: #fff; font-size: 0.65rem;
+      font-weight: 800; border-radius: 99px;
+      padding: 3px 6px; border: 2px solid #fff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    @keyframes fabPulse {
+      0%, 100% { box-shadow: 0 12px 32px rgba(0,119,182,0.45); }
+      50% { box-shadow: 0 12px 48px rgba(0,119,182,0.65), 0 0 0 12px rgba(0,119,182,0.15); }
+    }
+
+    #aiChatPanel {
+      position: fixed; bottom: 110px; right: 28px; z-index: 9001;
+      width: 450px;
+      max-height: calc(100vh - 160px);
+      height: 620px;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-radius: 30px;
+      box-shadow: 0 32px 100px rgba(0, 0, 0, 0.25), 
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(0, 119, 182, 0.1);
+      display: flex; flex-direction: column;
+      transform: translateY(30px) scale(0.92); opacity: 0; pointer-events: none;
+      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      overflow: hidden;
+    }
+    #aiChatPanel.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+
+    .ai-chat-header {
+      background: linear-gradient(135deg, rgba(2, 62, 138, 0.95), rgba(0, 119, 182, 0.95));
+      padding: 1.25rem 1.4rem;
+      display: flex; align-items: center; gap: 1rem;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .ai-avatar {
+      width: 46px; height: 46px; border-radius: 14px;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; border: 1.5px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 6px;
+    }
+    .ai-avatar img { width: 100%; height: 100%; object-fit: contain; }
+    
+    .ai-header-info { flex: 1; }
+    .ai-header-name { font-size: 1.05rem; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+    .ai-header-status {
+      font-size: 0.78rem; color: rgba(255, 255, 255, 0.85);
+      display: flex; align-items: center; gap: 0.35rem; margin-top: 1px;
+    }
+    .ai-status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+    @keyframes statusPulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+    
+    .ai-chat-close {
+      background: rgba(255, 255, 255, 0.15); border: none; cursor: pointer;
+      width: 32px; height: 32px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; transition: all 0.2s;
+    }
+    .ai-chat-close:hover { background: rgba(255, 255, 255, 0.3); transform: rotate(90deg); }
+    .ai-chat-close svg { width: 18px; height: 18px; }
+
+    .ai-chat-body {
+      flex: 1; overflow-y: auto; padding: 1.5rem 1.25rem;
+      display: flex; flex-direction: column; gap: 1rem;
+      scroll-behavior: smooth;
+      background: linear-gradient(rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.88)), 
+                  url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover;
+      background-position: center;
+      background-attachment: scroll;
+    }
+    .ai-chat-body::-webkit-scrollbar { width: 4px; }
+    .ai-chat-body::-webkit-scrollbar-thumb { background: rgba(0, 119, 182, 0.15); border-radius: 10px; }
+
+    .ai-msg { display: flex; gap: 0.75rem; align-items: flex-start; }
+    .ai-msg.user { flex-direction: row-reverse; }
+    
+    .ai-msg-avatar {
+      width: 32px; height: 32px; border-radius: 10px;
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.03);
+    }
+    .ai-msg.ai .ai-msg-avatar { background: #f0f7ff; color: #0077b6; }
+    .ai-msg.user .ai-msg-avatar { background: #6366f1; color: #fff; }
+    .ai-msg-avatar svg { width: 16px; height: 16px; }
+
+    .ai-bubble {
+      max-width: 85%; padding: 0.85rem 1.1rem;
+      border-radius: 20px; font-size: 0.9rem; line-height: 1.6;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      overflow-wrap: break-word; word-wrap: break-word; word-break: break-word;
+      transition: all 0.2s ease;
+    }
+    .ai-msg.error .ai-bubble {
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #991b1b;
+      font-size: 0.78rem;
+      padding: 0.5rem 0.8rem;
+    }
+    .ai-msg.ai .ai-bubble {
+      background: #fff;
+      border: 1px solid rgba(0, 119, 182, 0.08);
+      color: #1e293b;
+      border-top-left-radius: 4px;
+    }
+    .ai-msg.user .ai-bubble {
+      background: linear-gradient(135deg, #0077b6, #0096c7);
+      color: #fff;
+      border-top-right-radius: 4px;
+    }
+    .ai-bubble a { color: #0077b6; font-weight: 700; text-decoration: none; border-bottom: 2px solid rgba(0,119,182,0.2); transition: all 0.2s; }
+    .ai-bubble a:hover { border-bottom-color: #0077b6; background: rgba(0,119,182,0.05); }
+    .ai-msg.user .ai-bubble a { color: #fff; border-bottom-color: rgba(255,255,255,0.4); }
+
+    .ai-reco-chip {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: #fff; border: 1.5px solid #0077b6;
+      color: #0077b6; font-size: 0.82rem; font-weight: 700;
+      padding: 0.5rem 1rem; border-radius: 999px;
+      margin-top: 0.75rem; cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 12px rgba(0,119,182,0.1);
+    }
+    .ai-reco-chip:hover { 
+      background: #0077b6; color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(0,119,182,0.25);
+    }
+
+    .ai-typing .ai-bubble {
+      display: flex; gap: 5px; padding: 0.85rem 1.25rem;
+    }
+    .typing-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #0077b6; opacity: 0.3;
+      animation: typingBounce 1.4s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
+
+    .ai-suggestions {
+      display: flex; flex-wrap: wrap; gap: 0.6rem;
+      padding: 0 1.4rem 0.8rem; flex-shrink: 0;
+    }
+    .ai-suggestion-chip {
+      background: #f1f5f9; border: 1px solid rgba(0,0,0,0.04);
+      color: #475569; font-size: 0.78rem; font-weight: 600;
+      padding: 0.4rem 0.9rem; border-radius: 12px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .ai-suggestion-chip:hover { background: #e2e8f0; color: #0f172a; transform: translateY(-1px); }
+
+    .ai-chat-footer {
+      padding: 1.1rem 1.4rem 1.4rem;
+      border-top: 1px solid rgba(0,0,0,0.04);
+      display: flex; gap: 0.75rem; align-items: center;
+      background: #fff; flex-shrink: 0;
+    }
+    #aiChatInput {
+      flex: 1; border: 1.5px solid #f1f5f9; border-radius: 18px;
+      padding: 0.75rem 1.1rem; font-size: 0.92rem;
+      background: #f8fafc; resize: none; outline: none;
+      transition: all 0.25s;
+      scrollbar-width: none; -ms-overflow-style: none;
+    }
+    #aiChatInput::-webkit-scrollbar { display: none; }
+    #aiChatInput:focus { border-color: #0077b6; background: #fff; box-shadow: 0 0 0 4px rgba(0,119,182,0.06); }
+    
+    #aiChatSend {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: #0077b6; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 16px rgba(0,119,182,0.25);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #aiChatSend:hover:not(:disabled) { transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 20px rgba(0,119,182,0.35); }
+    #aiChatSend svg { width: 22px; height: 22px; color: #fff; }
+    #aiChatSend:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+
+    .ai-timestamp {
+      font-size: 0.7rem; color: #94a3b8; text-align: center;
+      margin: 0.5rem 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 520px) {
+      #aiChatPanel { 
+        width: 92vw; 
+        height: 82vh;
+        max-height: 82vh;
+        left: 4vw; 
+        top: 3vh;
+        bottom: 15vh;
+        right: 4vw;
+        border-radius: 28px; 
+        z-index: 10001;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+      }
+      #aiChatFab { 
+        bottom: 24px; 
+        right: 20px; 
+        width: 54px; 
+        height: 54px; 
+      }
+      .ai-header-name { font-size: 0.95rem; }
+      .ai-header-status { font-size: 0.72rem; }
+      .ai-bubble { font-size: 0.86rem; padding: 0.75rem 1rem; }
+      
+      .ai-chat-footer { padding-bottom: 1.2rem; }
+    }
+    /* ── LIVE STATUS TICKER ── */
+    .ticker-wrapper {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(0, 119, 182, 0.1);
+      overflow: hidden;
+      height: 48px;
+      display: none; /* Hidden by default, shown by JS if docs exist */
+      align-items: center;
+      position: relative;
+      z-index: 90;
+    }
+    .ticker-container {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker-slide 60s linear infinite;
+      padding-left: 100%; /* Start off-screen */
+    }
+    .ticker-container:hover { animation-play-state: paused; }
+    
+    .ticker-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 40px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      position: relative;
+    }
+    .status-dot.live { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+    .status-dot.upcoming { background: #0077b6; box-shadow: 0 0 10px rgba(0, 119, 182, 0.4); }
+    
+    .status-dot::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: inherit;
+      opacity: 0.4;
+      animation: status-pulse 1.8s ease-out infinite;
+    }
+    
+    @keyframes ticker-slide {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+    @keyframes status-pulse {
+      0% { transform: scale(1); opacity: 0.4; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 600px) {
+        .ticker-wrapper { height: 42px; }
+        .ticker-item { font-size: 0.82rem; padding: 0 25px; }
+    }
+
+    /* Admin profile dropdown styling */
+    .admin-profile-wrapper {
+      position: relative;
+    }
+    .admin-profile-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(0, 119, 182, 0.06);
+      border: 1px solid rgba(0, 119, 182, 0.15);
+      border-radius: 999px;
+      padding: 0.35rem 0.85rem;
+      color: #0077b6;
+      font-weight: 600;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .admin-profile-btn:hover {
+      background: rgba(0, 119, 182, 0.12);
+      transform: translateY(-1px);
+    }
+    .admin-avatar {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .admin-avatar-icon {
+      width: 14px !important;
+      height: 14px !important;
+    }
+    .active-badge {
+      position: absolute;
+      bottom: -1px;
+      right: -1px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      border: 1.5px solid #fff;
+    }
+    .admin-btn-label {
+      display: inline;
+    }
+    .admin-chevron {
+      width: 14px !important;
+      height: 14px !important;
+      color: #64748b;
+    }
+    .admin-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 280px;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 119, 182, 0.15);
+      border-radius: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 16px -6px rgba(0, 0, 0, 0.05);
+      z-index: 1050;
+      padding: 0.75rem 0.5rem;
+      animation: slideDownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .admin-dropdown-menu.show {
+      display: block;
+    }
+    @keyframes slideDownFade {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .dropdown-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .admin-avatar-small {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.1);
+      color: #6366f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .admin-avatar-small svg {
+      width: 18px;
+      height: 18px;
+    }
+    .dropdown-header-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .admin-name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .admin-email {
+      font-size: 0.74rem;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dropdown-divider {
+      height: 1px;
+      background: rgba(0, 0, 0, 0.05);
+      margin: 0.5rem 0;
+    }
+    .dropdown-section-title {
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #94a3b8;
+      padding: 0.25rem 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.75rem;
+      color: #475569;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .dropdown-item:hover {
+      background: rgba(0, 119, 182, 0.06);
+      color: #0077b6;
+    }
+    .dropdown-item svg {
+      width: 15px;
+      height: 15px;
+      color: #64748b;
+      transition: color 0.15s;
+    }
+    .dropdown-item:hover svg {
+      color: #0077b6;
+    }
+    .dropdown-item.logout-admin {
+      color: #e11d48;
+    }
+    .dropdown-item.logout-admin:hover {
+      background: rgba(225, 29, 72, 0.08);
+      color: #e11d48;
+    }
+    .dropdown-item.logout-admin svg {
+      color: #e11d48;
+    }
+    .dropdown-item.logout-user {
+      color: #f97316;
+    }
+    .dropdown-item.logout-user:hover {
+      background: rgba(249, 115, 22, 0.08);
+      color: #f97316;
+    }
+    .dropdown-item.logout-user svg {
+      color: #f97316;
+    }
+  </style>
+</head>
+
+<body>
+  {% set icons = {'General Physician':'activity','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
+
+  <!-- Global Toast Container -->
+  <div id="globalToast"></div>
+
+  <div class="bg-image"></div>
+  <div class="bg-blur"></div>
+  <div class="bg-overlay"></div>
+
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <!-- Logo + text column: logo on left, clinic name + tagline stacked on right -->
+      <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0;">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+             style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
+             alt="PrimeCare Logo" />
+        <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+          <div class="brand-title">PrimeCare Clinic</div>
+          <div class="brand-sub">Quality care · Trusted doctors</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        {% if session.get('admin_logged_in') %}
+          <!-- Admin Profile Icon and Dropdown Wrapper -->
+          <div class="admin-profile-wrapper" style="position: relative;">
+            <button id="adminProfileBtn" class="admin-profile-btn" aria-label="Admin Profile" onclick="toggleAdminDropdown(event)">
+              <div class="admin-avatar">
+                <i data-lucide="shield-alert" class="admin-avatar-icon"></i>
+                <span class="active-badge"></span>
+              </div>
+              <span class="admin-btn-label">Admin</span>
+              <i data-lucide="chevron-down" class="admin-chevron"></i>
+            </button>
+            
+            <!-- Dropdown Menu -->
+            <div id="adminDropdownMenu" class="admin-dropdown-menu">
+              <div class="dropdown-header">
+                <div class="admin-avatar-small">
+                  <i data-lucide="shield-check"></i>
+                </div>
+                <div class="dropdown-header-info">
+                  <span class="admin-name">Administrator</span>
+                  <span class="admin-email">{{ session.get('admin_email', 'admin@primecare.com') }}</span>
+                </div>
+              </div>
+              
+              <div class="dropdown-divider"></div>
+              
+              <div class="dropdown-section-title">Navigation</div>
+              
+              <a href="/booking?view=admin" class="dropdown-item">
+                <i data-lucide="sliders"></i>
+                <span>Admin Control Panel</span>
+              </a>
+              
+              <a href="/booking" class="dropdown-item">
+                <i data-lucide="calendar-plus"></i>
+                <span>Book Appointment</span>
+              </a>
+              
+              <div class="dropdown-divider"></div>
+              
+              <div class="dropdown-section-title">Roles</div>
+              
+              {% if session.get('user_id') %}
+                <a href="{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}" class="dropdown-item">
+                  <i data-lucide="layout-dashboard"></i>
+                  <span>Go to {{ 'Doctor' if session.get('user_role') == 'doctor' else 'User' }} Dashboard</span>
+                </a>
+                {% if can_switch %}
+                <div class="dropdown-item" onclick="switchUserSession()">
+                  <i data-lucide="shuffle"></i>
+                  <span>Switch Role (to {{ 'User' if session.get('user_role') == 'doctor' else 'Doctor' }})</span>
+                </div>
+                {% endif %}
+              {% else %}
+                <div class="dropdown-item" onclick="openAuthModalFromAdmin()">
+                  <i data-lucide="log-in"></i>
+                  <span>Login as Doctor/User</span>
+                </div>
+              {% endif %}
+              
+              <div class="dropdown-divider"></div>
+              
+              <div class="dropdown-section-title">Session Actions</div>
+              
+              <div class="dropdown-item logout-admin" onclick="triggerAdminLogout()">
+                <i data-lucide="shield-off"></i>
+                <span>Logout Admin Session</span>
+              </div>
+              
+              {% if session.get('user_id') %}
+                <div class="dropdown-item logout-user" onclick="triggerUserLogout()">
+                  <i data-lucide="log-out"></i>
+                  <span>Logout {{ 'Doctor' if session.get('user_role') == 'doctor' else 'User' }} Session</span>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% else %}
+          {% if session.get('user_id') %}
+          <button id="profileBtn" class="btn btn-outline" onclick="window.location.href='{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}'">
+            <i data-lucide="user"></i>
+            <span>Profile</span>
+          </button>
+          {% else %}
+          <button id="loginBtn" class="btn btn-outline" onclick="openAuthModal('login')">
+            <i data-lucide="log-in"></i>
+            <span>Login</span>
+          </button>
+          {% endif %}
+          <button class="btn btn-primary" onclick="window.location.href='/booking'">
+            <i data-lucide="calendar-plus"></i>
+            <span>Book Now</span>
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+  
+  <!-- Who's In Now Live Ticker (Non-Sticky) -->
+  <div class="ticker-wrapper" id="liveTicker">
+    <div class="ticker-container" id="tickerContent">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <!-- MOBILE-PRO PREMIUM CONTENT -->
+  <section class="hero-premium">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content" style="margin-top: -30px;" >
+      <span style="background:rgba(255,255,255,0.15); padding: 0.4rem 1rem; border-radius: 99px; font-size: 0.8rem; font-weight: 700; display: inline-block; margin-bottom: 1.5rem;">
+        <i data-lucide="shield-check" style="width:14px; height:14px; vertical-align: middle; margin-right: 4px;"></i> Quality Patient Care Since {{ settings.stat_since }}
+      </span>
+      <h1>{{ settings.promo_heading | safe }}</h1>
+      <p>{{ settings.promo_subheading }}</p>
+      <div class="hero-btns" style="display:flex; gap:1rem; flex-wrap: wrap; justify-content: inherit;">
+        <button class="btn btn-primary" style="height: 52px; padding: 0 2rem; min-width: auto;" onclick="window.location.href='/booking'">
+          Book Appointment
+        </button> 
+        <button class="btn btn-outline" style="height: 52px; padding: 0 2rem; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: #fff; min-width: auto;" onclick="document.getElementById('services-grid').scrollIntoView({behavior:'smooth'})">
+          Our Services
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <div class="trust-strip">
+    <div class="trust-item">
+      <span class="trust-val">{{ settings.stat_specialists }}</span>
+      <span class="trust-label">Specialists</span>
+    </div>
+    <div class="trust-item">
+      <span class="trust-val">{{ settings.stat_patients }}</span>
+      <span class="trust-label">Patients</span>
+    </div>
+    <div class="trust-item">
+      <span class="trust-val">{{ settings.stat_since }}</span>
+      <span class="trust-label">Since</span>
+    </div>
+    <div class="trust-item">
+      <span class="trust-val">{{ settings.stat_certified }}</span>
+      <span class="trust-label">Certified</span>
+    </div>
+  </div>
+
+  <section class="home-section" id="heritage-section">
+    <div class="heritage-grid">
+      <div class="heritage-text">
+        <span class="section-tag">Clinical Heritage</span>
+        <h2>{{ settings.promo_heritage_heading | safe }}</h2>
+        <p>{{ settings.promo_heritage_text }}</p>
+        <div style="display:flex; gap:2rem;">
+          <div style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 900; color: var(--primary);">{{ settings.departments_count }}+</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Departments</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 2rem; font-weight: 900; color: var(--primary);">24/7</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Support</div>
+          </div>
+        </div>
+      </div>
+      <div class="heritage-visual" style="height: 380px; background: url('{{ settings.promo_heritage_image }}') center/cover no-repeat; border-radius: var(--radius-lg); position: relative;">
+        <div style="position: absolute; bottom: 18px; left: 18px; background: #fff; padding: 1rem; border-radius: 16px; border: 1px solid var(--primary-soft); box-shadow: 0 10px 20px rgba(0,0,0,0.05);">
+          <i data-lucide="award" style="color: var(--primary); margin-bottom: 4px;"></i>
+          <h4 style="margin:0; font-size: 0.85rem; color: var(--primary-dark);">{{ settings.promo_award_title }}</h4>
+          <p style="margin:0; font-size: 0.7rem; color: var(--text-muted);">{{ settings.promo_award_desc }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="leadership-bg">
+    <div class="home-section">
+      <div style="text-align: center; margin-bottom: 3rem;">
+        <span class="section-tag">Governance</span>
+        <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--primary-dark); font-weight: 900;">Our Leadership</h2>
+      </div>
+      <div class="leadership-grid">
+        <div class="leader-card">
+          <div class="leader-img"><img src="{{ settings.promo_leader_1_image }}" alt="CMO"></div>
+          <div class="leader-info">
+            <h3>{{ settings.promo_leader_1_name }}</h3>
+            <span class="leader-role">{{ settings.promo_leader_1_role }}</span>
+            <p class="leader-bio">{{ settings.promo_leader_1_bio }}</p>
+          </div>
+        </div>
+        <div class="leader-card">
+          <div class="leader-img"><img src="{{ settings.promo_leader_2_image }}" alt="GM"></div>
+          <div class="leader-info">
+            <h3>{{ settings.promo_leader_2_name }}</h3>
+            <span class="leader-role">{{ settings.promo_leader_2_role }}</span>
+            <p class="leader-bio">{{ settings.promo_leader_2_bio }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section" id="visit-section" style="scroll-margin-top: 5rem;">
+    <div id="contact-section" style="position: absolute; top: -100px;"></div>
+    <div class="visit-card" style="box-shadow: 0 25px 60px -15px rgba(3, 4, 94, 0.25);">
+      <div class="visit-info">
+        <span class="section-tag" style="background:rgba(255,255,255,0.15); color:#fff; border: 1px solid rgba(255,255,255,0.2);">Our Facility</span>
+        <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); margin-bottom: 2rem; font-weight: 900; letter-spacing: -0.02em;">Central Facility <br>in Koorachundu</h2>
+        
+        <div class="c-row">
+          <div class="c-icon"><i data-lucide="map-pin"></i></div>
+          <div class="c-text">
+            <h4>Location</h4>
+            <p>{{ settings.clinic_address }}</p>
+          </div>
+        </div>
+        
+        <div class="c-row" style="margin-bottom: 2.5rem;">
+          <div style="display:flex; gap:2rem; flex-wrap: wrap;">
+            <div style="display:flex; gap:0.6rem; align-items:center;">
+              <i data-lucide="clock" style="width:16px; opacity:0.6;"></i>
+              <span style="font-size:0.9rem; font-weight:600;">08:00 AM - 09:00 PM</span>
+            </div>
+            <div style="display:flex; gap:0.6rem; align-items:center;">
+              <i data-lucide="phone-call" style="width:16px; opacity:0.6;"></i>
+              <span style="font-size:0.9rem; font-weight:600;">{{ settings.clinic_phone }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-pill-container" style="display:flex; gap:1rem; flex-wrap: wrap;">
+          <a href="{{ settings.clinic_map_link }}" target="_blank" class="action-pill pill-directions">
+            <i data-lucide="navigation"></i> Get Directions
+          </a>
+          <a href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" class="action-pill pill-whatsapp">
+            <svg style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp Enquiry
+          </a>
+        </div>
+      </div>
+      <div class="visit-visual" style="border-radius: 20px; overflow: hidden; position: relative; min-height: 280px;">
+        <div style="width:100%; height:100%; background: url('{{ settings.promo_facility_image }}') center/cover; opacity: 0.6; filter: grayscale(20%);"></div>
+        <div style="position: absolute; inset: 0; background: linear-gradient(to right, var(--primary-dark) 0%, transparent 100%);"></div>
+        <div style="position: absolute; bottom: 30px; left: 30px; color:#fff;">
+          <div style="display:flex; align-items:center; gap:0.5rem; opacity:0.8; font-size: 0.8rem; margin-bottom: 0.2rem;">
+            <i data-lucide="shield-check" style="width:14px;"></i> Verified Facility
+          </div>
+          <div style="font-weight:900; font-size: 1.4rem;">PrimeCare Clinic</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section" id="services-grid" style="scroll-margin-top: 0rem;">
+    <div id="services-section" style="position: absolute; top: -100px;"></div>
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--primary-dark); font-weight: 900;">Our Departments</h2>
+    </div>
+    <div class="dept-grid">
+      {% for group in doctors | groupby('Specialization') %}
+      <div class="dept-card" onclick="scrollToSpec('{{ group.grouper }}')">
+        <div class="dept-icon"><i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i></div>
+        <h4>{{ group.grouper }}</h4>
+        <p>{{ group.list | length }} Doctors</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS MODAL -->
+  <div class="info-modal-overlay" id="infoModal" role="dialog" aria-modal="true" aria-label="How booking works">
+    <div class="info-modal">
+      <button class="info-modal-close" id="infoModalClose" aria-label="Close">
+        <i data-lucide="x"></i>
+      </button>
+      <h3><i data-lucide="info"></i> How our booking works</h3>
+      <ul class="info-modal-steps">
+        <li>
+          <span class="step-num">1</span> 
+          <div><strong>Choose Your Path:</strong> Search by doctor or specialization. For multi-specialist slots, choose your preferred timing.</div>
+        </li>
+        <li>
+          <span class="step-num">2</span> 
+          <div><strong>Instant Token:</strong> Provide patient details (Name, Age, Gender) to instantly secure your digital token.</div>
+        </li>
+        <li>
+          <span class="step-num">3</span> 
+          <div><strong>Manage Appointments:</strong> Login any time to your Profile to view booking history, download tokens, or cancel if needed.</div>
+        </li>
+        <li>
+          <span class="step-num">4</span> 
+          <div><strong>Digital Records:</strong> Keep your prescriptions securely saved in your profile for easy access during future consultations.</div>
+        </li>
+        <li>
+          <span class="step-num">5</span> 
+          <div><strong>Live Tracking:</strong> Stay updated! Once consultations begin, track live token status and get push alerts directly from your home screen.</div>
+        </li>
+        <li>
+          <span class="step-num">6</span> 
+          <div><strong>Dedicated Support:</strong> Encountered a problem? Need assistance? Contact our support team directly for instant help.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- PATIENT AUTH MODAL -->
+  <div class="auth-modal-overlay" id="authModal">
+    <div class="auth-modal">
+      <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close">
+        <i data-lucide="x"></i>
+      </button>
+
+      <!-- LOGIN VIEW -->
+      <div id="authView-login" class="view-section active">
+        <h3 class="auth-title">Welcome Back</h3>
+        <p class="auth-subtitle">Login to your account</p>
+        <form onsubmit="handleAuthSubmit(event, 'login')">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="login-email" class="form-control" placeholder="Email Address" required>
+          </div>
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between;">
+              <label>Password</label>
+              <a href="#" onclick="switchAuthView('forgot')" style="font-size:0.8rem; color:#0077b6; text-decoration:none;">Forgot?</a>
+            </div>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="auth-btn" id="loginBtnSubmit">Sign In</button>
+        </form>
+        <div class="auth-switch">Don't have an account? <a onclick="switchAuthView('register')">Sign up</a></div>
+      </div>
+
+      <!-- REGISTER VIEW -->
+      <div id="authView-register" class="view-section">
+        <h3 class="auth-title">Create Account</h3>
+        <p class="auth-subtitle">Join PrimeCare Clinic</p>
+        <form onsubmit="handleAuthSubmit(event, 'register')">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" class="form-control" placeholder="Full Name" required>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="reg-email" class="form-control" placeholder="Email Address" required>
+          </div>
+          <div class="form-group">
+            <label>Password (min 6 chars)</label>
+            <input type="password" id="reg-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('register')">
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="reg-confirm-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('register')">
+            <div id="register-match-msg" style="font-size:0.75rem; margin-top:0.3rem; font-weight:600; display:none;"></div>
+          </div>
+          <button type="submit" class="auth-btn" id="regBtnSubmit">Continue</button>
+        </form>
+        <div class="auth-switch">Already have an account? <a onclick="switchAuthView('login')">Log in</a></div>
+      </div>
+
+      <!-- OTP VIEW (Used for both Register and Forgot) -->
+      <div id="authView-otp" class="view-section">
+        <h3 class="auth-title">Enter OTP</h3>
+        <p class="auth-subtitle">We sent a 6-digit code to your email.</p>
+        <form onsubmit="handleAuthSubmit(event, 'otp')">
+          <div class="otp-inputs" id="authOtpInputs">
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+          </div>
+          <button type="submit" class="auth-btn" id="otpBtnSubmit">Verify Code</button>
+        </form>
+        <div class="auth-switch" style="margin-top: 1rem; margin-bottom: 0.8rem;">
+          Didn't receive code? <a id="resendOtpBtn" onclick="handleResendOtp()">Resend OTP</a>
+        </div>
+        <div class="auth-switch"><a onclick="switchAuthView('login')">Cancel</a></div>
+      </div>
+
+      <!-- ROLE SELECTION VIEW -->
+      <div id="authView-roleSelect" class="view-section">
+        <h3 class="auth-title">Select Portal</h3>
+        <p class="auth-subtitle">Choose which dashboard you'd like to access</p>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:2rem;">
+            <button onclick="selectRole('patient')" style="display:flex; flex-direction:column; align-items:center; gap:0.8rem; padding:1.5rem 1rem; background:#fff; border:2.5px solid #e2e8f0; border-radius:16px; cursor:pointer; transition:all 0.2s; color:#0f172a;" onmouseover="this.style.borderColor='#0077b6'" onmouseout="this.style.borderColor='#e2e8f0'">
+                <div style="background:rgba(0,119,182,0.1); width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; margin-bottom:0.2rem;">
+                    <i data-lucide="user" style="width:32px; height:32px; color:#0077b6;"></i>
+                </div>
+                <span style="font-weight:800; font-size:1rem;">User Portal</span>
+            </button>
+            <button onclick="selectRole('doctor')" style="display:flex; flex-direction:column; align-items:center; gap:0.8rem; padding:1.5rem 1rem; background:#fff; border:2.5px solid #e2e8f0; border-radius:16px; cursor:pointer; transition:all 0.2s; color:#0f172a;" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#e2e8f0'">
+                <div style="background:rgba(16,185,129,0.1); width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; margin-bottom:0.2rem;">
+                    <i data-lucide="stethoscope" style="width:32px; height:32px; color:#10b981;"></i>
+                </div>
+                <span style="font-weight:800; font-size:1rem;">Doctor Portal</span>
+            </button>
+        </div>
+        
+        <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:2rem;">You can switch between these at any time from your dashboard.</p>
+      </div>
+
+      <!-- FORGOT PASSWORD VIEW -->
+      <div id="authView-forgot" class="view-section">
+        <h3 class="auth-title">Reset Password</h3>
+        <p class="auth-subtitle">Enter email to receive reset code</p>
+        <form onsubmit="handleAuthSubmit(event, 'forgot')">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="forgot-email" class="form-control" placeholder="name@example.com" required>
+          </div>
+          <button type="submit" class="auth-btn" id="forgotBtnSubmit">Send Code</button>
+        </form>
+        <div class="auth-switch"><a onclick="switchAuthView('login')">Back to Login</a></div>
+      </div>
+
+      <!-- RESET PASSWORD VIEW -->
+      <div id="authView-reset" class="view-section">
+        <h3 class="auth-title">New Password</h3>
+        <p class="auth-subtitle">Create a secure new password</p>
+        <form onsubmit="handleAuthSubmit(event, 'reset')">
+          <div class="form-group">
+            <label>New Password (min 6 chars)</label>
+            <input type="password" id="reset-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('reset')">
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="reset-confirm-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('reset')">
+            <div id="reset-match-msg" style="font-size:0.75rem; margin-top:0.3rem; font-weight:600; display:none;"></div>
+          </div>
+          <button type="submit" class="auth-btn" id="resetBtnSubmit">Update Password</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DOCTORS SECTION (Bounded Sticky Scope) -->
+  <div id="doctors-full-section">
+    <div id="doctors-anchor" style="scroll-margin-top: 4.5rem;"></div>
+    <h2 class="doctors-heading" id="doctors-section">
+      <i data-lucide="stethoscope"></i>
+      Our Doctors
+    </h2>
+
+  <main class="content-inner">
+    {% if not doctors %}
+      <div class="no-doctors">
+        <i data-lucide="circle-alert" style="width:32px;height:32px;color:#bbb;display:block;margin:0 auto 0.5rem;"></i>
+        Doctor list is currently unavailable. Please contact the clinic or try again later.
+      </div>
+    {% else %}
+      {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+
+      {% for group in doctors | groupby('Specialization') %}
+        {% set spec_index = loop.index %}
+        <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}" style="scroll-margin-top: 8rem;" >
+          <h2 class="spec-heading">
+            <i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i>
+            {{ group.grouper }}
+          </h2>
+          <div class="doctor-grid">
+            {% for doc in group.list %}
+              {% set card_id = 'timing-' ~ spec_index ~ '-' ~ loop.index0 %}
+              <article class="doctor-card">
+
+                <!-- Timing popup -->
+                <div class="card-timing-popup" id="{{ card_id }}">
+                  <div class="card-timing-header">
+                    <div class="card-timing-title">
+                      <i data-lucide="clock-3"></i>
+                      {{ doc.Name }}
+                    </div>
+                    <button type="button" class="close-timing" aria-label="Close timings">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                  <ul class="timing-list">
+                    {% for day in day_order %}
+                      {% set t = doc.DayTimes.get(day) if doc.DayTimes else None %}
+                      <li>
+                        <span class="timing-day">
+                          <i data-lucide="calendar-days"></i>
+                          <span class="full-day">{{ day }}</span>
+                          <span class="short-day">{{ day[:3] }}</span>
+                        </span>
+                        {% if day not in doc.Days %}
+                          <span class="timing-na">Not working</span>
+                        {% elif t %}
+                          <span class="timing-time">{{ t }}</span>
+                        {% else %}
+                          <span class="timing-na">Time not set</span>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+
+                <!-- Doctor image -->
+                <div class="doctor-img">
+                  {% if doc.Image %}
+                    <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" />
+                  {% else %}
+                    <img src="{{ url_for('static', filename='doctor_images/default.png') }}"
+                         alt="No image" loading="lazy" />
+                  {% endif %}
+                </div>
+
+                <!-- Doctor info -->
+                <div class="doctor-info">
+                  <h4>{{ doc.Name }}</h4>
+                  <p class="doctor-meta">
+                    <i data-lucide="stethoscope"></i>
+                    {{ doc.Specialization }}
+                  </p>
+                  <p class="doctor-meta">
+                    <i data-lucide="calendar-check"></i>
+                    {% if doc.Days %}{{ doc.Days | join(', ') }}{% else %}Not set{% endif %}
+                  </p>
+                  <button type="button" class="btn-timing" data-target="{{ card_id }}">
+                    <i data-lucide="clock"></i>
+                    View timings
+                  </button>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <footer class="site-footer-pro">
+    <div class="f-content">
+      <div class="f-col f-brand">
+        <h2 style="color: #fff; margin-bottom: 1rem;">PrimeCare Clinic</h2>
+        <p style="color: #94a3b8; line-height: 1.6; font-size: 0.95rem;">Providing institutional-grade healthcare since 2012. Your trust is our foundation, and your health is our mission.</p>
+        <div style="display:flex; gap:1rem; margin-top:2rem; color: rgba(255,255,255,0.4);">
+          <i data-lucide="instagram"></i>
+          <i data-lucide="facebook"></i>
+          <i data-lucide="twitter"></i>
+        </div>
+      </div>
+      <div class="f-col">
+        <h4>Navigation</h4>
+        <ul class="f-links">
+          <li><a href="/">Home</a></li>
+          {% if user %}
+            <li><a href="/patient_dashboard">My Profile</a></li>
+          {% else %}
+            <li><a href="#" onclick="openAuthModal('login')">Login</a></li>
+          {% endif %}
+          {% if session.get('admin_logged_in') %}
+          <li><a href="/booking?view=admin" id="adminLoginDiv" style="color: #6366f1; font-weight: bold;">Admin Panel</a></li>
+          {% else %}
+          <li><a href="/booking?view=admin" id="adminLoginDiv">Admin Login</a></li>
+          {% endif %}
+          <li><a href="#doctors-anchor">Doctors</a></li>
+          <li><a href="#contact-section">Contact</a></li>          
+          <li><a href="#heritage-section">About Us</a></li>
+        </ul>
+      </div>
+ 
+      <div class="f-col">
+        <h4>Contact Us</h4>
+        <div style="color: #94a3b8; font-size: 0.9rem; line-height: 1.7;">
+          PrimeCare Clinic<br>
+          {{ settings.clinic_address }}<br><br>
+          Phone: {{ settings.clinic_phone }}
+        </div>
+      </div>
+    </div>
+    <div style="width: 100%; padding: 2rem 1.5rem 2.5rem; border-top: 1px solid rgba(255,255,255,0.05); text-align: center; color: #475569; font-size: 0.85rem; margin-top: 0;">
+      <p style="margin-bottom: 0;">© 2026 PrimeCare Clinic. Delivering Excellence for 25+ Years.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Init Lucide icons
+    lucide.createIcons();
+
+    // --- NAVIGATION LOGIC ---
+    function scrollToSpec(specName) {
+      const slug = specName.replace(/\s+/g, '-').toLowerCase();
+      const target = document.getElementById('dept-' + slug);
+      if (target) {
+        // Ensure doctors section is visible first if it was hidden
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    // --- PATIENT AUTH LOGIC ---
+    function openAuthModal(view = 'login') {
+      document.getElementById('authModal').classList.add('open');
+      switchAuthView(view);
+    }
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.remove('open');
+    }
+    function switchAuthView(viewId) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      document.getElementById('authView-' + viewId).classList.add('active');
+    }
+
+    // OTP Input Auto-Advance
+    document.querySelectorAll('.otp-input').forEach((input, index, inputs) => {
+      input.addEventListener('input', (e) => {
+        if (e.target.value && index < inputs.length - 1) inputs[index + 1].focus();
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && index > 0) inputs[index - 1].focus();
+      });
+    });
+
+    function validateMatch(flow) {
+      const p1 = document.getElementById(flow === 'register' ? 'reg-password' : 'reset-password').value;
+      const p2 = document.getElementById(flow === 'register' ? 'reg-confirm-password' : 'reset-confirm-password').value;
+      const msg = document.getElementById(flow === 'register' ? 'register-match-msg' : 'reset-match-msg');
+      const btn = document.getElementById(flow === 'register' ? 'regBtnSubmit' : 'resetBtnSubmit');
+
+      if (!p1 && !p2) {
+        msg.style.display = 'none';
+        return;
+      }
+      msg.style.display = 'block';
+
+      if (p1 === p2) {
+        msg.textContent = 'Passwords match';
+        msg.style.color = '#16a34a'; // Success green
+      } else {
+        msg.textContent = 'Passwords do not match';
+        msg.style.color = '#e11d48'; // Danger rose
+      }
+    }
+
+    async function handleAuthSubmit(event, flow) {
+      event.preventDefault();
+
+      if (flow === 'register' || flow === 'reset') {
+        const p1 = document.getElementById(flow === 'register' ? 'reg-password' : 'reset-password').value;
+        const p2 = document.getElementById(flow === 'register' ? 'reg-confirm-password' : 'reset-confirm-password').value;
+        
+        if (p1.length < 6) {
+          showToast('Password must be at least 6 characters', 'error');
+          return;
+        }
+        if (p1 !== p2) {
+          showToast('Passwords do not match', 'error');
+          return;
+        }
+      }
+
+      const btn = event.target.querySelector('button[type="submit"]');
+      const ogText = btn.textContent;
+      btn.textContent = 'Processing...';
+      btn.disabled = true;
+
+      try {
+        let endpoint = '';
+        let payload = {};
+
+        if (flow === 'login') {
+          endpoint = '/patient_login';
+          payload = { email: document.getElementById('login-email').value, password: document.getElementById('login-password').value };
+        } else if (flow === 'register') {
+          endpoint = '/patient_register';
+          payload = { name: document.getElementById('reg-name').value, email: document.getElementById('reg-email').value, password: document.getElementById('reg-password').value };
+        } else if (flow === 'otp') {
+          endpoint = '/verify_patient_otp';
+          const otpStr = Array.from(document.querySelectorAll('.otp-input')).map(i => i.value).join('');
+          payload = { otp: otpStr };
+        } else if (flow === 'forgot') {
+          endpoint = '/send_forgot_otp';
+          payload = { email: document.getElementById('forgot-email').value };
+        } else if (flow === 'reset') {
+          endpoint = '/reset_password';
+          payload = { password: document.getElementById('reset-password').value };
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast(data.msg, 'success');
+          if (data.require_role_selection) {
+            switchAuthView('roleSelect');
+          } else if (flow === 'login' || flow === 'reset' || (flow === 'otp' && data.flow === 'register')) {
+            const nextUrl = sessionStorage.getItem('auth_next');
+            if (nextUrl) {
+                sessionStorage.removeItem('auth_next');
+                setTimeout(() => window.location.href = nextUrl, 1000);
+            } else {
+                setTimeout(() => window.location.href = data.redirect_url || '/patient_dashboard', 1000);
+            }
+          } else if (flow === 'register' || flow === 'forgot') {
+            switchAuthView('otp');
+          } else if (flow === 'otp' && data.flow === 'forgot') {
+            switchAuthView('reset');
+          }
+        } else {
+          showToast(data.msg || 'An error occurred', 'error');
+        }
+      } catch (err) {
+        showToast('Network error, try again.', 'error');
+      } finally {
+        btn.textContent = ogText;
+        btn.disabled = false;
+      }
+    }
+
+    async function selectRole(role) {
+        try {
+            const res = await fetch('/select_active_role', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.msg, 'success');
+                const nextUrl = sessionStorage.getItem('auth_next');
+                if (nextUrl) {
+                    sessionStorage.removeItem('auth_next');
+                    setTimeout(() => window.location.href = nextUrl, 1000);
+                } else {
+                    setTimeout(() => window.location.href = data.redirect_url, 1000);
+                }
+            } else {
+                showToast(data.msg, 'error');
+            }
+        } catch (e) {
+            showToast('Navigation error', 'error');
+        }
+    }
+
+    async function handleResendOtp() {
+      const btn = document.getElementById('resendOtpBtn');
+      if (btn.style.opacity === '0.5') return;
+      btn.style.opacity = '0.5';
+      btn.textContent = 'Sending...';
+
+      let isRegister = false;
+      let email = document.getElementById('reg-email').value;
+      if (email) {
+          isRegister = true;
+      } else {
+          email = document.getElementById('forgot-email').value;
+      }
+
+      const endpoint = isRegister ? '/patient_register' : '/send_forgot_otp';
+      const payload = isRegister ? { email: email, password: document.getElementById('reg-password').value } : { email: email };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if(data.success) {
+          showToast('OTP Resent!', 'success');
+        } else {
+          showToast(data.msg || 'Error resending OTP', 'error');
+        }
+      } catch (err) {
+        showToast('Network error', 'error');
+      } finally {
+        btn.textContent = 'Resend OTP';
+        setTimeout(() => btn.style.opacity = '1', 10000); // 10s cooldown
+      }
+    }
+
+    async function checkAdminSession() {
+      // Logout button removed from home page as per requirement
+    }
+
+    let activeModalAction = null;
+    function openModal(title, message, actionText, actionFn, isDanger = false) {
+      const modal = document.getElementById('universalModal');
+      if (!modal) return;
+      modal.querySelector('h3').textContent = title;
+      modal.querySelector('p').textContent = message;
+      const confirmBtn = modal.querySelector('.confirm-btn');
+      confirmBtn.textContent = actionText;
+      confirmBtn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      activeModalAction = actionFn;
+      modal.style.display = 'flex';
+      lucide.createIcons();
+    }
+    function closeModal() {
+      const modal = document.getElementById('universalModal');
+      if (modal) modal.style.display = 'none';
+      activeModalAction = null;
+    }
+    function handleConfirm() {
+      if (activeModalAction) activeModalAction();
+      closeModal();
+    }
+    function openLogoutModal() {
+      openModal('Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
+    }
+    async function confirmLogout() {
+      try {
+        await fetch('/admin_logout', { method: 'POST' });
+        showToast('Administrative session ended successfully', 'success');
+      } catch(err) { console.error('Logout failed:', err); }
+    }
+
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('globalToast');
+      if (!toast) return;
+      toast.className = 'toast-' + type;
+      toast.innerHTML = (type === 'success' 
+        ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' 
+        : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
+      lucide.createIcons();
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 5000);
+    }
+
+    // Update sticky positioning on load/resize — drives scroll-margin-top on anchor
+    function updateStickyLayout() {
+      const topBar = document.querySelector('.top-bar');
+      const docHeading = document.getElementById('doctors-section');
+      const anchor = document.getElementById('doctors-anchor');
+      if (topBar) {
+        const h = Math.round(topBar.getBoundingClientRect().height);
+        if (docHeading) docHeading.style.top = h + 'px';
+        if (anchor) anchor.style.scrollMarginTop = h + 'px';
+      }
+    }
+    window.addEventListener('resize', updateStickyLayout);
+    updateStickyLayout();
+
+    // Scroll to doctors section
+    function scrollToDoctors(openTimings = false) {
+      updateStickyLayout();
+      const anchor = document.getElementById('doctors-anchor');
+      if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      
+      if (openTimings) {
+        setTimeout(() => {
+          document.querySelectorAll('.card-timing-popup').forEach(p => p.classList.add('show'));
+        }, 500);
+      }
+    }
+    const viewDocsBtn = document.getElementById('viewDoctorsBtn');
+    if (viewDocsBtn) viewDocsBtn.addEventListener('click', () => scrollToDoctors());
+
+    // How it works modal
+    const infoModal = document.getElementById('infoModal');
+    const howBtn = document.getElementById('howItWorksBtn');
+    if (infoModal && howBtn) {
+      howBtn.addEventListener('click', () => {
+        infoModal.classList.add('open');
+      });
+      const closeBtn = document.getElementById('infoModalClose');
+      if (closeBtn) closeBtn.addEventListener('click', () => {
+        infoModal.classList.remove('open');
+      });
+      infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) infoModal.classList.remove('open');
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') infoModal.classList.remove('open');
+      });
+    }
+
+    // Timing popup open
+    document.querySelectorAll('.btn-timing').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const id = btn.dataset.target;
+        const popup = document.getElementById(id);
+        if (!popup) return;
+        document.querySelectorAll('.card-timing-popup.show').forEach(function (p) {
+          if (p !== popup) p.classList.remove('show');
+        });
+        popup.classList.add('show');
+        const rect = popup.getBoundingClientRect();
+        if (rect.top < 70) {
+          window.scrollBy({ top: rect.top - 80, behavior: 'smooth' });
+        }
+      });
+    });
+
+    // Timing popup close button
+    document.querySelectorAll('.card-timing-popup .close-timing').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const popup = btn.closest('.card-timing-popup');
+        if (popup) popup.classList.remove('show');
+      });
+    });
+
+    // Close timing popup on outside click
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.card-timing-popup') || e.target.closest('.btn-timing')) return;
+      document.querySelectorAll('.card-timing-popup.show').forEach(function (p) {
+        p.classList.remove('show');
+      });
+    });
+
+    // Re-run Lucide after DOM fully ready (for dynamic icons)
+    document.addEventListener('DOMContentLoaded', function () {
+      lucide.createIcons();
+      checkAdminSession();
+      
+      // Check URL parameters for login trigger, next redirect & custom msg
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('trigger_login') === 'true') {
+        const nextUrl = params.get('next');
+        const customMsg = params.get('msg');
+        
+        if (nextUrl) sessionStorage.setItem('auth_next', nextUrl);
+        
+        if (customMsg) {
+          const subtitle = document.querySelector('#authView-login .auth-subtitle');
+          if (subtitle) {
+            subtitle.innerHTML = `<div style="background:rgba(0,119,182,0.1); color:#0077b6; padding:10px; border-radius:12px; margin-bottom:10px; font-weight:600;"><i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;margin-right:5px;"></i>${customMsg}</div>`;
+            lucide.createIcons();
+          }
+        }
+        openAuthModal('login');
+      }
+
+      // Check if URL hash is #timings to automatically open doctor timings
+      if (window.location.hash === '#timings') {
+        setTimeout(() => scrollToDoctors(true), 600);
+      }
+    });
+  </script>
+
+
+  <!-- Universal Confirmation Modal (Reusable for Logout, etc.) -->
+  <div class="modal-overlay" id="universalModal">
+    <div class="modal-content">
+      <div class="modal-icon-container" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
+        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+      </div>
+      <h3>Confirm Action</h3>
+      <p>Are you sure you want to proceed with this action?</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary confirm-btn" onclick="handleConfirm()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ AI TRIAGE CHAT WIDGET ══════════════ -->
+  <!-- Floating Action Button -->
+  <button id="aiChatFab" onclick="toggleAiChat(event)" aria-label="Open AI Health Assistant" title="AI Clinic Assistant">
+    <svg viewBox="0 0 100 100" style="width:38px;height:38px;filter:drop-shadow(0 0 12px rgba(0,119,182,0.4));">
+      <defs>
+        <linearGradient id="primeLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fff"/>
+          <stop offset="100%" stop-color="#fff"/>
+        </linearGradient>
+      </defs>
+      <!-- Outer rings -->
+      <circle cx="50" cy="50" r="46" stroke="white" stroke-width="4" fill="none"/>
+      <circle cx="50" cy="50" r="38" stroke="white" stroke-width="2.5" fill="none" opacity="0.7"/>
+      <!-- Medical Cross -->
+      <path d="M42 17L58 17L58 42L83 42L83 58L58 58L58 83L42 83L42 58L17 58L17 42L42 42Z" fill="white"/>
+      <!-- Heartbeat line -->
+      <polyline points="17,50 29,50 33,35 40,65 47,50 57,50 63,35 70,65 75,50 83,50" stroke="#0077b6" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="fab-badge" id="aiFabBadge">AI</span>
+  </button>
+
+  <!-- AI Chat Overlay -->
+  <div id="aiChatOverlay" class="ai-chat-overlay" onclick="toggleAiChat()"></div>
+
+  <!-- AI Chat Panel -->
+  <div id="aiChatPanel" role="dialog" aria-label="PrimeCare AI Assistant" onclick="event.stopPropagation()">
+    <!-- Header -->
+    <div class="ai-chat-header">
+      <div class="ai-avatar">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}" alt="PrimeCare Logo">
+      </div>
+      <div class="ai-header-info">
+        <div class="ai-header-name">PrimeCare Assistant</div>
+        <div class="ai-header-status">
+          <span class="ai-status-dot"></span>
+          AI Agent · Always Online
+        </div>
+      </div>
+      <button class="ai-chat-close" onclick="toggleAiChat()" aria-label="Close AI chat">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <!-- Messages Body -->
+    <div class="ai-chat-body" id="aiChatBody"></div>
+
+    <!-- Quick Suggestions -->
+    <div class="ai-suggestions" id="aiSuggestions">
+      <button class="ai-suggestion-chip" onclick="sendSuggestion('I have chest pain and shortness of breath')">Chest pain</button>
+      <button class="ai-suggestion-chip" onclick="sendSuggestion('I have a fever and sore throat')">Fever &amp; sore throat</button>
+      <button class="ai-suggestion-chip" onclick="sendSuggestion('Who works on Monday?')">Monday doctors</button>
+      <button class="ai-suggestion-chip" onclick="sendSuggestion('How many departments does the clinic have?')">Departments</button>
+    </div>
+
+    <!-- Input Footer -->
+    <div class="ai-chat-footer">
+      <textarea id="aiChatInput" rows="1" placeholder="How can I help you?..."
+        onkeydown="aiInputKeydown(event)"></textarea>
+      <button id="aiChatSend" onclick="sendAiMessage()" aria-label="Send">
+        <i data-lucide="send"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+  // ── AI TRIAGE CHAT LOGIC ──
+  (function() {
+    const panel    = document.getElementById('aiChatPanel');
+    const body     = document.getElementById('aiChatBody');
+    const input    = document.getElementById('aiChatInput');
+    const sendBtn  = document.getElementById('aiChatSend');
+    const badge    = document.getElementById('aiFabBadge');
+    const suggestionsEl = document.getElementById('aiSuggestions');
+
+    let isOpen     = false;
+    let isTyping   = false;
+    let chatHistory = [];  // [ {role:'user'|'model', text:'...'} ]
+    let firstOpen  = true;
+
+    // ── Toggle panel ──────────────────────────────────────
+    window.toggleAiChat = function(e) {
+      if (e) e.stopPropagation();
+      const overlay = document.getElementById('aiChatOverlay');
+      isOpen = !isOpen;
+      
+      panel.classList.toggle('open', isOpen);
+      overlay.classList.toggle('open', isOpen);
+      
+      // Prevent body scroll when chat is open (on mobile)
+      if (window.innerWidth <= 520) {
+        document.body.style.overflow = isOpen ? 'hidden' : '';
+      }
+
+      if (isOpen) {
+        badge.style.display = 'none';
+        if (firstOpen) { firstOpen = false; showWelcome(); }
+        setTimeout(() => input.focus(), 350);
+      }
+    };
+
+    // ── Welcome message ──────────────────────────────────
+    function showWelcome() {
+      appendTimestamp('Today');
+      addAiMessage(
+        '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;color:#0077b6;font-weight:700;">' +
+        '<svg viewBox="0 0 100 100" style="width:22px;height:22px;"><circle cx="50" cy="50" r="46" stroke="#0077b6" stroke-width="5" fill="none"/><path d="M42 17L58 17L58 42L83 42L83 58L58 58L58 83L42 83L42 58L17 58L17 42L42 42Z" fill="#0077b6"/><polyline points="17,50 29,50 33,35 40,65 47,50 57,50 63,35 70,65 75,50 83,50" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Welcome to PrimeCare Chat' +
+        '</div>' +
+        'Hello! I am your <strong>PrimeCare AI Assistant</strong>.<br><br>' +
+        'I am here to assist you with:<br>' +
+        '<div style="display:flex;gap:0.6rem;margin-top:0.4rem;padding-left:0.2rem;">' +
+        '  <i data-lucide="stethoscope" style="width:14px;height:14px;color:#0077b6;margin-top:4px;flex-shrink:0;"></i>' +
+        '  <span><strong>Symptom Check</strong> — Tell me how you feel.</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:0.6rem;margin-top:0.4rem;padding-left:0.2rem;">' +
+        '  <i data-lucide="clock" style="width:14px;height:14px;color:#0077b6;margin-top:4px;flex-shrink:0;"></i>' +
+        '  <span><strong>Doctor Schedules</strong> — Find availability.</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:0.6rem;margin-top:0.4rem;padding-left:0.2rem;">' +
+        '  <i data-lucide="calendar" style="width:14px;height:14px;color:#0077b6;margin-top:4px;flex-shrink:0;"></i>' +
+        '  <span><strong>My Bookings</strong> — View your appointments.</span>' +
+        '</div>'
+      );
+    }
+
+    // ── Append helpers ────────────────────────────────────
+    function appendTimestamp(label) {
+      const el = document.createElement('div');
+      el.className = 'ai-timestamp';
+      el.textContent = label;
+      body.appendChild(el);
+    }
+
+    function addUserMessage(text) {
+      const row = document.createElement('div');
+      row.className = 'ai-msg user';
+      row.innerHTML = `
+        <div class="ai-msg-avatar"><i data-lucide="user"></i></div>
+        <div class="ai-bubble">${escHtml(text)}</div>`;
+      body.appendChild(row);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      scrollBottom();
+    }
+
+    function addAiMessage(html, isError = false) {
+      const row = document.createElement('div');
+      row.className = 'ai-msg ai' + (isError ? ' error' : '');
+      row.innerHTML = `
+        <div class="ai-msg-avatar">
+          <svg viewBox="0 0 100 100" style="width:22px;height:22px;"><circle cx="50" cy="50" r="46" stroke="#0077b6" stroke-width="5" fill="none"/><path d="M42 17L58 17L58 42L83 42L83 58L58 58L58 83L42 83L42 58L17 58L17 42L42 42Z" fill="#0077b6"/><polyline points="17,50 29,50 33,35 40,65 47,50 57,50 63,35 70,65 75,50 83,50" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="ai-bubble">${html}</div>`;
+      body.appendChild(row);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      scrollBottom();
+    }
+
+    function showTyping() {
+      const row = document.createElement('div');
+      row.className = 'ai-msg ai ai-typing';
+      row.id = 'aiTypingRow';
+      row.innerHTML = `
+        <div class="ai-msg-avatar">
+          <svg viewBox="0 0 100 100" style="width:22px;height:22px;"><circle cx="50" cy="50" r="46" stroke="#0077b6" stroke-width="5" fill="none"/><path d="M42 17L58 17L58 42L83 42L83 58L58 58L58 83L42 83L42 58L17 58L17 42L42 42Z" fill="#0077b6"/><polyline points="17,50 29,50 33,35 40,65 47,50 57,50 63,35 70,65 75,50 83,50" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="ai-bubble">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>`;
+      body.appendChild(row);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      scrollBottom();
+    }
+
+    function removeTyping() {
+      const el = document.getElementById('aiTypingRow');
+      if (el) el.remove();
+    }
+
+    function scrollBottom() {
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── Parse AI reply → render markdown-lite ─────────────
+    function renderReply(raw) {
+      // Bold **text**
+      let html = raw.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Italic *text*
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      // Newlines → <br>
+      html = html.replace(/\n/g, '<br>');
+
+      // Detect ➡️ Recommended: <Specialization>
+      const recoMatch = raw.match(/(?:➡️|Recommended:)\s*([^\n\r]+)/i);
+      let recoChip = '';
+      if (recoMatch) {
+        const spec = recoMatch[1].trim().replace(/\*+/g, '').replace('Recommended:', '').trim();
+        const encoded = encodeURIComponent(spec);
+        recoChip = `<br><button class="ai-reco-chip" onclick="window.location.href='/booking?spec=${encoded}'">
+          <i data-lucide="check-circle" style="width:14px;height:14px;"></i>
+          Book Appointment: ${spec}
+        </button>`;
+        // Hide suggestions after first triage
+        suggestionsEl.style.display = 'none';
+      }
+      return html + recoChip;
+    }
+
+    // ── Send message ──────────────────────────────────────
+    window.sendAiMessage = async function() {
+      const text = input.value.trim();
+      if (!text || isTyping) return;
+
+      input.value = '';
+      input.style.height = 'auto';
+      suggestionsEl.style.display = 'none';
+
+      addUserMessage(text);
+      chatHistory.push({ role: 'user', text });
+
+      isTyping = true;
+      sendBtn.disabled = true;
+      showTyping();
+
+      try {
+        const res = await fetch('/ai_triage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, history: chatHistory.slice(-10) })
+        });
+        const data = await res.json();
+        removeTyping();
+
+        const replyText = data.reply || 'Could not process request.';
+        addAiMessage(renderReply(replyText));
+        chatHistory.push({ role: 'model', text: replyText });
+      } catch(e) {
+        removeTyping();
+        addAiMessage('Connection error. Please try again.', true);
+      } finally {
+        isTyping = false;
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    };
+
+    window.sendSuggestion = function(text) {
+      input.value = text;
+      sendAiMessage();
+    };
+
+    // ── Auto-resize textarea ───────────────────────────────
+    input.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+
+    // ── Enter to send (Shift+Enter = newline) ──────────────
+    window.aiInputKeydown = function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAiMessage();
+      }
+    };
+
+    // ── Close panel on outside click ──────────────────────
+    document.addEventListener('click', function(e) {
+      if (isOpen &&
+          !panel.contains(e.target) &&
+          !document.getElementById('aiChatFab').contains(e.target)) {
+        isOpen = false;
+        panel.classList.remove('open');
+      }
+    });
+  })();
+  </script>
+
+  <!-- Notification Tray FAB -->
+  <button id="notifTrayFab" onclick="restoreBanner()" title="Restore Token Tracking">
+    <div class="notif-badge"></div>
+    <i data-lucide="bell"></i>
+  </button>
+
+  <!-- Live Token Floating Banner (Sync Structure) -->
+  <div id="homeTokenBanner" onclick="window.location.href='/live-tracking?doctor=' + encodeURIComponent(this.dataset.doc) + '&date=' + this.dataset.date">
+    <div class="banner-left">
+      <div class="banner-status">
+        <i data-lucide="radio" class="pulse"></i> 
+        <span id="bannerStatusText">Live Status</span>
+      </div>
+      <div class="banner-doctor" id="bannerDocName">--</div>
+    </div>
+    <div class="banner-stats">
+      <div class="banner-stat-item">
+        <span class="stat-label">Live</span>
+        <span class="stat-val stat-live" id="bannerLiveToken">--</span>
+      </div>
+      <div class="banner-stat-item">
+        <span class="stat-label">Your Token</span>
+        <span class="stat-val stat-mine" id="bannerYourToken">--</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const banner = document.getElementById('homeTokenBanner');
+      const tray = document.getElementById('notifTrayFab');
+      const docName = document.getElementById('bannerDocName');
+      const liveTokenEl = document.getElementById('bannerLiveToken');
+      const yourTokenEl = document.getElementById('bannerYourToken');
+      const statusText = document.getElementById('bannerStatusText');
+      
+      let isDismissed = localStorage.getItem('tokenBannerDismissed') === 'true';
+      let hasNotification = false;
+
+      // ── Swipe Logic ──
+      let startX = 0;
+      let currentX = 0;
+      let isSwiping = false;
+
+      banner.addEventListener('touchstart', e => {
+        startX = e.touches[0].clientX;
+        isSwiping = true;
+        banner.style.transition = 'none';
+      });
+
+      banner.addEventListener('touchmove', e => {
+        if (!isSwiping) return;
+        currentX = e.touches[0].clientX - startX;
+        // Apply resistance or movement
+        banner.style.transform = `translateX(calc(-50% + ${currentX}px)) translateY(0)`;
+        banner.style.opacity = 1 - Math.abs(currentX) / 300;
+      });
+
+      banner.addEventListener('touchend', e => {
+        isSwiping = false;
+        banner.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease';
+        
+        if (Math.abs(currentX) > 120) {
+          // Dismiss
+          dismissBanner();
+        } else {
+          // Reset
+          banner.style.transform = 'translateX(-50%) translateY(0)';
+          banner.style.opacity = '1';
+        }
+        currentX = 0;
+      });
+
+      window.dismissBanner = function() {
+        isDismissed = true;
+        localStorage.setItem('tokenBannerDismissed', 'true');
+        banner.style.transform = currentX > 0 ? 'translateX(100vw)' : 'translateX(-100vw)';
+        banner.style.opacity = '0';
+        setTimeout(() => {
+          banner.classList.remove('show');
+          if (hasNotification) tray.classList.add('show');
+        }, 400);
+      };
+
+      window.restoreBanner = function() {
+        isDismissed = false;
+        localStorage.removeItem('tokenBannerDismissed');
+        tray.classList.remove('show');
+        banner.classList.add('show');
+        banner.style.transform = 'translateX(-50%) translateY(0)';
+        banner.style.opacity = '1';
+      };
+
+      async function updateBanner() {
+        try {
+          const res = await fetch('/my_token_status');
+          const data = await res.json();
+          
+          if (data.success && data.data && data.data.length > 0) {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+            const isAndroid = /Android/.test(navigator.userAgent);
+            const supportsNotif = typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
+            const canReceiveNotif = supportsNotif && Notification.permission === 'granted' && (isAndroid || isStandalone);
+
+            // ── Push Notification Helper ──
+            function sendSwNotif(title, body, tag, vibrate, renotify) {
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(reg => {
+                  if (reg.active) {
+                    reg.active.postMessage({
+                      type: 'SHOW_NOTIFICATION',
+                      title, body, tag,
+                      vibrate: vibrate || null,
+                      renotify: renotify !== false,
+                      url: '/patient_dashboard'
+                    });
+                  } else {
+                    reg.showNotification(title, {
+                      body, tag, icon: '/static/android-chrome-192x192.png',
+                      badge: '/static/favicon-32x32.png',
+                      vibrate: vibrate || undefined,
+                      renotify: renotify !== false,
+                      silent: false,
+                      data: { url: '/patient_dashboard' }
+                    }).catch(() => {});
+                  }
+                }).catch(() => {});
+              }
+            }
+
+            let bestForBanner = null;
+
+            data.data.forEach(item => {
+              if (item.status === 'idle' || item.status === 'completed') return;
+
+              // ── Push Notifications for EVERY doctor ──
+              if (canReceiveNotif) {
+                const ahead = item.patients_ahead;
+                const liveDoc = item.doctor_name;
+                const liveTok = item.current_token;
+                const yourTok = item.your_token;
+
+                // 1. Live Tracking
+                const liveKey = `live_tok_${liveDoc}_${yourTok}`;
+                const lastLive = sessionStorage.getItem(liveKey);
+                if (String(liveTok) !== lastLive && item.status === 'active') {
+                  sessionStorage.setItem(liveKey, String(liveTok));
+                  sendSwNotif(
+                    '🔄 Live Tracking',
+                    `${liveDoc}  ·  Now: #${liveTok}  ·  Your Token: #${yourTok}`,
+                    `primecare-live-${liveDoc}`,
+                    null,
+                    false
+                  );
+                }
+
+                // 2. Alert (2/1/0 ahead)
+                const alertKey = `alerted_${liveDoc}_${yourTok}`;
+                const lastAlert = sessionStorage.getItem(alertKey);
+                if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && item.status === 'active') {
+                  sessionStorage.setItem(alertKey, String(ahead));
+                  const alertBody = ahead === 0
+                    ? `It's your turn! Proceed to ${liveDoc} immediately.`
+                    : ahead === 1
+                    ? `You're next for ${liveDoc}. Please be ready!`
+                    : `2 patients ahead — ${liveDoc}. Get ready soon.`;
+                  sendSwNotif(
+                    '🔔 Token Alert',
+                    alertBody,
+                    `primecare-alert-${liveDoc}`,
+                    [300, 100, 300, 100, 500],
+                    true
+                  );
+                }
+
+                // 3. Skipped
+                if (item.status === 'skipped') {
+                  const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
+                  if (!sessionStorage.getItem(skipKey)) {
+                    sessionStorage.setItem(skipKey, '1');
+                    sendSwNotif(
+                      '⚠️ Token Skipped',
+                      `Your token with ${liveDoc} was skipped.`,
+                      `primecare-skip-${liveDoc}`,
+                      [400, 200, 400],
+                      true
+                    );
+                  }
+                }
+              }
+
+              // ── Select the best one for the UI banner ──
+              // Priority: Active over Skipped; Smallest patients_ahead (including 0)
+              if (item.status === 'active') {
+                if (!bestForBanner || item.patients_ahead < bestForBanner.patients_ahead) {
+                  bestForBanner = item;
+                }
+              }
+            });
+
+            // ── Update Browser Permission Card ──
+            if (isMobile && supportsNotif && Notification.permission === 'default' && (isAndroid || isStandalone)) {
+              showNotifPermCard();
+            }
+
+            // ── Render Banner ──
+            if (bestForBanner) {
+              hasNotification = true;
+              docName.textContent = bestForBanner.doctor_name;
+              liveTokenEl.textContent = bestForBanner.current_token;
+              yourTokenEl.textContent = bestForBanner.your_token;
+
+              banner.dataset.doc = bestForBanner.doctor_name;
+              banner.dataset.date = bestForBanner.date;
+
+              const ahead = bestForBanner.patients_ahead;
+              if (ahead === 0) {
+                statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
+              } else if (ahead === 1) {
+                statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
+              } else {
+                statusText.textContent = "Live Status";
+              }
+
+              if (!isDismissed) {
+                banner.classList.add('show');
+              } else {
+                tray.classList.add('show');
+              }
+              lucide.createIcons();
+            } else {
+              hasNotification = false;
+              banner.classList.remove('show');
+              tray.classList.remove('show');
+            }
+          } else {
+            hasNotification = false;
+            banner.classList.remove('show');
+            tray.classList.remove('show');
+          }
+        } catch(e) { console.error(e); }
+      }
+
+      const userLoggedIn = {{ 'true' if 'user_id' in session else 'false' }};
+      const isPatient = {{ 'true' if session.get('user_role') == 'patient' else 'false' }};
+
+      if (userLoggedIn && isPatient) {
+          updateBanner();
+          setInterval(updateBanner, 5000);
+      }
+    })();
+
+
+    // ─── Shared Swipe Dismiss Helper ───────────────────────────────
+    function _addSwipeDismiss(el, onDismiss, skipSelector) {
+      let sX = 0, cX = 0, sw = false;
+      el.addEventListener('touchstart', e => {
+        if (skipSelector && e.target.closest(skipSelector)) return;
+        sX = e.touches[0].clientX; sw = true; el.style.transition = 'none';
+      }, {passive:true});
+      el.addEventListener('touchmove', e => {
+        if (!sw) return;
+        cX = e.touches[0].clientX - sX;
+        el.style.transform = `translateX(calc(-50% + ${cX}px))`;
+        el.style.opacity = String(Math.max(0, 1 - Math.abs(cX) / 180));
+      }, {passive:true});
+      el.addEventListener('touchend', () => {
+        sw = false;
+        el.style.transition = 'transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.3s ease';
+        if (Math.abs(cX) > 100) { onDismiss(cX); }
+        else { el.style.transform = 'translateX(-50%)'; el.style.opacity = '1'; }
+        cX = 0;
+      }, {passive:true});
+    }
+    function _slideOut(el, dir, storageKey) {
+      if (storageKey) sessionStorage.setItem(storageKey, '1');
+      el.style.transition = 'transform 0.45s ease, opacity 0.3s ease';
+      el.style.transform = dir >= 0 ? 'translateX(120vw)' : 'translateX(-120vw)';
+      el.style.opacity = '0';
+      setTimeout(() => { if (el.parentNode) el.remove(); }, 460);
+    }
+
+    // ─── Notification Permission Card (premium glass design) ──────────
+    let _notifCardShown = false;
+    function showNotifPermCard() {
+      if (_notifCardShown) return;
+      _notifCardShown = true;
+      if (sessionStorage.getItem('notifCardDismissed')) return;
+
+      const card = document.createElement('div');
+      card.id = 'notifPermCard';
+      card.style.cssText = `
+        position:fixed; bottom:24px; left:50%;
+        transform:translateX(-50%) translateY(180px);
+        width:90%; max-width:390px;
+        background:linear-gradient(135deg,rgba(255,255,255,0.97),rgba(236,248,255,0.97));
+        backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+        padding:1.1rem; border-radius:23px;
+        box-shadow:0 20px 60px rgba(0,119,182,0.18),0 4px 16px rgba(0,0,0,0.07),
+                   inset 0 0 0 1.5px rgba(255,255,255,0.85);
+        border:1.5px solid rgba(0,119,182,0.14);
+        display:flex; flex-direction:column; gap:0.95rem;
+        transition:transform 0.65s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.4s ease;
+        touch-action:pan-x; user-select:none; z-index:9998;
+      `;
+      card.innerHTML = `
+        <div style="display:flex; align-items:center; gap:0.95rem; width:100%;">
+          <div style="
+            background:linear-gradient(140deg,#0077b6,#00b4d8);
+            width:50px; height:50px; border-radius:16px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            box-shadow:0 8px 22px rgba(0,119,182,0.38);
+          ">
+            <i data-lucide="bell-ring" style="width:23px;height:23px;color:white;"></i>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:800; font-size:1rem; color:#0c1a2e; letter-spacing:-0.01em;">Enable Live Alerts</div>
+            <div style="font-size:0.78rem; color:#64748b; line-height:1.45; margin-top:2px;">Know when your token is near. <span style="color:#94a3b8;font-style:italic;">Swipe to dismiss.</span></div>
+          </div>
+        </div>
+        <button id="enableNotifBtnH" style="
+          width:100%;
+          background:linear-gradient(135deg,#0077b6,#0096c7); color:#fff; border:none;
+          padding:0.75rem 1rem; border-radius:14px; font-size:0.95rem; font-weight:800;
+          cursor:pointer; font-family:inherit;
+          box-shadow:0 6px 18px rgba(0,119,182,0.35); text-align:center;
+          letter-spacing:0.01em; margin-top:0 !important;
+        ">Enable Notification</button>
+      `;
+      document.body.appendChild(card);
+      if (typeof lucide !== 'undefined') lucide.createIcons(card);
+      requestAnimationFrame(() => { card.style.transform = 'translateX(-50%) translateY(0)'; });
+      document.getElementById('enableNotifBtnH').addEventListener('click', async e => {
+        e.stopPropagation();
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(async reg => {
+              try {
+                const vapidPublicKey = 'BOoeVMyifl6JFZhRdmlSNpg5vvdTAUAXZqrAMX3ONaZoffmW48-ohbJFUzZzhxkvxxm_z7gwmpf0-xqoe6dMpEU';
+                const padding = '='.repeat((4 - vapidPublicKey.length % 4) % 4);
+                const base64 = (vapidPublicKey + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+                
+                const subscription = await reg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: outputArray
+                });
+                
+                await fetch('/api/save_subscription', {
+                  method: 'POST',
+                  body: JSON.stringify(subscription),
+                  headers: { 'Content-Type': 'application/json' }
+                });
+              } catch (err) {
+                console.error("Web Push Subscription Error:", err);
+              }
+
+              reg.showNotification('PrimeCare', {
+                body: "Live alerts enabled! You will be notified when your turn is near.",
+                icon: '/static/android-chrome-192x192.png',
+                badge: '/static/favicon-32x32.png',
+                vibrate: [200, 100, 200]
+              }).catch(() => {
+                try { new Notification('PrimeCare', { body: "Live alerts enabled!", icon: '/static/android-chrome-192x192.png' }); } catch(err) {}
+              });
+            });
+          } else {
+            try { new Notification('PrimeCare', { body: "Live alerts enabled!", icon: '/static/android-chrome-192x192.png' }); } catch(err) {}
+          }
+        }
+        _slideOut(card, 1, 'notifCardDismissed');
+        _notifCardShown = false;
+      });
+      _addSwipeDismiss(card, dir => _slideOut(card, dir, 'notifCardDismissed'));
+    }
+
+    // ─── Unified Install Guide (iOS Share / Android Menu) ─────────
+    {% if has_upcoming %}
+    (function initInstallGuide() {
+      const isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isAndroid    = /Android/.test(navigator.userAgent);
+      const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+      // On iOS: show install guide when NOT in standalone (they need to install first!)
+      // On Android: show install guide when NOT in standalone
+      if (isStandalone || sessionStorage.getItem('installGuideDismissed')) return;
+      if (!isIOS && !isAndroid) return;
+      let deferredPrompt = null;
+      if (isAndroid) {
+        window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; });
+      }
+      setTimeout(() => {
+        const guide = document.createElement('div');
+        guide.style.cssText = `
+          position:fixed; bottom:24px; left:50%;
+          transform:translateX(-50%);
+          width:90%; max-width:390px;
+          background:linear-gradient(135deg,rgba(255,255,255,0.97),rgba(236,248,255,0.97));
+          backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+          padding:1.1rem 1.2rem; border-radius:22px;
+          box-shadow:0 20px 60px rgba(0,119,182,0.16),0 4px 16px rgba(0,0,0,0.07),
+                     inset 0 0 0 1.5px rgba(255,255,255,0.85);
+          border:1.5px solid rgba(0,119,182,0.14);
+          display:flex; align-items:center; gap:1rem;
+          animation:slideUpCard 0.7s cubic-bezier(0.175,0.885,0.32,1.275);
+          touch-action:pan-x; user-select:none; cursor:grab; z-index:10000;
+        `;
+        guide.innerHTML = isIOS ? `
+          <div id="installActionBtn" style="
+            background:linear-gradient(140deg,#0077b6,#00b4d8); color:#fff;
+            width:50px; height:50px; border-radius:16px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; box-shadow:0 8px 22px rgba(0,119,182,0.38);
+            animation:ios-pulse 2.5s ease-in-out infinite;
+          ">
+            <i data-lucide="share" style="width:22px;height:22px;"></i>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:800;font-size:0.95rem;color:#0c1a2e;letter-spacing:-0.01em;">Add to Home Screen</div>
+            <div style="font-size:0.78rem;color:#475569;line-height:1.45;margin-top:3px;">Tap <span style="font-weight:800;color:#0077b6;">Share</span> then <b style="color:#0f172a;">'Add to Home Screen'</b> for real-time alerts &amp; live tracking.</div>
+            <div style="font-size:0.7rem;color:#94a3b8;margin-top:5px;font-style:italic;">Swipe to dismiss</div>
+          </div>
+        ` : `
+          <div style="width:50px;height:50px;border-radius:16px;flex-shrink:0;overflow:hidden;box-shadow:0 8px 22px rgba(0,119,182,0.3);">
+            <img src="/static/android-chrome-192x192.png" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:800;font-size:0.95rem;color:#0c1a2e;letter-spacing:-0.01em;">Add to Home Screen</div>
+            <div id="installActionBtn" style="font-size:0.78rem;color:#475569;line-height:1.45;margin-top:3px;cursor:pointer;">Tap <span style="font-weight:800;color:#0077b6;">&#8942; Menu</span> then <b style="color:#0f172a;">'Add to Home Screen'</b> for push alerts &amp; live tracking.</div>
+            <div style="font-size:0.7rem;color:#94a3b8;margin-top:5px;font-style:italic;">Swipe to dismiss</div>
+          </div>
+        `;
+        document.body.appendChild(guide);
+        if (window.lucide) lucide.createIcons(guide);
+        const btn = guide.querySelector('#installActionBtn');
+        btn && btn.addEventListener('click', async e => {
+          e.stopPropagation();
+          if (isIOS) {
+            if (navigator.share) {
+              try { await navigator.share({ title:'PrimeCare Clinic', text:'Real-time Hospital Token Tracking', url:window.location.href }); } catch(err) {}
+            } else { alert("Tap the Share icon \u2197 in Safari's bottom bar, then 'Add to Home Screen'."); }
+          } else if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const res = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            if (res.outcome === 'accepted') _slideOut(guide, 1, 'installGuideDismissed');
+          }
+        });
+        _addSwipeDismiss(guide, dir => _slideOut(guide, dir, 'installGuideDismissed'), '#installActionBtn');
+      }, 3000);
+    })();
+    {% endif %}
+
+    // ─── PWA Service Worker Registration ────────────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then(reg => {
+            console.log('PrimeCare SW registered:', reg.scope);
+            if (Notification.permission === 'granted') {
+              try {
+                const vapidPublicKey = 'BOoeVMyifl6JFZhRdmlSNpg5vvdTAUAXZqrAMX3ONaZoffmW48-ohbJFUzZzhxkvxxm_z7gwmpf0-xqoe6dMpEU';
+                const padding = '='.repeat((4 - vapidPublicKey.length % 4) % 4);
+                const base64 = (vapidPublicKey + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+                
+                reg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: outputArray
+                }).then(subscription => {
+                    fetch('/api/save_subscription', {
+                      method: 'POST',
+                      body: JSON.stringify(subscription),
+                      headers: { 'Content-Type': 'application/json' }
+                    });
+                }).catch(e => {});
+              } catch(e) {}
+            }
+          })
+          .catch(err => console.error('SW registration failed:', err));
+      });
+    }
+  </script>
+
+
+  <script>
+    // ─── Who's In Now Live Ticker Logic ──────────────────────────────
+    (function initLiveTicker() {
+      const tickerWrapper = document.getElementById('liveTicker');
+      const tickerContent = document.getElementById('tickerContent');
+      
+      async function updateTicker() {
+        try {
+          const res = await fetch('/live_tokens');
+          const data = await res.json();
+          
+          if (data.success) {
+            let tickerItems = [];
+
+            // 1. Admin Messages (Always show if present)
+            if (data.admin_messages && data.admin_messages.length > 0) {
+              data.admin_messages.forEach(msg => {
+                tickerItems.push(`
+                  <div class="ticker-item">
+                    <div class="status-dot live" style="background:#f59e0b;"></div>
+                    <span><b>NOTICE:</b> ${msg}</span>
+                  </div>
+                `);
+              });
+            }
+
+            // 2. Holiday Messages + Doctor Statuses (Skip if solo_mode)
+            if (!data.solo_mode) {
+              // 🔴 Today Holiday
+              if (data.today_holiday) {
+                tickerItems.push(`
+                  <div class="ticker-item" style="color:#ef4444;">
+                    <div class="status-dot live" style="background:#ef4444;"></div>
+                    <span><b>Clinic is closed today: ${data.today_holiday}</b></span> 
+                  </div>
+                `);
+              }
+
+              // 🟠 Tomorrow Holiday
+              if (data.tomorrow_holiday) {
+                tickerItems.push(`
+                  <div class="ticker-item" style="color:#f97316;">
+                    <div class="status-dot upcoming" style="background:#f97316;"></div>
+                    <span><b>Clinic will be closed tomorrow: ${data.tomorrow_holiday}</b></span>
+                  </div>
+                `);
+              }
+
+              // 🩺 Doctor Statuses (Only show if not Today Holiday)
+              if (!data.today_holiday && data.data && data.data.length > 0) {
+                data.data.forEach(d => {
+                  if (d.status === 'Live Now' || d.status === 'Yet to start') {
+                    const isLive = d.status === 'Live Now';
+                    const dotClass = isLive ? 'live' : 'upcoming';
+                    
+                    const docDisplay = d.doctor_name.toLowerCase().startsWith('dr') ? d.doctor_name : `Dr. ${d.doctor_name}`;
+                    
+                    // Robust Time Parser: Handles both 24h (13:00) and 12h (1:00 PM)
+                    const parseTime = (t) => {
+                      if (!t) return { min: 0, disp: "" };
+                      let h, m, mod;
+                      const clean = t.trim().toUpperCase();
+                      if (clean.includes('AM') || clean.includes('PM')) {
+                        const parts = clean.split(/\s+/);
+                        [h, m] = parts[0].split(':').map(Number);
+                        mod = parts[1];
+                      } else {
+                        [h, m] = clean.split(':').map(Number);
+                        mod = (h >= 12) ? 'PM' : 'AM';
+                      }
+                      if (isNaN(m)) m = 0;
+                      
+                      let calcH = h;
+                      if (mod === 'PM' && h < 12) calcH += 12;
+                      if (mod === 'AM' && h === 12) calcH = 0;
+                      
+                      let dispH = h % 12 || 12;
+                      let dispM = m < 10 ? '0' + m : m;
+                      
+                      return {
+                        min: calcH * 60 + m,
+                        disp: `${dispH}:${dispM} ${mod}`
+                      };
+                    };
+
+                    const now = new Date();
+                    const currentMin = now.getHours() * 60 + now.getMinutes();
+                    
+                    // Time Parsing logic
+                    let timeMsg = "";
+                    try {
+                      // Support both " - " and "-" separators
+                      const times = d.time.split(/\s*-\s*/);
+                      if (times.length === 2) {
+                        const start = parseTime(times[0]);
+                        const end = parseTime(times[1]);
+                        
+                        // 1. SKIP if current time is past the end time (e.g. shift over)
+                        if (currentMin > end.min) return;
+
+                        // 2. SKIP if not live and more than 60 minutes away
+                        const minDiff = start.min - currentMin;
+                        if (!isLive && minDiff > 60) return;
+
+                        const isDelayed = !isLive && (currentMin > (start.min + 5));
+                        
+                        if (isDelayed) {
+                          timeMsg = `will start consultation shortly`;
+                        } else {
+                          timeMsg = isLive ? `is consulting up to ${end.disp}` : `is starting consultation at ${start.disp}`;
+                        }
+                      } else {
+                        const single = parseTime(d.time);
+                        const minDiffSingle = single.min - currentMin;
+                        if (!isLive && minDiffSingle > 60) return;
+
+                        timeMsg = isLive ? `is currently Consulting` : `is starting consultation at ${single.disp}`;
+                      }
+                    } catch(e) { timeMsg = d.status; }
+
+                    tickerItems.push(`
+                      <div class="ticker-item">
+                        <div class="status-dot ${dotClass}"></div>
+                        <span>${docDisplay} ${timeMsg}</span>
+                      </div>
+                    `);
+                  }
+                });
+              }
+            }
+
+            if (tickerItems.length > 0) {
+              tickerWrapper.style.display = 'flex';
+              
+              const html = tickerItems.join('');
+              // Triple the content to ensure smooth seamless looping
+              tickerContent.innerHTML = html + html + html;
+              
+              // Adjust animation speed based on content length
+              const duration = tickerItems.length * 12; // ~12s per item
+              tickerContent.style.animationDuration = `${Math.max(duration, 30)}s`;
+            } else {
+              tickerWrapper.style.display = 'none';
+            }
+          } else {
+            tickerWrapper.style.display = 'none';
+          }
+        } catch (err) {
+          console.error("Ticker update failed:", err);
+          tickerWrapper.style.display = 'none';
+        }
+      }
+
+      updateTicker();
+      // Refresh status every 5 minutes
+      setInterval(updateTicker, 300000);
+    })();
+  </script>
+
+  <!-- Admin Profile Dropdown Script -->
+  <script>
+    function toggleAdminDropdown(event) {
+      event.stopPropagation();
+      const dropdown = document.getElementById('adminDropdownMenu');
+      if (dropdown) {
+        dropdown.classList.toggle('show');
+      }
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      const dropdown = document.getElementById('adminDropdownMenu');
+      const btn = document.getElementById('adminProfileBtn');
+      if (dropdown && dropdown.classList.contains('show')) {
+        if (!dropdown.contains(e.target) && (!btn || !btn.contains(e.target))) {
+          dropdown.classList.remove('show');
+        }
+      }
+    });
+
+    function openAuthModalFromAdmin() {
+      const dropdown = document.getElementById('adminDropdownMenu');
+      if (dropdown) dropdown.classList.remove('show');
+      openAuthModal('login');
+    }
+
+    async function triggerAdminLogout() {
+      const dropdown = document.getElementById('adminDropdownMenu');
+      if (dropdown) dropdown.classList.remove('show');
+      
+      openModal('Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', async function() {
+        try {
+          const res = await fetch('/admin_logout', { method: 'POST' });
+          if (res.ok) {
+            window.location.reload();
+          } else {
+            showToast('Admin logout failed', 'error');
+          }
+        } catch(err) {
+          console.error(err);
+          showToast('Logout failed', 'error');
+        }
+      }, true);
+    }
+
+    async function triggerUserLogout() {
+      const dropdown = document.getElementById('adminDropdownMenu');
+      if (dropdown) dropdown.classList.remove('show');
+      
+      const currentRole = "{{ session.get('user_role', 'patient') }}";
+      const currentRoleDisplay = currentRole === 'doctor' ? 'doctor' : 'User';
+      
+      openModal('Confirm Logout', `Are you sure you want to end your current ${currentRoleDisplay} session?`, 'Logout', async function() {
+        try {
+          const res = await fetch('/patient_logout', { method: 'POST' });
+          if (res.ok) {
+            window.location.reload();
+          } else {
+            showToast('Logout failed', 'error');
+          }
+        } catch(err) {
+          console.error(err);
+          showToast('Logout failed', 'error');
+        }
+      }, true);
+    }
+
+    function switchUserSession() {
+      const dropdown = document.getElementById('adminDropdownMenu');
+      if (dropdown) dropdown.classList.remove('show');
+      
+      const currentRole = "{{ session.get('user_role', 'patient') }}";
+      const targetRole = currentRole === 'doctor' ? 'patient' : 'doctor';
+      const fromDisplay = currentRole === 'doctor' ? 'Doctor' : 'User';
+      const toDisplay   = targetRole  === 'doctor' ? 'Doctor' : 'User';
+
+      openModal(
+        'Switch Account',
+        `Are you sure you want to switch from ${fromDisplay} to ${toDisplay}?`,
+        'Switch Now',
+        async function() {
+          try {
+            const res = await fetch('/switch_active_role', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+              showToast(data.msg, 'success');
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
+            } else {
+              showToast(data.msg, 'error');
+            }
+          } catch(err) {
+            console.error(err);
+            showToast('Switch failed', 'error');
+          }
+        }
+      );
+    }
+  </script>
+</body>
+</html>

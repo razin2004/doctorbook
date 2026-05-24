@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>Live Token Tracker - PrimeCare</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  
+  <style>
+    /* ── DESIGN SYSTEM VARIABLES ── */
+    :root {
+      --primary: #0077b6;
+      --primary-dark: #023e8a;
+      --primary-light: #0096c7;
+      --primary-glow: rgba(0, 119, 182, 0.15);
+      
+      --accent: #10b981;
+      --accent-dark: #047857;
+      --accent-light: #ecfdf5;
+      
+      --warning: #f59e0b;
+      --warning-dark: #b45309;
+      --warning-light: #fef3c7;
+      
+      --danger: #e11d48;
+      --danger-light: #fff1f2;
+      
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-400: #94a3b8;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-900: #0f172a;
+    }
+
+    body {
+      background-attachment: fixed;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--slate-900);
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ── STICKY HEADER ── */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.85);
+      border-bottom: 1px solid rgba(0, 119, 182, 0.08);
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
+    }
+    .top-bar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 850;
+      color: var(--primary);
+      letter-spacing: -0.02em;
+    }
+    .brand-sub {
+      font-size: 0.72rem;
+      color: var(--slate-600);
+      font-weight: 500;
+      margin-top: -1px;
+    }
+    .top-actions {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+    .top-actions .btn {
+      margin-top: 0 !important;
+    }
+    .desktop-home-btn { display: inline-flex !important; }
+    .desktop-dashboard-btn { display: inline-flex !important; }
+    .mobile-home-btn { display: none !important; }
+    .mobile-dashboard-btn { display: none !important; }
+
+    /* ── CONTAINER & HERO ── */
+    .tracking-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1.5rem 5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2.2rem;
+    }
+
+    /* Hero section */
+    .page-hero {
+      text-align: center;
+      max-width: 700px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .page-hero h1 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--slate-900);
+      letter-spacing: -0.03em;
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+    }
+    .page-hero p {
+      font-size: 1.05rem;
+      color: var(--slate-600);
+      font-weight: 500;
+      margin: 0;
+    }
+
+    /* ── QUICK STATS GRID ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+      width: 100%;
+    }
+    .stat-card-premium {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 24px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.03);
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .stat-card-premium:hover {
+      transform: translateY(-4px);
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 119, 182, 0.15);
+      box-shadow: 0 15px 35px rgba(0, 119, 182, 0.06);
+    }
+    .stat-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .stat-card-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+    .stat-card-info {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stat-card-label {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--slate-400);
+    }
+    .stat-card-value {
+      font-size: 1.7rem;
+      font-weight: 900;
+      color: var(--slate-900);
+      line-height: 1.1;
+    }
+    .stat-card-subtext {
+      font-size: 0.74rem;
+      color: var(--slate-600);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Icon theme classes */
+    .stat-live .stat-card-icon { background: rgba(16, 185, 129, 0.1); color: var(--accent); }
+    .stat-pending .stat-card-icon { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    .stat-completed .stat-card-icon { background: rgba(225, 29, 72, 0.1); color: var(--danger); }
+
+    /* Blinking Live Dot inside Icon */
+    .blinking-dot-small {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: blink-live 1.5s infinite;
+    }
+    @keyframes blink-live {
+      0% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+      70% { opacity: 0.4; box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* ── FILTER & TAB BAR ── */
+    .filter-section {
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      border-radius: 28px;
+      padding: 1rem 1.4rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1.2rem;
+    }
+    
+    /* Tabs selector */
+    .filter-tabs {
+      display: flex;
+      gap: 0.4rem;
+      background: rgba(15, 23, 42, 0.04);
+      padding: 0.25rem;
+      border-radius: 16px;
+    }
+    .filter-tab-btn {
+      border: none;
+      background: transparent;
+      padding: 0.5rem 1rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--slate-600);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .filter-tab-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .filter-tab-btn.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+    }
+    
+    /* Dropdown controls */
+    .filter-controls {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .select-pill {
+      background: white;
+      border: 1px solid var(--slate-200);
+      padding: 0.5rem 1rem;
+      border-radius: 14px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--slate-700);
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 160px;
+    }
+    .select-pill:focus, .select-pill:hover {
+      border-color: rgba(0, 119, 182, 0.35);
+      box-shadow: 0 4px 12px rgba(0, 119, 182, 0.05);
+    }
+
+    /* ── TRACKER CARDS GRID ── */
+    .tracker-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .tracker-card {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-radius: 28px;
+      padding: 1.6rem;
+      box-shadow: 0 10px 40px rgba(15, 23, 42, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .tracker-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(0, 119, 182, 0.2);
+      box-shadow: 0 20px 45px rgba(0, 119, 182, 0.08);
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Glow ring for Live Doctors */
+    .tracker-card.active-session {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(255, 255, 255, 0.75);
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.05), 0 0 0 1px rgba(16, 185, 129, 0.1);
+      animation: card-live-pulse 3s ease-in-out infinite;
+    }
+    .tracker-card.active-session:hover {
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 20px 50px rgba(16, 185, 129, 0.12);
+      background: rgba(255, 255, 255, 0.85);
+      animation: none;
+    }
+    @keyframes card-live-pulse {
+      0%, 100% { box-shadow: 0 10px 30px rgba(16, 185, 129, 0.05), 0 0 0 1px rgba(16, 185, 129, 0.1); }
+      50%       { box-shadow: 0 10px 30px rgba(16, 185, 129, 0.12), 0 0 0 3px rgba(16, 185, 129, 0.07); }
+    }
+
+    /* Stat cards are clickable */
+    .stat-card-premium {
+      cursor: pointer;
+    }
+    
+    /* Top Line Accent Indicator */
+    .card-accent-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      opacity: 0.7;
+    }
+    .active-session .card-accent-line { background: linear-gradient(90deg, var(--accent), var(--primary-light)); }
+    .pending-session .card-accent-line { background: linear-gradient(90deg, var(--warning), rgba(245, 158, 11, 0.2)); }
+    .completed-session .card-accent-line { background: linear-gradient(90deg, var(--slate-300), var(--slate-200)); }
+
+    /* Doctor Info inside card */
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.8rem;
+    }
+    .card-doc-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .card-doc-name {
+      font-size: 1.15rem;
+      font-weight: 850;
+      color: var(--slate-900);
+      letter-spacing: -0.015em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-doc-spec {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--slate-400);
+      letter-spacing: 0.08em;
+    }
+    .card-doc-time {
+      font-size: 0.78rem;
+      color: var(--slate-600);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-top: 0.35rem;
+    }
+    .card-doc-time svg {
+      width: 13px;
+      height: 13px;
+      color: var(--primary);
+    }
+
+    /* Badges */
+    .card-badge {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 0.3rem 0.65rem;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      flex-shrink: 0;
+    }
+    .badge-active { background: var(--accent-light); color: var(--accent-dark); border: 1.5px solid rgba(16,185,129,0.25); }
+    .badge-pending { background: var(--warning-light); color: var(--warning-dark); border: 1.5px solid rgba(245,158,11,0.25); }
+    .badge-completed { background: #f1f5f9; color: var(--slate-600); border: 1.5px solid rgba(203,213,225,0.5); }
+
+    /* ── QUEUE MAIN BOX ── */
+    .queue-box {
+      background: rgba(15, 23, 42, 0.02);
+      border-radius: 20px;
+      padding: 1.25rem;
+      border: 1px solid var(--slate-200);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      position: relative;
+    }
+    .active-session .queue-box {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.02) 0%, rgba(0, 119, 182, 0.02) 100%);
+      border-color: rgba(16, 185, 129, 0.12);
+    }
+    .queue-label {
+      font-size: 0.74rem;
+      font-weight: 800;
+      color: var(--slate-400);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Circular token status display */
+    .queue-number-circle {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: white;
+      border: 3.5px solid var(--slate-200);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin: 0.2rem 0;
+      transition: all 0.3s;
+    }
+    .active-session .queue-number-circle {
+      border-color: var(--accent);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.08);
+    }
+    .queue-token-value {
+      font-size: 2.3rem;
+      font-weight: 900;
+      color: var(--slate-900);
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .active-session .queue-token-value {
+      color: var(--accent-dark);
+    }
+    .queue-token-desc {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--slate-400);
+      text-transform: uppercase;
+    }
+    .queue-total-tokens {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--slate-600);
+    }
+    .queue-total-tokens span {
+      font-weight: 800;
+      color: var(--slate-900);
+    }
+
+    /* ── YOUR TICKETS AREA ── */
+    .user-ticket-box {
+      margin-top: auto;
+      border-radius: 18px;
+      padding: 0.9rem 1.1rem;
+      background: linear-gradient(135deg, rgba(0, 119, 182, 0.07), rgba(0, 150, 199, 0.03));
+      border: 1.5px dashed rgba(0, 119, 182, 0.22);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+    .user-ticket-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .user-ticket-label {
+      font-size: 0.74rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .user-ticket-label svg {
+      width: 14px;
+      height: 14px;
+    }
+    .user-ticket-numbers {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: var(--primary-dark);
+    }
+    
+    /* Queue progress status inside ticket */
+    .user-ticket-progress {
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--slate-700);
+      background: white;
+      padding: 0.35rem 0.65rem;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 119, 182, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .progress-tag {
+      font-size: 0.66rem;
+      font-weight: 800;
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+    .tag-calling { background: var(--accent-light); color: var(--accent-dark); }
+    .tag-waiting { background: rgba(0, 119, 182, 0.08); color: var(--primary-dark); }
+    .tag-skipped { background: var(--warning-light); color: var(--warning-dark); }
+    .tag-completed { background: var(--slate-100); color: var(--slate-600); }
+
+    /* ── SKELETONS ── */
+    .skeleton-card {
+      height: 280px;
+      background: rgba(255, 255, 255, 0.55);
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      position: relative;
+      overflow: hidden;
+    }
+    .skeleton-card::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* ── FOOTER ── */
+    .site-footer {
+      padding: 4rem 1.5rem 2rem;
+      text-align: center;
+      margin-top: auto;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .footer-link {
+      color: var(--slate-700);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .footer-link svg {
+      width: 15px;
+      height: 15px;
+      color: var(--primary);
+    }
+    .footer-link:hover {
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+    .footer-copy {
+      font-size: 0.8rem;
+      color: var(--slate-400);
+      font-weight: 500;
+      margin: 0;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── RESPONSIVENESS ── */
+    @media (max-width: 900px) {
+      .tracker-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.8rem;
+      }
+      /* Make 3rd card span full width on tablets if odd */
+      .stat-card-premium:nth-child(3) {
+        grid-column: span 2;
+      }
+      .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0.8rem;
+        gap: 1rem;
+      }
+      .filter-tabs {
+        display: flex;
+        gap: 0.25rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start;
+        scrollbar-width: none;
+        padding: 0.2rem;
+        border-radius: 12px;
+      }
+      .filter-tabs::-webkit-scrollbar {
+        display: none;
+      }
+      .filter-tab-btn {
+        flex-shrink: 0;
+        padding: 0.35rem 0.6rem;
+        font-size: 0.76rem;
+      }
+      .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+      }
+      .select-pill {
+        width: 100%;
+        min-width: unset;
+      }
+    }
+
+    @media (max-width: 580px) {
+      .top-bar-inner {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.85rem;
+        gap: 0.5rem;
+      }
+      .brand {
+        align-items: flex-start;
+        flex-shrink: 1;
+        min-width: 0;
+      }
+      .brand-title {
+        font-size: 1.0rem;
+      }
+      .brand-sub {
+        display: none;
+      }
+      .top-actions {
+        display: flex;
+        flex-direction: row;
+        flex-shrink: 0;
+        gap: 0.4rem;
+        align-items: center;
+        margin-left: auto;
+      }
+      .desktop-home-btn { display: none !important; }
+      .desktop-dashboard-btn { display: none !important; }
+      .mobile-home-btn { 
+        display: flex !important;
+        border-radius: 10px !important;
+        background: rgba(0, 119, 182, 0.06) !important;
+        color: #0077b6 !important;
+        height: 36px !important;
+      }
+      .mobile-dashboard-btn { 
+        display: flex !important;
+        border-radius: 10px !important;
+        background: rgba(0, 119, 182, 0.06) !important;
+        color: #0077b6 !important;
+        height: 36px !important;
+        width: 36px !important;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .tracking-container {
+        padding: 0 0.8rem 4rem;
+        gap: 1.5rem;
+        margin-top: 1rem;
+      }
+      .page-hero h1 {
+        font-size: 1.8rem;
+      }
+      .page-hero p {
+        font-size: 0.95rem;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+      }
+      .stat-card-premium {
+        padding: 0.8rem 1rem;
+        gap: 0.6rem;
+        border-radius: 18px;
+      }
+      .stat-card-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+      }
+      .stat-card-icon svg {
+        width: 16px;
+        height: 16px;
+      }
+      .stat-card-value {
+        font-size: 1.35rem;
+      }
+      .stat-card-label {
+        font-size: 0.65rem;
+      }
+      .stat-card-subtext {
+        font-size: 0.65rem;
+      }
+      .stat-card-premium:nth-child(3) {
+        grid-column: span 2;
+      }
+      
+      .tracker-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      .tracker-card {
+        padding: 1.25rem;
+        border-radius: 24px;
+        gap: 1rem;
+      }
+      .queue-number-circle {
+        width: 76px;
+        height: 76px;
+      }
+      .queue-token-value {
+        font-size: 1.9rem;
+      }
+    }
+  </style>
+</head>
+<body class="bg-image">
+  <div class="bg-blur"></div>
+
+  <!-- HEADER -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex-shrink:1;">
+        <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0; text-decoration: none;" onclick="window.location.href='/'">
+          <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+               style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
+               alt="PrimeCare Logo" />
+          <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+            <div class="brand-title">PrimeCare Clinic</div>
+            <div class="brand-sub">Quality care · Trusted doctors</div>
+          </div>
+        </div>
+      </div>
+      <div class="top-actions" style="margin-left:auto;">
+        <!-- Desktop Home Button -->
+        <button class="btn btn-outline desktop-home-btn" onclick="window.location.href='/'" style="margin-top:0;" title="Go Home">
+          <i data-lucide="house"></i>
+          <span>Home</span>
+        </button>
+        
+        <!-- Mobile Back/Home Button (Matches other HTMLs) -->
+        <button class="admin-sidebar-toggle-btn mobile-home-btn" onclick="window.location.href='/'" style="margin-top:0; width:auto; padding:0 8px; gap:2px;" title="Go Home">
+          <i data-lucide="arrow-left" style="width:18px;height:18px; stroke-width:3px;"></i>
+          <i data-lucide="house" style="width:18px;height:18px; stroke-width:3px;"></i>
+        </button>
+        
+        <!-- Desktop Dashboard/Login Button -->
+        {% if 'user_id' in session or 'admin_logged_in' in session %}
+          <button class="btn btn-primary desktop-dashboard-btn" onclick="window.location.href='{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}'" style="margin-top:0;" title="Dashboard">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+          </button>
+        {% else %}
+          <button class="btn btn-primary desktop-dashboard-btn" onclick="window.location.href='/#auth'" style="margin-top:0;" title="Login">
+            <i data-lucide="log-in"></i>
+            <span>Login</span>
+          </button>
+        {% endif %}
+
+        <!-- Mobile Dashboard/Login Button -->
+        {% if 'user_id' in session or 'admin_logged_in' in session %}
+          <button class="admin-sidebar-toggle-btn mobile-dashboard-btn" onclick="window.location.href='{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}'" style="margin-top:0;" title="Dashboard">
+            <i data-lucide="layout-dashboard" style="width:18px;height:18px; stroke-width:2.5px;"></i>
+          </button>
+        {% else %}
+          <button class="admin-sidebar-toggle-btn mobile-dashboard-btn" onclick="window.location.href='/#auth'" style="margin-top:0;" title="Login">
+            <i data-lucide="log-in" style="width:18px;height:18px; stroke-width:2.5px;"></i>
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <div class="tracking-container">
+    
+    <!-- HERO TITLE -->
+    <div class="page-hero">
+      <h1><span class="blinking-dot-small" style="width:12px;height:12px;"></span> Live Token Tracker</h1>
+      <p>Real-time doctor queues and consultation schedules.</p>
+    </div>
+
+    <!-- QUICK STATS GRID -->
+    <div class="stats-grid">
+      <!-- Live Sessions -->
+      <div class="stat-card-premium stat-live" onclick="setStatusTabFilter('active')">
+        <div class="stat-card-icon">
+          <span class="blinking-dot-small"></span>
+        </div>
+        <div class="stat-card-info">
+          <span class="stat-card-label">Live Now</span>
+          <span class="stat-card-value" id="statsLiveCount">0</span>
+          <span class="stat-card-subtext">Active consultations</span>
+        </div>
+      </div>
+      
+      <!-- Awaiting Sessions -->
+      <div class="stat-card-premium stat-pending" onclick="setStatusTabFilter('idle')">
+        <div class="stat-card-icon">
+          <i data-lucide="clock"></i>
+        </div>
+        <div class="stat-card-info">
+          <span class="stat-card-label">Yet to Start</span>
+          <span class="stat-card-value" id="statsPendingCount">0</span>
+          <span class="stat-card-subtext">Doctors awaiting schedule</span>
+        </div>
+      </div>
+      
+      <!-- Completed Sessions -->
+      <div class="stat-card-premium stat-completed" onclick="setStatusTabFilter('completed')">
+        <div class="stat-card-icon">
+          <i data-lucide="check-circle"></i>
+        </div>
+        <div class="stat-card-info">
+          <span class="stat-card-label">Completed</span>
+          <span class="stat-card-value" id="statsCompletedCount">0</span>
+          <span class="stat-card-subtext">Finished today</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREMIUM FILTER BAR -->
+    <div class="filter-section">
+      <!-- Quick Status Filter Tabs -->
+      <div class="filter-tabs">
+        <button class="filter-tab-btn active" id="tab-all" onclick="setStatusTabFilter('all')">
+          <i data-lucide="grid"></i> All
+        </button>
+        <button class="filter-tab-btn" id="tab-active" onclick="setStatusTabFilter('active')">
+          <span class="blinking-dot-small" style="width:7px;height:7px;box-shadow:none;"></span> Live Now
+        </button>
+        <button class="filter-tab-btn" id="tab-idle" onclick="setStatusTabFilter('idle')">
+          <i data-lucide="clock"></i> Awaiting
+        </button>
+        <button class="filter-tab-btn" id="tab-completed" onclick="setStatusTabFilter('completed')">
+          <i data-lucide="check-circle"></i> Completed
+        </button>
+      </div>
+      
+      <!-- Dropdown Select Filters -->
+      <div class="filter-controls">
+        <select id="specFilter" class="select-pill" onchange="updateDoctorFilter(); applyFilters()">
+          <option value="all">All Specialties</option>
+        </select>
+        <select id="docFilter" class="select-pill" onchange="applyFilters()">
+          <option value="all">All Doctors</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- LAST UPDATED ROW -->
+    <div id="lastUpdatedBar" style="display:flex; align-items:center; justify-content:flex-end; gap:0.4rem; font-size:0.78rem; color:var(--slate-400); font-weight:600; padding: 0 0.2rem; margin-top:-0.8rem;">
+      <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>
+      <span id="lastUpdatedText">Updating...</span>
+    </div>
+
+    <!-- TRACKER GRID -->
+    <div class="tracker-grid" id="trackerGrid">
+      <!-- Loading Skeletons -->
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+
+  </div>
+
+  <!-- CENTURED FOOTER -->
+  <footer class="site-footer">
+    <p class="footer-copy">&copy; 2026 PrimeCare Clinic. All rights reserved.</p>
+  </footer>
+
+  <!-- SCRIPT -->
+  <script>
+    lucide.createIcons();
+    
+    let allTokensData = [];
+    let userTokens = {};
+    let isInitialLoad = true;
+    let currentStatusFilter = 'all'; // 'all', 'active', 'idle', 'completed'
+
+    function getStatusBadgeParams(statusRaw) {
+        if (statusRaw === 'active') return { class: 'badge-active', icon: 'radio', text: 'Live Now' };
+        if (statusRaw === 'completed') return { class: 'badge-completed', icon: 'check-circle', text: 'Completed' };
+        return { class: 'badge-pending', icon: 'clock', text: 'Yet to start' };
+    }
+
+    // Set Status Filter Tab
+    window.setStatusTabFilter = function(filterVal) {
+        currentStatusFilter = filterVal;
+        
+        // Update active tab styling
+        document.querySelectorAll('.filter-tab-btn').forEach(btn => btn.classList.remove('active'));
+        if (filterVal === 'all') document.getElementById('tab-all').classList.add('active');
+        else if (filterVal === 'active') document.getElementById('tab-active').classList.add('active');
+        else if (filterVal === 'idle') document.getElementById('tab-idle').classList.add('active');
+        else if (filterVal === 'completed') document.getElementById('tab-completed').classList.add('active');
+        
+        applyFilters();
+    }
+
+    function populateFilters(data) {
+        const specFilter = document.getElementById('specFilter');
+        const currentSpec = specFilter.value;
+        const specs = [...new Set(data.map(d => d.specialization))].sort();
+        
+        specFilter.innerHTML = '<option value="all">All Specialties</option>' + 
+            specs.map(s => `<option value="${s}" ${s === currentSpec ? 'selected' : ''}>${s}</option>`).join('');
+            
+        updateDoctorFilter();
+    }
+    
+    window.updateDoctorFilter = function() {
+        const specValue = document.getElementById('specFilter').value;
+        const docFilter = document.getElementById('docFilter');
+        const currentDoc = docFilter.value;
+        
+        let doctorsData = allTokensData;
+        if (specValue !== 'all') {
+            doctorsData = allTokensData.filter(d => d.specialization === specValue);
+        }
+        
+        const docs = [...new Set(doctorsData.map(d => d.doctor_name))].sort();
+        
+        docFilter.innerHTML = '<option value="all">All Doctors</option>' + 
+            docs.map(d => `<option value="${d}" ${d === currentDoc ? 'selected' : ''}>${d}</option>`).join('');
+            
+        if (specValue !== 'all' && currentDoc !== 'all' && !docs.includes(currentDoc)) {
+            docFilter.value = 'all';
+        }
+    }
+    
+    window.applyFilters = function() {
+        const specValue = document.getElementById('specFilter').value;
+        const docValue = document.getElementById('docFilter').value;
+        
+        let filtered = allTokensData;
+        
+        // 1. Apply quick status tab filter
+        if (currentStatusFilter !== 'all') {
+            filtered = filtered.filter(d => d.status_raw === currentStatusFilter);
+        }
+        
+        // 2. Apply specialty filter
+        if (specValue !== 'all') {
+            filtered = filtered.filter(d => d.specialization === specValue);
+        }
+        
+        // 3. Apply doctor name filter
+        if (docValue !== 'all') {
+            filtered = filtered.filter(d => d.doctor_name === docValue);
+        }
+        
+        // Sort
+        sortDoctors(filtered);
+        
+        // Render
+        renderCards(filtered);
+    }
+    
+    function sortDoctors(data) {
+        data.sort((a, b) => {
+            const statusOrder = { 'active': 10, 'idle': 20, 'completed': 30 };
+            let weightA = statusOrder[a.status_raw] || 40;
+            let weightB = statusOrder[b.status_raw] || 40;
+
+            const aKey = `${a.doctor_name.toLowerCase().trim()}|${a.specialization.toLowerCase().trim()}`;
+            const bKey = `${b.doctor_name.toLowerCase().trim()}|${b.specialization.toLowerCase().trim()}`;
+            if (userTokens[aKey]) weightA -= 5;
+            if (userTokens[bKey]) weightB -= 5;
+
+            if (weightA !== weightB) return weightA - weightB;
+
+            if (a.status_raw === 'active') {
+                return (b.session_start || "").localeCompare(a.session_start || "");
+            }
+            if (a.status_raw === 'idle') {
+                return (a.sched_start || "99:99").localeCompare(b.sched_start || "99:99");
+            }
+            if (a.status_raw === 'completed') {
+                return (b.session_end || "").localeCompare(a.session_end || "");
+            }
+            return 0;
+        });
+    }
+    
+    function updateStatsGrid(data) {
+        let liveCount = 0;
+        let pendingCount = 0;
+        let completedCount = 0;
+        
+        data.forEach(d => {
+            if (d.status_raw === 'active') liveCount++;
+            else if (d.status_raw === 'idle') pendingCount++;
+            else if (d.status_raw === 'completed') completedCount++;
+        });
+        
+        document.getElementById('statsLiveCount').textContent = liveCount;
+        document.getElementById('statsPendingCount').textContent = pendingCount;
+        document.getElementById('statsCompletedCount').textContent = completedCount;
+    }
+
+    function renderCards(data) {
+        const grid = document.getElementById('trackerGrid');
+        
+        if (data.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 5rem 2rem; color: var(--slate-400); background: rgba(255,255,255,0.45); border-radius: 28px; border: 2px dashed var(--slate-300);">
+                    <i data-lucide="search-x" style="width:48px;height:48px;margin:0 auto 1.2rem;opacity:0.6;color:var(--slate-400);"></i>
+                    <div style="font-weight:700;font-size:1.1rem;color:var(--slate-700);">No Active Queue Found</div>
+                    <div style="font-size:0.88rem;margin-top:0.4rem;font-weight:500;">No doctors matching the selection are scheduled currently.</div>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+        
+        grid.innerHTML = '';
+        data.forEach(doc => {
+            const badgeParams = getStatusBadgeParams(doc.status_raw);
+            const tokenDisp = doc.status_raw === 'idle' ? '--' : `#${doc.current_token}`;
+            
+            // Layout classes
+            const sessionClass = doc.status_raw === 'active' ? 'active-session' : (doc.status_raw === 'completed' ? 'completed-session' : 'pending-session');
+            
+            const card = document.createElement('div');
+            card.className = `tracker-card ${sessionClass}`;
+            card.innerHTML = `
+                <div class="card-accent-line"></div>
+                <div class="card-top">
+                    <div class="card-doc-info">
+                        <span class="card-doc-name">${doc.doctor_name}</span>
+                        <span class="card-doc-spec">${doc.specialization}</span>
+                        <span class="card-doc-time"><i data-lucide="calendar"></i> ${doc.time}</span>
+                    </div>
+                    <span class="card-badge ${badgeParams.class}">
+                        <i data-lucide="${badgeParams.icon}" style="width:12px;height:12px;"></i>
+                        ${badgeParams.text}
+                    </span>
+                </div>
+                
+                <div class="queue-box">
+                    <span class="queue-label">
+                        ${doc.status_raw === 'active' ? 'Now Serving' : (doc.status_raw === 'completed' ? 'Final Token' : 'Queue Awaiting')}
+                    </span>
+                    <div class="queue-number-circle">
+                        ${doc.status_raw === 'completed' 
+                            ? `<i data-lucide="check" style="width:36px;height:36px;color:var(--slate-400);"></i>` 
+                            : `<span class="queue-token-value">${tokenDisp}</span>`
+                        }
+                    </div>
+                    <span class="queue-total-tokens">
+                        ${doc.status_raw === 'idle' 
+                            ? 'No tokens active' 
+                            : `Total Booked: <span>${doc.total_tokens || 0}</span>`
+                        }
+                    </span>
+                </div>
+                
+                ${renderUserTickets(doc)}
+            `;
+            grid.appendChild(card);
+        });
+        
+        lucide.createIcons();
+    }
+
+    function renderUserTickets(doc) {
+        const jsKey = `${doc.doctor_name.toLowerCase().trim()}|${doc.specialization.toLowerCase().trim()}`;
+        const tokens = userTokens[jsKey];
+        
+        if (!tokens || tokens.length === 0) return '';
+        
+        let ticketItemsHtml = '';
+        const skippedList = doc.skipped_tokens ? doc.skipped_tokens.split(',').map(s => s.trim()) : [];
+        
+        tokens.forEach(t => {
+            const tokenStr = String(t);
+            let stateLabel = 'Waiting';
+            let stateClass = 'tag-waiting';
+            let progressText = '';
+            
+            if (doc.status_raw === 'completed') {
+                stateLabel = 'Completed';
+                stateClass = 'tag-completed';
+                progressText = 'Consultation finished';
+            } else if (skippedList.includes(tokenStr)) {
+                stateLabel = 'Skipped';
+                stateClass = 'tag-skipped';
+                progressText = 'Ask receptionist to recall';
+            } else if (doc.status_raw === 'active') {
+                if (t === doc.current_token) {
+                    stateLabel = 'Calling Now';
+                    stateClass = 'tag-calling';
+                    progressText = 'Please enter consulting room';
+                } else if (t < doc.current_token) {
+                    stateLabel = 'Consulted';
+                    stateClass = 'tag-completed';
+                    progressText = 'Consultation completed';
+                } else {
+                    const diff = t - doc.current_token;
+                    stateLabel = 'Awaiting Call';
+                    stateClass = 'tag-waiting';
+                    progressText = diff === 1 ? 'You are next in line' : `${diff} patients ahead`;
+                }
+            } else {
+                // Awaiting session start
+                stateLabel = 'Awaiting Start';
+                stateClass = 'tag-waiting';
+                const diff = t - 1;
+                progressText = diff === 0 ? 'You are first in queue' : `${diff} patients ahead`;
+            }
+            
+            ticketItemsHtml += `
+                <div class="user-ticket-progress">
+                    <span style="font-weight:700;">Token #${t}</span>
+                    <span style="font-size:0.75rem; color:var(--slate-600); font-weight:500;">${progressText}</span>
+                    <span class="progress-tag ${stateClass}">${stateLabel}</span>
+                </div>
+            `;
+        });
+        
+        return `
+            <div class="user-ticket-box">
+                <div class="user-ticket-header">
+                    <span class="user-ticket-label">
+                        <i data-lucide="ticket"></i> Your Appointment Info
+                    </span>
+                </div>
+                ${ticketItemsHtml}
+            </div>
+        `;
+    }
+    
+    async function fetchLiveTokens() {
+        try {
+            const res = await fetch('/live_tokens');
+            const data = await res.json();
+            
+            if (data.success && data.data) {
+                allTokensData = data.data;
+                userTokens = data.user_tokens || {};
+                
+                updateStatsGrid(allTokensData);
+                
+                if (isInitialLoad) {
+                    populateFilters(allTokensData);
+                    isInitialLoad = false;
+                }
+                applyFilters();
+                
+                // Update last-refreshed timestamp
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const el = document.getElementById('lastUpdatedText');
+                if (el) el.textContent = `Last updated: ${timeStr}`;
+                lucide.createIcons();
+            }
+        } catch (e) {
+            console.error("Failed to fetch live tokens", e);
+            const el = document.getElementById('lastUpdatedText');
+            if (el) el.textContent = 'Connection issue, retrying...';
+        }
+    }
+    
+    fetchLiveTokens();
+    setInterval(fetchLiveTokens, 3000); 
+  </script>
+</body>
+</html>
