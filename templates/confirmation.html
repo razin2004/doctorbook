@@ -15,15 +15,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
   <style>
-    /* Single header button stays inline on all screen sizes */
-    @media (max-width: 420px) {
-      .top-bar-inner { flex-direction: row; align-items: center; padding: 0.5rem 0.9rem; }
-      .top-actions .btn { flex: 0 0 auto; max-width: none; font-size: 0.8rem; padding: 0.35rem 0.8rem; margin-top: 0; }
-    }
-    .brand-logo { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
-    .brand-name-row { display: flex; align-items: center; gap: 0.4rem; }
-
-    /* ── Page background ── */
+    /* ── Page Background ── */
     body.bg-image {
       min-height: 100vh;
       background-image: url("/static/image/background11.jpeg");
@@ -36,229 +28,562 @@
     }
 
     .bg-blur {
-      position: fixed; inset: 0;
+      position: fixed;
+      inset: 0;
       background-image: url("/static/image/background11.jpeg");
-      background-size: cover; background-position: center;
+      background-size: cover;
+      background-position: center;
       background-repeat: no-repeat;
-      filter: blur(5px); transform: scale(1.04); z-index: -2;
+      filter: blur(7px);
+      transform: scale(1.03);
+      z-index: -2;
     }
 
     body.bg-image::after {
-      content: ""; position: fixed; inset: 0;
-      background: rgba(255,255,255,0.48); z-index: -1;
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.48);
+      z-index: -1;
     }
 
-    /* ── Confirmation card ── */
+    /* ── Confirmation Card Wrapper ── */
     .confirm-wrap {
       display: flex;
       justify-content: center;
-      padding: 1.6rem 1.2rem 2.5rem;
+      padding: 2.5rem 1.25rem 3.5rem;
     }
 
     .confirmation-box {
       width: 100%;
-      max-width: 500px;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 24px;
-      padding: 2rem 2.2rem 2.2rem;
-      box-shadow:
-        0 24px 56px rgba(15,23,42,0.18),
-        inset 0 0 0 1px rgba(255,255,255,0.88);
+      max-width: 900px; /* Widened for desktop side-by-side layout */
+      background: rgba(255, 255, 255, 0.22); /* Transparent glass */
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border-radius: 28px;
+      padding: 2.5rem;
+      box-shadow: 
+        0 30px 70px rgba(15, 23, 42, 0.12),
+        inset 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.55);
       text-align: center;
       color: #374151;
+      position: relative;
+      overflow: hidden;
+      transition: max-width 0.3s ease;
     }
 
-    /* clinic brand inside card */
+    /* Brand Header inline layout */
+    .card-brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(0, 119, 182, 0.1);
+      padding-bottom: 0.6rem;
+    }
+
+    /* Brand label inside card */
     .card-brand {
-      font-size: 0.75rem;
-      font-weight: 700;
+      font-size: 0.8rem;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.18em;
-      color: #9ca3af;
-      margin-bottom: 0.4rem;
+      color: #0077b6;
+      margin-bottom: 0;
     }
 
-    /* success icon */
+    /* Premium Success Icon */
     .success-icon {
-      width: 60px; height: 60px;
-      border-radius: 18px;
-      margin: 0.6rem auto 0.85rem;
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 12px 28px rgba(22,163,74,0.42);
-      color: #fff;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      margin: 0.5rem auto 1.2rem;
+      background: linear-gradient(135deg, #10b981, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+      color: #ffffff;
+      margin-left: auto;
+      margin-right: auto;
     }
-    .success-icon svg { width: 30px; height: 30px; }
+    .success-icon svg {
+      width: 32px;
+      height: 32px;
+      stroke-width: 2.5px;
+    }
 
     .confirmation-box h1 {
-      font-size: 1.72rem;
+      font-size: 1.8rem;
       font-weight: 800;
       color: #0b3a60;
-      margin: 0 0 0.3rem;
-      letter-spacing: 0.01em;
+      margin: 0 0 0.35rem;
+      letter-spacing: -0.015em;
     }
 
     .confirmation-sub {
-      font-size: 0.88rem;
-      color: #6b7280;
-      margin-bottom: 1.1rem;
+      font-size: 0.9rem;
+      color: #64748b;
+      margin-bottom: 1.8rem;
+      font-weight: 500;
     }
 
-    /* ── Info rows ── */
+    /* ── Sections Grid (Side by side on desktop) ── */
+    .sections-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    .details-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Details Grid ── */
     .section-title {
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #111827;
-      margin: 1.1rem 0 0.45rem;
+      font-weight: 800;
+      font-size: 0.98rem;
+      color: #023e8a;
+      margin: 0 0 0.9rem;
       text-align: left;
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      padding-bottom: 0.3rem;
-      border-bottom: 2px solid rgba(0,119,182,0.14);
+      gap: 0.45rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1.5px solid rgba(0, 119, 182, 0.1);
     }
-    .section-title svg { width: 16px; height: 16px; color: #0077b6; flex-shrink: 0; }
+    .section-title svg {
+      width: 17px;
+      height: 17px;
+      color: #0077b6;
+      flex-shrink: 0;
+    }
 
     .info-table {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.85rem;
+      margin: 0.5rem 0;
       text-align: left;
-      margin: 0.25rem 0 0;
-      font-size: 0.92rem;
     }
 
     .info-row {
+      background: rgba(255, 255, 255, 0.85);
+      border: 1.5px solid rgba(0, 119, 182, 0.06);
+      border-radius: 16px;
+      padding: 0.8rem 0.9rem;
       display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-      padding: 0.28rem 0;
-      border-bottom: 1px solid rgba(0,0,0,0.05);
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+      transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
-    .info-row:last-child { border-bottom: none; }
+    .info-row:hover {
+      border-color: rgba(0, 119, 182, 0.15);
+      background: #ffffff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 119, 182, 0.05);
+    }
 
     .info-row-icon {
-      width: 26px; height: 26px;
-      border-radius: 8px;
-      background: rgba(0,119,182,0.08);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; margin-top: 1px;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(0, 119, 182, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
-    .info-row-icon svg { width: 13px; height: 13px; color: #0077b6; }
+    .info-row-icon svg {
+      width: 18px;
+      height: 18px;
+      color: #0077b6;
+      stroke-width: 2.2px;
+    }
 
+    .info-label-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-width: 0;
+      flex-grow: 1;
+    }
+    
     .info-label {
-      flex: 0 0 120px;
-      font-weight: 500;
-      color: #6b7280;
-      font-size: 0.87rem;
-      padding-top: 3px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
     }
-
     .info-value {
-      flex: 1;
-      font-weight: 600;
-      color: #111827;
-      word-break: break-word;
-      padding-top: 3px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    hr.divider {
-      margin: 1rem 0;
-      border: none;
-      border-top: 1.5px solid rgba(0,119,182,0.1);
+    /* ── Ticket notch divider ── */
+    .ticket-divider {
+      position: relative;
+      margin: 1.8rem -2.5rem;
+      border-top: 2.5px dashed rgba(0, 119, 182, 0.12);
+      height: 0;
+    }
+    .ticket-divider::before,
+    .ticket-divider::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: #e7eef8;
+      border-radius: 50%;
+      top: -10px;
+    }
+    .ticket-divider::before {
+      left: -10px;
+      box-shadow: inset -2px 0 4px rgba(15, 23, 42, 0.04);
+    }
+    .ticket-divider::after {
+      right: -10px;
+      box-shadow: inset 2px 0 4px rgba(15, 23, 42, 0.04);
     }
 
-    /* ── Token box ── */
+    /* ── Token Ring Centerpiece ── */
     .token-box {
-      margin-top: 1.2rem;
+      margin: 1.25rem 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
 
     .token-title {
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #374151;
-      display: flex; align-items: center; gap: 0.35rem;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
     }
-    .token-title svg { width: 16px; height: 16px; color: #0077b6; }
+    .token-title svg {
+      width: 14px;
+      height: 14px;
+      color: #0077b6;
+    }
+
+    .token-ring-pulse {
+      position: relative;
+      width: 96px;
+      height: 96px;
+      margin-top: 0.4rem;
+    }
 
     .token-number {
-      display: inline-flex;
-      align-items: center; justify-content: center;
-      width: 82px; height: 82px;
+      position: absolute;
+      inset: 0;
       border-radius: 50%;
-      background: radial-gradient(circle at 30% 20%, #bbf7d0, #22c55e);
+      background: radial-gradient(circle at 30% 20%, #22c55e, #10b981);
       color: white;
-      font-weight: 800;
-      font-size: 1.9rem;
-      box-shadow:
-        0 14px 30px rgba(34,197,94,0.45),
-        0 0 0 7px rgba(187,247,208,0.7);
+      font-weight: 900;
+      font-size: 2.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.35);
+      z-index: 2;
       letter-spacing: -0.02em;
+    }
+
+    .token-ring-glow {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: rgba(34, 197, 94, 0.15);
+      animation: tokenPulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+      z-index: 1;
+    }
+
+    @keyframes tokenPulse {
+      0% { transform: scale(0.9); opacity: 1; }
+      70% { transform: scale(1.15); opacity: 0; }
+      100% { transform: scale(1.15); opacity: 0; }
     }
 
     .footer-note {
       margin-top: 1.1rem;
       font-size: 0.84rem;
-      color: #6b7280;
-      display: flex; align-items: flex-start; gap: 0.35rem;
-      text-align: left;
-    }
-    .footer-note svg { width: 15px; height: 15px; color: #0077b6; flex-shrink: 0; margin-top: 2px; }
-
-    /* ── Buttons ── */
-    .button-group {
+      color: #64748b;
       display: flex;
+      align-items: flex-start;
+      gap: 0.45rem;
+      text-align: left;
+      background: rgba(0, 119, 182, 0.04);
+      padding: 0.75rem 0.95rem;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 119, 182, 0.08);
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .footer-note svg {
+      width: 16px;
+      height: 16px;
+      color: #0077b6;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ── Top Save Button (inline) ── */
+    .btn-save-top {
+      background: transparent !important;
+      color: #0077b6 !important;
+      border: 1.5px solid rgba(0, 119, 182, 0.22) !important;
+      border-radius: 999px;
+      padding: 0 1.1rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+      display: inline-flex;
+      align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      margin-top: 1.4rem;
+      gap: 0.45rem;
+      box-shadow: none !important;
+      height: 32px;
+      box-sizing: border-box;
+      margin: 0;
+    }
+    .btn-save-top:hover {
+      transform: translateY(-2px);
+      border-color: #0077b6 !important;
+      background: rgba(0, 119, 182, 0.08) !important;
+    }
+    .btn-save-top svg {
+      width: 15px;
+      height: 15px;
+      stroke-width: 2.2px;
+    }
+
+    /* ── Action Buttons ── */
+    .button-group {
+      display: flex !important;
+      flex-direction: row !important;
+      justify-content: center !important;
+      align-items: center !important;
+      gap: 0.8rem !important;
+      margin-top: 1.5rem !important;
+      width: 100% !important;
+      flex-wrap: nowrap !important;
     }
 
     .btn-pill {
       text-decoration: none;
-      border: none;
+      box-sizing: border-box;
+      border: 1.5px solid transparent;
       cursor: pointer;
       border-radius: 999px;
-      padding: 0.55rem 1.4rem;
       font-size: 0.9rem;
-      font-weight: 600;
-      font-family: 'Inter', sans-serif;
-      transition: all 0.15s ease;
+      font-weight: 700;
+      font-family: inherit;
+      transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.35rem;
-      min-width: 130px;
+      gap: 0.45rem;
+      height: 44px; /* Explicit identical height */
+      background: transparent !important; /* All transparent backgrounds */
+      margin: 0 !important;
+      vertical-align: middle !important;
     }
-    .btn-pill svg { width: 15px; height: 15px; }
-
-    .btn-blue {
-      background: linear-gradient(135deg, #0077b6, #0096c7);
-      color: #fff;
-      box-shadow: 0 8px 22px rgba(0,119,182,0.38);
+    .btn-pill svg {
+      width: 16px;
+      height: 16px;
     }
-    .btn-blue:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(0,119,182,0.5); }
 
-    .btn-ghost {
-      background: rgba(255,255,255,0.96);
+    .button-group .btn-pill {
+      width: 180px; /* Force same length on desktop */
+      padding: 0 1rem;
+      white-space: nowrap;
+      text-overflow: clip;
+    }
+
+    .btn-blue-trans {
+      color: #0077b6 !important;
+      border: 1.5px solid rgba(0, 119, 182, 0.4) !important;
+    }
+    .btn-blue-trans:hover {
+      transform: translateY(-2px);
+      background: rgba(0, 119, 182, 0.08) !important;
+      border-color: #0077b6 !important;
+    }
+
+    .btn-share-trans {
+      color: #25d366 !important;
+      border: 1.5px solid rgba(37, 211, 102, 0.4) !important;
+    }
+    .btn-share-trans:hover {
+      transform: translateY(-2px);
+      background: rgba(37, 211, 102, 0.08) !important;
+      border-color: #25d366 !important;
+    }
+
+    /* ── Header Home Toggle Buttons ── */
+    .admin-sidebar-toggle-btn {
+      display: none;
+      background: transparent !important;
       color: #0077b6;
-      border: 1.5px solid rgba(0,119,182,0.25);
-      box-shadow: 0 6px 16px rgba(0,119,182,0.1);
+      border: 1.5px solid rgba(0, 119, 182, 0.15);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+      transition: all 0.2s;
+      text-decoration: none;
     }
-    .btn-ghost:hover { transform: translateY(-1px); box-shadow: 0 9px 22px rgba(0,119,182,0.18); }
+    .admin-sidebar-toggle-btn:hover {
+      background: rgba(0, 119, 182, 0.08) !important;
+      color: #0096c7;
+      transform: scale(1.03);
+    }
 
-    /* ── Responsive ── */
-    @media (max-width: 480px) {
-      body.bg-image { padding-inline: 0; }
-      .confirm-wrap { padding: 1rem 0.9rem 2rem; }
-      .confirmation-box { padding: 1.7rem 1.3rem 1.9rem; border-radius: 20px; }
-      .info-label { flex-basis: 105px; font-size: 0.83rem; }
-      .btn-pill { width: 100%; max-width: 280px; }
-      .footer-note { font-size: 0.82rem; }
+    .desktop-home-btn { display: inline-flex !important; }
+    .mobile-home-btn { display: none !important; }
+
+    /* ── Responsive adjustments ── */
+    @media (max-width: 768px) {
+      .sections-container {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
     }
+
+    @media (max-width: 580px) {
+      .confirm-wrap {
+        padding: 1.25rem 0.9rem 2.2rem;
+      }
+      .confirmation-box {
+        padding: 1.8rem 1.2rem;
+        border-radius: 20px;
+      }
+      .sections-container {
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
+        margin-bottom: 1.2rem;
+      }
+      /* Two columns in a line on mobile view */
+      .info-table {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+      }
+      .info-row {
+        padding: 0.5rem 0.6rem !important;
+        gap: 0.4rem !important;
+        border-radius: 12px !important;
+      }
+      .info-row-icon {
+        width: 28px !important;
+        height: 28px !important;
+        border-radius: 8px !important;
+      }
+      .info-row-icon svg {
+        width: 14px !important;
+        height: 14px !important;
+      }
+      .info-label {
+        font-size: 0.62rem !important;
+      }
+      .info-value {
+        font-size: 0.78rem !important;
+      }
+      .footer-note {
+        font-size: 0.82rem;
+      }
+      .ticket-divider {
+        margin: 1.5rem -1.2rem;
+      }
+      
+      /* Mobile buttons group side-by-side equal sizes */
+      .button-group {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0.6rem !important;
+        width: 100% !important;
+        justify-content: center !important;
+        align-items: center !important;
+      }
+      .button-group .btn-pill {
+        flex: 1 !important;
+        width: auto !important;
+        height: 40px !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        padding: 0 0.4rem !important;
+        font-size: 0.8rem !important;
+      }
+      
+      /* Brand Header positioning on mobile to center brand name */
+      .card-brand-header {
+        display: block !important;
+        text-align: center !important;
+        position: relative !important;
+        width: 100% !important;
+        margin-bottom: 1.2rem !important;
+        padding-bottom: 0.6rem !important;
+      }
+      .card-brand {
+        text-align: center !important;
+        width: 100% !important;
+        display: block !important;
+        margin: 0 auto !important;
+        line-height: 32px !important;
+      }
+      
+      /* Save Button inline placement in mobile - icon only on the right */
+      .btn-save-top {
+        position: absolute !important;
+        top: 0 !important;
+        right: 0 !important;
+        width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        margin: 0 !important;
+      }
+      .btn-save-top .btn-text {
+        display: none !important;
+      }
+      
+      /* Home button at the header in mobile view */
+      .desktop-home-btn { display: none !important; }
+      .mobile-home-btn { 
+        display: flex !important;
+        border-radius: 10px !important;
+        background: transparent !important;
+        border: 1.5px solid rgba(0, 119, 182, 0.2) !important;
+        color: #0077b6 !important;
+        height: 36px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
   </style>
 </head>
 
@@ -277,10 +602,14 @@
           <div class="brand-sub">Quality care · Trusted doctors</div>
         </div>
       </div>
-      <div class="top-actions">
-        <a class="btn btn-outline" href="{{ url_for('home') }}" style="margin-top:0;">
+      <div class="top-actions" style="margin-left:auto;">
+        <a class="btn btn-outline desktop-home-btn" href="{{ url_for('home') }}" style="margin-top:0;">
           <i data-lucide="house"></i>
           <span>Home</span>
+        </a>
+        <a class="admin-sidebar-toggle-btn mobile-home-btn" href="{{ url_for('home') }}" style="margin-top:0; width:auto; padding:0 8px; gap:2px;">
+          <i data-lucide="arrow-left" style="width:18px;height:18px; stroke-width:3px;"></i>
+          <i data-lucide="house" style="width:18px;height:18px; stroke-width:3px;"></i>
         </a>
       </div>
     </div>
@@ -290,7 +619,14 @@
   <div class="confirm-wrap">
     <div class="confirmation-box" id="confirmationBox">
 
-      <div class="card-brand">PrimeCare Clinic</div>
+      <!-- BRAND HEADER INLINE WITH SAVE BUTTON -->
+      <div class="card-brand-header">
+        <div class="card-brand">PrimeCare Clinic</div>
+        <button type="button" class="btn-save-top" id="saveImageBtn" title="Save">
+          <i data-lucide="download"></i>
+          <span class="btn-text">Save</span>
+        </button>
+      </div>
 
       <div class="success-icon">
         <i data-lucide="check"></i>
@@ -299,68 +635,95 @@
       <h1>Appointment Confirmed</h1>
       <div class="confirmation-sub">Your visit has been scheduled successfully.</div>
 
-      <!-- PATIENT DETAILS -->
-      <div class="section-title">
-        <i data-lucide="user-round"></i> Patient Details
-      </div>
-      <div class="info-table">
-        <div class="info-row">
-          <div class="info-row-icon"><i data-lucide="user"></i></div>
-          <div class="info-label">Name</div>
-          <div class="info-value">{{ name }}</div>
+      <!-- SECTIONS CONTAINER -->
+      <div class="sections-container">
+        <!-- PATIENT DETAILS -->
+        <div class="details-section">
+          <div class="section-title">
+            <i data-lucide="user-round"></i> Patient Details
+          </div>
+          <div class="info-table">
+            <div class="info-row">
+              <div class="info-row-icon"><i data-lucide="user"></i></div>
+              <div class="info-label-cell">
+                <div class="info-label">Name</div>
+                <div class="info-value">{{ name }}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-row-icon"><i data-lucide="cake"></i></div>
+              <div class="info-label-cell">
+                <div class="info-label">Age</div>
+                <div class="info-value">{% if age and age != "-" %}{{ age }}{% else %}Not Provided{% endif %}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-row-icon"><i data-lucide="venus"></i></div>
+              <div class="info-label-cell">
+                <div class="info-label">Gender</div>
+                <div class="info-value">{% if gender and gender != "-" %}{{ gender }}{% else %}Not Specified{% endif %}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-row-icon"><i data-lucide="phone"></i></div>
+              <div class="info-label-cell">
+                <div class="info-label">Phone</div>
+                <div class="info-value">{% if phone and phone != "-" %}{{ phone }}{% else %}Not Provided{% endif %}</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="info-row">
-          <div class="info-row-icon"><i data-lucide="cake"></i></div>
-          <div class="info-label">Age</div>
-          <div class="info-value">{% if age and age != "-" %}{{ age }}{% else %}Not Provided{% endif %}</div>
-        </div>
-        <div class="info-row">
-          <div class="info-row-icon"><i data-lucide="venus"></i></div>
-          <div class="info-label">Gender</div>
-          <div class="info-value">{% if gender and gender != "-" %}{{ gender }}{% else %}Not Specified{% endif %}</div>
-        </div>
-        <div class="info-row">
-          <div class="info-row-icon"><i data-lucide="phone"></i></div>
-          <div class="info-label">Phone</div>
-          <div class="info-value">{% if phone and phone != "-" %}{{ phone }}{% else %}Not Provided{% endif %}</div>
+
+        <!-- APPOINTMENT DETAILS -->
+        <div class="details-section">
+          <div class="section-title">
+            <i data-lucide="stethoscope"></i> Appointment Details
+          </div>
+          <div class="info-table">
+            <div class="info-row">
+              <div class="info-row-icon"><i data-lucide="user-round"></i></div>
+              <div class="info-label-cell">
+                <div class="info-label">Doctor</div>
+                <div class="info-value">{{ doctor }}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-row-icon"><i data-lucide="activity"></i></div>
+              <div class="info-label-cell">
+                <div class="info-label">Specialization</div>
+                <div class="info-value">{{ specialization }}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-row-icon"><i data-lucide="calendar"></i></div>
+              <div class="info-label-cell">
+                <div class="info-label">Date</div>
+                <div class="info-value">{{ date }}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-row-icon"><i data-lucide="clock"></i></div>
+              <div class="info-label-cell">
+                <div class="info-label">Time</div>
+                <div class="info-value">{{ time }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <hr class="divider" />
-
-      <!-- APPOINTMENT DETAILS -->
-      <div class="section-title">
-        <i data-lucide="stethoscope"></i> Appointment Details
-      </div>
-      <div class="info-table">
-        <div class="info-row">
-          <div class="info-row-icon"><i data-lucide="user-round"></i></div>
-          <div class="info-label">Doctor</div>
-          <div class="info-value">{{ doctor }}</div>
-        </div>
-        <div class="info-row">
-          <div class="info-row-icon"><i data-lucide="activity"></i></div>
-          <div class="info-label">Specialization</div>
-          <div class="info-value">{{ specialization }}</div>
-        </div>
-        <div class="info-row">
-          <div class="info-row-icon"><i data-lucide="calendar"></i></div>
-          <div class="info-label">Date</div>
-          <div class="info-value">{{ date }}</div>
-        </div>
-        <div class="info-row">
-          <div class="info-row-icon"><i data-lucide="clock"></i></div>
-          <div class="info-label">Time</div>
-          <div class="info-value">{{ time }}</div>
-        </div>
-      </div>
+      <!-- ticket notch divider below details-container -->
+      <div class="ticket-divider"></div>
 
       <!-- TOKEN -->
       <div class="token-box">
         <div class="token-title">
           <i data-lucide="hash"></i> Your Token Number
         </div>
-        <div class="token-number">{{ token }}</div>
+        <div class="token-ring-pulse">
+          <div class="token-number">{{ token }}</div>
+          <div class="token-ring-glow"></div>
+        </div>
       </div>
 
       <p class="footer-note">
@@ -368,22 +731,18 @@
         Please arrive 10–15 minutes early and bring any previous reports if available.
       </p>
 
-      <!-- ACTION BUTTONS: Save as Image first, then Book Another -->
+      <!-- ACTION BUTTONS: WhatsApp Share and Book Another -->
       <div class="button-group">
-        <button type="button" class="btn-pill btn-ghost" id="saveImageBtn">
-          <i data-lucide="download"></i> Save as Image
+        <button type="button" class="btn-pill btn-share-trans" id="whatsappShareBtn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-bottom: 2px;">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.458 5.704 1.459h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          <span>Share</span>
         </button>
-        <button type="button" class="btn-pill btn-ghost" id="whatsappShareBtn" style="color: #25d366; border-color: rgba(37, 211, 102, 0.3);">
-          <i data-lucide="message-circle"></i> Share via WhatsApp
-        </button>
-      </div>
-
-      <div class="button-group">
-        <a class="btn-pill btn-blue" href="{{ url_for('booking') }}">
+        <a class="btn-pill btn-blue-trans" href="{{ url_for('booking') }}">
           <i data-lucide="calendar-plus"></i> Book Another
         </a>
       </div>
-
     </div>
   </div>
 

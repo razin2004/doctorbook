@@ -1091,6 +1091,558 @@
       letter-spacing: 0.01em;
       margin: 0;
     }
+
+    /* ==========================================================================
+       PATIENT DASHBOARD & BOOKING REDESIGN (PREMIUM UI)
+       ========================================================================== */
+    /* ── 3-Panel Card Navigation ── */
+    .panel-nav {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 1.25rem !important;
+      max-width: 1000px !important;
+      margin: 1.8rem auto 1.2rem auto !important;
+      padding: 0 1rem !important;
+    }
+    .panel-card {
+      background: rgba(255, 255, 255, 0.45) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.7) !important;
+      border-radius: 20px !important;
+      padding: 1.25rem !important;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255,255,255,0.6) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+      cursor: pointer !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 0.85rem !important;
+      text-align: left !important;
+      height: auto !important;
+      min-width: auto !important;
+      color: #0b3a60 !important;
+    }
+    .panel-card:hover {
+      transform: translateY(-4px) !important;
+      box-shadow: 0 16px 36px rgba(0, 119, 182, 0.12), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+      background: rgba(255, 255, 255, 0.75) !important;
+      border-color: rgba(0, 119, 182, 0.2) !important;
+    }
+    .panel-card.active {
+      background: linear-gradient(135deg, #0077b6 0%, #0096c7 100%) !important;
+      border-color: #0077b6 !important;
+      color: #ffffff !important;
+      box-shadow: 0 12px 30px rgba(0, 119, 182, 0.25) !important;
+      transform: translateY(-2px) !important;
+    }
+    .panel-card-icon {
+      width: 46px !important;
+      height: 46px !important;
+      border-radius: 12px !important;
+      background: rgba(0, 119, 182, 0.08) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: all 0.25s !important;
+      margin: 0 !important;
+    }
+    .panel-card-icon svg {
+      width: 22px !important;
+      height: 22px !important;
+      color: #0077b6 !important;
+      stroke-width: 2.2px !important;
+    }
+    .panel-card.active .panel-card-icon {
+      background: rgba(255, 255, 255, 0.18) !important;
+    }
+    .panel-card.active .panel-card-icon svg {
+      color: #ffffff !important;
+    }
+    .panel-card-text {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.2rem !important;
+    }
+    .panel-card-label {
+      font-size: 0.95rem !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.01em !important;
+    }
+    .panel-card-sub {
+      font-size: 0.78rem !important;
+      opacity: 0.75 !important;
+      line-height: 1.35 !important;
+    }
+    
+    /* Helper instruction text */
+    .helper-text {
+      max-width: 1000px !important;
+      margin: 0 auto 1.5rem auto !important;
+      text-align: center !important;
+      font-size: 0.84rem !important;
+      color: #64748b !important;
+      font-weight: 600 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.35rem !important;
+    }
+    .helper-text svg {
+      color: #0077b6 !important;
+    }
+
+    /* ── Split Grid Booking Panels ── */
+    .booking-section:not(#admin) .myclass {
+      max-width: 1000px !important;
+      background: rgba(255, 255, 255, 0.65) !important;
+      border-radius: 28px !important;
+      padding: 2.2rem !important;
+      box-shadow: 0 25px 65px rgba(15, 23, 42, 0.1), 0 4px 12px rgba(0, 0, 0, 0.01) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+      backdrop-filter: blur(24px) !important;
+      -webkit-backdrop-filter: blur(24px) !important;
+      margin: 0 auto !important;
+    }
+    
+    .booking-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1.2fr !important;
+      gap: 2.5rem !important;
+      align-items: start !important;
+    }
+    
+    .booking-grid-col {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 1.2rem !important;
+    }
+
+    .booking-grid-col-right {
+      border-left: 1px solid rgba(0, 119, 182, 0.08) !important;
+      padding-left: 2.5rem !important;
+    }
+    
+    /* Section Headers */
+    .booking-section h2 {
+      font-size: 1.5rem !important;
+      font-weight: 800 !important;
+      color: #023e8a !important;
+      letter-spacing: -0.02em !important;
+      justify-content: flex-start !important;
+      margin-bottom: 1.5rem !important;
+      border-bottom: 1px solid rgba(0, 119, 182, 0.08) !important;
+      padding-bottom: 0.85rem !important;
+      text-align: left !important;
+    }
+    .booking-section h2 svg {
+      width: 24px !important;
+      height: 24px !important;
+      stroke-width: 2.2px !important;
+      margin-right: 6px !important;
+    }
+
+    /* Form Fields Improvement */
+    .form-group {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.4rem !important;
+    }
+    
+    /* Interactive Preview Cards */
+    .preview-card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(243, 248, 255, 0.85) 100%) !important;
+      border: 1.5px solid rgba(0, 119, 182, 0.12) !important;
+      border-radius: 20px !important;
+      padding: 1.4rem !important;
+      margin-top: 0.75rem !important;
+      box-shadow: 0 12px 30px rgba(0, 119, 182, 0.05), inset 0 1px 0 #ffffff !important;
+      animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .preview-card-header {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.85rem !important;
+      margin-bottom: 1rem !important;
+    }
+    .preview-card-avatar {
+      width: 48px !important;
+      height: 48px !important;
+      border-radius: 14px !important;
+      background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: white !important;
+      box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2) !important;
+    }
+    .preview-card-avatar svg {
+      width: 22px !important;
+      height: 22px !important;
+    }
+    .preview-card-title-group {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.2rem !important;
+    }
+    .preview-card-title {
+      font-size: 1.1rem !important;
+      font-weight: 800 !important;
+      color: #023e8a !important;
+      margin: 0 !important;
+      text-align: left !important;
+    }
+    .preview-card-badge {
+      font-size: 0.76rem !important;
+      font-weight: 750 !important;
+      color: #0077b6 !important;
+      background: rgba(0, 119, 182, 0.08) !important;
+      padding: 0.2rem 0.6rem !important;
+      border-radius: 6px !important;
+      width: fit-content !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.03em !important;
+    }
+    .preview-card-body {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.85rem !important;
+      font-size: 0.86rem !important;
+      border-top: 1px solid rgba(0, 119, 182, 0.08) !important;
+      padding-top: 0.85rem !important;
+    }
+    .preview-card-info-row {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.4rem !important;
+    }
+    .preview-card-label {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.35rem !important;
+      font-weight: 700 !important;
+      color: #475569 !important;
+    }
+    .preview-card-label svg {
+      width: 14.5px !important;
+      height: 14.5px !important;
+      color: #0077b6 !important;
+    }
+    .preview-card-tags {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 0.35rem !important;
+    }
+    .tag-day {
+      background: rgba(100, 116, 139, 0.06) !important;
+      color: #475569 !important;
+      padding: 0.2rem 0.55rem !important;
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+      font-size: 0.78rem !important;
+      border: 1px solid transparent !important;
+      transition: all 0.25s !important;
+    }
+    .tag-day.active-day {
+      background: rgba(16, 185, 129, 0.08) !important;
+      color: #059669 !important;
+      border-color: rgba(16, 185, 129, 0.25) !important;
+      font-weight: 700 !important;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08) !important;
+    }
+    .preview-card-times {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 0.35rem !important;
+    }
+    .tag-time {
+      background: rgba(0, 119, 182, 0.06) !important;
+      color: #0077b6 !important;
+      padding: 0.25rem 0.65rem !important;
+      border-radius: 8px !important;
+      font-weight: 700 !important;
+      font-size: 0.8rem !important;
+      border: 1px solid rgba(0, 119, 182, 0.1) !important;
+    }
+    .spec-doc-grid {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 0.75rem !important;
+      margin-top: 0.25rem !important;
+    }
+    .spec-doc-item {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.4rem !important;
+      padding: 0.75rem 0.9rem !important;
+      border-radius: 12px !important;
+      background: rgba(255,255,255,0.7) !important;
+      border: 1px dashed rgba(0, 119, 182, 0.15) !important;
+    }
+    .spec-doc-name-row {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.4rem !important;
+      font-weight: 700 !important;
+      color: #023e8a !important;
+    }
+    .spec-doc-name-row svg {
+      width: 14.5px !important;
+      height: 14.5px !important;
+      color: #0077b6 !important;
+    }
+    .spec-doc-timing-row {
+      display: flex !important;
+      justify-content: space-between !important;
+      flex-wrap: wrap !important;
+      gap: 0.5rem !important;
+      font-size: 0.78rem !important;
+      color: #64748b !important;
+      font-weight: 500 !important;
+    }
+
+    /* ── My Bookings / Tickets UI ── */
+    .mybookings-container {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 1.25rem !important;
+    }
+    
+    .ticket-card {
+      background: #ffffff !important;
+      border-radius: 20px !important;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04) !important;
+      border: 1px solid #f1f5f9 !important;
+      position: relative !important;
+      overflow: hidden !important;
+      display: grid !important;
+      grid-template-columns: 1fr auto !important;
+      align-items: center !important;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    }
+    .ticket-card:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08) !important;
+      border-color: rgba(0, 119, 182, 0.15) !important;
+    }
+    .ticket-left {
+      padding: 1.4rem !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.65rem !important;
+    }
+    .ticket-right {
+      padding: 1.4rem 2rem !important;
+      border-left: 2px dashed #e2e8f0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      position: relative !important;
+      min-width: 160px !important;
+    }
+    
+    /* Ticket notch details */
+    .ticket-card::before,
+    .ticket-card::after {
+      content: '' !important;
+      position: absolute !important;
+      width: 16px !important;
+      height: 16px !important;
+      background: #e7eef8 !important; /* Matches the background overlay blur */
+      border-radius: 50% !important;
+      right: 152px !important; /* aligns centered with the dash border of right side */
+      z-index: 5 !important;
+    }
+    .ticket-card::before {
+      top: -8px !important;
+    }
+    .ticket-card::after {
+      bottom: -8px !important;
+    }
+
+    .ticket-title {
+      font-size: 1.12rem !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.45rem !important;
+    }
+    .ticket-spec-badge {
+      font-size: 0.75rem !important;
+      font-weight: 700 !important;
+      color: #64748b !important;
+      background: #f1f5f9 !important;
+      padding: 0.15rem 0.5rem !important;
+      border-radius: 6px !important;
+    }
+    .ticket-meta-grid {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 0.75rem !important;
+    }
+    .ticket-meta-chip {
+      display: flex !important;
+      align-items: center !important;
+      gap: 0.35rem !important;
+      font-size: 0.8rem !important;
+      font-weight: 600 !important;
+      color: #475569 !important;
+      background: #f8fafc !important;
+      padding: 0.28rem 0.65rem !important;
+      border-radius: 8px !important;
+      border: 1px solid #f1f5f9 !important;
+    }
+    .ticket-meta-chip svg {
+      width: 13.5px !important;
+      height: 13.5px !important;
+      color: #0077b6 !important;
+    }
+    
+    /* Ticket Status */
+    .status-badge-cancelled {
+      background: #fee2e2 !important;
+      color: #ef4444 !important;
+      padding: 0.2rem 0.55rem !important;
+      border-radius: 6px !important;
+      font-weight: 800 !important;
+      font-size: 0.75rem !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.25rem !important;
+    }
+    .status-badge-completed {
+      background: #f1f5f9 !important;
+      color: #64748b !important;
+      padding: 0.2rem 0.55rem !important;
+      border-radius: 6px !important;
+      font-weight: 700 !important;
+      font-size: 0.75rem !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.25rem !important;
+    }
+    
+    .ticket-token-label {
+      font-size: 0.7rem !important;
+      text-transform: uppercase !important;
+      font-weight: 800 !important;
+      color: #64748b !important;
+      letter-spacing: 0.05em !important;
+    }
+    .ticket-token-value {
+      font-size: 2.2rem !important;
+      font-weight: 900 !important;
+      color: #0077b6 !important;
+      line-height: 1 !important;
+      margin: 0.15rem 0 0.4rem 0 !important;
+    }
+    
+    /* Empty State */
+    .empty-state-card {
+      text-align: center !important;
+      padding: 3.5rem 2rem !important;
+      background: rgba(255,255,255,0.4) !important;
+      border-radius: 24px !important;
+      border: 1.5px dashed rgba(0,119,182,0.15) !important;
+      backdrop-filter: blur(8px) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 0.85rem !important;
+    }
+    .empty-state-icon {
+      background: rgba(0, 119, 182, 0.08) !important;
+      width: 60px !important;
+      height: 60px !important;
+      border-radius: 50% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: #0077b6 !important;
+      margin-bottom: 0.5rem !important;
+    }
+    .empty-state-icon svg {
+      width: 26px !important;
+      height: 26px !important;
+    }
+    .empty-state-title {
+      font-size: 1.15rem !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      margin: 0 !important;
+      text-align: center !important;
+    }
+    .empty-state-desc {
+      font-size: 0.88rem !important;
+      color: #64748b !important;
+      max-width: 320px !important;
+      line-height: 1.5 !important;
+      margin: 0 !important;
+    }
+
+    /* ── Responsive rules ── */
+    @media (max-width: 900px) {
+      .panel-nav {
+        gap: 0.75rem !important;
+      }
+      .booking-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.8rem !important;
+      }
+      .booking-grid-col-right {
+        border-left: none !important;
+        padding-left: 0 !important;
+        border-top: 1px solid rgba(0, 119, 182, 0.08) !important;
+        padding-top: 1.8rem !important;
+      }
+      .ticket-card {
+        grid-template-columns: 1fr !important;
+      }
+      .ticket-right {
+        border-left: none !important;
+        border-top: 2px dashed #e2e8f0 !important;
+        padding: 1.25rem 1.4rem !important;
+        min-width: 100% !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        gap: 1rem !important;
+      }
+      .ticket-card::before,
+      .ticket-card::after {
+        display: none !important;
+      }
+      .ticket-token-value {
+        font-size: 1.6rem !important;
+        margin: 0 !important;
+      }
+    }
+    @media (max-width: 600px) {
+      .panel-nav {
+        grid-template-columns: 1fr !important;
+        gap: 0.6rem !important;
+      }
+      .panel-card {
+        padding: 0.9rem 1.1rem !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0.75rem !important;
+      }
+      .panel-card-icon {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 10px !important;
+      }
+      .panel-card-icon svg {
+        width: 18px !important;
+        height: 18px !important;
+      }
+      .booking-section:not(#admin) .myclass {
+        padding: 1.25rem 1.1rem !important;
+        border-radius: 20px !important;
+      }
+    }
   </style>
 </head>
 
@@ -1168,22 +1720,23 @@
 {% endif %}
 
   <!-- ==================== MY BOOKINGS (Patient Only) ==================== -->
+  <!-- ==================== MY BOOKINGS (Patient Only) ==================== -->
   <section id="mybookings" class="booking-section container" style="display:none;">
     {% if not user_id %}
-    <div class="myclass" style="text-align:center; padding: 3rem 1.5rem; background:rgba(255,255,255,0.4); border-radius:30px; border:1px solid rgba(255,255,255,0.7); backdrop-filter:blur(10px);">
-      <div style="background:rgba(0,119,182,0.1); width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem;">
-        <i data-lucide="lock" style="width:30px;height:30px;color:#0077b6;"></i>
+    <div class="empty-state-card" style="padding: 4rem 2rem;">
+      <div class="empty-state-icon" style="width: 72px; height: 72px; background: rgba(0, 119, 182, 0.08); color: #0077b6;">
+        <i data-lucide="lock" style="width: 32px; height: 32px; stroke-width: 2.2px;"></i>
       </div>
-      <h2 style="margin-bottom:0.5rem; color:#0f172a; font-weight:800;">Log-in Required</h2>
-      <p style="color:#64748b; margin-bottom:1.8rem; font-weight:500;">To see your bookings and manage your health records, please sign in to your account.</p>
-      <button class="btn" onclick="window.location.href='/?trigger_login=true&msg=To see your bookings, you need to login'" style="padding:0.75rem 2rem;">
+      <h3 class="empty-state-title" style="font-size: 1.4rem;">Log-in Required</h3>
+      <p class="empty-state-desc" style="max-width: 400px; font-weight: 500; margin-bottom: 1rem;">To see your bookings and manage your health records, please sign in to your account.</p>
+      <button class="btn" onclick="window.location.href='/?trigger_login=true&msg=To see your bookings, you need to login'" style="padding:0.75rem 2rem; margin-top:0.5rem;">
         <i data-lucide="log-in"></i>
         Sign In Now
       </button>
     </div>
     {% else %}
     <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:2px solid rgba(0,119,182,0.1); padding-bottom:0.8rem;">
-      <h2 style="margin:0;"><i data-lucide="calendar-check" style="width:20px;height:20px;"></i> My Bookings</h2>
+      <h2 style="margin:0; border-bottom: none; padding-bottom: 0;"><i data-lucide="calendar-check" style="width:20px;height:20px;"></i> My Bookings</h2>
     </div>
 
     <!-- Upcoming / Past Tabs -->
@@ -1197,30 +1750,33 @@
     </div>
 
     <div class="tab-panel active" id="panel-upcoming">
-      <div class="item-list" style="display:flex; flex-direction:column; gap:1rem;">
+      <div class="mybookings-container">
         {% if upcoming_bookings %}
           {% for b in upcoming_bookings %}
-          <div class="item-card" style="border-radius:16px; padding:1.2rem; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; {% if b.status == 'cancelled' %}opacity:0.65; background:#fafafa; border:1px solid #fee2e2;{% else %}background:#fff; border:1px solid #f1f5f9;{% endif %}">
-            <div class="item-info">
-              <div class="item-title" style="font-weight:700; color:#0f172a; font-size:1rem;">{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.85rem;">({{ b.specialization }})</span></div>
-              <div class="item-meta" style="display:flex; flex-wrap:wrap; gap:0.6rem; font-size:0.8rem; color:#64748b; margin-top:0.3rem;">
-                <span class="meta-tag"><i data-lucide="calendar" style="width:13px;height:13px;"></i> {{ b.date }}</span>
-                <span class="meta-tag"><i data-lucide="clock" style="width:13px;height:13px;"></i> {{ b.time }}</span>
+          <div class="ticket-card" style="{% if b.status == 'cancelled' %}opacity:0.65; background:#fafafa; border-color:#fee2e2;{% endif %}">
+            <div class="ticket-left">
+              <div class="ticket-title">
+                <i data-lucide="user-round" style="width:18px;height:18px;color:#0077b6;"></i>
+                <span>{{ b.doctor_name }}</span>
+                <span class="ticket-spec-badge">{{ b.specialization }}</span>
+              </div>
+              <div class="ticket-meta-grid">
+                <span class="ticket-meta-chip"><i data-lucide="calendar"></i> {{ b.date }}</span>
+                <span class="ticket-meta-chip"><i data-lucide="clock"></i> {{ b.time }}</span>
                 
                 {% if b.status == 'cancelled' %}
-                <span style="background:#fee2e2; color:#ef4444; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem;"><i data-lucide="ban" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> {% if b.cancelled_by == 'admin' %}Cancelled by Admin{% else %}Cancelled{% endif %}</span>
-                {% else %}
-                <span style="background:#e0f2fe; color:#0284c7; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem;">Token #{{ b.token }}</span>
+                <span class="status-badge-cancelled"><i data-lucide="ban" style="width:12px;height:12px;"></i> {% if b.cancelled_by == 'admin' %}Cancelled by Admin{% else %}Cancelled{% endif %}</span>
                 {% endif %}
                 {% if b.is_skipped %}
-                <span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
+                <span style="background:#fef3c7; color:#d97706; padding:0.2rem 0.55rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
                 {% endif %}
                 
                 {% if b.status != 'cancelled' and b.live_status %}
                   <div class="live-sync-badge {% if b.live_status == 'idle' %}idle{% endif %}" 
                        data-live-doctor="{{ b.doctor_name|lower|trim }}" 
                        data-live-spec="{{ b.specialization|lower|trim }}"
-                       data-sched-start="{{ b.sched_start }}">
+                       data-sched-start="{{ b.sched_start }}"
+                       style="margin-left: 0; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.05);">
                     {% if b.live_status == 'active' %}
                       <span class="blinking-dot-small"></span>
                       <span class="live-text">Live: Calling #{{ b.live_token }}</span>
@@ -1235,44 +1791,70 @@
                 {% endif %}
               </div>
             </div>
-            <div class="item-actions">
-               {% if b.status == 'cancelled' %}
-               <button class="btn-view" disabled style="background:#e2e8f0; color:#94a3b8; border:none; padding:0.4rem 0.8rem; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:not-allowed;">Dashboard Details</button>
-               {% else %}
-               <button class="btn-view" style="background:#f0fdf4; color:#16a34a; border:none; padding:0.4rem 0.8rem; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer;" onclick="window.location.href='/patient_dashboard'">Dashboard Details</button>
-               {% endif %}
+            
+            <div class="ticket-right">
+              <div class="ticket-token-label">Token</div>
+              {% if b.status == 'cancelled' %}
+              <div class="ticket-token-value" style="color: #cbd5e1; font-size: 1.6rem; font-weight: 700; text-decoration: line-through;">#{{ b.token }}</div>
+              <button class="btn" disabled style="background:#e2e8f0; color:#94a3b8; border:none; padding:0.4rem 0.8rem; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:not-allowed; min-width:auto; margin-top:0;">Details</button>
+              {% else %}
+              <div class="ticket-token-value">#{{ b.token }}</div>
+              <button class="btn" style="background:#f0fdf4; color:#16a34a; border:none; padding:0.4rem 0.8rem; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer; min-width:auto; margin-top:0;" onclick="window.location.href='/patient_dashboard'">Details</button>
+              {% endif %}
             </div>
           </div>
           {% endfor %}
         {% else %}
-          <div style="text-align:center; padding:2rem; color:#94a3b8;">No upcoming bookings found.</div>
+          <div class="empty-state-card">
+            <div class="empty-state-icon">
+              <i data-lucide="calendar-x"></i>
+            </div>
+            <h3 class="empty-state-title">No Upcoming Appointments</h3>
+            <p class="empty-state-desc">You don't have any scheduled appointments. Select "By Doctor" or "By Specialization" to book one.</p>
+          </div>
         {% endif %}
       </div>
     </div>
 
     <div class="tab-panel" id="panel-past" style="display:none;">
-      <div class="item-list" style="display:flex; flex-direction:column; gap:1rem;">
+      <div class="mybookings-container">
         {% if past_bookings %}
           {% for b in past_bookings %}
-          <div class="item-card" style="border-radius:16px; padding:1.2rem; box-shadow:0 4px 15px rgba(0,0,0,0.03); display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; {% if b.status == 'cancelled' %}opacity:0.6; background:#fafafa; border:1px solid #fee2e2;{% else %}background:#fff; border:1px solid #f1f5f9; opacity:0.8;{% endif %}">
-            <div class="item-info">
-              <div class="item-title" style="font-weight:700; color:#0f172a; font-size:1rem;">{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.85rem;">({{ b.specialization }})</span></div>
-              <div class="item-meta" style="display:flex; flex-wrap:wrap; gap:0.6rem; font-size:0.8rem; color:#64748b; margin-top:0.3rem;">
-                <span class="meta-tag"><i data-lucide="calendar" style="width:13px;height:13px;"></i> {{ b.date }}</span>
+          <div class="ticket-card" style="opacity: 0.8; {% if b.status == 'cancelled' %}background:#fafafa; border-color:#fee2e2;{% endif %}">
+            <div class="ticket-left" style="padding: 1.1rem 1.4rem;">
+              <div class="ticket-title" style="font-size: 1.05rem;">
+                <i data-lucide="user-round" style="width:16px;height:16px;color:#64748b;"></i>
+                <span>{{ b.doctor_name }}</span>
+                <span class="ticket-spec-badge" style="font-size: 0.72rem;">{{ b.specialization }}</span>
+              </div>
+              <div class="ticket-meta-grid">
+                <span class="ticket-meta-chip" style="font-size: 0.76rem;"><i data-lucide="calendar"></i> {{ b.date }}</span>
+                
                 {% if b.status == 'cancelled' %}
-                <span style="background:#fee2e2; color:#ef4444; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem;"><i data-lucide="ban" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> {% if b.cancelled_by == 'admin' %}Cancelled by Admin{% else %}Cancelled{% endif %}</span>
+                <span class="status-badge-cancelled" style="font-size: 0.72rem;"><i data-lucide="ban" style="width:11px;height:11px;"></i> {% if b.cancelled_by == 'admin' %}Cancelled by Admin{% else %}Cancelled{% endif %}</span>
                 {% else %}
-                <span style="background:#f1f5f9; color:#64748b; padding:0.15rem 0.5rem; border-radius:6px; font-weight:700; font-size:0.75rem;">Completed</span>
+                <span class="status-badge-completed" style="font-size: 0.72rem;"><i data-lucide="check" style="width:11px;height:11px;"></i> Completed</span>
                 {% endif %}
                 {% if b.is_skipped %}
-                <span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
+                <span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.72rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:11px;height:11px;"></i> Skipped</span>
                 {% endif %}
               </div>
+            </div>
+            
+            <div class="ticket-right" style="padding: 1.1rem 1.4rem; border-left-style: dotted; min-width: 140px;">
+              <div class="ticket-token-label" style="font-size: 0.65rem;">Token</div>
+              <div class="ticket-token-value" style="font-size: 1.6rem; color: #64748b;">#{{ b.token }}</div>
             </div>
           </div>
           {% endfor %}
         {% else %}
-          <div style="text-align:center; padding:2rem; color:#94a3b8;">No past bookings found.</div>
+          <div class="empty-state-card">
+            <div class="empty-state-icon" style="color: #64748b; background: rgba(100, 116, 139, 0.08);">
+              <i data-lucide="history"></i>
+            </div>
+            <h3 class="empty-state-title">No Appointment History</h3>
+            <p class="empty-state-desc">You have no records of past appointments in this account.</p>
+          </div>
         {% endif %}
       </div>
     </div>
@@ -1283,41 +1865,84 @@
   <section id="bookDoctor" class="booking-section container" style="display:none;">
     <h2><i data-lucide="user-round-search"></i> Book by Doctor</h2>
     <div class="myclass">
+      <div class="booking-grid">
+        <!-- Left Column: Selection & Doctor Info -->
+        <div class="booking-grid-col">
+          <div class="form-group">
+            <label for="doctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
+            <select id="doctorSelect"></select>
+          </div>
 
-      <label for="doctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
-      <select id="doctorSelect"></select>
+          <div class="form-group">
+            <label for="doctorDate"><i data-lucide="calendar"></i> Select Date</label>
+            <input type="date" id="doctorDate" />
+          </div>
+          
+          <div id="doctorMsg"></div>
+          
+          <!-- Dynamic Doctor Info Card -->
+          <div id="doctorPreviewCard" class="preview-card" style="display: none;">
+            <div class="preview-card-header">
+              <div class="preview-card-avatar">
+                <i data-lucide="stethoscope"></i>
+              </div>
+              <div class="preview-card-title-group">
+                <h4 id="previewDocName" class="preview-card-title">Doctor Name</h4>
+                <span id="previewDocSpec" class="preview-card-badge">Specialization</span>
+              </div>
+            </div>
+            <div class="preview-card-body">
+              <div class="preview-card-info-row">
+                <span class="preview-card-label"><i data-lucide="calendar-days"></i> Working Days</span>
+                <div id="previewDocDays" class="preview-card-tags"></div>
+              </div>
+              <div class="preview-card-info-row">
+                <span class="preview-card-label"><i data-lucide="clock"></i> Consulting Hours</span>
+                <div id="previewDocTimes" class="preview-card-times"></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <label for="doctorDate"><i data-lucide="calendar"></i> Select Date</label>
-      <input type="date" id="doctorDate" />
-      <div id="doctorMsg"></div>
+        <!-- Right Column: Patient details Form -->
+        <div class="booking-grid-col booking-grid-col-right">
+          <form id="doctorBookingForm" style="display:flex; flex-direction:column; gap:0.9rem;">
+            <div class="form-group">
+              <label for="docName"><i data-lucide="user"></i> Full Name</label>
+              <input id="docName" required placeholder="Enter your full name" />
+            </div>
 
-      <form id="doctorBookingForm">
-        <label for="docName"><i data-lucide="user"></i> Full Name</label>
-        <input id="docName" required placeholder="Enter your full name" />
+            <div class="form-group">
+              <label for="docAge"><i data-lucide="cake"></i> Age</label>
+              <input id="docAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+            </div>
 
-        <label for="docAge"><i data-lucide="cake"></i> Age</label>
-        <input id="docAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+            <div class="form-group">
+              <label for="docGender"><i data-lucide="venus"></i> Gender</label>
+              <select id="docGender" required>
+                <option value="">Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
 
-        <label for="docGender"><i data-lucide="venus"></i> Gender</label>
-        <select id="docGender" required>
-          <option value="">Select gender</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-          <option value="Other">Other</option>
-        </select>
+            <div class="form-group">
+              <label for="docNumber"><i data-lucide="phone"></i> Phone Number</label>
+              <input id="docNumber" name="phone" type="tel"
+                     pattern="[0-9]{10}" maxlength="10"
+                     inputmode="numeric" required
+                     placeholder="Enter 10-digit phone number" />
+            </div>
 
-        <label for="docNumber"><i data-lucide="phone"></i> Phone Number</label>
-        <input id="docNumber" name="phone" type="tel"
-               pattern="[0-9]{10}" maxlength="10"
-               inputmode="numeric" required
-               placeholder="Enter 10-digit phone number" />
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.6rem;">
+              <i data-lucide="calendar-check"></i> Book Appointment
+            </button>
+          </form>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1.5rem;">
-          <i data-lucide="calendar-check"></i> Book Appointment
-        </button>
-      </form>
-
-      <div id="doctorBookingResult"></div>
+          <div id="doctorBookingResult"></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1325,50 +1950,88 @@
   <section id="bookDept" class="booking-section container" style="display:none;">
     <h2><i data-lucide="layers"></i> Book by Specialization</h2>
     <div class="myclass">
+      <div class="booking-grid">
+        <!-- Left Column: Selection & Specialties Preview -->
+        <div class="booking-grid-col">
+          <div class="form-group">
+            <label for="specSelect"><i data-lucide="activity"></i> Select Specialization</label>
+            <select id="specSelect"></select>
+          </div>
 
-      <label for="specSelect"><i data-lucide="activity"></i> Select Specialization</label>
-      <select id="specSelect"></select>
-
-      <label for="specDate"><i data-lucide="calendar"></i> Select Date</label>
-      <input type="date" id="specDate" />
-      <div id="noDoctorMsg"></div>
-
-      <div id="specTimesContainer" style="margin-top:8px;"></div>
-
-      <form id="departmentBookingForm">
-        <label for="depName"><i data-lucide="user"></i> Full Name</label>
-        <input id="depName" required placeholder="Enter your full name" />
-
-        <label for="depAge"><i data-lucide="cake"></i> Age</label>
-        <input id="depAge" type="number" min="1" max="110" required placeholder="Enter your age" />
-
-        <label for="depGender"><i data-lucide="venus"></i> Gender</label>
-        <select id="depGender" required>
-          <option value="">Select gender</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-          <option value="Other">Other</option>
-        </select>
-
-        <label for="depNumber"><i data-lucide="phone"></i> Phone Number</label>
-        <input id="depNumber" name="phone" type="tel"
-               pattern="[0-9]{10}" maxlength="10"
-               inputmode="numeric" required
-               placeholder="Enter 10-digit phone number" />
-
-        <div id="depTimeWrapper" style="display:none; margin-top:10px;">
-          <label for="depTime"><i data-lucide="clock"></i> Preferred Time (optional)</label>
-          <select id="depTime">
-            <option value="">Any available time</option>
-          </select>
+          <div class="form-group">
+            <label for="specDate"><i data-lucide="calendar"></i> Select Date</label>
+            <input type="date" id="specDate" />
+          </div>
+          
+          <div id="noDoctorMsg"></div>
+          
+          <div id="specTimesContainer" style="margin-top:8px;"></div>
+          
+          <!-- Dynamic Specialization Info Card -->
+          <div id="deptPreviewCard" class="preview-card" style="display: none;">
+            <div class="preview-card-header">
+              <div class="preview-card-avatar">
+                <i data-lucide="layers"></i>
+              </div>
+              <div class="preview-card-title-group">
+                <h4 id="previewDeptName" class="preview-card-title">Department Name</h4>
+                <span class="preview-card-badge">Available Specialists</span>
+              </div>
+            </div>
+            <div class="preview-card-body" id="previewDeptDocsList">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1.5rem;">
-          <i data-lucide="calendar-check"></i> Book Appointment
-        </button>
-      </form>
+        <!-- Right Column: Patient details Form -->
+        <div class="booking-grid-col booking-grid-col-right">
+          <form id="departmentBookingForm" style="display:flex; flex-direction:column; gap:0.9rem;">
+            <div class="form-group">
+              <label for="depName"><i data-lucide="user"></i> Full Name</label>
+              <input id="depName" required placeholder="Enter your full name" />
+            </div>
 
-      <div id="departmentBookingResult"></div>
+            <div class="form-group">
+              <label for="depAge"><i data-lucide="cake"></i> Age</label>
+              <input id="depAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+            </div>
+
+            <div class="form-group">
+              <label for="depGender"><i data-lucide="venus"></i> Gender</label>
+              <select id="depGender" required>
+                <option value="">Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="depNumber"><i data-lucide="phone"></i> Phone Number</label>
+              <input id="depNumber" name="phone" type="tel"
+                     pattern="[0-9]{10}" maxlength="10"
+                     inputmode="numeric" required
+                     placeholder="Enter 10-digit phone number" />
+            </div>
+
+            <div id="depTimeWrapper" style="display:none;">
+              <div class="form-group">
+                <label for="depTime"><i data-lucide="clock"></i> Preferred Time (optional)</label>
+                <select id="depTime">
+                  <option value="">Any available time</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.6rem;">
+              <i data-lucide="calendar-check"></i> Book Appointment
+            </button>
+          </form>
+
+          <div id="departmentBookingResult"></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -3687,6 +4350,135 @@
         } catch(e) {}
     }
 
+    // ─── Premium UI Dynamic Preview Card Handlers ─────────────────
+    function updateDoctorPreviewCard() {
+      const doctorSelect = document.getElementById('doctorSelect');
+      const previewCard = document.getElementById('doctorPreviewCard');
+      if (!doctorSelect || !previewCard) return;
+
+      const opt = doctorSelect.selectedOptions[0];
+      if (!opt || !opt.value) {
+        previewCard.style.display = 'none';
+        return;
+      }
+
+      const text = opt.textContent;
+      const nameParts = text.split(' (');
+      const docName = nameParts[0];
+      const docSpec = nameParts[1] ? nameParts[1].replace(')', '') : '';
+
+      document.getElementById('previewDocName').textContent = docName;
+      document.getElementById('previewDocSpec').textContent = docSpec;
+
+      // Build Days list
+      const daysStr = opt.dataset.days || '';
+      const daysArr = daysStr ? daysStr.split(',').filter(Boolean) : [];
+      
+      // Check if we have a selected date
+      const dateInput = document.getElementById('doctorDate');
+      let selectedDayIndex = -1;
+      if (dateInput && dateInput.value) {
+        selectedDayIndex = new Date(dateInput.value).getDay();
+      }
+
+      const daysContainer = document.getElementById('previewDocDays');
+      daysContainer.innerHTML = '';
+      
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      if (daysArr.length === 0) {
+        daysContainer.innerHTML = '<span class="tag-day">No working days set</span>';
+      } else {
+        daysArr.forEach(day => {
+          const span = document.createElement('span');
+          span.className = 'tag-day';
+          span.textContent = day;
+          
+          // Check if selected date day matches this day name
+          const dayIdx = dayNames.indexOf(day);
+          if (dayIdx !== -1 && dayIdx === selectedDayIndex) {
+            span.classList.add('active-day');
+          }
+          daysContainer.appendChild(span);
+        });
+      }
+
+      // Build Times list
+      const timesContainer = document.getElementById('previewDocTimes');
+      timesContainer.innerHTML = '';
+      const dayTimes = opt.dataset.dayTimes ? JSON.parse(opt.dataset.dayTimes) : {};
+      
+      const timeRanges = Object.values(dayTimes).filter(Boolean);
+      const uniqueTimeRanges = [...new Set(timeRanges)];
+
+      if (uniqueTimeRanges.length === 0) {
+        timesContainer.innerHTML = '<span class="tag-time">No set timing</span>';
+      } else {
+        uniqueTimeRanges.forEach(tr => {
+          const span = document.createElement('span');
+          span.className = 'tag-time';
+          span.textContent = tr;
+          timesContainer.appendChild(span);
+        });
+      }
+
+      previewCard.style.display = 'block';
+      lucide.createIcons();
+    }
+
+    function updateDeptPreviewCard() {
+      const specSelect = document.getElementById('specSelect');
+      const previewCard = document.getElementById('deptPreviewCard');
+      if (!specSelect || !previewCard) return;
+
+      const spec = specSelect.value;
+      if (!spec || !doctorsBySpecialization[spec]) {
+        previewCard.style.display = 'none';
+        return;
+      }
+
+      document.getElementById('previewDeptName').textContent = spec + ' Department';
+      
+      const listContainer = document.getElementById('previewDeptDocsList');
+      listContainer.innerHTML = '';
+
+      const docs = doctorsBySpecialization[spec];
+      if (docs.length === 0) {
+        listContainer.innerHTML = '<div>No doctors in this specialization</div>';
+      } else {
+        const grid = document.createElement('div');
+        grid.className = 'spec-doc-grid';
+        docs.forEach(doc => {
+          const item = document.createElement('div');
+          item.className = 'spec-doc-item';
+          
+          // Days
+          const daysArr = doc.Days || [];
+          const daysText = daysArr.map(d => d.slice(0,3)).join(', ');
+          
+          // Timings
+          const timings = Object.values(doc.DayTimes || {}).filter(Boolean);
+          const timingText = timings.length > 0 ? timings[0] : 'No schedule';
+
+          item.innerHTML = `
+            <div class="spec-doc-name-row">
+              <i data-lucide="user-round"></i>
+              <span class="spec-doc-name">${doc.Name}</span>
+            </div>
+            <div class="spec-doc-timing-row">
+              <span class="spec-doc-schedule"><i data-lucide="calendar"></i> ${daysText}</span>
+              <span class="spec-doc-hours"><i data-lucide="clock"></i> ${timingText}</span>
+            </div>
+          `;
+          grid.appendChild(item);
+        });
+        listContainer.appendChild(grid);
+      }
+
+      previewCard.style.display = 'block';
+      lucide.createIcons();
+    }
+
     // ─── Load doctors ──────────────────────────────────────────
     async function loadDoctors() {
       try {
@@ -3847,9 +4639,10 @@
         dateInput.setAttribute('min', today);
         dateInput.value = '';
       }
-      if (!selectedOption || !selectedOption.value) { workingDays=[]; return; }
+      if (!selectedOption || !selectedOption.value) { workingDays=[]; updateDoctorPreviewCard(); return; }
       const daysStr = selectedOption.dataset.days;
       workingDays = daysStr ? daysStr.split(',').map(day=>dayMap[day.trim()]) : [];
+      updateDoctorPreviewCard();
     });
 
     document.getElementById('doctorDate')?.addEventListener('change', async function () {
@@ -3861,7 +4654,7 @@
 
       if (!selectedDoctorOption || !selectedDoctorOption.value) {
         showMessage('doctorMsg','Please select a doctor to view availability.');
-        this.value=''; return;
+        this.value=''; updateDoctorPreviewCard(); return;
       }
 
       // 1. Check API first for Global Holiday/Leave Priority
@@ -3872,13 +4665,13 @@
         // ─── ABSOLUTE PRIORITY: Clinic Wide Holiday ───
         if (data.holiday) {
           showMessage('doctorMsg', data.reason);
-          this.value = ''; return;
+          this.value = ''; updateDoctorPreviewCard(); return;
         }
 
         // 2. Individual Doctor Availability Logic (Server-side result)
         if (data.available === false) {
            showMessage('doctorMsg', data.reason || 'Doctor is not available.');
-           this.value = ''; return;
+           this.value = ''; updateDoctorPreviewCard(); return;
         }
 
         // 3. Local Validations (Past date, working habits, etc.)
@@ -3889,14 +4682,14 @@
 
         if (!workingDays.includes(selectedDay)) {
           showMessage('doctorMsg','This doctor is not available on the selected date. Please choose another.');
-          this.value=''; return;
+          this.value=''; updateDoctorPreviewCard(); return;
         }
 
         const todayStr  = new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
         const todayDate = new Date(todayStr);
         if (selectedDate < todayDate) {
           showMessage('doctorMsg','Appointment dates cannot be set in the past. Please select a future date.');
-          this.value=''; return;
+          this.value=''; updateDoctorPreviewCard(); return;
         }
 
         if (dateVal === todayStr) {
@@ -3910,7 +4703,7 @@
               const nowStr = new Date().toLocaleTimeString('en-GB',{hour12:false,hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'});
               if (timeToMinutes(nowStr) > timeToMinutes(endTimeStr)) {
                 showMessage('doctorMsg','Bookings for this doctor have closed for today. Please select another date.');
-                this.value=''; return;
+                this.value=''; updateDoctorPreviewCard(); return;
               }
             }
           }
@@ -3920,6 +4713,7 @@
         showMessage('doctorMsg', 'Error checking availability. Please try again.');
         this.value = '';
       }
+      updateDoctorPreviewCard();
     });
 
     // ─── Edit doctor select ────────────────────────────────────
@@ -4262,7 +5056,7 @@
 
       if (!spec || !doctorsBySpecialization[spec]) {
         showMessage('noDoctorMsg','Please select a Specialization before choosing a date.');
-        this.value=''; return;
+        this.value=''; updateDeptPreviewCard(); return;
       }
 
       // 1. Always check API first for Global Holiday Priority
@@ -4279,7 +5073,7 @@
         // ─── ABSOLUTE PRIORITY: Clinic Wide Holiday ───
         if (data.holiday) {
           showMessage('noDoctorMsg', data.reason);
-          this.value=''; return;
+          this.value=''; updateDeptPreviewCard(); return;
         }
 
         // 2. Local Validations (Past date, working day, etc.)
@@ -4290,7 +5084,7 @@
 
         if (selectedDate < todayDate) {
           showMessage('noDoctorMsg','Past dates cannot be selected. Please choose a future date.');
-          this.value=''; return;
+          this.value=''; updateDeptPreviewCard(); return;
         }
 
         const weekdayName = Object.keys(dayMap).find(key=>dayMap[key]===selectedDay);
@@ -4301,7 +5095,7 @@
 
         if (availableDoctors.length===0) {
           showMessage('noDoctorMsg','No doctors available for this specialization on the selected day.');
-          this.value=''; return;
+          this.value=''; updateDeptPreviewCard(); return;
         }
 
         if (dateVal === todayStr) {
@@ -4315,7 +5109,7 @@
           });
           if (availableDoctors.length===0) {
             showMessage('noDoctorMsg','All doctors in this specialization have finished for today. Please select another date.');
-            this.value=''; return;
+            this.value=''; updateDeptPreviewCard(); return;
           }
         }
 
@@ -4331,7 +5125,7 @@
                          ? results[firstKey].reason 
                          : 'All doctors in this specialization are unavailable for the selected date.';
           showMessage('noDoctorMsg', errMsg);
-          this.value = ''; return;
+          this.value = ''; updateDeptPreviewCard(); return;
         }
 
         updateSpecTimeSelect(availableDoctors, weekdayName);
@@ -4340,6 +5134,7 @@
         console.error('Availability check failed:', err);
         showMessage('noDoctorMsg', 'Error checking availability. Please try again.');
       }
+      updateDeptPreviewCard();
     });
 
     function updateSpecTimeSelect(doctors, weekdayName) {
@@ -5468,6 +6263,7 @@
           specDateInput.value='';
           const msg=document.getElementById('noDoctorMsg');
           if(msg) msg.textContent='';
+          updateDeptPreviewCard();
         });
       }
       // Check current section and trigger session check if needed
