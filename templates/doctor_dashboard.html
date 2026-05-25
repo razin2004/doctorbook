@@ -591,6 +591,32 @@
     }
 
     @media (max-width: 768px) {
+      .top-bar-inner {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 0.5rem 0.85rem !important;
+        gap: 0.5rem !important;
+      }
+      .brand {
+        align-items: flex-start !important;
+        flex-shrink: 1 !important;
+        min-width: 0 !important;
+      }
+      .brand-title {
+        font-size: 1.0rem !important;
+      }
+      .brand-sub {
+        display: block !important;
+        font-size: 0.68rem !important;
+      }
+      .top-actions {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-shrink: 0 !important;
+        gap: 0.28rem !important;
+        align-items: center !important;
+      }
       .desktop-home-btn { display: none !important; }
       .mobile-home-btn { 
         display: flex !important;
