@@ -101,6 +101,8 @@ class PatientBooking(db.Model):
     cancelled_by = db.Column(db.String(50), nullable=True)
     cancellation_reason = db.Column(db.String(255), nullable=True)
     cancelled_at = db.Column(db.String(50), nullable=True)
+    consultation_start_time = db.Column(db.DateTime, nullable=True)
+    consultation_end_time = db.Column(db.DateTime, nullable=True)
 
 class Prescription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -150,6 +152,10 @@ with app.app_context():
             db.session.execute(text("ALTER TABLE patient_booking ADD COLUMN cancellation_reason VARCHAR(255)"))
         if 'cancelled_at' not in columns:
             db.session.execute(text("ALTER TABLE patient_booking ADD COLUMN cancelled_at VARCHAR(50)"))
+        if 'consultation_start_time' not in columns:
+            db.session.execute(text("ALTER TABLE patient_booking ADD COLUMN consultation_start_time TIMESTAMP"))
+        if 'consultation_end_time' not in columns:
+            db.session.execute(text("ALTER TABLE patient_booking ADD COLUMN consultation_end_time TIMESTAMP"))
         db.session.commit()
     except Exception as e:
         print(f"[WARNING] Database schema update failed: {e}")
@@ -3562,6 +3568,231 @@ def check_admin():
         "email": session.get("admin_email", "")
     })
 
+# ===================== ADMIN ANALYTICS DASHBOARD =====================
+
+@app.route("/admin/analytics")
+def admin_analytics():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return redirect(url_for('booking', view='admin'))
+        
+    period = request.args.get('period', 'all')
+    doctor_filter = request.args.get('doctor', 'all')
+    
+    # 1. Fetch all doctors and bookings
+    all_doctors = []
+    try:
+        all_doctors = get_all_doctors()
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch doctors: {e}")
+        
+    bookings = []
+    try:
+        bookings = PatientBooking.query.all()
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch bookings: {e}")
+        
+    # 2. Timezone and range setups (IST)
+    ist = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(ist)
+    
+    def to_ist(dt):
+        if dt is None:
+            return None
+        return pytz.utc.localize(dt).astimezone(ist)
+        
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    weekday_idx = now.weekday()
+    week_start = (now - timedelta(days=weekday_idx)).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # 3. Apply Doctor Filter
+    if doctor_filter != 'all':
+        bookings_filtered = [b for b in bookings if b.doctor_name and b.doctor_name.lower().strip() == doctor_filter.lower().strip()]
+    else:
+        bookings_filtered = bookings
+        
+    # 4. Summary cards computations
+    total_bookings_all_time = len(bookings_filtered)
+    
+    bookings_today = sum(1 for b in bookings_filtered if to_ist(b.created_at) and to_ist(b.created_at).date() == now.date())
+    bookings_week = sum(1 for b in bookings_filtered if to_ist(b.created_at) and to_ist(b.created_at) >= week_start)
+    bookings_month = sum(1 for b in bookings_filtered if to_ist(b.created_at) and to_ist(b.created_at) >= month_start)
+    
+    total_doctors = len(all_doctors) if doctor_filter == 'all' else 1
+    total_patients = len(set(b.user_id for b in bookings_filtered if b.user_id))
+    
+    completed_bookings = [b for b in bookings_filtered if b.consultation_start_time and b.consultation_end_time and b.status != 'cancelled']
+    total_completed = len(completed_bookings)
+    total_cancelled = sum(1 for b in bookings_filtered if b.status == 'cancelled')
+    
+    # Average consultation duration
+    total_minutes = sum((b.consultation_end_time - b.consultation_start_time).total_seconds() for b in completed_bookings) / 60.0
+    avg_consultation_duration = round(total_minutes / total_completed, 1) if total_completed > 0 else 0.0
+    
+    # 5. Doctor Statistics Table Calculations
+    doctor_stats = []
+    
+    # Get all unique doctor names from active doctor list
+    doctor_names = [d.get("Name") for d in all_doctors] if all_doctors else []
+    if doctor_filter != 'all':
+        doctor_names = [d for d in doctor_names if d.lower().strip() == doctor_filter.lower().strip()]
+        
+    for doc_name in doctor_names:
+        doc_bookings = [b for b in bookings if b.doctor_name and b.doctor_name.lower().strip() == doc_name.lower().strip()]
+        doc_completed = [b for b in doc_bookings if b.consultation_start_time and b.consultation_end_time and b.status != 'cancelled']
+        
+        doc_today = sum(1 for b in doc_completed if to_ist(b.consultation_end_time) and to_ist(b.consultation_end_time).date() == now.date())
+        doc_week = sum(1 for b in doc_completed if to_ist(b.consultation_end_time) and to_ist(b.consultation_end_time) >= week_start)
+        doc_month = sum(1 for b in doc_completed if to_ist(b.consultation_end_time) and to_ist(b.consultation_end_time) >= month_start)
+        doc_year = sum(1 for b in doc_completed if to_ist(b.consultation_end_time) and to_ist(b.consultation_end_time) >= year_start)
+        
+        # Average consultations per day
+        unique_days = len(set(to_ist(b.consultation_end_time).date() for b in doc_completed))
+        doc_avg_per_day = round(len(doc_completed) / unique_days, 1) if unique_days > 0 else 0.0
+        
+        # Working hours this week/month (duration: end_time - start_time)
+        doc_week_bookings = [b for b in doc_completed if to_ist(b.consultation_end_time) >= week_start]
+        seconds_week = sum((b.consultation_end_time - b.consultation_start_time).total_seconds() for b in doc_week_bookings)
+        doc_hours_week = round(seconds_week / 3600.0, 1)
+        
+        doc_month_bookings = [b for b in doc_completed if to_ist(b.consultation_end_time) >= month_start]
+        seconds_month = sum((b.consultation_end_time - b.consultation_start_time).total_seconds() for b in doc_month_bookings)
+        doc_hours_month = round(seconds_month / 3600.0, 1)
+        
+        doctor_stats.append({
+            "name": doc_name,
+            "today": doc_today,
+            "week": doc_week,
+            "month": doc_month,
+            "year": doc_year,
+            "avg_per_day": doc_avg_per_day,
+            "hours_week": doc_hours_week,
+            "hours_month": doc_hours_month
+        })
+        
+    # 6. Additional Statistics
+    # Most Consulted Doctor
+    most_consulted_doc = "N/A"
+    max_consults = -1
+    for doc_name in [d.get("Name") for d in all_doctors]:
+        completed_count = sum(1 for b in bookings if b.doctor_name and b.doctor_name.lower().strip() == doc_name.lower().strip() 
+                              and b.consultation_start_time and b.consultation_end_time and b.status != 'cancelled')
+        if completed_count > max_consults and completed_count > 0:
+            max_consults = completed_count
+            most_consulted_doc = f"{doc_name} ({completed_count} consults)"
+            
+    # Doctor With Highest Working Hours
+    highest_hours_doc = "N/A"
+    max_hours = -1.0
+    for doc_name in [d.get("Name") for d in all_doctors]:
+        doc_completed = [b for b in bookings if b.doctor_name and b.doctor_name.lower().strip() == doc_name.lower().strip() 
+                         and b.consultation_start_time and b.consultation_end_time and b.status != 'cancelled']
+        total_sec = sum((b.consultation_end_time - b.consultation_start_time).total_seconds() for b in doc_completed)
+        total_hrs = total_sec / 3600.0
+        if total_hrs > max_hours and total_hrs > 0:
+            max_hours = total_hrs
+            highest_hours_doc = f"{doc_name} ({round(total_hrs, 1)} hrs)"
+            
+    # Holidays and working days
+    holidays_this_month = 0
+    holidays_this_year = 0
+    holiday_dates = set()
+    try:
+        holiday_ws = get_holiday_worksheet()
+        if holiday_ws:
+            all_vals = holiday_ws.get_all_values()
+            if len(all_vals) > 1:
+                for row in all_vals[1:]:
+                    if not row: continue
+                    d_str = str(row[0]).strip()
+                    try:
+                        dt = datetime.strptime(d_str, "%Y-%m-%d")
+                        holiday_dates.add(d_str)
+                        if dt.year == now.year:
+                            holidays_this_year += 1
+                            if dt.month == now.month:
+                                holidays_this_month += 1
+                    except: pass
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch holiday statistics: {e}")
+        
+    import calendar
+    _, num_days = calendar.monthrange(now.year, now.month)
+    working_days_this_month = num_days - holidays_this_month
+    
+    # 7. Booking Trend Chart Data
+    trend_labels = []
+    trend_values = []
+    
+    if period == 'today':
+        hours = {h: 0 for h in range(24)}
+        for b in bookings_filtered:
+            ist_dt = to_ist(b.created_at)
+            if ist_dt and ist_dt.date() == now.date():
+                hours[ist_dt.hour] += 1
+        trend_labels = [f"{h:02d}:00" for h in range(24)]
+        trend_values = [hours[h] for h in range(24)]
+    elif period == 'this_week':
+        days = {week_start.date() + timedelta(days=d): 0 for d in range(7)}
+        for b in bookings_filtered:
+            ist_dt = to_ist(b.created_at)
+            if ist_dt and ist_dt.date() in days:
+                days[ist_dt.date()] += 1
+        trend_labels = [d.strftime("%a (%d %b)") for d in sorted(days.keys())]
+        trend_values = [days[d] for d in sorted(days.keys())]
+    elif period == 'this_month':
+        days = {month_start.date() + timedelta(days=d): 0 for d in range(num_days)}
+        for b in bookings_filtered:
+            ist_dt = to_ist(b.created_at)
+            if ist_dt and ist_dt.date() in days:
+                days[ist_dt.date()] += 1
+        trend_labels = [d.strftime("%d %b") for d in sorted(days.keys())]
+        trend_values = [days[d] for d in sorted(days.keys())]
+    elif period == 'this_year':
+        months = {m: 0 for m in range(1, 13)}
+        for b in bookings_filtered:
+            ist_dt = to_ist(b.created_at)
+            if ist_dt and ist_dt.year == now.year:
+                months[ist_dt.month] += 1
+        trend_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        trend_values = [months[m] for m in range(1, 13)]
+    else: # 'all' or default: last 7 days trend
+        days = {(now - timedelta(days=d)).date(): 0 for d in range(7)}
+        for b in bookings_filtered:
+            ist_dt = to_ist(b.created_at)
+            if ist_dt and ist_dt.date() in days:
+                days[ist_dt.date()] += 1
+        trend_labels = [d.strftime("%a (%d %b)") for d in sorted(days.keys())]
+        trend_values = [days[d] for d in sorted(days.keys())]
+        
+    return render_template(
+        "admin_analytics.html",
+        admin_email=session.get("admin_email"),
+        period=period,
+        selected_doctor=doctor_filter,
+        all_doctors=all_doctors,
+        total_bookings_all_time=total_bookings_all_time,
+        bookings_today=bookings_today,
+        bookings_week=bookings_week,
+        bookings_month=bookings_month,
+        total_doctors=total_doctors,
+        total_patients=total_patients,
+        total_completed=total_completed,
+        total_cancelled=total_cancelled,
+        avg_consultation_duration=avg_consultation_duration,
+        doctor_stats=doctor_stats,
+        most_consulted_doc=most_consulted_doc,
+        highest_hours_doc=highest_hours_doc,
+        holidays_this_month=holidays_this_month,
+        holidays_this_year=holidays_this_year,
+        working_days_this_month=working_days_this_month,
+        trend_labels=trend_labels,
+        trend_values=trend_values
+    )
+
 # ===================== LIVE TOKEN TRACKING =====================
 
 @app.route('/doctor_dashboard')
@@ -3652,6 +3883,113 @@ def doctor_dashboard():
                            today_bookings=today_bookings,
                            can_switch=True)
 
+@app.route('/doctor/my_stats')
+def doctor_my_stats():
+    """Returns JSON stats for the logged-in doctor: bookings, hours, days."""
+    if session.get('user_role') != 'doctor':
+        return jsonify(success=False, msg="Unauthorized"), 403
+
+    doctor_email = session.get('user_email')
+    doc_session = DoctorSession.query.filter_by(email=doctor_email).first()
+    if not doc_session:
+        return jsonify(success=False, msg="Doctor not found"), 404
+
+    ist = pytz.timezone('Asia/Kolkata')
+    now_ist = datetime.now(ist)
+    today_str = now_ist.strftime("%Y-%m-%d")
+
+    # Week: Monday→today
+    week_start = (now_ist - timedelta(days=now_ist.weekday())).strftime("%Y-%m-%d")
+    # Month: 1st→today
+    month_start = now_ist.replace(day=1).strftime("%Y-%m-%d")
+    # Year: Jan 1→today
+    year_start = now_ist.replace(month=1, day=1).strftime("%Y-%m-%d")
+
+    doc_name_lower = doc_session.doctor_name.strip().lower()
+    doc_spec_lower = doc_session.specialization.strip().lower()
+
+    # Fetch ALL non-cancelled bookings for this doctor
+    all_bookings = PatientBooking.query.filter(
+        db.func.lower(PatientBooking.doctor_name) == doc_name_lower,
+        db.func.lower(PatientBooking.specialization) == doc_spec_lower,
+        PatientBooking.status != 'cancelled'
+    ).all()
+
+    total_bookings = len(all_bookings)
+    today_bookings_count = 0
+    week_bookings = 0
+    month_bookings = 0
+    year_bookings = 0
+    upcoming_bookings_count = 0
+    past_bookings_count = 0
+    total_working_minutes = 0
+    completed_consultations = 0
+    working_days_set = set()
+
+    for b in all_bookings:
+        b_date = b.date  # stored as "YYYY-MM-DD"
+        if not b_date:
+            continue
+
+        # Normalise date format (handle DD-MM-YYYY too)
+        try:
+            if '-' in b_date and len(b_date.split('-')[0]) == 4:
+                parsed_date = b_date  # already YYYY-MM-DD
+            else:
+                parsed_date = datetime.strptime(b_date, "%d-%m-%Y").strftime("%Y-%m-%d")
+        except Exception:
+            parsed_date = b_date
+
+        if parsed_date == today_str:
+            today_bookings_count += 1
+        if parsed_date >= week_start:
+            week_bookings += 1
+        if parsed_date >= month_start:
+            month_bookings += 1
+        if parsed_date >= year_start:
+            year_bookings += 1
+
+        if parsed_date >= today_str:
+            upcoming_bookings_count += 1
+        else:
+            past_bookings_count += 1
+
+        # Working hours from consultation times (ignore if either is missing)
+        if b.consultation_start_time and b.consultation_end_time:
+            delta_mins = (b.consultation_end_time - b.consultation_start_time).total_seconds() / 60
+            if delta_mins > 0:
+                total_working_minutes += delta_mins
+                completed_consultations += 1
+                working_days_set.add(parsed_date)
+
+    avg_duration_mins = round(total_working_minutes / completed_consultations, 1) if completed_consultations else 0
+    total_working_hours = round(total_working_minutes / 60, 1)
+    working_days_count = len(working_days_set)
+
+    # Upcoming (future dates including today that haven't passed)
+    # past = dates strictly before today
+    past_bookings_count = sum(1 for b in all_bookings if b.date and (
+        datetime.strptime(b.date, "%d-%m-%Y").strftime("%Y-%m-%d") if (len(b.date.split('-')[0]) == 2) else b.date
+    ) < today_str)
+    upcoming_bookings_count = total_bookings - past_bookings_count
+
+    return jsonify(
+        success=True,
+        doctor_name=doc_session.doctor_name,
+        specialization=doc_session.specialization,
+        total_bookings=total_bookings,
+        today=today_bookings_count,
+        this_week=week_bookings,
+        this_month=month_bookings,
+        this_year=year_bookings,
+        upcoming=upcoming_bookings_count,
+        past=past_bookings_count,
+        completed_consultations=completed_consultations,
+        total_working_hours=total_working_hours,
+        working_days=working_days_count,
+        avg_consultation_duration_mins=avg_duration_mins
+    )
+
 @app.route('/start_session', methods=['POST'])
 def start_session():
     if session.get('user_role') != 'doctor':
@@ -3675,6 +4013,18 @@ def start_session():
     doc_session.start_time = datetime.now(ist).strftime("%H:%M %p")
     doc_session.end_time = None
     doc_session.skipped_tokens = ""
+    
+    # Start first patient's consultation time
+    first_booking = PatientBooking.query.filter(
+        db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+        db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+        PatientBooking.date == today_str,
+        PatientBooking.token == 1,
+        PatientBooking.status != 'cancelled'
+    ).first()
+    if first_booking:
+        first_booking.consultation_start_time = datetime.utcnow()
+        
     db.session.commit()
     
     try:
@@ -3696,6 +4046,17 @@ def next_token():
     if not doc_session or doc_session.status != 'active':
         return jsonify(success=False, msg="Session not active")
         
+    # End current consultation
+    prev_booking = PatientBooking.query.filter(
+        db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+        db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+        PatientBooking.date == doc_session.session_date,
+        PatientBooking.token == doc_session.current_token,
+        PatientBooking.status != 'cancelled'
+    ).first()
+    if prev_booking and not prev_booking.consultation_end_time:
+        prev_booking.consultation_end_time = datetime.utcnow()
+
     doc_session.current_token += 1
     
     if doc_session.current_token > doc_session.total_tokens:
@@ -3703,6 +4064,17 @@ def next_token():
         doc_session.status = "completed"
         ist = pytz.timezone('Asia/Kolkata')
         doc_session.end_time = datetime.now(ist).strftime("%H:%M %p")
+    else:
+        # Start next patient's consultation time
+        next_booking = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+            PatientBooking.date == doc_session.session_date,
+            PatientBooking.token == doc_session.current_token,
+            PatientBooking.status != 'cancelled'
+        ).first()
+        if next_booking:
+            next_booking.consultation_start_time = datetime.utcnow()
         
     db.session.commit()
     
@@ -3731,6 +4103,17 @@ def skip_token():
     if not doc_session or doc_session.status != 'active':
         return jsonify(success=False, msg="Session not active")
 
+    # Clear start time of skipped token so we ignore it
+    skipped_booking = PatientBooking.query.filter(
+        db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+        db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+        PatientBooking.date == doc_session.session_date,
+        PatientBooking.token == doc_session.current_token,
+        PatientBooking.status != 'cancelled'
+    ).first()
+    if skipped_booking:
+        skipped_booking.consultation_start_time = None
+
     # Add current token to skipped list
     skipped = doc_session.skipped_tokens.strip().split(',') if doc_session.skipped_tokens else []
     skipped.append(str(doc_session.current_token))
@@ -3744,6 +4127,17 @@ def skip_token():
         doc_session.status = "completed"
         ist = pytz.timezone('Asia/Kolkata')
         doc_session.end_time = datetime.now(ist).strftime("%H:%M %p")
+    else:
+        # Start next patient's consultation time
+        next_booking = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+            PatientBooking.date == doc_session.session_date,
+            PatientBooking.token == doc_session.current_token,
+            PatientBooking.status != 'cancelled'
+        ).first()
+        if next_booking:
+            next_booking.consultation_start_time = datetime.utcnow()
         
     db.session.commit()
     
@@ -3783,6 +4177,19 @@ def consult_skipped():
     if target_token in skipped:
         skipped.remove(target_token)
         doc_session.skipped_tokens = ",".join(skipped)
+        
+        # Set start and end time for consulted skipped token
+        booking = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+            PatientBooking.date == doc_session.session_date,
+            PatientBooking.token == int(target_token),
+            PatientBooking.status != 'cancelled'
+        ).first()
+        if booking:
+            booking.consultation_start_time = datetime.utcnow() - timedelta(minutes=10)
+            booking.consultation_end_time = datetime.utcnow()
+            
         db.session.commit()
         return jsonify(success=True, skipped_tokens=doc_session.skipped_tokens)
     
@@ -4294,5 +4701,5 @@ def internal_error(e):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
 

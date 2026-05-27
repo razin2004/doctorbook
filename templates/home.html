@@ -2255,8 +2255,64 @@
         : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
       lucide.createIcons();
       toast.style.display = 'flex';
-      setTimeout(() => { toast.style.display = 'none'; }, 5000);
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.opacity = '1';
+      if (window.toastTimeout) clearTimeout(window.toastTimeout);
+      window.toastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 5000);
     }
+
+    (function initToastSwipeDismiss() {
+      const toast = document.getElementById('globalToast');
+      if (!toast) return;
+      let startX = 0, startY = 0;
+      let isDragging = false;
+      let diffX = 0, diffY = 0;
+
+      toast.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        isDragging = true;
+        toast.style.transition = 'none';
+      }, { passive: true });
+
+      toast.addEventListener('touchmove', (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        diffX = e.touches[0].clientX - startX;
+        diffY = e.touches[0].clientY - startY;
+        let moveX = diffX;
+        let moveY = diffY < 0 ? diffY : 0;
+        const dist = Math.sqrt(diffX * diffX + (diffY < 0 ? diffY * diffY : 0));
+        const opacity = Math.max(0, 1 - dist / 150);
+        toast.style.transform = `translate(calc(-50% + ${moveX}px), ${moveY}px)`;
+        toast.style.opacity = opacity;
+      }, { passive: true });
+
+      toast.addEventListener('touchend', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        toast.style.transition = 'all 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
+        const threshold = 60;
+        if (Math.abs(diffX) > threshold || diffY < -threshold) {
+          if (Math.abs(diffX) > threshold) {
+            toast.style.transform = `translate(calc(-50% + ${diffX > 0 ? 100 : -100}vw), 0)`;
+          } else {
+            toast.style.transform = `translate(-50%, -150px)`;
+          }
+          toast.style.opacity = '0';
+          setTimeout(() => {
+            toast.style.display = 'none';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.opacity = '1';
+          }, 300);
+        } else {
+          toast.style.transform = 'translateX(-50%)';
+          toast.style.opacity = '1';
+        }
+        diffX = 0;
+        diffY = 0;
+      }, { passive: true });
+    })();
 
     // Update sticky positioning on load/resize — drives scroll-margin-top on anchor
     function updateStickyLayout() {

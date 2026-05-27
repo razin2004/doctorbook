@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clinic Analytics – PrimeCare Clinic</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+  <style>
+    html, body {
+      height: auto !important;
+    }
+    body.bg-image {
+      min-height: 100vh;
+      background-image: url("/static/image/background11.jpeg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: relative;
+      display: block;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+    body.bg-image::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.48);
+      z-index: -1;
+    }
+    .bg-blur {
+      position: fixed;
+      inset: 0;
+      background-image: url("/static/image/background11.jpeg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(7px);
+      transform: scale(1.03);
+      z-index: -2;
+    }
+    .top-bar {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 1000 !important;
+    }
+    
+    /* Workspace Layout */
+    .admin-workspace {
+      display: flex;
+      min-height: calc(100vh - 65px);
+      position: relative;
+    }
+    
+    /* Sidebar Navigation */
+    .admin-sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.85); /* More opaque white for high contrast legibility */
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-right: 1px solid rgba(0, 119, 182, 0.08);
+      
+      /* Fixed sidebar placement: permanently locked below header */
+      position: fixed;
+      top: 60px;
+      left: 0;
+      bottom: 0;
+      
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 0.8rem 0.6rem;
+      
+      /* Hide scrollbar completely while maintaining scrollability if contents overflow */
+      overflow-y: auto;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge */
+      
+      z-index: 900; /* Sits below the header (1000) */
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+    }
+    
+    .admin-sidebar::-webkit-scrollbar {
+      display: none; /* Chrome/Safari/Webkit */
+    }
+
+    .admin-sidebar-header {
+      display: none; /* Hidden by default on desktop */
+    }
+
+    .admin-sidebar-logo-text {
+      font-size: 1.35rem; /* Match brand-title font size */
+      font-weight: 800;
+      color: #0077b6; /* Match brand-title color */
+      letter-spacing: 0.02em;
+    }
+
+    .admin-sidebar-close-btn {
+      display: none;
+      background: rgba(0, 119, 182, 0.05);
+      color: #64748b;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+      transition: all 0.2s;
+    }
+    .admin-sidebar-close-btn:hover {
+      background: rgba(239, 68, 68, 0.08);
+      color: #ef4444;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .admin-sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .admin-sidebar-nav-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .admin-sidebar-nav-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #023e8a; /* Darker blue for legibility */
+      margin-bottom: 0.5rem;
+      padding-left: 0.5rem;
+    }
+
+    .admin-sidebar-nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      padding: 0;
+      margin: 0;
+    }
+
+    .admin-sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 12px;
+      color: #0f172a !important; /* Deepest slate/black for high visibility */
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      margin-top: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .admin-sidebar-nav-item i,
+    .admin-sidebar-nav-item svg {
+      width: 17px;
+      height: 17px;
+      opacity: 0.85; /* Higher visibility */
+      transition: transform 0.2s;
+    }
+
+    .admin-sidebar-nav-item:hover {
+      background: rgba(0, 119, 182, 0.08) !important;
+      color: #0077b6 !important;
+      padding-left: 1.05rem; /* Subtle indent micro-animation */
+      box-shadow: none;
+    }
+
+    .admin-sidebar-nav-item:hover i,
+    .admin-sidebar-nav-item:hover svg {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+
+    .admin-sidebar-nav-item.active {
+      background: linear-gradient(135deg, #0077b6 0%, #0096c7 100%) !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 15px rgba(0, 119, 182, 0.2) !important;
+    }
+    
+    .admin-sidebar-nav-item.active:hover {
+      padding-left: 0.85rem; /* Disable indent on active */
+    }
+
+    .admin-sidebar-nav-item.active i,
+    .admin-sidebar-nav-item.active svg {
+      opacity: 1;
+    }
+
+    .admin-sidebar-footer {
+      margin-top: 1.5rem;
+      border-top: 1px solid rgba(0, 119, 182, 0.08);
+      padding-top: 1rem;
+    }
+
+    .logout-item {
+      color: #ef4444 !important;
+    }
+    .logout-item:hover {
+      background: rgba(239, 68, 68, 0.05) !important;
+      color: #ef4444 !important;
+    }
+
+    /* Content Area */
+    .admin-content {
+      flex: 1;
+      padding: 2rem;
+      min-width: 0;
+      transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    @media (min-width: 992px) {
+      .admin-content {
+        margin-left: 280px;
+      }
+    }
+    .admin-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .admin-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      color: #64748b;
+      font-weight: 600;
+    }
+    .breadcrumb-active {
+      color: #0077b6;
+      font-weight: 700;
+    }
+
+    /* Filters Section */
+    .filters-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    .period-pills {
+      display: flex;
+      gap: 0.4rem;
+    }
+    .period-pill {
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(0, 119, 182, 0.1);
+      color: #475569;
+      padding: 0.5rem 1rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .period-pill:hover {
+      background: rgba(0, 119, 182, 0.05);
+      color: #0077b6;
+    }
+    .period-pill.active {
+      background: #0077b6;
+      color: white;
+      border-color: #0077b6;
+      box-shadow: 0 4px 12px rgba(0, 119, 182, 0.25);
+    }
+    .doctor-filter-box select {
+      padding: 0.5rem 2rem 0.5rem 1rem;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 119, 182, 0.15);
+      background: white;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #475569;
+      outline: none;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.7rem center;
+      background-size: 1rem;
+    }
+
+    /* Cards Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+    .glass-card-premium {
+      background: rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      padding: 1.5rem;
+      box-shadow: 
+        0 15px 35px rgba(15, 23, 42, 0.05),
+        inset 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.25s;
+    }
+    .glass-card-premium:hover {
+      transform: translateY(-3px);
+    }
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+    .icon-bookings { background: rgba(0, 119, 182, 0.08); color: #0077b6; }
+    .icon-completed { background: rgba(16, 185, 129, 0.08); color: #10b981; }
+    .icon-cancelled { background: rgba(239, 68, 68, 0.08); color: #ef4444; }
+    .icon-patients { background: rgba(99, 102, 241, 0.08); color: #6366f1; }
+    
+    .card-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .card-value {
+      font-size: 1.85rem;
+      font-weight: 850;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+    .card-subtext {
+      font-size: 0.78rem;
+      color: #64748b;
+      font-weight: 500;
+      margin-top: 0.5rem;
+    }
+
+    /* Dashboard Layout: Left Chart, Right Additional Stats */
+    .dashboard-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 1024px) {
+      .dashboard-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Chart Card */
+    .chart-card {
+      min-height: 380px;
+    }
+    .section-header {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Additional Stats Card */
+    .additional-stats-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin-top: 0.5rem;
+    }
+    .additional-stat-item {
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      padding: 0.8rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    .stat-meta {
+      display: flex;
+      flex-direction: column;
+    }
+    .stat-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-val-text {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 0.15rem;
+    }
+    .stat-badge {
+      background: rgba(0, 119, 182, 0.08);
+      color: #0077b6;
+      font-size: 1.15rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Doctor Table Section */
+    .table-card {
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    table.premium-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    table.premium-table th {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 1rem 0.8rem;
+      border-bottom: 2px solid rgba(0, 119, 182, 0.1);
+    }
+    table.premium-table td {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #334155;
+      padding: 1rem 0.8rem;
+      border-bottom: 1px solid rgba(0, 119, 182, 0.05);
+    }
+    table.premium-table tbody tr:hover td {
+      background: rgba(0, 119, 182, 0.02);
+      color: #0077b6;
+    }
+    .doctor-name-col {
+      font-weight: 700 !important;
+      color: #0f172a !important;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    
+    /* Responsive overrides */
+    /* Sidebar Mobile Backdrop */
+    .admin-sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.2);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 1050; /* Sits above the header (1000) but below the drawer (1100) */
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .admin-sidebar-backdrop.open {
+      display: block;
+      opacity: 1;
+    }
+
+    /* Sidebar toggle button (hidden on desktop) */
+    .admin-sidebar-toggle-btn {
+      display: none;
+      background: rgba(0, 119, 182, 0.06);
+      color: #0077b6;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+      transition: all 0.2s;
+    }
+    .admin-sidebar-toggle-btn:hover {
+      background: rgba(0, 119, 182, 0.12);
+      color: #0096c7;
+      transform: scale(1.03);
+    }
+    .admin-sidebar-toggle-btn i,
+    .admin-sidebar-toggle-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .desktop-home-btn { display: inline-flex !important; }
+    .mobile-home-btn { display: none !important; }
+
+    /* Responsive adjustments */
+    @media (max-width: 991px) {
+      .admin-sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        bottom: 0;
+        height: 100dvh;
+        z-index: 1100;
+        box-shadow: 20px 0 45px rgba(0,0,0,0.12);
+        background: rgba(255, 255, 255, 0.98);
+        transform: translateX(0);
+        padding-bottom: calc(0.8rem + env(safe-area-inset-bottom, 1.5rem));
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .admin-sidebar.open {
+        transform: translateX(280px);
+      }
+      .admin-sidebar-header {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between !important;
+        width: 100%;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid rgba(0, 119, 182, 0.08);
+        margin-bottom: 1.25rem;
+        position: sticky;
+        top: -0.8rem;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.98);
+        margin-top: -0.8rem;
+        padding-top: 0.8rem;
+      }
+      .admin-sidebar-logo-text {
+        font-size: 1.25rem !important;
+        font-weight: 800 !important;
+        color: #0077b6 !important;
+        letter-spacing: 0.02em !important;
+        background: none !important;
+        -webkit-text-fill-color: initial !important;
+        text-fill-color: initial !important;
+        white-space: nowrap;
+      }
+      .admin-sidebar-close-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: transparent !important;
+        border: none !important;
+        color: #0077b6 !important;
+        cursor: pointer;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        width: auto !important;
+        height: auto !important;
+        transition: transform 0.2s;
+        -webkit-tap-highlight-color: transparent !important;
+        outline: none !important;
+      }
+      .admin-sidebar-close-btn:hover,
+      .admin-sidebar-close-btn:focus,
+      .admin-sidebar-close-btn:active {
+        background: transparent !important;
+        color: #0096c7 !important;
+        transform: scale(1.1);
+        box-shadow: none !important;
+        outline: none !important;
+      }
+      .admin-sidebar-close-btn svg,
+      .admin-sidebar-close-btn i {
+        width: 24px !important;
+        height: 24px !important;
+        stroke-width: 3px !important;
+      }
+      .admin-content {
+        max-width: 100%;
+        padding: 1rem 1.25rem;
+      }
+      .admin-sidebar-toggle-btn {
+        display: flex !important;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 0.8rem !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .desktop-home-btn { display: none !important; }
+      .mobile-home-btn { 
+        display: flex !important;
+        border-radius: 10px !important;
+        background: rgba(0, 119, 182, 0.06) !important;
+        color: #0077b6 !important;
+        height: 36px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .filters-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+        padding: 0.75rem !important;
+      }
+      .period-pills {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 0.4rem !important;
+      }
+      .period-pill {
+        padding: 0.4rem 0.75rem !important;
+        font-size: 0.78rem !important;
+        flex: 1 1 auto !important;
+        text-align: center !important;
+      }
+      .doctor-filter-box select {
+        width: 100% !important;
+        text-align: center !important;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+      }
+      .stats-grid .glass-card-premium {
+        padding: 0.7rem 0.6rem !important;
+        border-radius: 14px !important;
+      }
+      .stats-grid .card-icon {
+        width: 30px !important;
+        height: 30px !important;
+      }
+      .stats-grid .card-icon svg,
+      .stats-grid .card-icon i {
+        width: 16px !important;
+        height: 16px !important;
+      }
+      .stats-grid .card-label {
+        font-size: 0.65rem !important;
+        line-height: 1.2 !important;
+      }
+      .stats-grid .card-value {
+        font-size: 1.15rem !important;
+      }
+      .stats-grid .card-subtext {
+        display: none !important;
+      }
+      .additional-stats-list {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.6rem !important;
+      }
+      .additional-stat-item {
+        padding: 0.6rem 0.8rem !important;
+        border-radius: 10px !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+      }
+      .additional-stat-item .stat-badge {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 0.95rem !important;
+      }
+      .additional-stat-item .stat-title {
+        font-size: 0.65rem !important;
+      }
+      .additional-stat-item .stat-val-text {
+        font-size: 0.8rem !important;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .top-bar-inner {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.85rem;
+        gap: 0.5rem;
+      }
+      .brand {
+        align-items: flex-start;
+        flex-shrink: 1;
+        min-width: 0;
+      }
+      .brand-title {
+        font-size: 1.0rem;
+      }
+      .brand-sub {
+        font-size: 0.65rem;
+      }
+      .top-actions {
+        display: flex;
+        flex-direction: row;
+        flex-shrink: 0;
+        gap: 0.28rem;
+        align-items: center;
+      }
+      .top-actions .btn {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.5rem;
+        margin-top: 0 !important;
+        white-space: nowrap;
+        min-width: auto;
+        width: auto;
+        border-radius: 10px;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #0077b6 !important;
+        -webkit-tap-highlight-color: transparent !important;
+        outline: none !important;
+      }
+      .top-actions .btn svg {
+        width: 14px;
+        height: 14px;
+      }
+      .top-actions .btn span {
+        display: none;
+      }
+    }
+
+  </style>
+</head>
+
+<body class="bg-image">
+  <div class="bg-blur"></div>
+
+  <!-- HEADER -->
+  <header class="top-bar">
+
+
+    <div class="top-bar-inner">
+      <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex-shrink:1;">
+        <button id="headerAdminSidebarToggle" class="admin-sidebar-toggle-btn" onclick="toggleAdminSidebar(true)" aria-label="Toggle Sidebar" style="margin-top:0;">
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0;">
+          <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+               style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
+               alt="PrimeCare Logo" />
+          <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
+            <div class="brand-title">PrimeCare Clinic</div>
+            <div class="brand-sub">Quality care · Trusted doctors</div>
+          </div>
+        </div>
+      </div>
+      <div class="top-actions" style="margin-left:auto;">
+        <button class="btn btn-outline desktop-home-btn" onclick="goHome()" style="margin-top:0;">
+          <i data-lucide="house"></i>
+          <span>Home</span>
+        </button>
+        <button class="admin-sidebar-toggle-btn mobile-home-btn" onclick="goHome()" style="margin-top:0; width:auto; padding:0 8px; gap:2px;">
+          <i data-lucide="arrow-left" style="width:18px;height:18px; stroke-width:3px;"></i>
+          <i data-lucide="house" style="width:18px;height:18px; stroke-width:3px;"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- WORKSPACE WRAPPER -->
+  <div class="admin-workspace">
+    <!-- LEFT SIDEBAR -->
+    <aside class="admin-sidebar" id="adminSidebar">
+          <div class="admin-sidebar-top">
+            <div class="admin-sidebar-header">
+              <div class="admin-sidebar-logo-text">PrimeCare Clinic</div>
+              <button class="admin-sidebar-close-btn" onclick="toggleAdminSidebar(false)" aria-label="Close sidebar">
+                <i data-lucide="chevron-left"></i>
+              </button>
+            </div>
+            
+            <div class="admin-sidebar-nav">
+              <!-- Heading 1: Booking Hub -->
+              <div class="admin-sidebar-nav-group">
+                <div class="admin-sidebar-nav-title">Booking Hub</div>
+                <ul class="admin-sidebar-nav-list">
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="book" onclick="goToPanel('book')">
+                      <i data-lucide="phone-call"></i>
+                      <span>New Appointment</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="view" onclick="goToPanel('view')">
+                      <i data-lucide="calendar-check-2"></i>
+                      <span>Manage Appointments</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="cancel" onclick="goToPanel('cancel')">
+                      <i data-lucide="calendar-x"></i>
+                      <span>Cancel Appointments</span>
+                    </div>
+                  </li>
+                
+                </ul>
+              </div>
+              
+              <!-- Heading 2: Staff Roster -->
+              <div class="admin-sidebar-nav-group">
+                <div class="admin-sidebar-nav-title">Staff Roster</div>
+                <ul class="admin-sidebar-nav-list">
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="add" onclick="goToPanel('add')">
+                      <i data-lucide="user-plus"></i>
+                      <span>Register Doctor</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="edit" onclick="goToPanel('edit')">
+                      <i data-lucide="pencil"></i>
+                      <span>Edit Schedules</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="leaves" onclick="goToPanel('leaves')">
+                      <i data-lucide="calendar-x"></i>
+                      <span>Temporary Leaves</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="delete" onclick="goToPanel('delete')">
+                      <i data-lucide="trash-2"></i>
+                      <span>Remove Doctor</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              
+              <!-- Heading 3: Operations & System -->
+              <div class="admin-sidebar-nav-group">
+                <div class="admin-sidebar-nav-title">Clinic Operations</div>
+                <ul class="admin-sidebar-nav-list">
+                    <li>
+                    <div class="admin-sidebar-nav-item" data-panel="ticker" onclick="goToPanel('ticker')">
+                      <i data-lucide="radio"></i>
+                      <span>Queue &amp; Announcements</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="holiday" onclick="goToPanel('holiday')">
+                      <i data-lucide="calendar-off"></i>
+                      <span>Manage Holidays</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="settings" onclick="goToPanel('settings')">
+                      <i data-lucide="sliders"></i>
+                      <span>System Settings</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="security" onclick="goToPanel('security')">
+                      <i data-lucide="key-round"></i>
+                      <span>Security &amp; Access</span>
+                    </div>
+                  </li>
+                  <li>
+                    <a href="/admin/analytics" style="text-decoration: none; color: inherit; display: block; width: 100%;">
+                      <div class="admin-sidebar-nav-item active">
+                        <i data-lucide="bar-chart-3"></i>
+                        <span>Analytics</span>
+                      </div>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Heading 4: Dashboards -->
+              <div class="admin-sidebar-nav-group">
+                <div class="admin-sidebar-nav-title">Dashboard Access</div>
+                <ul class="admin-sidebar-nav-list">
+                  <li>
+                    <div class="admin-sidebar-nav-item" onclick="goToCurrentDashboard()">
+                      <i data-lucide="layout-dashboard"></i>
+                      <span>Doctor/User View</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div class="admin-sidebar-footer">
+            <div class="admin-sidebar-nav-item logout-item" onclick="openLogoutModal()">
+              <i data-lucide="log-out"></i>
+              <span>Logout Admin</span>
+            </div>
+          </div>
+        </aside>
+
+    <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop" onclick="toggleAdminSidebar(false)"></div>
+
+    <!-- MAIN CONTENT -->
+    <main class="admin-content">
+      <div class="admin-topbar">
+        <div class="admin-breadcrumb">
+          <span>Admin</span>
+          <span><i data-lucide="chevron-right" style="width:14px;height:14px;vertical-align:middle;"></i></span>
+          <span>Business Intelligence</span>
+          <span><i data-lucide="chevron-right" style="width:14px;height:14px;vertical-align:middle;"></i></span>
+          <span class="breadcrumb-active">Analytics Dashboard</span>
+        </div>
+      </div>
+
+      <!-- Filters Section -->
+      <div class="filters-row">
+        <div class="period-pills">
+          <a href="?period=today&doctor={{ selected_doctor }}" class="period-pill {% if period == 'today' %}active{% endif %}">Today</a>
+          <a href="?period=this_week&doctor={{ selected_doctor }}" class="period-pill {% if period == 'this_week' %}active{% endif %}">This Week</a>
+          <a href="?period=this_month&doctor={{ selected_doctor }}" class="period-pill {% if period == 'this_month' %}active{% endif %}">This Month</a>
+          <a href="?period=this_year&doctor={{ selected_doctor }}" class="period-pill {% if period == 'this_year' %}active{% endif %}">This Year</a>
+          <a href="?period=all&doctor={{ selected_doctor }}" class="period-pill {% if period == 'all' %}active{% endif %}">All Time</a>
+        </div>
+
+        <div class="doctor-filter-box">
+          <select onchange="window.location.href='?period={{ period }}&doctor=' + this.value">
+            <option value="all" {% if selected_doctor == 'all' %}selected{% endif %}>All Doctors</option>
+            {% for doc in all_doctors %}
+              <option value="{{ doc.Name }}" {% if selected_doctor == doc.Name %}selected{% endif %}>{{ doc.Name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="stats-grid">
+        <div class="glass-card-premium">
+          <div class="card-meta">
+            <span class="card-label">Total Bookings</span>
+            <div class="card-icon icon-bookings"><i data-lucide="calendar"></i></div>
+          </div>
+          <div class="card-value">{{ total_bookings_all_time }}</div>
+          <div class="card-subtext">All bookings under selection</div>
+        </div>
+
+        <div class="glass-card-premium">
+          <div class="card-meta">
+            <span class="card-label">Today's Bookings</span>
+            <div class="card-icon icon-bookings"><i data-lucide="clock"></i></div>
+          </div>
+          <div class="card-value">{{ bookings_today }}</div>
+          <div class="card-subtext">New registrations today</div>
+        </div>
+
+        <div class="glass-card-premium">
+          <div class="card-meta">
+            <span class="card-label">Weekly Bookings</span>
+            <div class="card-icon icon-bookings"><i data-lucide="calendar-days"></i></div>
+          </div>
+          <div class="card-value">{{ bookings_week }}</div>
+          <div class="card-subtext">This week (since Monday)</div>
+        </div>
+
+        <div class="glass-card-premium">
+          <div class="card-meta">
+            <span class="card-label">Completed Consults</span>
+            <div class="card-icon icon-completed"><i data-lucide="check-circle"></i></div>
+          </div>
+          <div class="card-value">{{ total_completed }}</div>
+          <div class="card-subtext">Avg duration: <strong>{{ avg_consultation_duration }} mins</strong></div>
+        </div>
+
+        <div class="glass-card-premium">
+          <div class="card-meta">
+            <span class="card-label">Cancellations</span>
+            <div class="card-icon icon-cancelled"><i data-lucide="ban"></i></div>
+          </div>
+          <div class="card-value">{{ total_cancelled }}</div>
+          <div class="card-subtext">Cancelled bookings</div>
+        </div>
+
+        <div class="glass-card-premium">
+          <div class="card-meta">
+            <span class="card-label">Total Patients</span>
+            <div class="card-icon icon-patients"><i data-lucide="users"></i></div>
+          </div>
+          <div class="card-value">{{ total_patients }}</div>
+          <div class="card-subtext">Unique patient users</div>
+        </div>
+      </div>
+
+      <!-- Trend Chart & Additional Stats Row -->
+      <div class="dashboard-row">
+        <!-- Chart.js Booking Trend -->
+        <div class="glass-card-premium chart-card">
+          <div class="section-header">
+            <i data-lucide="trending-up" style="color:#0077b6;"></i>
+            <span>Booking Volume Trend</span>
+          </div>
+          <div style="flex:1; width:100%; position:relative; min-height:280px;">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Additional Stats Box -->
+        <div class="glass-card-premium">
+          <div class="section-header">
+            <i data-lucide="info" style="color:#6366f1;"></i>
+            <span>Key Performance Metrics</span>
+          </div>
+          <div class="additional-stats-list">
+            <div class="additional-stat-item">
+              <div class="stat-meta">
+                <span class="stat-title">Most Consulted</span>
+                <span class="stat-val-text">{{ most_consulted_doc }}</span>
+              </div>
+              <div class="stat-badge"><i data-lucide="award"></i></div>
+            </div>
+
+            <div class="additional-stat-item">
+              <div class="stat-meta">
+                <span class="stat-title">Most Active (Hours)</span>
+                <span class="stat-val-text">{{ highest_hours_doc }}</span>
+              </div>
+              <div class="stat-badge"><i data-lucide="hourglass"></i></div>
+            </div>
+
+            <div class="additional-stat-item">
+              <div class="stat-meta">
+                <span class="stat-title">Holidays (Month/Year)</span>
+                <span class="stat-val-text">{{ holidays_this_month }} / {{ holidays_this_year }}</span>
+              </div>
+              <div class="stat-badge"><i data-lucide="calendar-off"></i></div>
+            </div>
+
+            <div class="additional-stat-item">
+              <div class="stat-meta">
+                <span class="stat-title">Working Days (Month)</span>
+                <span class="stat-val-text">{{ working_days_this_month }} Days</span>
+              </div>
+              <div class="stat-badge"><i data-lucide="calendar-check"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Doctor Statistics Table -->
+      <div class="glass-card-premium table-card">
+        <div class="section-header" style="margin-bottom: 1.5rem;">
+          <i data-lucide="users-round" style="color:#0077b6;"></i>
+          <span>Doctor Consultation statistics</span>
+        </div>
+        <table class="premium-table">
+          <thead>
+            <tr>
+              <th>Doctor Name</th>
+              <th>Consults (Today)</th>
+              <th>Consults (Week)</th>
+              <th>Consults (Month)</th>
+              <th>Consults (Year)</th>
+              <th>Avg Consults/Day</th>
+              <th>Hours (Week)</th>
+              <th>Hours (Month)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if doctor_stats %}
+              {% for d in doctor_stats %}
+                <tr>
+                  <td class="doctor-name-col">
+                    <i data-lucide="user" style="width:14px;height:14px;color:#0077b6;"></i>
+                    {{ d.name }}
+                  </td>
+                  <td>{{ d.today }}</td>
+                  <td>{{ d.week }}</td>
+                  <td>{{ d.month }}</td>
+                  <td>{{ d.year }}</td>
+                  <td>{{ d.avg_per_day }}</td>
+                  <td>{{ d.hours_week }} hrs</td>
+                  <td>{{ d.hours_month }} hrs</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="8" style="text-align:center; color:#64748b; padding:2rem 0;">No active doctor stats available for this selection.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Initialise Lucide icons
+    lucide.createIcons();
+
+    // Toggle Sidebar
+    
+
+    // Chart.js Configuration
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    
+    // Inject backend labels/values
+    const labels = {{ trend_labels|tojson }};
+    const dataValues = {{ trend_values|tojson }};
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(0, 119, 182, 0.3)');
+    gradient.addColorStop(1, 'rgba(0, 119, 182, 0.01)');
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Bookings Count',
+          data: dataValues,
+          borderColor: '#0077b6',
+          borderWidth: 3,
+          backgroundColor: gradient,
+          fill: true,
+          tension: 0.35,
+          pointBackgroundColor: '#0077b6',
+          pointHoverRadius: 7,
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: '#0077b6',
+          pointHoverBorderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            grid: { color: 'rgba(0,0,0,0.03)' },
+            ticks: {
+              stepSize: 1,
+              font: { family: 'Inter', weight: 500 }
+            }
+          },
+          x: {
+            grid: { display: false },
+            ticks: {
+              font: { family: 'Inter', weight: 500 }
+            }
+          }
+        }
+      }
+    });
+  
+    function goToPanel(panel) {
+      window.location.href = '/booking?view=admin&panel=' + panel.replace(/['"]/g, '');
+    }
+    function goToCurrentDashboard() {
+      window.location.href = '/booking';
+    }
+    function goToAdminDashboard() {
+      window.location.href = '/booking?view=admin';
+    }
+    function goHome() {
+      window.location.href = '/';
+    }
+    function toggleAdminSidebar(show) {
+      const sidebar = document.getElementById('adminSidebar');
+      const backdrop = document.getElementById('adminSidebarBackdrop');
+      if (show) {
+        sidebar.classList.add('open');
+        backdrop.classList.add('open');
+      } else {
+        sidebar.classList.remove('open');
+        backdrop.classList.remove('open');
+      }
+    }
+    function openLogoutModal() {
+      if (confirm('Are you sure you want to log out from the admin session?')) {
+        fetch('/admin_logout', { method: 'POST' })
+          .then(() => {
+            window.location.href = '/booking';
+          });
+      }
+    }
+
+  </script>
+</body>
+</html>
