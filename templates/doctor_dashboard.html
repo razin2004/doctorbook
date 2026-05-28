@@ -687,32 +687,113 @@
       text-transform: uppercase;
       letter-spacing: 0.4px;
     }
-    /* Mobile: stat cards go horizontal — icon left, value+label right */
-    @media (max-width: 767px) {
-      .doc-stat-card {
-        flex-direction: row;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem 1rem;
-      }
-      .doc-stat-body {
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
-        min-width: 0;
-      }
-      .doc-stat-value {
-        font-size: 1.25rem;
-      }
-      .stats-refresh-text {
+
+    /* ── Statistics Header & Refresh Button ── */
+    #statsPanel .section-header {
+      border-bottom: 2px solid rgba(0, 119, 182, 0.1);
+      padding-bottom: 0.8rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+    }
+
+    .stats-refresh-btn {
+      background: rgba(0,119,182,0.08);
+      border: 1.5px solid rgba(0,119,182,0.18);
+      color: #0077b6;
+      border-radius: 8px;
+      padding: 0.25rem 0.6rem;
+      font-weight: 700;
+      font-size: 0.72rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-top: 0;
+      box-shadow: none;
+      transition: all 0.2s ease;
+    }
+    .stats-refresh-btn:hover {
+      background: rgba(0,119,182,0.15);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0, 119, 182, 0.15);
+    }
+
+    .doc-stats-grid {
+      display: grid;
+      gap: 0.9rem;
+    }
+    .ds-grid-booking {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+    .ds-grid-metrics {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+
+    @media (max-width: 991px) {
+      .refresh-btn-text {
         display: none;
       }
       .stats-refresh-btn {
-        padding: 0.45rem !important;
+        width: 36px !important;
+        height: 36px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         border-radius: 10px !important;
-        min-width: 36px;
-        min-height: 36px;
-        justify-content: center;
+        background: rgba(0, 119, 182, 0.06) !important;
+        color: #0077b6 !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+
+      /* Statistics Cards Grid Mobile Inline Layout */
+      #statsPanel .doc-stat-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-areas:
+          "icon value"
+          "icon label";
+        align-items: center;
+        column-gap: 0.8rem;
+        row-gap: 0.15rem;
+        padding: 0.8rem 1rem;
+      }
+      #statsPanel .doc-stat-icon {
+        grid-area: icon;
+        align-self: center;
+      }
+      #statsPanel .doc-stat-value {
+        grid-area: value;
+        font-size: 1.15rem;
+        line-height: 1.2;
+      }
+      #statsPanel .doc-stat-label {
+        grid-area: label;
+        font-size: 0.62rem;
+        line-height: 1.2;
+      }
+
+      /* Booking Summary always has 2 cards in a row in mobile view */
+      .ds-grid-booking {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      .ds-grid-metrics {
+        grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)) !important;
+      }
+
+      /* Hide welcome banner and stats grid when selecting other panels in mobile view */
+      body.non-overview-active .workspace-welcome-banner,
+      body.non-overview-active .stats-grid {
+        display: none !important;
+      }
+    }
+    @media (max-width: 480px) {
+      .ds-grid-metrics {
+        grid-template-columns: 1fr !important;
       }
     }
 
@@ -1323,12 +1404,12 @@
       </div>
       <!-- PANEL 4: DOCTOR STATISTICS -->
       <div id="statsPanel" class="adminPanel glass-card-premium">
-        <div class="section-header" style="border-bottom: 2px solid rgba(0,119,182,0.1); padding-bottom: 0.8rem; margin-bottom: 1.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.8rem;">
+        <div class="section-header">
           <h2 style="margin:0; text-align:left; display:flex; align-items:center; gap:0.5rem;">
             <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i> My Statistics
           </h2>
-          <button onclick="fetchDoctorStats()" class="stats-refresh-btn" style="background:rgba(0,119,182,0.08); border:1.5px solid rgba(0,119,182,0.18); color:#0077b6; border-radius:12px; padding:0.4rem 1rem; font-weight:700; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; gap:0.4rem;">
-            <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i><span class="stats-refresh-text"> Refresh</span>
+          <button onclick="fetchDoctorStats()" class="stats-refresh-btn">
+            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> <span class="refresh-btn-text">Refresh</span>
           </button>
         </div>
 
@@ -1349,62 +1430,48 @@
           <!-- SECTION 1: Booking Summary -->
           <div style="margin-bottom:1.8rem;">
             <div style="font-size:0.72rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Booking Summary (Excl. Cancelled)</div>
-            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap:0.9rem;">
+            <div class="doc-stats-grid ds-grid-booking">
 
               <div class="doc-stat-card" style="--accent-c:#0077b6;">
                 <div class="doc-stat-icon" style="background:rgba(0,119,182,0.1);color:#0077b6;"><i data-lucide="calendar-check" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsTotalBookings">—</div>
-                  <div class="doc-stat-label">Total Bookings</div>
-                </div>
+                <div class="doc-stat-value" id="dsTotalBookings">—</div>
+                <div class="doc-stat-label">Total Bookings</div>
               </div>
 
               <div class="doc-stat-card" style="--accent-c:#10b981;">
                 <div class="doc-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i data-lucide="sun" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsTodayBookings">—</div>
-                  <div class="doc-stat-label">Today</div>
-                </div>
+                <div class="doc-stat-value" id="dsTodayBookings">—</div>
+                <div class="doc-stat-label">Today</div>
               </div>
 
               <div class="doc-stat-card" style="--accent-c:#8b5cf6;">
                 <div class="doc-stat-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;"><i data-lucide="calendar-days" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsWeekBookings">—</div>
-                  <div class="doc-stat-label">This Week</div>
-                </div>
+                <div class="doc-stat-value" id="dsWeekBookings">—</div>
+                <div class="doc-stat-label">This Week</div>
               </div>
 
               <div class="doc-stat-card" style="--accent-c:#f59e0b;">
                 <div class="doc-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i data-lucide="calendar" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsMonthBookings">—</div>
-                  <div class="doc-stat-label">This Month</div>
-                </div>
+                <div class="doc-stat-value" id="dsMonthBookings">—</div>
+                <div class="doc-stat-label">This Month</div>
               </div>
 
               <div class="doc-stat-card" style="--accent-c:#06b6d4;">
                 <div class="doc-stat-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;"><i data-lucide="calendar-range" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsYearBookings">—</div>
-                  <div class="doc-stat-label">This Year</div>
-                </div>
+                <div class="doc-stat-value" id="dsYearBookings">—</div>
+                <div class="doc-stat-label">This Year</div>
               </div>
 
               <div class="doc-stat-card" style="--accent-c:#0077b6;">
                 <div class="doc-stat-icon" style="background:rgba(0,119,182,0.08);color:#0077b6;"><i data-lucide="clock-arrow-up" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsUpcoming">—</div>
-                  <div class="doc-stat-label">Upcoming</div>
-                </div>
+                <div class="doc-stat-value" id="dsUpcoming">—</div>
+                <div class="doc-stat-label">Upcoming</div>
               </div>
 
               <div class="doc-stat-card" style="--accent-c:#475569;">
                 <div class="doc-stat-icon" style="background:rgba(71,85,105,0.08);color:#475569;"><i data-lucide="history" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsPast">—</div>
-                  <div class="doc-stat-label">Past Visits</div>
-                </div>
+                <div class="doc-stat-value" id="dsPast">—</div>
+                <div class="doc-stat-label">Past Visits</div>
               </div>
 
             </div>
@@ -1416,42 +1483,35 @@
           <!-- SECTION 2: Consultation & Hours -->
           <div style="margin-bottom:1.8rem;">
             <div style="font-size:0.72rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Consultation Metrics</div>
-            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap:0.9rem;">
+            <div class="doc-stats-grid ds-grid-metrics">
 
               <div class="doc-stat-card" style="--accent-c:#10b981;">
                 <div class="doc-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i data-lucide="stethoscope" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsCompleted">—</div>
-                  <div class="doc-stat-label">Completed Consultations</div>
-                </div>
+                <div class="doc-stat-value" id="dsCompleted">—</div>
+                <div class="doc-stat-label">Completed Consultations</div>
               </div>
 
               <div class="doc-stat-card" style="--accent-c:#0077b6;">
                 <div class="doc-stat-icon" style="background:rgba(0,119,182,0.1);color:#0077b6;"><i data-lucide="clock" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsTotalHours">—</div>
-                  <div class="doc-stat-label">Total Working Hours</div>
-                </div>
+                <div class="doc-stat-value" id="dsTotalHours">—</div>
+                <div class="doc-stat-label">Total Working Hours</div>
               </div>
 
               <div class="doc-stat-card" style="--accent-c:#8b5cf6;">
                 <div class="doc-stat-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;"><i data-lucide="briefcase" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsWorkingDays">—</div>
-                  <div class="doc-stat-label">Working Days</div>
-                </div>
+                <div class="doc-stat-value" id="dsWorkingDays">—</div>
+                <div class="doc-stat-label">Working Days</div>
               </div>
 
               <div class="doc-stat-card" style="--accent-c:#f59e0b;">
                 <div class="doc-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i data-lucide="timer" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-body">
-                  <div class="doc-stat-value" id="dsAvgDuration">—</div>
-                  <div class="doc-stat-label">Avg. Consult Duration</div>
-                </div>
+                <div class="doc-stat-value" id="dsAvgDuration">—</div>
+                <div class="doc-stat-label">Avg. Consult Duration</div>
               </div>
 
             </div>
           </div>
+
 
           <!-- Note if no consultation times recorded -->
           <div id="dsNoTimesNote" style="display:none; background:rgba(245,158,11,0.07); border:1px solid rgba(245,158,11,0.2); border-radius:14px; padding:0.9rem 1.1rem; font-size:0.82rem; color:#92400e; display:flex; align-items:flex-start; gap:0.6rem;">
@@ -1644,6 +1704,12 @@
       const targetPanel = document.getElementById(panelName + 'Panel');
       if (targetPanel) {
         targetPanel.classList.add('active');
+      }
+      
+      if (panelName === 'overview') {
+        document.body.classList.remove('non-overview-active');
+      } else {
+        document.body.classList.add('non-overview-active');
       }
       
       document.querySelectorAll('.admin-sidebar-nav-item').forEach(item => item.classList.remove('active'));
