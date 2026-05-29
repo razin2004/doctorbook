@@ -1328,174 +1328,177 @@
         </div>
       </div>
 
-      <!-- Premium Welcome Banner -->
-          <div class="workspace-welcome-banner">
-            <div class="welcome-greet" id="greetingText">Welcome back,</div>
-            <h1 class="welcome-title">{{ session.get('user_name', 'User') }}</h1>
-            <p class="welcome-subtitle">
-              <span class="sidebar-user-badge" style="background: rgba(255,255,255,0.2); color:white;"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Verified User Account</span>
-              &nbsp;·&nbsp;{{ session.get('user_email') }}
-            </p>
-          </div>
+      <!-- PANEL 1: OVERVIEW -->
+      <div id="overviewPanel" class="adminPanel active">
+        <!-- Premium Welcome Banner -->
+        <div class="workspace-welcome-banner">
+          <div class="welcome-greet" id="greetingText">Welcome back,</div>
+          <h1 class="welcome-title">{{ session.get('user_name', 'User') }}</h1>
+          <p class="welcome-subtitle">
+            <span class="sidebar-user-badge" style="background: rgba(255,255,255,0.2); color:white;"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Verified User Account</span>
+            &nbsp;·&nbsp;{{ session.get('user_email') }}
+          </p>
+        </div>
 
-          <!-- Quick Stats Grid -->
-          <div class="stats-grid">
-            <div class="stat-card-premium stat-appointments" onclick="showAdminPanel('bookings')">
-              <div class="stat-card-icon">
-                <i data-lucide="calendar"></i>
-              </div>
-              <div class="stat-card-info">
-                <span class="stat-card-label">Appointments</span>
-                <span class="stat-card-value">{{ active_upcoming_count }}</span>
-                <span class="stat-card-subtext">Upcoming visits</span>
-              </div>
+        <!-- Quick Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card-premium stat-appointments" onclick="showAdminPanel('bookings')">
+            <div class="stat-card-icon">
+              <i data-lucide="calendar"></i>
             </div>
-
-            <div class="stat-card-premium stat-vault" onclick="showAdminPanel('vault')">
-              <div class="stat-card-icon">
-                <i data-lucide="shield-plus"></i>
-              </div>
-              <div class="stat-card-info">
-                <span class="stat-card-label">Medical Records</span>
-                <span class="stat-card-value">{{ prescriptions|length }}</span>
-                <span class="stat-card-subtext">Vault documents</span>
-              </div>
-            </div>
-
-            <!-- Active Tracker Live Status -->
-            <div class="stat-card-premium stat-tracking" onclick="window.location.href='/live-tracking'">
-              <div class="stat-card-icon">
-                <i data-lucide="radio"></i>
-              </div>
-              <div class="stat-card-info">
-                <span class="stat-card-label">Live Queue Status</span>
-                <span class="stat-card-value" id="statsLiveQueue">--</span>
-                <span class="stat-card-subtext" id="statsLiveSub">No active session</span>
-              </div>
-            </div>
-
-            <!-- Past Visits -->
-            <div class="stat-card-premium" onclick="switchBookingTab('past'); showAdminPanel('bookings')" style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.85);">
-              <div class="stat-card-icon" style="color: #64748b; background: #f1f5f9;">
-                <i data-lucide="history"></i>
-              </div>
-              <div class="stat-card-info">
-                <span class="stat-card-label">Past Visits</span>
-                <span class="stat-card-value">{{ past_bookings|length }}</span>
-                <span class="stat-card-subtext">Completed consults</span>
-              </div>
+            <div class="stat-card-info">
+              <span class="stat-card-label">Appointments</span>
+              <span class="stat-card-value">{{ active_upcoming_count }}</span>
+              <span class="stat-card-subtext">Upcoming visits</span>
             </div>
           </div>
 
-          <!-- Quick Actions Grid -->
-          <div class="next-appointment-title">Quick Actions</div>
-          <div class="actions-grid">
-            <div class="action-card-premium act-booking" onclick="window.location.href='/booking'">
-              <div class="action-card-header">
-                <div class="action-card-icon"><i data-lucide="calendar-plus"></i></div>
-                <span class="action-card-link">Book <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
-              </div>
-              <div>
-                <h4 class="action-card-title">New Appointment</h4>
-                <p class="action-card-desc">Schedule a consult with one of our trusted doctors.</p>
-              </div>
+          <div class="stat-card-premium stat-vault" onclick="showAdminPanel('vault')">
+            <div class="stat-card-icon">
+              <i data-lucide="shield-plus"></i>
             </div>
-
-            <div class="action-card-premium act-vault" onclick="openPrescriptionModal()">
-              <div class="action-card-header">
-                <div class="action-card-icon"><i data-lucide="upload-cloud"></i></div>
-                <span class="action-card-link">Add <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
-              </div>
-              <div>
-                <h4 class="action-card-title">Upload Record</h4>
-                <p class="action-card-desc">Store lab results, prescriptions, and health summaries.</p>
-              </div>
-            </div>
-
-            <div class="action-card-premium act-tracking" onclick="window.location.href='/live-tracking'">
-              <div class="action-card-header">
-                <div class="action-card-icon"><i data-lucide="radio"></i></div>
-                <span class="action-card-link">Track <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
-              </div>
-              <div>
-                <h4 class="action-card-title">Live Token Track</h4>
-                <p class="action-card-desc">Check active queues and view real-time patient calls.</p>
-              </div>
+            <div class="stat-card-info">
+              <span class="stat-card-label">Medical Records</span>
+              <span class="stat-card-value">{{ prescriptions|length }}</span>
+              <span class="stat-card-subtext">Vault documents</span>
             </div>
           </div>
 
-          {% set next_active = namespace(b=none) %}
-          {% for b in upcoming_bookings %}
-            {% if next_active.b is none and b.status != 'cancelled' %}
-              {% set next_active.b = b %}
-            {% endif %}
-          {% endfor %}
-          {% if next_active.b is not none %}
-          <!-- Next Appointment Box (Borderless & Integrated without card container) -->
-          <div class="next-appointment-box">
-            <div class="next-appointment-title">Next Appointment Details</div>
-            {% set next_b = next_active.b %}
-            <div class="next-appointment-details-flat" style="display:flex; justify-content:space-between; align-items:center; gap:1.2rem; flex-wrap:wrap; padding: 1.4rem 1.6rem; border-left: 4px solid var(--primary); background: rgba(0, 119, 182, 0.04); border-radius: 16px; {% if next_b.status == 'cancelled' %}opacity:0.65; border-left-color: var(--danger); background: rgba(225, 29, 72, 0.02);{% elif next_b.is_holiday %}border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.03);{% endif %}">
-              <div class="item-info" style="display:flex; flex-direction:column; gap:0.4rem; flex: 1;">
-                {% if next_b.is_holiday %}
-                <div class="holiday-alert" style="margin-bottom:0.6rem; background: transparent; border: none; padding: 0;">
-                  <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#f59e0b;flex-shrink:0;"></i>
-                  <div>
-                    <div style="font-weight:800; color:#d97706; font-size:0.9rem;">Clinic Closed (Holiday)</div>
-                    <div style="font-size:0.82rem; color:#b45309; font-weight:500;">
-                        {{ next_b.holiday_reason }}. Please book another day.
-                    </div>
-                  </div>
-                </div>
-                {% endif %}
-                <div style="font-weight:800; color:var(--slate-900); font-size:1.15rem; display:flex; align-items:center; gap:0.5rem;">
-                  <i data-lucide="stethoscope" style="width:18px;height:18px;color:var(--primary);"></i>
-                  {{ next_b.doctor_name }} 
-                  <span style="font-weight:500;color:var(--slate-600);font-size:0.9rem;">({{ next_b.specialization }})</span>
-                </div>
-                <div class="item-meta" style="display:flex; flex-wrap:wrap; gap:0.8rem; font-size:0.85rem; color:var(--slate-600); margin-top:0.3rem;">
-                  <span class="meta-tag" style="background:var(--slate-100); padding:0.2rem 0.6rem; border-radius:8px; color:var(--slate-700); font-weight:700;"><i data-lucide="user" style="width:12px;height:12px;"></i> {{ next_b.patient_name }}</span>
-                  <span class="meta-tag" style="display:flex; align-items:center; gap:0.25rem;"><i data-lucide="calendar" style="width:14px;height:14px;color:var(--primary);"></i> {{ next_b.date }}</span>
-                  <span class="meta-tag" style="display:flex; align-items:center; gap:0.25rem;"><i data-lucide="clock" style="width:14px;height:14px;color:var(--primary);"></i> {{ next_b.time }}</span>
-                  
-                  {% if next_b.status == 'cancelled' %}
-                  <span style="background:#fee2e2; color:#ef4444; padding:0.2rem 0.6rem; border-radius:8px; font-weight:800; font-size:0.75rem;"><i data-lucide="ban" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> Cancelled</span>
-                  {% else %}
-                  <span class="token-badge" style="padding:0.25rem 0.65rem;">Token #{{ next_b.token }}</span>
-                  {% endif %}
-                  {% if next_b.is_skipped %}
-                  <span style="background:#fef3c7; color:#d97706; padding:0.2rem 0.6rem; border-radius:8px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
-                  {% endif %}
-                  
-                  {% if next_b.status != 'cancelled' and next_b.live_status %}
-                  <div class="live-sync-badge {% if next_b.live_status == 'idle' %}idle{% endif %}" 
-                       data-live-doctor="{{ next_b.doctor_name|lower|trim }}" 
-                       data-live-spec="{{ next_b.specialization|lower|trim }}"
-                       data-sched-start="{{ next_b.sched_start }}">
-                    {% if next_b.live_status == 'active' %}
-                      <span class="blinking-dot-small"></span>
-                      <span class="live-text">Live: Calling #{{ next_b.live_token }}</span>
-                    {% elif next_b.live_status == 'idle' and next_b.is_start_time_passed %}
-                      <i data-lucide="clock" style="width:11px;height:11px;"></i>
-                      <span class="live-text">Awaiting Start</span>
-                    {% elif next_b.live_status == 'idle' %}
-                      <i data-lucide="calendar" style="width:11px;height:11px;"></i>
-                      <span class="live-text">Starts at {{ next_b.sched_start }}</span>
-                    {% endif %}
-                  </div>
-                  {% endif %}
-                </div>
-              </div>
-              <div class="item-actions" style="flex-shrink:0;">
-                {% if next_b.is_holiday %}
-                <a href="/booking" id="reschedBtn" class="btn btn-primary" style="border-radius:12px; padding:0.5rem 1rem;"><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Reschedule</a>
-                {% endif %}
-              </div>
+          <!-- Active Tracker Live Status -->
+          <div class="stat-card-premium stat-tracking" onclick="window.location.href='/live-tracking'">
+            <div class="stat-card-icon">
+              <i data-lucide="radio"></i>
+            </div>
+            <div class="stat-card-info">
+              <span class="stat-card-label">Live Queue Status</span>
+              <span class="stat-card-value" id="statsLiveQueue">--</span>
+              <span class="stat-card-subtext" id="statsLiveSub">No active session</span>
             </div>
           </div>
+
+          <!-- Past Visits -->
+          <div class="stat-card-premium" onclick="switchBookingTab('past'); showAdminPanel('bookings')" style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.85);">
+            <div class="stat-card-icon" style="color: #64748b; background: #f1f5f9;">
+              <i data-lucide="history"></i>
+            </div>
+            <div class="stat-card-info">
+              <span class="stat-card-label">Past Visits</span>
+              <span class="stat-card-value">{{ past_bookings|length }}</span>
+              <span class="stat-card-subtext">Completed consults</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions Grid -->
+        <div class="next-appointment-title">Quick Actions</div>
+        <div class="actions-grid">
+          <div class="action-card-premium act-booking" onclick="window.location.href='/booking'">
+            <div class="action-card-header">
+              <div class="action-card-icon"><i data-lucide="calendar-plus"></i></div>
+              <span class="action-card-link">Book <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+            </div>
+            <div>
+              <h4 class="action-card-title">New Appointment</h4>
+              <p class="action-card-desc">Schedule a consult with one of our trusted doctors.</p>
+            </div>
+          </div>
+
+          <div class="action-card-premium act-vault" onclick="openPrescriptionModal()">
+            <div class="action-card-header">
+              <div class="action-card-icon"><i data-lucide="upload-cloud"></i></div>
+              <span class="action-card-link">Add <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+            </div>
+            <div>
+              <h4 class="action-card-title">Upload Record</h4>
+              <p class="action-card-desc">Store lab results, prescriptions, and health summaries.</p>
+            </div>
+          </div>
+
+          <div class="action-card-premium act-tracking" onclick="window.location.href='/live-tracking'">
+            <div class="action-card-header">
+              <div class="action-card-icon"><i data-lucide="radio"></i></div>
+              <span class="action-card-link">Track <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+            </div>
+            <div>
+              <h4 class="action-card-title">Live Token Track</h4>
+              <p class="action-card-desc">Check active queues and view real-time patient calls.</p>
+            </div>
+          </div>
+        </div>
+
+        {% set next_active = namespace(b=none) %}
+        {% for b in upcoming_bookings %}
+          {% if next_active.b is none and b.status != 'cancelled' %}
+            {% set next_active.b = b %}
           {% endif %}
+        {% endfor %}
+        {% if next_active.b is not none %}
+        <!-- Next Appointment Box (Borderless & Integrated without card container) -->
+        <div class="next-appointment-box">
+          <div class="next-appointment-title">Next Appointment Details</div>
+          {% set next_b = next_active.b %}
+          <div class="next-appointment-details-flat" style="display:flex; justify-content:space-between; align-items:center; gap:1.2rem; flex-wrap:wrap; padding: 1.4rem 1.6rem; border-left: 4px solid var(--primary); background: rgba(0, 119, 182, 0.04); border-radius: 16px; {% if next_b.status == 'cancelled' %}opacity:0.65; border-left-color: var(--danger); background: rgba(225, 29, 72, 0.02);{% elif next_b.is_holiday %}border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.03);{% endif %}">
+            <div class="item-info" style="display:flex; flex-direction:column; gap:0.4rem; flex: 1;">
+              {% if next_b.is_holiday %}
+              <div class="holiday-alert" style="margin-bottom:0.6rem; background: transparent; border: none; padding: 0;">
+                <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#f59e0b;flex-shrink:0;"></i>
+                <div>
+                  <div style="font-weight:800; color:#d97706; font-size:0.9rem;">Clinic Closed (Holiday)</div>
+                  <div style="font-size:0.82rem; color:#b45309; font-weight:500;">
+                      {{ next_b.holiday_reason }}. Please book another day.
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+              <div style="font-weight:800; color:var(--slate-900); font-size:1.15rem; display:flex; align-items:center; gap:0.5rem;">
+                <i data-lucide="stethoscope" style="width:18px;height:18px;color:var(--primary);"></i>
+                {{ next_b.doctor_name }} 
+                <span style="font-weight:500;color:var(--slate-600);font-size:0.9rem;">({{ next_b.specialization }})</span>
+              </div>
+              <div class="item-meta" style="display:flex; flex-wrap:wrap; gap:0.8rem; font-size:0.85rem; color:var(--slate-600); margin-top:0.3rem;">
+                <span class="meta-tag" style="background:var(--slate-100); padding:0.2rem 0.6rem; border-radius:8px; color:var(--slate-700); font-weight:700;"><i data-lucide="user" style="width:12px;height:12px;"></i> {{ next_b.patient_name }}</span>
+                <span class="meta-tag" style="display:flex; align-items:center; gap:0.25rem;"><i data-lucide="calendar" style="width:14px;height:14px;color:var(--primary);"></i> {{ next_b.date }}</span>
+                <span class="meta-tag" style="display:flex; align-items:center; gap:0.25rem;"><i data-lucide="clock" style="width:14px;height:14px;color:var(--primary);"></i> {{ next_b.time }}</span>
+                
+                {% if next_b.status == 'cancelled' %}
+                <span style="background:#fee2e2; color:#ef4444; padding:0.2rem 0.6rem; border-radius:8px; font-weight:800; font-size:0.75rem;"><i data-lucide="ban" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> Cancelled</span>
+                {% else %}
+                <span class="token-badge" style="padding:0.25rem 0.65rem;">Token #{{ next_b.token }}</span>
+                {% endif %}
+                {% if next_b.is_skipped %}
+                <span style="background:#fef3c7; color:#d97706; padding:0.2rem 0.6rem; border-radius:8px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
+                {% endif %}
+                
+                {% if next_b.status != 'cancelled' and next_b.live_status %}
+                <div class="live-sync-badge {% if next_b.live_status == 'idle' %}idle{% endif %}" 
+                     data-live-doctor="{{ next_b.doctor_name|lower|trim }}" 
+                     data-live-spec="{{ next_b.specialization|lower|trim }}"
+                     data-sched-start="{{ next_b.sched_start }}">
+                  {% if next_b.live_status == 'active' %}
+                    <span class="blinking-dot-small"></span>
+                    <span class="live-text">Live: Calling #{{ next_b.live_token }}</span>
+                  {% elif next_b.live_status == 'idle' and next_b.is_start_time_passed %}
+                    <i data-lucide="clock" style="width:11px;height:11px;"></i>
+                    <span class="live-text">Awaiting Start</span>
+                  {% elif next_b.live_status == 'idle' %}
+                    <i data-lucide="calendar" style="width:11px;height:11px;"></i>
+                    <span class="live-text">Starts at {{ next_b.sched_start }}</span>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="item-actions" style="flex-shrink:0;">
+              {% if next_b.is_holiday %}
+              <a href="/booking" id="reschedBtn" class="btn btn-primary" style="border-radius:12px; padding:0.5rem 1rem;"><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Reschedule</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
 
-        <!-- PANEL 2: APPOINTMENTS (Single Large Glass Container Panel) -->
+      <!-- PANEL 2: APPOINTMENTS (Single Large Glass Container Panel) -->
         <div id="bookingsPanel" class="adminPanel glass-card-premium">
           <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid rgba(0,119,182,0.1); padding-bottom: 0.8rem; margin-bottom: 1.2rem;">
             <h2 style="margin:0; text-align:left; justify-content:flex-start;"><i data-lucide="calendar" style="width:18px;height:18px;"></i> My Appointments</h2>
@@ -1808,12 +1811,11 @@
       // Hide all switchable panels
       document.querySelectorAll('.adminPanel').forEach(p => p.classList.remove('active'));
       
-      // If not overview, activate the target panel
-      if (panelName !== 'overview') {
-        const targetPanel = document.getElementById(panelName + 'Panel');
-        if (targetPanel) targetPanel.classList.add('active');
+      // Activate the target panel
+      const targetPanel = document.getElementById(panelName + 'Panel');
+      if (targetPanel) {
+        targetPanel.classList.add('active');
       }
-      // overview = no panel shown (welcome banner + stats always visible)
       
       document.querySelectorAll('.admin-sidebar-nav-item').forEach(item => item.classList.remove('active'));
       
