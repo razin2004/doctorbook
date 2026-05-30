@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
   <link rel="manifest" href="/static/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1185,13 +1187,236 @@
       .vault-doctor { font-size: 0.95rem; }
       .vault-btn { font-size: 0.75rem; padding: 0.45rem 0.6rem; }
     }
+
+    html, body {
+      height: auto !important;
+      min-height: 100% !important;
+    }
+
+    /* CSS Overrides for Dashboard Overview Panel and Referrals */
+    #overviewPanel {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    .top-bar {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 1000 !important;
+    }
+
+    .referrals-container {
+      margin-top: 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .referral-card-premium {
+      background: rgba(2, 132, 199, 0.06) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border: 1px solid rgba(2, 132, 199, 0.15) !important;
+      border-radius: 20px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 30px rgba(2, 132, 199, 0.04);
+    }
+
+    .referral-card-premium:hover {
+      background: rgba(2, 132, 199, 0.09) !important;
+      border-color: rgba(2, 132, 199, 0.25) !important;
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px rgba(2, 132, 199, 0.08);
+    }
+
+    .referral-card-header {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      max-width: calc(100% - 24px);
+    }
+
+    .referral-icon-wrapper {
+      background: rgba(2, 132, 199, 0.12);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0284c7;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(2, 132, 199, 0.1);
+    }
+
+    .referral-info {
+      flex-grow: 1;
+    }
+
+    .referral-title {
+      margin: 0 0 0.25rem 0;
+      color: #0284c7;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .referral-desc {
+      margin: 0;
+      color: #334155;
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .referral-notes {
+      margin-top: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.7);
+      border-left: 3px solid #0284c7;
+      border-radius: 6px 12px 12px 6px;
+      font-size: 0.85rem;
+      color: #475569;
+      font-style: italic;
+      font-weight: 500;
+      line-height: 1.4;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.01);
+    }
+
+    .referral-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      width: 100%;
+    }
+
+    .referral-dismiss-btn {
+      position: absolute;
+      top: 1.25rem;
+      right: 1.25rem;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      border-radius: 50%;
+      margin-top: 0 !important;
+      box-shadow: none !important;
+    }
+
+    .referral-dismiss-btn:hover {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    @media (max-width: 600px) {
+      .referral-card-premium {
+        padding: 1.1rem 1.1rem !important;
+        border-radius: 16px;
+        gap: 0.9rem;
+      }
+      .referral-card-header {
+        max-width: 100%;
+        gap: 0.75rem;
+      }
+      .referral-icon-wrapper {
+        width: 38px;
+        height: 38px;
+      }
+      .referral-icon-wrapper i,
+      .referral-icon-wrapper svg {
+        width: 18px;
+        height: 18px;
+      }
+      .referral-title {
+        font-size: 0.95rem;
+      }
+      .referral-desc {
+        font-size: 0.85rem;
+      }
+      .referral-notes {
+        font-size: 0.8rem;
+        padding: 0.6rem 0.8rem;
+      }
+      .referral-actions {
+        flex-direction: row;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        width: 100%;
+      }
+      .referral-actions .btn {
+        width: auto !important;
+        flex: 1;
+        max-width: 50%;
+        font-size: 0.75rem !important;
+        padding: 0.35rem 0.75rem !important;
+        height: 34px !important;
+        min-width: 0 !important;
+        justify-content: center;
+        margin: 0 !important;
+        border-radius: 10px !important;
+      }
+      .referral-dismiss-btn {
+        top: 0.9rem;
+        right: 0.9rem;
+      }
+    }
+
+    /* Referral Status Tags inside Booking Panels */
+    .referral-status-tag {
+      font-weight: 700;
+      font-size: 0.72rem;
+      border-radius: 6px;
+      padding: 2.5px 6.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3.5px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+    .referral-status-tag:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0, 119, 182, 0.1);
+      filter: brightness(0.96);
+    }
+    .referral-status-tag:active {
+      transform: translateY(0);
+    }
+    .referral-status-tag.status-pending {
+      background: rgba(2, 132, 199, 0.08);
+      color: #0284c7;
+      border: 1px solid rgba(2, 132, 199, 0.15);
+    }
+    .referral-status-tag.status-booked {
+      background: rgba(16, 185, 129, 0.08);
+      color: #059669;
+      border: 1px solid rgba(16, 185, 129, 0.15);
+    }
+    .referral-status-tag.status-dismissed {
+      background: rgba(100, 116, 139, 0.08);
+      color: #64748b;
+      border: 1px solid rgba(100, 116, 139, 0.15);
+    }
   </style>
 </head>
 <body class="bg-image">
   <div id="pullIndicator">
     <div class="pull-indicator-content"><i data-lucide="refresh-cw"></i></div>
   </div>
-  <div id="globalToast"></div>
   <div class="bg-blur"></div>
 
   <!-- HEADER -->
@@ -1270,7 +1495,7 @@
               </li>
               <li>
                 <div class="admin-sidebar-nav-item" data-panel="vault" onclick="showAdminPanel('vault', this)">
-                  <i data-lucide="shield-plus"></i>
+                  <i data-lucide="folder-open"></i>
                   <span>Medical Vault</span>
                   <span class="nav-badge-count">{{ prescriptions|length }}</span>
                 </div>
@@ -1339,6 +1564,49 @@
             &nbsp;·&nbsp;{{ session.get('user_email') }}
           </p>
         </div>
+
+        {% if referrals %}
+        <div class="referrals-container">
+          {% for ref in referrals %}
+          <div class="referral-card-premium" id="referral-card-{{ ref.id }}"
+               data-ref-id="{{ ref.id }}"
+               data-patient="{{ ref.patient_name|e }}"
+               data-to-spec="{{ ref.to_specialization|e }}">
+            <!-- X button: soft-hide (stays pending, auto-dismisses after 5 days) -->
+            <button class="referral-dismiss-btn" onclick="hideReferralCard({{ ref.id }})" title="Hide (pending for 5 days)">
+              <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+            </button>
+            
+            <div class="referral-card-header">
+              <div class="referral-icon-wrapper">
+                <i data-lucide="stethoscope" style="width: 22px; height: 22px;"></i>
+              </div>
+              <div class="referral-info">
+                <h4 class="referral-title">Specialist Referral Recommended</h4>
+                <p class="referral-desc">
+                  <strong style="color: #0f172a;">{{ ref.from_doctor }}</strong> has referred <strong style="color: #0f172a;">{{ ref.patient_name or 'you' }}</strong> to the <strong style="color: #0f172a;">{{ ref.to_specialization }}</strong> department for specialist consultation.
+                </p>
+                {% if ref.notes %}
+                <div class="referral-notes">
+                  "{{ ref.notes }}"
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            
+            <div class="referral-actions">
+              <!-- Dismiss button: permanently marks as dismissed in DB -->
+              <button class="btn btn-outline" onclick="dismissReferral({{ ref.id }})" style="color:#e11d48; border-color:#fecaca;">
+                <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Dismiss
+              </button>
+              <button class="btn btn-primary" onclick="bookReferral('{{ ref.to_specialization|e }}', '{{ ref.patient_name|e }}', '')">
+                <i data-lucide="calendar" style="width: 14px; height: 14px;"></i> Book Specialist
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
 
         <!-- Quick Stats Grid -->
         <div class="stats-grid">
@@ -1465,7 +1733,7 @@
                 {% else %}
                 <span class="token-badge" style="padding:0.25rem 0.65rem;">Token #{{ next_b.token }}</span>
                 {% endif %}
-                {% if next_b.is_skipped %}
+                {% if next_b.is_skipped and next_b.status != 'cancelled' %}
                 <span style="background:#fef3c7; color:#d97706; padding:0.2rem 0.6rem; border-radius:8px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
                 {% endif %}
                 
@@ -1499,7 +1767,7 @@
       </div>
 
       <!-- PANEL 2: APPOINTMENTS (Single Large Glass Container Panel) -->
-        <div id="bookingsPanel" class="adminPanel glass-card-premium">
+        <div id="bookingsPanel" class="adminPanel glass-card-premium" style="position: relative;">
           <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid rgba(0,119,182,0.1); padding-bottom: 0.8rem; margin-bottom: 1.2rem;">
             <h2 style="margin:0; text-align:left; justify-content:flex-start;"><i data-lucide="calendar" style="width:18px;height:18px;"></i> My Appointments</h2>
             <a href="/booking" class="btn btn-primary section-action-btn" style="margin:0; min-width:auto; border-radius:12px; padding:0.5rem 0.9rem;"><i data-lucide="plus" style="width:14px;height:14px;"></i> <span>New Booking</span></a>
@@ -1546,7 +1814,7 @@
                       {% else %}
                       <span class="token-badge">Token #{{ b.token }}</span>
                       {% endif %}
-                      {% if b.is_skipped %}
+                      {% if b.is_skipped and b.status != 'cancelled' %}
                       <span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
                       {% endif %}
                       
@@ -1611,8 +1879,20 @@
                       {% if b.status == 'cancelled' %}
                       <span style="background:#fee2e2; color:#ef4444; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem;"><i data-lucide="ban" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> {% if b.cancelled_by == 'admin' %}Cancelled by Admin{% else %}Cancelled{% endif %}</span>
                       {% endif %}
-                      {% if b.is_skipped %}
+                      {% if b.is_skipped and b.status != 'cancelled' %}
                       <span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
+                      {% endif %}
+                      {% if b.referral %}
+                      <span class="referral-status-tag ref-detail-trigger {% if b.referral.status == 'booked' %}status-booked{% elif b.referral.status == 'dismissed' %}status-dismissed{% else %}status-pending{% endif %}"
+                            data-patient="{{ b.patient_name|e }}"
+                            data-from-doctor="{{ b.referral.from_doctor|e }}"
+                            data-to-spec="{{ b.referral.to_specialization|e }}"
+                            data-date="{{ (b.referral.created_at.strftime('%Y-%m-%d') if b.referral.created_at else b.date)|e }}"
+                            data-status="{{ b.referral.status|e }}"
+                            data-notes="{{ (b.referral.notes or '')|e }}">
+                        <i data-lucide="arrow-up-right" style="width: 12px; height: 12px;"></i>
+                        Referred to {{ b.referral.to_specialization }}
+                      </span>
                       {% endif %}
                     </div>
                   </div>
@@ -1631,7 +1911,7 @@
         <!-- PANEL 3: MEDICAL VAULT (Single Large Glass Container Panel) -->
         <div id="vaultPanel" class="adminPanel glass-card-premium">
           <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid rgba(0,119,182,0.1); padding-bottom: 0.8rem; margin-bottom: 1.25rem;">
-            <h2 style="margin:0; text-align:left; justify-content:flex-start;"><i data-lucide="shield-plus" style="width:18px;height:18px;color:#10b981;"></i> Medical Vault</h2>
+            <h2 style="margin:0; text-align:left; justify-content:flex-start;"><i data-lucide="folder-open" style="width:18px;height:18px;color:#10b981;"></i> Medical Vault</h2>
             <button class="btn btn-primary section-action-btn" onclick="openPrescriptionModal()" style="margin:0; min-width:auto; border-radius:12px; padding:0.5rem 0.9rem; background:#10b981; box-shadow:0 4px 12px rgba(16,185,129,0.2);">
               <i data-lucide="upload-cloud" style="width:14px;height:14px;"></i> <span>Add Record</span>
             </button>
@@ -1745,16 +2025,77 @@
   </div>
 
   <!-- Universal Confirmation Modal -->
+    <!-- Universal Confirmation Modal -->
   <div class="modal-overlay" id="universalModal">
-    <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-      <div class="modal-icon-container" id="unvIconContainer" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
-        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+    <div class="modal-content">
+      <div class="modal-icon-container" id="unvIconContainer">
+        <i data-lucide="help-circle"></i>
       </div>
-      <h3 id="unvTitle" style="margin: 0 auto 0.5rem auto; color: #0f172a; font-size: 1.4rem; font-weight: 800; text-align: center; width: 100%;">Confirm Action</h3>
-      <p id="unvMessage" style="color: #64748b; font-size: 1.05rem; margin: 0 auto 2.2rem auto; line-height: 1.6; text-align: center; width: 100%;">Are you sure you want to proceed?</p>
-      <div class="modal-btns" style="display: flex; gap: 1.2rem; justify-content: center; width: 100%;">
-        <button class="btn btn-outline" onclick="closeUniversalModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Cancel</button>
-        <button id="unvConfirmBtn" class="btn btn-primary" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Confirm</button>
+      <h3 id="unvTitle">Confirm Action</h3>
+      <p id="unvMessage">Are you sure you want to proceed with this action?</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" onclick="closeUniversalModal()">Cancel</button>
+        <button id="unvConfirmBtn" class="btn btn-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Referral Detail Modal -->
+  <div class="modal-overlay" id="referralDetailModal">
+    <div class="modal-content" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; max-width: 480px; padding: 2.2rem 2.0rem; border: 1px solid rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); border-radius: 24px;">
+      <button class="pres-close-btn" onclick="closeReferralDetailModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0.25rem;" title="Close"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; width: 100%;">
+        <div style="background: rgba(79, 70, 229, 0.1); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #4f46e5; flex-shrink: 0;">
+          <i data-lucide="arrow-up-right" style="width: 22px; height: 22px;"></i>
+        </div>
+        <div>
+          <h3 style="margin: 0; color: #0f172a; font-size: 1.2rem; font-weight: 800;">Specialist Referral</h3>
+          <p style="margin: 0; font-size: 0.8rem; color: #64748b; font-weight: 500;">Referred for specialist consultation</p>
+        </div>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 1.1rem; width: 100%; margin-bottom: 1.8rem;">
+        <div>
+          <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.2rem;">Patient Name</span>
+          <span id="refDetPatientName" style="color: #0f172a; font-weight: 700; font-size: 0.95rem;">-</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.2rem;">Referring Doctor</span>
+            <span id="refDetFromDoctor" style="color: #0f172a; font-weight: 700; font-size: 0.95rem;">-</span>
+          </div>
+          <div>
+            <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.2rem;">Department / Specialty</span>
+            <span id="refDetToSpecialization" style="color: #4f46e5; font-weight: 800; font-size: 0.95rem;">-</span>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div>
+            <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.2rem;">Referral Date</span>
+            <span id="refDetDate" style="color: #0f172a; font-weight: 600; font-size: 0.9rem;">-</span>
+          </div>
+          <div>
+            <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.2rem;">Referral Status</span>
+            <span id="refDetStatus" style="display: inline-block; padding: 1.5px 5.5px; border-radius: 5px; font-weight: 800; font-size: 0.7rem; text-transform: uppercase;">-</span>
+          </div>
+        </div>
+        
+        <div>
+          <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.3rem;">Clinical Reason &amp; Notes</span>
+          <div id="refDetNotesContainer" style="background: rgba(248, 250, 252, 0.8); border: 1.5px solid #f1f5f9; border-radius: 12px; padding: 0.8rem 1rem; color: #475569; font-size: 0.9rem; line-height: 1.5; min-height: 60px; max-height: 120px; overflow-y: auto;">
+            <span id="refDetNotes">-</span>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 0.8rem; width: 100%; justify-content: flex-end;">
+        <!-- 'Book Referral' shown only when status is pending -->
+        <button id="refDetBookBtn" class="btn btn-primary" onclick="bookFromReferralModal()" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3); border: none; border-radius: 12px; padding: 0.65rem 1.4rem; margin: 0; height: auto; display: none;">
+          <i data-lucide="calendar-plus" style="width:15px;height:15px;"></i> Book Referral
+        </button>
+        <button id="refDetCloseBtn" class="btn btn-primary" onclick="closeReferralDetailModal()" style="background: #4f46e5; box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25); border: none; border-radius: 12px; padding: 0.65rem 1.4rem; margin: 0; min-width: 90px; height: auto;">Close</button>
       </div>
     </div>
   </div>
@@ -1887,106 +2228,284 @@
       document.getElementById('panel-' + tab).classList.add('active');
     }
 
-    // ── Universal Modal ──
+        // ─── Unified Modal System ───
     let activeModalAction = null;
-    function openUniversalModal(title, message, actionText, actionFn, isDanger = false) {
-      document.getElementById('unvTitle').textContent = title;
-      document.getElementById('unvMessage').textContent = message;
-      const btn = document.getElementById('unvConfirmBtn');
-      btn.textContent = actionText;
-      btn.style.background = isDanger ? '#e11d48' : '#0077b6';
-      btn.style.boxShadow = isDanger ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+    
+    window.openUniversalModal = function(titleOrId, messageOrTitle, actionTextOrMessage, actionFnOrText, isDangerOrFn, isDanger) {
+      const modal = document.getElementById('universalModal');
+      if (!modal) return;
       
-      const container = document.getElementById('unvIconContainer');
-      const iconName = isDanger ? 'alert-triangle' : 'help-circle';
-      container.innerHTML = `<i data-lucide="${iconName}" style="width: 32px; height: 32px;"></i>`;
+      let id = 'info';
+      let title, message, actionText, actionFn, isDangerVal = false;
       
-      if(isDanger) {
-         container.style.color = '#e11d48';
-         container.style.background = 'rgba(225, 29, 72, 0.1)';
+      // Handle variable signatures
+      if (['success', 'warning', 'danger', 'info', 'universalModal', 'delete', 'logout'].includes(titleOrId)) {
+        id = titleOrId;
+        title = messageOrTitle;
+        message = actionTextOrMessage;
+        actionText = actionFnOrText;
+        actionFn = isDangerOrFn;
+        isDangerVal = isDanger || false;
       } else {
-         container.style.color = '#0077b6';
-         container.style.background = 'rgba(0, 119, 182, 0.1)';
+        title = titleOrId;
+        message = messageOrTitle;
+        actionText = actionTextOrMessage;
+        actionFn = actionFnOrText;
+        isDangerVal = isDangerOrFn || false;
       }
-      lucide.createIcons();
+      
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
+      
+      // Update Title & Message
+      const titleEl = document.getElementById('unvTitle') || modal.querySelector('h3');
+      const msgEl = document.getElementById('unvMessage') || modal.querySelector('p');
+      if (titleEl) titleEl.textContent = title;
+      if (msgEl) msgEl.innerHTML = message;
+      
+      // Update Confirm Button
+      const btn = document.getElementById('unvConfirmBtn') || modal.querySelector('.confirm-btn');
+      if (btn) {
+        btn.textContent = actionText;
+        btn.style.background = isDangerVal ? '#e11d48' : '#0077b6';
+        btn.style.boxShadow = isDangerVal ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      }
+      
+      // Update Icon
+      const container = document.getElementById('unvIconContainer') || modal.querySelector('.modal-icon-container');
+      if (container) {
+        let iconName = 'help-circle';
+        if (id === 'success') {
+          iconName = 'check-circle';
+          container.style.color = '#10b981';
+        } else if (id === 'warning') {
+          iconName = 'alert-circle';
+          container.style.color = '#f59e0b';
+        } else if (isDangerVal) {
+          iconName = 'alert-triangle';
+          container.style.color = '#e11d48';
+        } else {
+          container.style.color = '#0077b6';
+        }
+        container.style.background = 'transparent';
+        container.style.border = 'none';
+        container.style.boxShadow = 'none';
+        container.style.borderRadius = '0';
+        container.style.padding = '0';
+        container.innerHTML = `<i data-lucide="${iconName}"></i>`;
+      }
+      
       activeModalAction = actionFn;
-      document.getElementById('universalModal').style.display = 'flex';
-    }
-    function closeUniversalModal() {
-      document.getElementById('universalModal').style.display = 'none';
+      modal.style.display = 'flex';
+      if (window.lucide) lucide.createIcons();
+    };
+    
+    window.closeUniversalModal = function() {
+      const modal = document.getElementById('universalModal');
+      if (modal) modal.style.display = 'none';
       activeModalAction = null;
-    }
-    document.getElementById('unvConfirmBtn').addEventListener('click', () => {
+      
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal?.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
+    };
+    
+    // Setup aliases
+    window.openModal = window.openUniversalModal;
+    window.closeModal = window.closeUniversalModal;
+    window.handleConfirm = function() {
       if (activeModalAction) activeModalAction();
       closeUniversalModal();
+    };
+    
+    // Register event listener for confirmation button
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('unvConfirmBtn') || document.querySelector('#universalModal .confirm-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (activeModalAction) activeModalAction();
+          closeUniversalModal();
+        });
+      }
     });
 
-    // ── Toast ──
-    function showToast(msg, type='success') {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      toast.className = 'toast-' + type;
-      toast.innerHTML = (type === 'success' ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
-      lucide.createIcons();
-      toast.style.display = 'flex';
-      toast.style.transform = 'translateX(-50%)';
-      toast.style.opacity = '1';
-      if (window.toastTimeout) clearTimeout(window.toastTimeout);
-      window.toastTimeout = setTimeout(() => toast.style.display = 'none', 3500);
+
+    // ── Dismiss Referral ──
+    async function dismissReferral(referralId) {
+      try {
+        const res = await fetch('/api/dismiss_referral', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referral_id: referralId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.msg, 'success');
+          const card = document.getElementById(`referral-card-${referralId}`);
+          if (card) {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(-20px)';
+            setTimeout(() => {
+              card.remove();
+              const container = document.querySelector('.referrals-container');
+              if (container && container.children.length === 0) {
+                container.remove();
+              }
+            }, 300);
+          }
+        } else {
+          showToast(data.msg, 'error');
+        }
+      } catch (err) {
+        console.error('Error dismissing referral:', err);
+        showToast('Connection error. Please try again.', 'error');
+      }
     }
 
-    (function initToastSwipeDismiss() {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      let startX = 0, startY = 0;
-      let isDragging = false;
-      let diffX = 0, diffY = 0;
+    // Store referral context for modal booking action
+    let _refModalPatient = '', _refModalSpec = '', _refModalAge = '';
 
-      toast.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        isDragging = true;
-        toast.style.transition = 'none';
-      }, { passive: true });
+    function openReferralDetailModal(patientName, fromDoctor, toSpecialization, dateStr, status, notes) {
+      // Store context for potential booking
+      _refModalPatient = patientName || '';
+      _refModalSpec = toSpecialization || '';
 
-      toast.addEventListener('touchmove', (e) => {
-        if (!isDragging || e.touches.length !== 1) return;
-        diffX = e.touches[0].clientX - startX;
-        diffY = e.touches[0].clientY - startY;
-        let moveX = diffX;
-        let moveY = diffY < 0 ? diffY : 0;
-        const dist = Math.sqrt(diffX * diffX + (diffY < 0 ? diffY * diffY : 0));
-        const opacity = Math.max(0, 1 - dist / 150);
-        toast.style.transform = `translate(calc(-50% + ${moveX}px), ${moveY}px)`;
-        toast.style.opacity = opacity;
-      }, { passive: true });
+      document.getElementById('refDetPatientName').textContent = patientName || '-';
+      document.getElementById('refDetFromDoctor').textContent = fromDoctor || '-';
+      document.getElementById('refDetToSpecialization').textContent = toSpecialization || '-';
+      document.getElementById('refDetDate').textContent = dateStr || '-';
+      
+      const statusEl = document.getElementById('refDetStatus');
+      statusEl.textContent = status || 'pending';
+      statusEl.className = 'referral-status-tag';
+      if (status === 'booked') {
+        statusEl.classList.add('status-booked');
+      } else if (status === 'dismissed') {
+        statusEl.classList.add('status-dismissed');
+      } else {
+        statusEl.classList.add('status-pending');
+      }
+      
+      const notesEl = document.getElementById('refDetNotes');
+      if (notes && notes.trim() !== '') {
+        notesEl.textContent = notes;
+        notesEl.style.fontStyle = 'normal';
+        notesEl.style.color = '#475569';
+      } else {
+        notesEl.textContent = 'No additional notes provided.';
+        notesEl.style.fontStyle = 'italic';
+        notesEl.style.color = '#94a3b8';
+      }
 
-      toast.addEventListener('touchend', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        toast.style.transition = 'all 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
-        const threshold = 60;
-        if (Math.abs(diffX) > threshold || diffY < -threshold) {
-          if (Math.abs(diffX) > threshold) {
-            toast.style.transform = `translate(calc(-50% + ${diffX > 0 ? 100 : -100}vw), 0)`;
-          } else {
-            toast.style.transform = `translate(-50%, -150px)`;
-          }
-          toast.style.opacity = '0';
-          setTimeout(() => {
-            toast.style.display = 'none';
-            toast.style.transform = 'translateX(-50%)';
-            toast.style.opacity = '1';
-          }, 300);
+      // Show "Book Referral" for pending, "Close" for booked/dismissed
+      const bookBtn = document.getElementById('refDetBookBtn');
+      const closeBtn = document.getElementById('refDetCloseBtn');
+      if (status === 'pending') {
+        bookBtn.style.display = 'flex';
+        closeBtn.textContent = 'Maybe Later';
+        closeBtn.style.background = '#f1f5f9';
+        closeBtn.style.color = '#64748b';
+        closeBtn.style.boxShadow = 'none';
+      } else {
+        bookBtn.style.display = 'none';
+        closeBtn.textContent = 'Close';
+        closeBtn.style.background = '#4f46e5';
+        closeBtn.style.color = '#fff';
+        closeBtn.style.boxShadow = '0 8px 20px rgba(79, 70, 229, 0.25)';
+      }
+      
+      const modal = document.getElementById('referralDetailModal');
+      modal.style.display = 'flex';
+      lucide.createIcons(modal);
+    }
+
+    function closeReferralDetailModal() {
+      document.getElementById('referralDetailModal').style.display = 'none';
+    }
+
+    // Navigate to booking page with patient data pre-filled via URL params + sessionStorage
+    function bookReferral(specialization, patientName, age) {
+      if (patientName) sessionStorage.setItem('ref_prefill_name', patientName);
+      if (age) sessionStorage.setItem('ref_prefill_age', age);
+      const url = '/booking?specialization=' + encodeURIComponent(specialization);
+      window.location.href = url;
+    }
+
+    // Called from modal "Book Referral" button
+    function bookFromReferralModal() {
+      closeReferralDetailModal();
+      bookReferral(_refModalSpec, _refModalPatient, _refModalAge);
+    }
+
+    // ── Soft-hide referral card (keeps pending in DB, auto-dismisses after 5 days) ──
+    function hideReferralCard(refId) {
+      const card = document.getElementById(`referral-card-${refId}`);
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(-20px)';
+        setTimeout(() => {
+          card.remove();
+          const container = document.querySelector('.referrals-container');
+          if (container && container.children.length === 0) container.remove();
+        }, 300);
+      }
+      // Store hide timestamp in localStorage
+      const key = `ref_hidden_${refId}`;
+      localStorage.setItem(key, Date.now().toString());
+    }
+
+    // ── On page load: apply hidden referrals and auto-dismiss those > 5 days old ──
+    (function applyHiddenReferrals() {
+      const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+      document.querySelectorAll('.referral-card-premium[data-ref-id]').forEach(card => {
+        const refId = card.dataset.refId;
+        const key = `ref_hidden_${refId}`;
+        const hiddenAt = localStorage.getItem(key);
+        if (!hiddenAt) return;
+
+        const elapsed = Date.now() - parseInt(hiddenAt, 10);
+        if (elapsed >= FIVE_DAYS_MS) {
+          // Auto-dismiss after 5 days
+          localStorage.removeItem(key);
+          fetch('/api/dismiss_referral', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ referral_id: parseInt(refId, 10) })
+          }).catch(() => {});
+          card.remove();
         } else {
-          toast.style.transform = 'translateX(-50%)';
-          toast.style.opacity = '1';
+          // Still within 5 days – just hide it
+          card.style.display = 'none';
         }
-        diffX = 0;
-        diffY = 0;
-      }, { passive: true });
+      });
+      // Clean up container if empty
+      const container = document.querySelector('.referrals-container');
+      if (container && !container.querySelector('.referral-card-premium[data-ref-id]:not([style*="display: none"])')) {
+        if (container.querySelectorAll('.referral-card-premium').length === 0 ||
+            [...container.querySelectorAll('.referral-card-premium')].every(c => c.style.display === 'none')) {
+          container.style.display = 'none';
+        }
+      }
     })();
+
+    // Delegated click listener for referral detail triggers (uses data-* attributes)
+    document.addEventListener('click', function(e) {
+      const trigger = e.target.closest('.ref-detail-trigger');
+      if (trigger) {
+        const d = trigger.dataset;
+        openReferralDetailModal(d.patient, d.fromDoctor, d.toSpec, d.date, d.status, d.notes);
+      }
+    });
+
+    // Close referral detail modal on overlay backdrop click
+    document.getElementById('referralDetailModal').addEventListener('click', function(e) {
+      if (e.target === this) closeReferralDetailModal();
+    });
 
     // ── Logout ──
     function confirmLogout() {
@@ -2541,7 +3060,7 @@
               try { await navigator.share({ title:'PrimeCare Clinic', text:'Real-time Hospital Token Tracking', url:window.location.href }); }
               catch(err) {}
             } else {
-              alert("Tap the Share icon \u2197 in Safari's bottom bar, then choose 'Add to Home Screen'.");
+              openUniversalModal('PWA Install Guide', "Tap the Share icon \u2197 in Safari's bottom bar, then choose 'Add to Home Screen'.", 'Got it', null, false);
             }
           } else if (deferredPrompt) {
             deferredPrompt.prompt();
@@ -2642,6 +3161,10 @@
                 badge.innerHTML = '<span class="blinking-dot-small"></span><span class="live-text"></span>';
               }
               badge.querySelector('.live-text').textContent = `Live: Calling #${liveData.current_token}`;
+            } else if (liveData.status_raw === 'waiting_bookings') {
+              badge.classList.remove('idle');
+              badge.innerHTML = '<i data-lucide="clock" style="width:11px;height:11px;"></i><span class="live-text">Waiting for Patients</span>';
+              lucide.createIcons();
             } else if (liveData.status_raw === 'idle') {
               badge.classList.add('idle');
               if (currentHHMM >= schedStart) {

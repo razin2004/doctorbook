@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
   
   <style>
     /* ── DESIGN SYSTEM VARIABLES ── */
@@ -420,6 +422,7 @@
     .badge-active { background: var(--accent-light); color: var(--accent-dark); border: 1.5px solid rgba(16,185,129,0.25); }
     .badge-pending { background: var(--warning-light); color: var(--warning-dark); border: 1.5px solid rgba(245,158,11,0.25); }
     .badge-completed { background: #f1f5f9; color: var(--slate-600); border: 1.5px solid rgba(203,213,225,0.5); }
+    .badge-waiting-bookings { background: #dbeafe; color: #1e40af; border: 1.5px solid #bfdbfe; }
 
     /* ── QUEUE MAIN BOX ── */
     .queue-box {
@@ -947,6 +950,7 @@
     function getStatusBadgeParams(statusRaw) {
         if (statusRaw === 'active') return { class: 'badge-active', icon: 'radio', text: 'Live Now' };
         if (statusRaw === 'completed') return { class: 'badge-completed', icon: 'check-circle', text: 'Completed' };
+        if (statusRaw === 'waiting_bookings') return { class: 'badge-waiting-bookings', icon: 'clock', text: 'Waiting for Bookings' };
         return { class: 'badge-pending', icon: 'clock', text: 'Yet to start' };
     }
 
@@ -994,7 +998,7 @@
             docFilter.value = 'all';
         }
     }
-    
+
     window.applyFilters = function() {
         const specValue = document.getElementById('specFilter').value;
         const docValue = document.getElementById('docFilter').value;
@@ -1003,7 +1007,13 @@
         
         // 1. Apply quick status tab filter
         if (currentStatusFilter !== 'all') {
-            filtered = filtered.filter(d => d.status_raw === currentStatusFilter);
+            if (currentStatusFilter === 'active') {
+                filtered = filtered.filter(d => d.status_raw === 'active');
+            } else if (currentStatusFilter === 'idle') {
+                filtered = filtered.filter(d => d.status_raw === 'idle' || d.status_raw === 'waiting_bookings');
+            } else {
+                filtered = filtered.filter(d => d.status_raw === currentStatusFilter);
+            }
         }
         
         // 2. Apply specialty filter
@@ -1025,9 +1035,9 @@
     
     function sortDoctors(data) {
         data.sort((a, b) => {
-            const statusOrder = { 'active': 10, 'idle': 20, 'completed': 30 };
-            let weightA = statusOrder[a.status_raw] || 40;
-            let weightB = statusOrder[b.status_raw] || 40;
+            const statusOrder = { 'active': 10, 'waiting_bookings': 20, 'idle': 30, 'completed': 40 };
+            let weightA = statusOrder[a.status_raw] || 50;
+            let weightB = statusOrder[b.status_raw] || 50;
 
             const aKey = `${a.doctor_name.toLowerCase().trim()}|${a.specialization.toLowerCase().trim()}`;
             const bKey = `${b.doctor_name.toLowerCase().trim()}|${b.specialization.toLowerCase().trim()}`;
@@ -1036,7 +1046,7 @@
 
             if (weightA !== weightB) return weightA - weightB;
 
-            if (a.status_raw === 'active') {
+            if (a.status_raw === 'active' || a.status_raw === 'waiting_bookings') {
                 return (b.session_start || "").localeCompare(a.session_start || "");
             }
             if (a.status_raw === 'idle') {
@@ -1056,7 +1066,7 @@
         
         data.forEach(d => {
             if (d.status_raw === 'active') liveCount++;
-            else if (d.status_raw === 'idle') pendingCount++;
+            else if (d.status_raw === 'idle' || d.status_raw === 'waiting_bookings') pendingCount++;
             else if (d.status_raw === 'completed') completedCount++;
         });
         
@@ -1083,10 +1093,10 @@
         grid.innerHTML = '';
         data.forEach(doc => {
             const badgeParams = getStatusBadgeParams(doc.status_raw);
-            const tokenDisp = doc.status_raw === 'idle' ? '--' : `#${doc.current_token}`;
+            const tokenDisp = (doc.status_raw === 'idle' || doc.status_raw === 'waiting_bookings') ? '--' : `#${doc.current_token}`;
             
             // Layout classes
-            const sessionClass = doc.status_raw === 'active' ? 'active-session' : (doc.status_raw === 'completed' ? 'completed-session' : 'pending-session');
+            const sessionClass = (doc.status_raw === 'active') ? 'active-session' : (doc.status_raw === 'completed' ? 'completed-session' : 'pending-session');
             
             const card = document.createElement('div');
             card.className = `tracker-card ${sessionClass}`;
@@ -1106,12 +1116,15 @@
                 
                 <div class="queue-box">
                     <span class="queue-label">
-                        ${doc.status_raw === 'active' ? 'Now Serving' : (doc.status_raw === 'completed' ? 'Final Token' : 'Queue Awaiting')}
+                        ${doc.status_raw === 'active' ? 'Now Serving' : (doc.status_raw === 'waiting_bookings' ? 'Waiting for Patients' : (doc.status_raw === 'completed' ? 'Final Token' : 'Queue Awaiting'))}
                     </span>
                     <div class="queue-number-circle">
                         ${doc.status_raw === 'completed' 
                             ? `<i data-lucide="check" style="width:36px;height:36px;color:var(--slate-400);"></i>` 
-                            : `<span class="queue-token-value">${tokenDisp}</span>`
+                            : (doc.status_raw === 'waiting_bookings'
+                                ? `<i data-lucide="hourglass" style="width:32px;height:32px;color:var(--primary);"></i>`
+                                : `<span class="queue-token-value">${tokenDisp}</span>`
+                              )
                         }
                     </div>
                     <span class="queue-total-tokens">
@@ -1153,7 +1166,7 @@
                 stateLabel = 'Skipped';
                 stateClass = 'tag-skipped';
                 progressText = 'Ask receptionist to recall';
-            } else if (doc.status_raw === 'active') {
+            } else if (doc.status_raw === 'active' || doc.status_raw === 'waiting_bookings') {
                 if (t === doc.current_token) {
                     stateLabel = 'Calling Now';
                     stateClass = 'tag-calling';

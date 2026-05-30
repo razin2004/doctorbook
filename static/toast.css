@@ -1,0 +1,240 @@
+/* ── CENTRAL PREMIUM TOAST STYLESHEET ── */
+
+/* Toast Container */
+#toast-container {
+  position: fixed;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none; /* Allows clicks to pass through empty areas */
+  box-sizing: border-box;
+}
+
+/* Desktop positioning */
+@media (min-width: 768px) {
+  #toast-container {
+    top: 24px;
+    right: 24px;
+    align-items: flex-end;
+    width: 380px;
+  }
+}
+
+/* Mobile positioning (below main navigation bar) */
+@media (max-width: 767px) {
+  #toast-container {
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 400px;
+    align-items: center;
+  }
+}
+
+/* Toast Card Card Layout */
+.toast-card {
+  pointer-events: auto; /* Enable interaction with the toast itself */
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.03), 
+    0 10px 15px -3px rgba(0, 0, 0, 0.08), 
+    0 20px 25px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  box-sizing: border-box;
+  
+  /* Smooth CSS Transitions for entry, exit, and slide-up height collapse */
+  transition: 
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
+    opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    margin-bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s ease;
+  max-height: 160px;
+  opacity: 0;
+}
+
+/* Entrance Animations */
+@media (min-width: 768px) {
+  .toast-card.entering {
+    transform: translateX(120%) scale(0.9);
+    opacity: 0;
+  }
+  .toast-card.active {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  .toast-card.leaving {
+    transform: translateX(120%) scale(0.9);
+    opacity: 0;
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: -12px !important;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .toast-card.entering {
+    transform: translateY(-40px) scale(0.9);
+    opacity: 0;
+  }
+  .toast-card.active {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  .toast-card.leaving {
+    transform: translateY(-20px) scale(0.9);
+    opacity: 0;
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: -12px !important;
+    box-shadow: none;
+  }
+}
+
+/* Icon Wrapper & Type Accent Themes */
+.toast-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.toast-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Type Accent styling: Success */
+.toast-success .toast-icon-wrapper {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+/* Type Accent styling: Error */
+.toast-error .toast-icon-wrapper {
+  background-color: rgba(244, 63, 94, 0.1);
+  color: #f43f5e;
+}
+
+/* Type Accent styling: Warning */
+.toast-warning .toast-icon-wrapper {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+/* Type Accent styling: Information */
+.toast-information .toast-icon-wrapper {
+  background-color: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+}
+
+/* Content layout */
+.toast-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 2px;
+}
+
+.toast-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.toast-message {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #475569;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Close Button styling */
+.toast-close-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  margin-top: -2px;
+  margin-right: -4px;
+  cursor: pointer;
+  color: #94a3b8;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.toast-close-btn:hover {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.toast-close-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Progress bar indicator */
+.toast-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  transform-origin: left;
+  box-sizing: border-box;
+}
+
+.toast-success .toast-progress-bar {
+  background-color: #10b981;
+}
+
+.toast-error .toast-progress-bar {
+  background-color: #f43f5e;
+}
+
+.toast-warning .toast-progress-bar {
+  background-color: #f59e0b;
+}
+
+.toast-information .toast-progress-bar {
+  background-color: #0284c7;
+}
+
+/* Mobile-specific overrides for a cleaner, gesture-driven interface */
+@media (max-width: 767px) {
+  .toast-card {
+    touch-action: none; /* Prevents page scroll / pull-to-refresh while swiping toast */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .toast-close-btn {
+    display: none !important; /* Hide close button on mobile */
+  }
+}
+

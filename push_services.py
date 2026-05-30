@@ -11,7 +11,9 @@ VAPID_CLAIMS = {
 VAPID_PRIVATE_KEY = ""
 
 try:
-    with open('vapid_keys.json', 'r') as f:
+    APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    VAPID_KEYS_PATH = os.path.join(APP_DIR, 'vapid_keys.json')
+    with open(VAPID_KEYS_PATH, 'r') as f:
         keys = json.load(f)
         VAPID_PRIVATE_KEY = keys.get('private_key', '')
 except Exception as e:

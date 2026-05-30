@@ -135,7 +135,16 @@ class PushSubscription(db.Model):
     auth = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-
+class DoctorReferral(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    from_doctor = db.Column(db.String(100))
+    to_specialization = db.Column(db.String(100))
+    notes = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(50), default="pending")  # pending, booked, dismissed
+    patient_name = db.Column(db.String(100), nullable=True)
+    booking_id = db.Column(db.Integer, db.ForeignKey('patient_booking.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 with app.app_context():
     db.create_all()
@@ -156,6 +165,48 @@ with app.app_context():
             db.session.execute(text("ALTER TABLE patient_booking ADD COLUMN consultation_start_time TIMESTAMP"))
         if 'consultation_end_time' not in columns:
             db.session.execute(text("ALTER TABLE patient_booking ADD COLUMN consultation_end_time TIMESTAMP"))
+        
+        # Safely alter doctor_referral table
+        columns_ref = [c['name'] for c in inspector.get_columns('doctor_referral')]
+        if 'patient_name' not in columns_ref:
+            db.session.execute(text("ALTER TABLE doctor_referral ADD COLUMN patient_name VARCHAR(100)"))
+        if 'booking_id' not in columns_ref:
+            db.session.execute(text("ALTER TABLE doctor_referral ADD COLUMN booking_id INTEGER"))
+            
+        db.session.commit()
+        
+        # Backfill existing legacy referrals with booking_id and patient_name
+        legacy_refs = DoctorReferral.query.all()
+        for ref in legacy_refs:
+            updated = False
+            if not ref.booking_id or not ref.patient_name:
+                b = PatientBooking.query.filter(
+                    PatientBooking.user_id == ref.user_id,
+                    db.func.lower(db.func.trim(PatientBooking.doctor_name)) == ref.from_doctor.lower().strip()
+                ).filter(PatientBooking.created_at <= ref.created_at).order_by(PatientBooking.created_at.desc()).first()
+                
+                if not b:
+                    b = PatientBooking.query.filter(
+                        PatientBooking.user_id == ref.user_id,
+                        db.func.lower(db.func.trim(PatientBooking.doctor_name)) == ref.from_doctor.lower().strip()
+                    ).order_by(PatientBooking.created_at.desc()).first()
+                
+                if b:
+                    if not ref.booking_id:
+                        ref.booking_id = b.id
+                        updated = True
+                    if not ref.patient_name:
+                        ref.patient_name = b.patient_name
+                        updated = True
+                else:
+                    u = User.query.get(ref.user_id)
+                    if u and not ref.patient_name:
+                        ref.patient_name = u.name
+                        updated = True
+            
+            if updated:
+                db.session.add(ref)
+        
         db.session.commit()
     except Exception as e:
         print(f"[WARNING] Database schema update failed: {e}")
@@ -236,16 +287,29 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
 
 def get_credentials():
     creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    token_path = os.path.join(app_dir, 'token.json')
+    credentials_path = os.path.join(app_dir, 'credentials.json')
+
+    if os.path.exists(token_path):
+        try:
+            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        except Exception as e:
+            print(f"[WARNING] Failed to load token.json: {e}")
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                print(f"[WARNING] Failed to refresh credentials: {e}")
+                creds = None
+        
+        if not creds or not creds.valid:
+            flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
             creds = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
+            
+        with open(token_path, 'w') as token:
             token.write(creds.to_json())
     return creds
 
@@ -776,8 +840,8 @@ def booking():
                         if doc_data:
                             day_times = doc_data.get("DayTimes", {})
                             time_range = day_times.get(weekday, "")
-                            if " - " in time_range:
-                                b.sched_start = time_range.split(" - ")[0].strip()
+                            if "-" in time_range:
+                                b.sched_start = time_range.replace(" ", "").split("-")[0].strip()
                         
                         # Flag if schedule has begun
                         b.is_start_time_passed = (current_time_str >= b.sched_start)
@@ -802,9 +866,9 @@ def booking():
                     if not is_past and doc_data:
                         day_times = doc_data.get("DayTimes", {})
                         time_range = day_times.get(weekday, "")
-                        if " - " in time_range:
+                        if "-" in time_range:
                             try:
-                                end_time_str = time_range.split(" - ")[1].strip()
+                                end_time_str = time_range.replace(" ", "").split("-")[1].strip()
                                 # Compare HH:MM strings directly
                                 if current_time_str > end_time_str:
                                     is_past = True
@@ -818,7 +882,7 @@ def booking():
             # Note: bookings are already ordered by date DESC from the query
             # but we want upcoming to be soonest first (and they are already sorted by date desc)
             # Sort: Upcoming (First coming first), Past (Most recent first)
-            upcoming_bookings.sort(key=lambda x: (x.date or "", x.token or 0))
+            upcoming_bookings.sort(key=lambda x: (1 if x.status == 'cancelled' else 0, x.date or "", x.token or 0))
             past_bookings.sort(key=lambda x: (x.date or "", x.token or 0), reverse=True)
         except Exception as e:
             print(f"[ERROR] Failed to fetch user bookings: {e}")
@@ -1225,7 +1289,7 @@ def patient_dashboard():
                 b.sched_start = "00:00"
                 if doc_data:
                     tr = doc_data.get("DayTimes",{}).get(weekday,"")
-                    if " - " in tr: b.sched_start = tr.split(" - ")[0].strip()
+                    if "-" in tr: b.sched_start = tr.replace(" ", "").split("-")[0].strip()
                 b.is_start_time_passed = (current_time_str >= b.sched_start)
 
                 # Determine if skipped
@@ -1248,9 +1312,9 @@ def patient_dashboard():
             if not is_past and doc_data:
                 day_times = doc_data.get("DayTimes", {})
                 time_range = day_times.get(weekday, "")
-                if " - " in time_range:
+                if "-" in time_range:
                     try:
-                        end_time_str = time_range.split(" - ")[1].strip()
+                        end_time_str = time_range.replace(" ", "").split("-")[1].strip()
                         if current_time_str > end_time_str: is_past = True
                     except: pass
         
@@ -1258,7 +1322,7 @@ def patient_dashboard():
         else: upcoming_bookings.append(b)
 
     # Sort
-    upcoming_bookings.sort(key=lambda x: (x.date or "", x.token or 0))
+    upcoming_bookings.sort(key=lambda x: (1 if x.status == 'cancelled' else 0, x.date or "", x.token or 0))
     past_bookings.sort(key=lambda x: (x.date or "", x.token or 0), reverse=True)
     
     # Enrichment: Holidays (Keeping existing logic for holidays)
@@ -1280,6 +1344,18 @@ def patient_dashboard():
     # Get prescriptions
     prescriptions = Prescription.query.filter_by(user_id=user_id).order_by(Prescription.created_at.desc()).all()
     
+    # Fetch pending referrals
+    referrals = DoctorReferral.query.filter_by(user_id=user_id, status='pending').order_by(DoctorReferral.created_at.desc()).all()
+
+    # Query all referrals for this user to attach to bookings
+    all_user_referrals = DoctorReferral.query.filter_by(user_id=user_id).all()
+    booking_referral_map = {ref.booking_id: ref for ref in all_user_referrals if ref.booking_id}
+    
+    for b in upcoming_bookings:
+        b.referral = booking_referral_map.get(b.id)
+    for b in past_bookings:
+        b.referral = booking_referral_map.get(b.id)
+
     user_email = session.get('user_email')
     is_doctor = DoctorSession.query.filter_by(email=user_email).first() is not None
 
@@ -1289,7 +1365,102 @@ def patient_dashboard():
                            active_upcoming_count=active_upcoming_count,
                            prescriptions=prescriptions, 
                            all_doctors=all_doctors,
+                           referrals=referrals,
                            can_switch=is_doctor)
+
+def mark_pending_referrals_booked(user_id, specialization, patient_name):
+    try:
+        if not patient_name:
+            return
+        pending_refs = DoctorReferral.query.filter_by(
+            user_id=user_id,
+            to_specialization=specialization.strip(),
+            status='pending'
+        ).all()
+        for ref in pending_refs:
+            ref_patient = (ref.patient_name or "").strip().lower()
+            target_patient = patient_name.strip().lower()
+            if not ref_patient or ref_patient == target_patient:
+                ref.status = 'booked'
+        db.session.commit()
+    except Exception as e:
+        app.logger.error(f"Error marking referrals as booked: {e}")
+
+@app.route('/api/create_referral', methods=['POST'])
+def create_referral():
+    if session.get('user_role') != 'doctor':
+        return jsonify(success=False, msg="Unauthorized access."), 403
+
+    doctor_email = session.get('user_email')
+    doc_session = DoctorSession.query.filter_by(email=doctor_email).first()
+    if not doc_session:
+        return jsonify(success=False, msg="Doctor session not found."), 404
+
+    data = request.get_json()
+    if not data:
+        return jsonify(success=False, msg="Missing payload."), 400
+
+    token = data.get('token')
+    to_specialization = data.get('specialization')
+    notes = data.get('notes', '')
+
+    if not token or not to_specialization:
+        return jsonify(success=False, msg="Token and Specialization are required."), 400
+
+    ist = pytz.timezone('Asia/Kolkata')
+    today_str = datetime.now(ist).strftime("%Y-%m-%d")
+    
+    booking = PatientBooking.query.filter(
+        db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+        db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+        PatientBooking.date == today_str,
+        PatientBooking.token == int(token)
+    ).first()
+
+    if not booking:
+        return jsonify(success=False, msg="Patient booking record not found for today's token."), 404
+
+    # Prevent duplicate referrals for the same booking
+    existing_referral = DoctorReferral.query.filter_by(booking_id=booking.id).first()
+    if existing_referral:
+        return jsonify(success=False, msg="Patient already referred.")
+
+    referral = DoctorReferral(
+        user_id=booking.user_id,
+        from_doctor=doc_session.doctor_name,
+        to_specialization=to_specialization.strip(),
+        notes=notes.strip() if notes else None,
+        patient_name=booking.patient_name,
+        booking_id=booking.id,
+        status="pending"
+    )
+    db.session.add(referral)
+    db.session.commit()
+
+    return jsonify(success=True, msg="Referral created successfully.")
+
+@app.route('/api/dismiss_referral', methods=['POST'])
+def dismiss_referral():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify(success=False, msg="Unauthorized access."), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify(success=False, msg="Missing payload."), 400
+
+    referral_id = data.get('referral_id')
+    if not referral_id:
+        return jsonify(success=False, msg="Referral ID is required."), 400
+
+    referral = DoctorReferral.query.filter_by(id=referral_id, user_id=user_id).first()
+    if not referral:
+        return jsonify(success=False, msg="Referral not found."), 404
+
+    referral.status = 'dismissed'
+    db.session.commit()
+
+    return jsonify(success=True, msg="Referral dismissed successfully.")
 
 @app.route('/cancel_own_booking', methods=['POST'])
 def cancel_own_booking():
@@ -2495,6 +2666,24 @@ def book_doctor():
             )
             db.session.add(new_booking)
             db.session.commit()
+            mark_pending_referrals_booked(user_id, doctor_info["Specialization"], name)
+
+        # --- Auto-Update Doctor Session Total Tokens for today ---
+        ist = pytz.timezone('Asia/Kolkata')
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        if date == today_str:
+            try:
+                doc_sess = DoctorSession.query.filter(
+                    db.func.lower(db.func.trim(DoctorSession.doctor_name)) == doctor_info["Name"].lower().strip(),
+                    db.func.lower(db.func.trim(DoctorSession.specialization)) == doctor_info["Specialization"].lower().strip(),
+                    DoctorSession.session_date == today_str
+                ).first()
+                if doc_sess:
+                    doc_sess.total_tokens += 1
+                    sync_doctor_session_status(doc_sess)
+                    db.session.commit()
+            except Exception as e:
+                app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
 
         # Set flag for celebratory confetti
         session['justBooked'] = True
@@ -2622,6 +2811,7 @@ def admin_book_patient():
                 ).first()
                 if doc_sess:
                     doc_sess.total_tokens += 1
+                    sync_doctor_session_status(doc_sess)
                     db.session.commit()
             except Exception as e:
                 app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
@@ -2764,6 +2954,7 @@ def book_department():
                     ).first()
                     if doc_sess:
                         doc_sess.total_tokens += 1
+                        sync_doctor_session_status(doc_sess)
                         db.session.commit()
                 except Exception as e:
                     app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
@@ -2783,6 +2974,7 @@ def book_department():
                 )
                 db.session.add(new_booking)
                 db.session.commit()
+                mark_pending_referrals_booked(user_id, chosen_doc["Specialization"], name)
 
             increment_booking_counter()
             cleanup_old_date_sheets(spreadsheet)
@@ -2872,6 +3064,7 @@ def book_department():
                 ).first()
                 if doc_sess:
                     doc_sess.total_tokens += 1
+                    sync_doctor_session_status(doc_sess)
                     db.session.commit()
             except Exception as e:
                 app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
@@ -2890,6 +3083,7 @@ def book_department():
             )
             db.session.add(new_booking)
             db.session.commit()
+            mark_pending_referrals_booked(user_id, best_doc["Specialization"], name)
 
         increment_booking_counter()
         cleanup_old_date_sheets(best_spreadsheet)
@@ -3098,8 +3292,29 @@ def get_doctor_stats():
                 ws = s.worksheet(dt_formatted)
                 records = get_worksheet_records_safe(ws)
                 total_tokens = len(records)
+                doc_session.total_tokens = total_tokens
+                sync_doctor_session_status(doc_session)
+                db.session.commit()
                 
                 skipped_set = set(doc_session.skipped_tokens.split(",")) if doc_session.skipped_tokens else set()
+                
+                # Fetch bookings and referrals for today's session to identify referred patients
+                bookings_today = PatientBooking.query.filter(
+                    db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+                    db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+                    PatientBooking.date == today_str
+                ).all()
+                
+                referred_tokens = set()
+                if bookings_today:
+                    booking_ids = [b.id for b in bookings_today]
+                    referrals_today = DoctorReferral.query.filter(
+                        DoctorReferral.booking_id.in_(booking_ids)
+                    ).all()
+                    booking_id_to_token = {b.id: b.token for b in bookings_today}
+                    for ref in referrals_today:
+                        if ref.booking_id in booking_id_to_token:
+                            referred_tokens.add(booking_id_to_token[ref.booking_id])
                 
                 for r in records:
                     t_val = r.get("Token")
@@ -3113,8 +3328,11 @@ def get_doctor_stats():
                             b_status = "skipped"
                         elif doc_session.status == "active" and t_val == doc_session.current_token:
                             b_status = "calling"
-                        elif doc_session.status == "completed" or (doc_session.status == "active" and t_val < doc_session.current_token):
-                            b_status = "consulted"
+                        elif doc_session.status in ["completed", "waiting_bookings"] or (doc_session.status == "active" and t_val < doc_session.current_token):
+                            if t_val in referred_tokens:
+                                b_status = "referred"
+                            else:
+                                b_status = "consulted"
                         else:
                             b_status = "waiting"
                             
@@ -3129,7 +3347,9 @@ def get_doctor_stats():
                     else:
                         empty_slots.append(t_val)
             except gspread.exceptions.WorksheetNotFound:
-                pass
+                doc_session.total_tokens = 0
+                sync_doctor_session_status(doc_session)
+                db.session.commit()
                 
         return jsonify({
             "success": True,
@@ -3793,6 +4013,104 @@ def admin_analytics():
         trend_values=trend_values
     )
 
+def is_doctor_working_hours_finished(doctor_name, specialization):
+    try:
+        ist = pytz.timezone('Asia/Kolkata')
+        now_ist = datetime.now(ist)
+        weekday = now_ist.strftime("%A")
+        current_time_str = now_ist.strftime("%H:%M")
+        
+        doctors = get_all_doctors()
+        for d in doctors:
+            if d.get("Name").strip().lower() == doctor_name.strip().lower() and d.get("Specialization").strip().lower() == specialization.strip().lower():
+                day_times = d.get("DayTimes", {})
+                time_range = day_times.get(weekday, "")
+                if "-" in time_range:
+                    try:
+                        end_time_str = time_range.replace(" ", "").split("-")[1].strip() # HH:MM format
+                        if current_time_str >= end_time_str:
+                            return True
+                    except:
+                        pass
+                break
+    except Exception as e:
+        print(f"[Error] is_doctor_working_hours_finished: {e}")
+    return False
+
+def sync_doctor_session_status(doc_session):
+    try:
+        ist = pytz.timezone('Asia/Kolkata')
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        
+        # Reset session if new day
+        if doc_session.session_date != today_str:
+            doc_session.status = 'idle'
+            doc_session.current_token = 0
+            doc_session.session_date = today_str
+            doc_session.total_tokens = 0
+            doc_session.start_time = None
+            doc_session.end_time = None
+            doc_session.skipped_tokens = ""
+            db.session.commit()
+            return
+
+        if doc_session.status == 'completed':
+            return
+
+        # Check if the doctor's working hours have finished
+        hours_finished = is_doctor_working_hours_finished(doc_session.doctor_name, doc_session.specialization)
+        
+        # Check if there are any remaining booked patients for today
+        cur_tok = doc_session.current_token if doc_session.current_token > 0 else 1
+        remaining_bookings = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+            PatientBooking.date == today_str,
+            PatientBooking.status != 'cancelled',
+            PatientBooking.token >= cur_tok
+        ).all()
+        has_remaining_patients = len(remaining_bookings) > 0
+
+        # Auto-complete session if working hours have finished
+        should_complete = False
+        if hours_finished:
+            if doc_session.status == 'active':
+                # Active session only completes when no further patients are in the queue
+                if not has_remaining_patients:
+                    should_complete = True
+            elif doc_session.status in ['idle', 'waiting_bookings']:
+                # Idle or waiting sessions complete immediately once shift ends
+                should_complete = True
+
+        if should_complete:
+            doc_session.status = 'completed'
+            doc_session.end_time = datetime.now(ist).strftime("%H:%M %p")
+            if doc_session.current_token > doc_session.total_tokens:
+                doc_session.current_token = doc_session.total_tokens if doc_session.total_tokens > 0 else 0
+            db.session.commit()
+            try:
+                from push_services import trigger_push
+                trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "completed", app, db, PatientBooking, PushSubscription)
+            except Exception as e:
+                print(f"Push Error: {e}")
+            return
+
+        if doc_session.status == 'idle':
+            # Idle sessions remain idle until explicitly started
+            return
+
+        total_tokens = doc_session.total_tokens
+        if total_tokens >= doc_session.current_token and total_tokens > 0:
+            if doc_session.status != 'active':
+                doc_session.status = 'active'
+                db.session.commit()
+        else:
+            if doc_session.status != 'waiting_bookings':
+                doc_session.status = 'waiting_bookings'
+                db.session.commit()
+    except Exception as e:
+        print(f"[Error] sync_doctor_session_status: {e}")
+
 # ===================== LIVE TOKEN TRACKING =====================
 
 @app.route('/doctor_dashboard')
@@ -3839,6 +4157,7 @@ def doctor_dashboard():
                 ws = s.worksheet(dt_formatted)
                 records = get_worksheet_records_safe(ws)
                 doc_session.total_tokens = len(records)
+                sync_doctor_session_status(doc_session)
                 
                 skipped_set = set(doc_session.skipped_tokens.split(",")) if doc_session.skipped_tokens else set()
                 
@@ -3848,13 +4167,12 @@ def doctor_dashboard():
                     if p_name:
                         total_booked += 1
                         
-                        # Determine status
                         t_str = str(t_val)
                         if t_str in skipped_set:
                             b_status = "skipped"
                         elif doc_session.status == "active" and t_val == doc_session.current_token:
                             b_status = "calling"
-                        elif doc_session.status == "completed" or (doc_session.status == "active" and t_val < doc_session.current_token):
+                        elif doc_session.status in ["completed", "waiting_bookings"] or (doc_session.status == "active" and t_val < doc_session.current_token):
                             b_status = "consulted"
                         else:
                             b_status = "waiting"
@@ -4035,6 +4353,32 @@ def start_session():
     
     return jsonify(success=True, current_token=1, start_time=doc_session.start_time)
 
+@app.route('/complete_session', methods=['POST'])
+def complete_session():
+    if session.get('user_role') != 'doctor':
+        return jsonify(success=False, msg="Unauthorized")
+        
+    doctor_email = session.get('user_email')
+    doc_session = DoctorSession.query.filter_by(email=doctor_email).first()
+    
+    if not doc_session:
+        return jsonify(success=False, msg="Doctor session not found")
+        
+    ist = pytz.timezone('Asia/Kolkata')
+    doc_session.status = "completed"
+    doc_session.end_time = datetime.now(ist).strftime("%H:%M %p")
+    if doc_session.current_token > doc_session.total_tokens:
+        doc_session.current_token = doc_session.total_tokens if doc_session.total_tokens > 0 else 0
+    db.session.commit()
+    
+    try:
+        from push_services import trigger_push
+        trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "completed", app, db, PatientBooking, PushSubscription)
+    except Exception as e:
+        print(f"Push Error: {e}")
+        
+    return jsonify(success=True, status="completed", end_time=doc_session.end_time)
+
 @app.route('/next_token', methods=['POST'])
 def next_token():
     if session.get('user_role') != 'doctor':
@@ -4059,12 +4403,9 @@ def next_token():
 
     doc_session.current_token += 1
     
-    if doc_session.current_token > doc_session.total_tokens:
-        doc_session.current_token = doc_session.total_tokens
-        doc_session.status = "completed"
-        ist = pytz.timezone('Asia/Kolkata')
-        doc_session.end_time = datetime.now(ist).strftime("%H:%M %p")
-    else:
+    sync_doctor_session_status(doc_session)
+    
+    if doc_session.status == "active":
         # Start next patient's consultation time
         next_booking = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
@@ -4102,7 +4443,7 @@ def skip_token():
     
     if not doc_session or doc_session.status != 'active':
         return jsonify(success=False, msg="Session not active")
-
+ 
     # Clear start time of skipped token so we ignore it
     skipped_booking = PatientBooking.query.filter(
         db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
@@ -4122,12 +4463,10 @@ def skip_token():
     skipped_tok = doc_session.current_token
     # Move to next token
     doc_session.current_token += 1
-    if doc_session.current_token > doc_session.total_tokens:
-        doc_session.current_token = doc_session.total_tokens
-        doc_session.status = "completed"
-        ist = pytz.timezone('Asia/Kolkata')
-        doc_session.end_time = datetime.now(ist).strftime("%H:%M %p")
-    else:
+    
+    sync_doctor_session_status(doc_session)
+    
+    if doc_session.status == "active":
         # Start next patient's consultation time
         next_booking = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
@@ -4150,7 +4489,7 @@ def skip_token():
             trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active", app, db, PatientBooking, PushSubscription)
     except Exception as e:
         print(f"Push Error: {e}")
-
+ 
     return jsonify({
         "success": True, 
         "current_token": doc_session.current_token, 
@@ -4249,6 +4588,9 @@ def live_tokens():
                 db.func.lower(db.func.trim(DoctorSession.specialization)) == doc_spec.lower().strip()
             ).first()
             
+            if doc_session:
+                sync_doctor_session_status(doc_session)
+            
             status = "Yet to start"
             status_raw = "idle"
             current_token = 0
@@ -4260,6 +4602,7 @@ def live_tokens():
                 skipped_tokens = doc_session.skipped_tokens or ""
                 if doc_session.status == 'idle': status = "Yet to start"
                 elif doc_session.status == 'active': status = "Live Now"
+                elif doc_session.status == 'waiting_bookings': status = "Waiting for Bookings"
                 elif doc_session.status == 'completed': status = "Completed"
                 current_token = doc_session.current_token
                 total_tokens = doc_session.total_tokens

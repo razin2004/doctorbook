@@ -11,6 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
   <link rel="manifest" href="/static/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -773,26 +775,7 @@
     .otp-input { width: 44px; height: 50px; text-align: center; font-size: 1.5rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #f8fafc; }
     .otp-input:focus { border-color: #0077b6; outline: none; background: #fff; }
 
-    /* ── PREMIUM TOAST ISLAND ── */
-    #globalToast {
-      position: fixed; top: 24px; left: 50%;
-      transform: translateX(-50%); z-index: 10001;
-      padding: 16px 32px; border-radius: 24px;
-      font-weight: 600; font-size: 1rem;
-      display: none; align-items: center; gap: 14px;
-      box-shadow: 0 15px 50px rgba(0,0,0,0.25);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(14px);
-      color: #fff;
-      transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-    }
-    @media (max-width: 600px) {
-      #globalToast {
-        width: 95%; top: 16px; padding: 14px 22px; border-radius: 20px; font-size: 0.92rem;
-      }
-    }
-    .toast-success { background: rgba(5, 150, 105, 0.95); }
-    .toast-error   { background: rgba(225, 29, 72, 0.95); }
+
 
     /* ── PREMIUM CONTACT SECTION (ULTRA-MODERN) ── */
     .contact-grid {
@@ -1417,8 +1400,7 @@
 <body>
   {% set icons = {'General Physician':'activity','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
 
-  <!-- Global Toast Container -->
-  <div id="globalToast"></div>
+
 
   <div class="bg-image"></div>
   <div class="bg-blur"></div>
@@ -2214,28 +2196,111 @@
       // Logout button removed from home page as per requirement
     }
 
+        // ─── Unified Modal System ───
     let activeModalAction = null;
-    function openModal(title, message, actionText, actionFn, isDanger = false) {
+    
+    window.openUniversalModal = function(titleOrId, messageOrTitle, actionTextOrMessage, actionFnOrText, isDangerOrFn, isDanger) {
       const modal = document.getElementById('universalModal');
       if (!modal) return;
-      modal.querySelector('h3').textContent = title;
-      modal.querySelector('p').textContent = message;
-      const confirmBtn = modal.querySelector('.confirm-btn');
-      confirmBtn.textContent = actionText;
-      confirmBtn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      
+      let id = 'info';
+      let title, message, actionText, actionFn, isDangerVal = false;
+      
+      // Handle variable signatures
+      if (['success', 'warning', 'danger', 'info', 'universalModal', 'delete', 'logout'].includes(titleOrId)) {
+        id = titleOrId;
+        title = messageOrTitle;
+        message = actionTextOrMessage;
+        actionText = actionFnOrText;
+        actionFn = isDangerOrFn;
+        isDangerVal = isDanger || false;
+      } else {
+        title = titleOrId;
+        message = messageOrTitle;
+        actionText = actionTextOrMessage;
+        actionFn = actionFnOrText;
+        isDangerVal = isDangerOrFn || false;
+      }
+      
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
+      
+      // Update Title & Message
+      const titleEl = document.getElementById('unvTitle') || modal.querySelector('h3');
+      const msgEl = document.getElementById('unvMessage') || modal.querySelector('p');
+      if (titleEl) titleEl.textContent = title;
+      if (msgEl) msgEl.innerHTML = message;
+      
+      // Update Confirm Button
+      const btn = document.getElementById('unvConfirmBtn') || modal.querySelector('.confirm-btn');
+      if (btn) {
+        btn.textContent = actionText;
+        btn.style.background = isDangerVal ? '#e11d48' : '#0077b6';
+        btn.style.boxShadow = isDangerVal ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      }
+      
+      // Update Icon
+      const container = document.getElementById('unvIconContainer') || modal.querySelector('.modal-icon-container');
+      if (container) {
+        let iconName = 'help-circle';
+        if (id === 'success') {
+          iconName = 'check-circle';
+          container.style.color = '#10b981';
+        } else if (id === 'warning') {
+          iconName = 'alert-circle';
+          container.style.color = '#f59e0b';
+        } else if (isDangerVal) {
+          iconName = 'alert-triangle';
+          container.style.color = '#e11d48';
+        } else {
+          container.style.color = '#0077b6';
+        }
+        container.style.background = 'transparent';
+        container.style.border = 'none';
+        container.style.boxShadow = 'none';
+        container.style.borderRadius = '0';
+        container.style.padding = '0';
+        container.innerHTML = `<i data-lucide="${iconName}"></i>`;
+      }
+      
       activeModalAction = actionFn;
       modal.style.display = 'flex';
-      lucide.createIcons();
-    }
-    function closeModal() {
+      if (window.lucide) lucide.createIcons();
+    };
+    
+    window.closeUniversalModal = function() {
       const modal = document.getElementById('universalModal');
       if (modal) modal.style.display = 'none';
       activeModalAction = null;
-    }
-    function handleConfirm() {
+      
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal?.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
+    };
+    
+    // Setup aliases
+    window.openModal = window.openUniversalModal;
+    window.closeModal = window.closeUniversalModal;
+    window.handleConfirm = function() {
       if (activeModalAction) activeModalAction();
-      closeModal();
-    }
+      closeUniversalModal();
+    };
+    
+    // Register event listener for confirmation button
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('unvConfirmBtn') || document.querySelector('#universalModal .confirm-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (activeModalAction) activeModalAction();
+          closeUniversalModal();
+        });
+      }
+    });
     function openLogoutModal() {
       openModal('Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
     }
@@ -2246,73 +2311,7 @@
       } catch(err) { console.error('Logout failed:', err); }
     }
 
-    function showToast(msg, type = 'success') {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      toast.className = 'toast-' + type;
-      toast.innerHTML = (type === 'success' 
-        ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' 
-        : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
-      lucide.createIcons();
-      toast.style.display = 'flex';
-      toast.style.transform = 'translateX(-50%)';
-      toast.style.opacity = '1';
-      if (window.toastTimeout) clearTimeout(window.toastTimeout);
-      window.toastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 5000);
-    }
 
-    (function initToastSwipeDismiss() {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      let startX = 0, startY = 0;
-      let isDragging = false;
-      let diffX = 0, diffY = 0;
-
-      toast.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        isDragging = true;
-        toast.style.transition = 'none';
-      }, { passive: true });
-
-      toast.addEventListener('touchmove', (e) => {
-        if (!isDragging || e.touches.length !== 1) return;
-        diffX = e.touches[0].clientX - startX;
-        diffY = e.touches[0].clientY - startY;
-        let moveX = diffX;
-        let moveY = diffY < 0 ? diffY : 0;
-        const dist = Math.sqrt(diffX * diffX + (diffY < 0 ? diffY * diffY : 0));
-        const opacity = Math.max(0, 1 - dist / 150);
-        toast.style.transform = `translate(calc(-50% + ${moveX}px), ${moveY}px)`;
-        toast.style.opacity = opacity;
-      }, { passive: true });
-
-      toast.addEventListener('touchend', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        toast.style.transition = 'all 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
-        const threshold = 60;
-        if (Math.abs(diffX) > threshold || diffY < -threshold) {
-          if (Math.abs(diffX) > threshold) {
-            toast.style.transform = `translate(calc(-50% + ${diffX > 0 ? 100 : -100}vw), 0)`;
-          } else {
-            toast.style.transform = `translate(-50%, -150px)`;
-          }
-          toast.style.opacity = '0';
-          setTimeout(() => {
-            toast.style.display = 'none';
-            toast.style.transform = 'translateX(-50%)';
-            toast.style.opacity = '1';
-          }, 300);
-        } else {
-          toast.style.transform = 'translateX(-50%)';
-          toast.style.opacity = '1';
-        }
-        diffX = 0;
-        diffY = 0;
-      }, { passive: true });
-    })();
 
     // Update sticky positioning on load/resize — drives scroll-margin-top on anchor
     function updateStickyLayout() {
@@ -2428,16 +2427,17 @@
 
 
   <!-- Universal Confirmation Modal (Reusable for Logout, etc.) -->
+    <!-- Universal Confirmation Modal -->
   <div class="modal-overlay" id="universalModal">
     <div class="modal-content">
-      <div class="modal-icon-container" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
-        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+      <div class="modal-icon-container" id="unvIconContainer">
+        <i data-lucide="help-circle"></i>
       </div>
-      <h3>Confirm Action</h3>
-      <p>Are you sure you want to proceed with this action?</p>
+      <h3 id="unvTitle">Confirm Action</h3>
+      <p id="unvMessage">Are you sure you want to proceed with this action?</p>
       <div class="modal-btns">
-        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary confirm-btn" onclick="handleConfirm()">Confirm</button>
+        <button class="btn btn-outline" onclick="closeUniversalModal()">Cancel</button>
+        <button id="unvConfirmBtn" class="btn btn-primary">Confirm</button>
       </div>
     </div>
   </div>
@@ -3166,7 +3166,7 @@
           if (isIOS) {
             if (navigator.share) {
               try { await navigator.share({ title:'PrimeCare Clinic', text:'Real-time Hospital Token Tracking', url:window.location.href }); } catch(err) {}
-            } else { alert("Tap the Share icon \u2197 in Safari's bottom bar, then 'Add to Home Screen'."); }
+            } else { openModal('PWA Install Guide', "Tap the Share icon \u2197 in Safari's bottom bar, then choose 'Add to Home Screen'.", 'Got it', null, false); }
           } else if (deferredPrompt) {
             deferredPrompt.prompt();
             const res = await deferredPrompt.userChoice;

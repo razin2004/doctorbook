@@ -13,6 +13,8 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}">
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
 
   <style>
     /* ── Page Background ── */
@@ -69,7 +71,7 @@
       text-align: center;
       color: #374151;
       position: relative;
-      overflow: hidden;
+      /* overflow: hidden removed — was clipping inner cards and token glow on mobile */
       transition: max-width 0.3s ease;
     }
 
@@ -182,6 +184,7 @@
       gap: 0.75rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
       transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+      min-width: 0; /* prevent grid blowout */
     }
     .info-row:hover {
       border-color: rgba(0, 119, 182, 0.15);
@@ -213,6 +216,7 @@
       gap: 0.15rem;
       min-width: 0;
       flex-grow: 1;
+      overflow: hidden;
     }
     
     .info-label {
@@ -226,9 +230,9 @@
       font-size: 0.9rem;
       font-weight: 800;
       color: #0f172a;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      word-break: break-word; /* allow wrapping instead of overflow clipping */
+      overflow-wrap: break-word;
+      white-space: normal; /* was nowrap — caused text to be hidden on mobile */
     }
 
     /* ── Ticket notch divider ── */
@@ -478,7 +482,7 @@
         padding: 1.25rem 0.9rem 2.2rem;
       }
       .confirmation-box {
-        padding: 1.8rem 1.2rem;
+        padding: 1.6rem 1.1rem;
         border-radius: 20px;
       }
       .sections-container {
@@ -486,56 +490,60 @@
         gap: 1.2rem;
         margin-bottom: 1.2rem;
       }
-      /* Two columns in a line on mobile view */
+      /* Single column on small mobile for better readability */
       .info-table {
-        grid-template-columns: repeat(2, 1fr) !important;
+        grid-template-columns: 1fr 1fr !important;
         gap: 0.5rem !important;
       }
       .info-row {
-        padding: 0.5rem 0.6rem !important;
-        gap: 0.4rem !important;
+        padding: 0.55rem 0.65rem !important;
+        gap: 0.45rem !important;
         border-radius: 12px !important;
       }
       .info-row-icon {
-        width: 28px !important;
-        height: 28px !important;
+        width: 30px !important;
+        height: 30px !important;
         border-radius: 8px !important;
+        flex-shrink: 0 !important;
       }
       .info-row-icon svg {
-        width: 14px !important;
-        height: 14px !important;
+        width: 15px !important;
+        height: 15px !important;
       }
       .info-label {
         font-size: 0.62rem !important;
       }
       .info-value {
-        font-size: 0.78rem !important;
+        font-size: 0.8rem !important;
+        white-space: normal !important;
+        word-break: break-word !important;
       }
       .footer-note {
         font-size: 0.82rem;
       }
+      /* Divider negative margin matches the 1.1rem box padding */
       .ticket-divider {
-        margin: 1.5rem -1.2rem;
+        margin: 1.5rem -1.1rem;
       }
       
       /* Mobile buttons group side-by-side equal sizes */
       .button-group {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
         gap: 0.6rem !important;
         width: 100% !important;
         justify-content: center !important;
         align-items: center !important;
       }
       .button-group .btn-pill {
-        flex: 1 !important;
+        flex: 1 1 120px !important;
         width: auto !important;
         height: 40px !important;
-        max-width: none !important;
-        min-width: 0 !important;
-        padding: 0 0.4rem !important;
-        font-size: 0.8rem !important;
+        max-width: 200px !important;
+        min-width: 100px !important;
+        padding: 0 0.6rem !important;
+        font-size: 0.82rem !important;
       }
       
       /* Brand Header positioning on mobile to center brand name */
@@ -584,6 +592,26 @@
         border: none !important;
         box-shadow: none !important;
       }
+    }
+
+    @media (max-width: 400px) {
+      .info-table {
+        grid-template-columns: 1fr !important; /* single column on very small screens */
+      }
+      .info-row {
+        padding: 0.65rem 0.75rem !important;
+      }
+      .info-row-icon {
+        width: 32px !important;
+        height: 32px !important;
+      }
+      .info-value {
+        font-size: 0.85rem !important;
+      }
+      .confirmation-box h1 {
+        font-size: 1.45rem;
+      }
+    }
 
       /* ── Header: buttons stack vertically on mobile to match homepage ── */
       @media (max-width: 520px) {
@@ -626,6 +654,7 @@
           color: #0077b6 !important;
         }
       }
+
   </style>
 </head>
 
@@ -807,28 +836,111 @@
       } catch(e) { console.error('Session check failed:', e); }
     }
 
+        // ─── Unified Modal System ───
     let activeModalAction = null;
-    function openModal(title, message, actionText, actionFn, isDanger = false) {
+    
+    window.openUniversalModal = function(titleOrId, messageOrTitle, actionTextOrMessage, actionFnOrText, isDangerOrFn, isDanger) {
       const modal = document.getElementById('universalModal');
       if (!modal) return;
-      modal.querySelector('h3').textContent = title;
-      modal.querySelector('p').textContent = message;
-      const confirmBtn = modal.querySelector('.confirm-btn');
-      confirmBtn.textContent = actionText;
-      confirmBtn.style.background = isDanger ? '#e11d48' : '#0077b6';
+      
+      let id = 'info';
+      let title, message, actionText, actionFn, isDangerVal = false;
+      
+      // Handle variable signatures
+      if (['success', 'warning', 'danger', 'info', 'universalModal', 'delete', 'logout'].includes(titleOrId)) {
+        id = titleOrId;
+        title = messageOrTitle;
+        message = actionTextOrMessage;
+        actionText = actionFnOrText;
+        actionFn = isDangerOrFn;
+        isDangerVal = isDanger || false;
+      } else {
+        title = titleOrId;
+        message = messageOrTitle;
+        actionText = actionTextOrMessage;
+        actionFn = actionFnOrText;
+        isDangerVal = isDangerOrFn || false;
+      }
+      
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
+      
+      // Update Title & Message
+      const titleEl = document.getElementById('unvTitle') || modal.querySelector('h3');
+      const msgEl = document.getElementById('unvMessage') || modal.querySelector('p');
+      if (titleEl) titleEl.textContent = title;
+      if (msgEl) msgEl.innerHTML = message;
+      
+      // Update Confirm Button
+      const btn = document.getElementById('unvConfirmBtn') || modal.querySelector('.confirm-btn');
+      if (btn) {
+        btn.textContent = actionText;
+        btn.style.background = isDangerVal ? '#e11d48' : '#0077b6';
+        btn.style.boxShadow = isDangerVal ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      }
+      
+      // Update Icon
+      const container = document.getElementById('unvIconContainer') || modal.querySelector('.modal-icon-container');
+      if (container) {
+        let iconName = 'help-circle';
+        if (id === 'success') {
+          iconName = 'check-circle';
+          container.style.color = '#10b981';
+        } else if (id === 'warning') {
+          iconName = 'alert-circle';
+          container.style.color = '#f59e0b';
+        } else if (isDangerVal) {
+          iconName = 'alert-triangle';
+          container.style.color = '#e11d48';
+        } else {
+          container.style.color = '#0077b6';
+        }
+        container.style.background = 'transparent';
+        container.style.border = 'none';
+        container.style.boxShadow = 'none';
+        container.style.borderRadius = '0';
+        container.style.padding = '0';
+        container.innerHTML = `<i data-lucide="${iconName}"></i>`;
+      }
+      
       activeModalAction = actionFn;
       modal.style.display = 'flex';
-      lucide.createIcons();
-    }
-    function closeModal() {
+      if (window.lucide) lucide.createIcons();
+    };
+    
+    window.closeUniversalModal = function() {
       const modal = document.getElementById('universalModal');
       if (modal) modal.style.display = 'none';
       activeModalAction = null;
-    }
-    function handleConfirm() {
+      
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal?.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
+    };
+    
+    // Setup aliases
+    window.openModal = window.openUniversalModal;
+    window.closeModal = window.closeUniversalModal;
+    window.handleConfirm = function() {
       if (activeModalAction) activeModalAction();
-      closeModal();
-    }
+      closeUniversalModal();
+    };
+    
+    // Register event listener for confirmation button
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('unvConfirmBtn') || document.querySelector('#universalModal .confirm-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (activeModalAction) activeModalAction();
+          closeUniversalModal();
+        });
+      }
+    });
     function openLogoutModal() {
       openModal('Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
     }
@@ -841,73 +953,7 @@
       } catch(err) { console.error('Logout failed:', err); }
     }
 
-    function showToast(msg, type = 'success') {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      toast.className = 'toast-' + type;
-      toast.innerHTML = (type === 'success' 
-        ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' 
-        : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
-      lucide.createIcons();
-      toast.style.display = 'flex';
-      toast.style.transform = 'translateX(-50%)';
-      toast.style.opacity = '1';
-      if (window.toastTimeout) clearTimeout(window.toastTimeout);
-      window.toastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 5000);
-    }
 
-    (function initToastSwipeDismiss() {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      let startX = 0, startY = 0;
-      let isDragging = false;
-      let diffX = 0, diffY = 0;
-
-      toast.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        isDragging = true;
-        toast.style.transition = 'none';
-      }, { passive: true });
-
-      toast.addEventListener('touchmove', (e) => {
-        if (!isDragging || e.touches.length !== 1) return;
-        diffX = e.touches[0].clientX - startX;
-        diffY = e.touches[0].clientY - startY;
-        let moveX = diffX;
-        let moveY = diffY < 0 ? diffY : 0;
-        const dist = Math.sqrt(diffX * diffX + (diffY < 0 ? diffY * diffY : 0));
-        const opacity = Math.max(0, 1 - dist / 150);
-        toast.style.transform = `translate(calc(-50% + ${moveX}px), ${moveY}px)`;
-        toast.style.opacity = opacity;
-      }, { passive: true });
-
-      toast.addEventListener('touchend', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        toast.style.transition = 'all 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
-        const threshold = 60;
-        if (Math.abs(diffX) > threshold || diffY < -threshold) {
-          if (Math.abs(diffX) > threshold) {
-            toast.style.transform = `translate(calc(-50% + ${diffX > 0 ? 100 : -100}vw), 0)`;
-          } else {
-            toast.style.transform = `translate(-50%, -150px)`;
-          }
-          toast.style.opacity = '0';
-          setTimeout(() => {
-            toast.style.display = 'none';
-            toast.style.transform = 'translateX(-50%)';
-            toast.style.opacity = '1';
-          }, 300);
-        } else {
-          toast.style.transform = 'translateX(-50%)';
-          toast.style.opacity = '1';
-        }
-        diffX = 0;
-        diffY = 0;
-      }, { passive: true });
-    })();
 
     document.addEventListener('DOMContentLoaded', function () {
       lucide.createIcons();
@@ -1099,20 +1145,20 @@
       });
     }
   </script>
-  <!-- Global Toast Container -->
-  <div id="globalToast"></div>
+
 
   <!-- Universal Confirmation Modal -->
+    <!-- Universal Confirmation Modal -->
   <div class="modal-overlay" id="universalModal">
     <div class="modal-content">
-      <div class="modal-icon-container" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6;">
-        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+      <div class="modal-icon-container" id="unvIconContainer">
+        <i data-lucide="help-circle"></i>
       </div>
-      <h3>Confirm Action</h3>
-      <p>Are you sure you want to proceed with this action?</p>
+      <h3 id="unvTitle">Confirm Action</h3>
+      <p id="unvMessage">Are you sure you want to proceed with this action?</p>
       <div class="modal-btns">
-        <button class="btn btn-outline" onclick="closeModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem;">Cancel</button>
-        <button class="btn btn-primary confirm-btn" onclick="handleConfirm()" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem;">Confirm</button>
+        <button class="btn btn-outline" onclick="closeUniversalModal()">Cancel</button>
+        <button id="unvConfirmBtn" class="btn btn-primary">Confirm</button>
       </div>
     </div>
   </div>

@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
   
   <style>
     /* ── DOCTOR DASHBOARD PREMIUM SYSTEM ── */
@@ -801,6 +803,7 @@
     .status-idle { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
     .status-active { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
     .status-completed { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+    .status-waiting-bookings { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); }
 
     /* Control Button System */
     .control-btn {
@@ -825,6 +828,14 @@
     .btn-skip:hover {
       transform: translateY(-2px);
       box-shadow: 0 12px 30px rgba(245,158,11,0.4);
+    }
+    .btn-complete {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      box-shadow: 0 8px 25px rgba(239,68,68,0.3);
+    }
+    .btn-complete:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(239,68,68,0.4);
     }
     .btn-disabled { 
       background: #cbd5e1 !important; 
@@ -984,6 +995,7 @@
     }
     .status-calling { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
     .status-consulted { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .status-referred { background: #e0e7ff; color: #4f46e5; border: 1px solid #c7d2fe; }
     .status-skipped { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
     .status-waiting { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
 
@@ -1032,7 +1044,6 @@
   <div id="pullIndicator">
     <div class="pull-indicator-content"><i data-lucide="refresh-cw"></i></div>
   </div>
-  <div id="globalToast"></div>
   <div class="bg-blur"></div>
 
   <!-- HEADER -->
@@ -1279,9 +1290,9 @@
               </div>
           </div>
 
-          <div id="statusBadge" class="status-badge {% if doc.status == 'idle' %}status-idle{% elif doc.status == 'active' %}status-active{% else %}status-completed{% endif %}" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1rem; border-radius: 999px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem;">
-              <i id="statusIcon" data-lucide="{% if doc.status == 'idle' %}clock{% elif doc.status == 'active' %}radio{% else %}check-circle{% endif %}" style="width:16px;height:16px;"></i>
-              <span id="statusText">{{ "Awaiting" if doc.status == 'idle' else ("Live Now" if doc.status == 'active' else "Completed") }}</span>
+          <div id="statusBadge" class="status-badge {% if doc.status == 'idle' %}status-idle{% elif doc.status == 'active' %}status-active{% elif doc.status == 'waiting_bookings' %}status-waiting-bookings{% else %}status-completed{% endif %}" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1rem; border-radius: 999px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem;">
+              <i id="statusIcon" data-lucide="{% if doc.status == 'idle' %}clock{% elif doc.status == 'active' %}radio{% elif doc.status == 'waiting_bookings' %}clock{% else %}check-circle{% endif %}" style="width:16px;height:16px;"></i>
+              <span id="statusText">{% if doc.status == 'idle' %}Awaiting{% elif doc.status == 'active' %}Live Now{% elif doc.status == 'waiting_bookings' %}Waiting for Bookings{% else %}Completed{% endif %}</span>
           </div>
           
           <div class="token-display" id="tokenDisplay" style="font-size: 5.5rem; font-weight: 850; color: #0077b6; line-height: 1; margin: 1rem 0; text-shadow: 0 4px 20px rgba(0, 119, 182, 0.15);">
@@ -1299,15 +1310,21 @@
           
           <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; max-width: 400px; margin-left: auto; margin-right: auto;">
               <button id="sessionBtn" class="control-btn {% if doc.status == 'idle' %}btn-start{% elif doc.status == 'active' %}btn-next{% else %}btn-disabled{% endif %}"
-                  {% if doc.status == 'completed' or doc.total_tokens == 0 %}disabled{% endif %} style="width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff;">
+                  {% if doc.status == 'completed' or doc.status == 'waiting_bookings' or doc.total_tokens == 0 %}disabled{% endif %} style="width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff;">
                   
                   {% if doc.status == 'idle' %}
                       <i data-lucide="play"></i> Start Session
                   {% elif doc.status == 'active' %}
                       <i data-lucide="arrow-right"></i> Next Patient
+                  {% elif doc.status == 'waiting_bookings' %}
+                      <i data-lucide="hourglass"></i> Waiting for Bookings
                   {% else %}
                       <i data-lucide="check-circle"></i> Session Completed
                   {% endif %}
+              </button>
+              
+              <button id="completeSessionBtn" class="control-btn btn-complete" style="display: {% if doc.status == 'waiting_bookings' %}flex{% else %}none{% endif %}; width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff;">
+                  <i data-lucide="power"></i> Complete Session
               </button>
               
               <button id="skipBtn" class="control-btn btn-skip" style="display: {% if doc.status == 'active' %}flex{% else %}none{% endif %}; width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff; background: #f59e0b; box-shadow: 0 8px 25px rgba(245,158,11,0.3);">
@@ -1530,17 +1547,66 @@
   </div>
 
   <!-- Universal Confirmation Modal -->
+    <!-- Universal Confirmation Modal -->
   <div class="modal-overlay" id="universalModal">
-    <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-      <div class="modal-icon-container" id="unvIconContainer" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
-        <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
+    <div class="modal-content">
+      <div class="modal-icon-container" id="unvIconContainer">
+        <i data-lucide="help-circle"></i>
       </div>
-      <h3 id="unvTitle" style="margin: 0 auto 0.5rem auto; color: #0f172a; font-size: 1.4rem; font-weight: 800; text-align: center; width: 100%;">Confirm Action</h3>
-      <p id="unvMessage" style="color: #64748b; font-size: 1.05rem; margin: 0 auto 2.2rem auto; line-height: 1.6; text-align: center; width: 100%;">Are you sure you want to proceed?</p>
-      <div class="modal-btns" style="display: flex; gap: 1.2rem; justify-content: center; width: 100%;">
-        <button class="btn btn-outline" onclick="closeUniversalModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Cancel</button>
-        <button id="unvConfirmBtn" class="btn btn-primary" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Confirm</button>
+      <h3 id="unvTitle">Confirm Action</h3>
+      <p id="unvMessage">Are you sure you want to proceed with this action?</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" onclick="closeUniversalModal()">Cancel</button>
+        <button id="unvConfirmBtn" class="btn btn-primary">Confirm</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Referral Modal -->
+  <div class="modal-overlay" id="referralModal">
+    <div class="modal-content" style="max-width: 480px;">
+      <button onclick="closeReferralModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0.25rem;" title="Close">
+        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+      </button>
+      
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+        <div style="background: rgba(2, 132, 199, 0.1); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0284c7;">
+          <i data-lucide="send" style="width: 24px; height: 24px;"></i>
+        </div>
+        <div>
+          <h3 style="margin: 0; color: #0f172a; font-size: 1.25rem; font-weight: 800;">Create Specialist Referral</h3>
+          <p style="margin: 0.15rem 0 0; color: #64748b; font-size: 0.85rem; font-weight: 500;">Recommend another department to this patient</p>
+        </div>
+      </div>
+      
+      <form id="referralForm" onsubmit="submitReferral(event)">
+        <input type="hidden" id="referralToken" name="token">
+        
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem;">Patient Name</label>
+          <input type="text" id="referralPatientName" readonly style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 0.95rem;">
+        </div>
+        
+        <div style="margin-bottom: 1.25rem;">
+          <label for="referralSpecialization" style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem;">Refer to Department / Specialization</label>
+          <div style="position: relative;">
+            <select id="referralSpecialization" required style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; font-weight: 600; font-size: 0.95rem; appearance: none; -webkit-appearance: none;">
+              <option value="" disabled selected>Select specialization...</option>
+            </select>
+            <i data-lucide="chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #94a3b8; pointer-events: none;"></i>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <label for="referralNotes" style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem;">Prescription Notes / Reason (Optional)</label>
+          <textarea id="referralNotes" rows="3" placeholder="Add clinical reason or recommendation notes for the specialist..." style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; font-size: 0.95rem; resize: none; font-family: inherit;"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-outline" onclick="closeReferralModal()" style="border-radius: 12px; padding: 0.7rem 1.4rem; margin: 0; min-width: auto; height: auto;">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background: #0284c7; border: none; border-radius: 12px; padding: 0.7rem 1.4rem; margin: 0; min-width: auto; height: auto; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);">Send Referral</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1553,102 +1619,187 @@
     let totalTokens = {{ doc.total_tokens }};
     let skippedTokensStr = "{{ doc.skipped_tokens }}";
     
-    // ── Toast ──
-    function showToast(msg, type='success') {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      toast.className = 'toast-' + type;
-      toast.innerHTML = (type === 'success' ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
-      lucide.createIcons();
-      toast.style.display = 'flex';
-      toast.style.transform = 'translateX(-50%)';
-      toast.style.opacity = '1';
-      if (window.toastTimeout) clearTimeout(window.toastTimeout);
-      window.toastTimeout = setTimeout(() => toast.style.display = 'none', 3500);
-    }
 
-    (function initToastSwipeDismiss() {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      let startX = 0, startY = 0;
-      let isDragging = false;
-      let diffX = 0, diffY = 0;
-
-      toast.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        isDragging = true;
-        toast.style.transition = 'none';
-      }, { passive: true });
-
-      toast.addEventListener('touchmove', (e) => {
-        if (!isDragging || e.touches.length !== 1) return;
-        diffX = e.touches[0].clientX - startX;
-        diffY = e.touches[0].clientY - startY;
-        let moveX = diffX;
-        let moveY = diffY < 0 ? diffY : 0;
-        const dist = Math.sqrt(diffX * diffX + (diffY < 0 ? diffY * diffY : 0));
-        const opacity = Math.max(0, 1 - dist / 150);
-        toast.style.transform = `translate(calc(-50% + ${moveX}px), ${moveY}px)`;
-        toast.style.opacity = opacity;
-      }, { passive: true });
-
-      toast.addEventListener('touchend', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        toast.style.transition = 'all 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
-        const threshold = 60;
-        if (Math.abs(diffX) > threshold || diffY < -threshold) {
-          if (Math.abs(diffX) > threshold) {
-            toast.style.transform = `translate(calc(-50% + ${diffX > 0 ? 100 : -100}vw), 0)`;
-          } else {
-            toast.style.transform = `translate(-50%, -150px)`;
-          }
-          toast.style.opacity = '0';
-          setTimeout(() => {
-            toast.style.display = 'none';
-            toast.style.transform = 'translateX(-50%)';
-            toast.style.opacity = '1';
-          }, 300);
-        } else {
-          toast.style.transform = 'translateX(-50%)';
-          toast.style.opacity = '1';
-        }
-        diffX = 0;
-        diffY = 0;
-      }, { passive: true });
-    })();
     
-    // ── Universal Modal Logic ──
+        // ─── Unified Modal System ───
     let activeModalAction = null;
-    function openUniversalModal(title, message, actionText, actionFn, isDanger = false) {
-      document.getElementById('unvTitle').textContent = title;
-      document.getElementById('unvMessage').textContent = message;
-      const btn = document.getElementById('unvConfirmBtn');
-      btn.textContent = actionText;
-      btn.style.background = isDanger ? '#e11d48' : '#0077b6';
-      btn.style.boxShadow = isDanger ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+    
+    window.openUniversalModal = function(titleOrId, messageOrTitle, actionTextOrMessage, actionFnOrText, isDangerOrFn, isDanger) {
+      const modal = document.getElementById('universalModal');
+      if (!modal) return;
       
-      const container = document.getElementById('unvIconContainer');
-      const iconName = isDanger ? 'alert-triangle' : 'help-circle';
-      container.innerHTML = `<i data-lucide="${iconName}" style="width: 32px; height: 32px;"></i>`;
+      let id = 'info';
+      let title, message, actionText, actionFn, isDangerVal = false;
       
-      if(isDanger) {
-         container.style.color = '#e11d48';
-         container.style.background = 'rgba(225, 29, 72, 0.1)';
+      // Handle variable signatures
+      if (['success', 'warning', 'danger', 'info', 'universalModal', 'delete', 'logout'].includes(titleOrId)) {
+        id = titleOrId;
+        title = messageOrTitle;
+        message = actionTextOrMessage;
+        actionText = actionFnOrText;
+        actionFn = isDangerOrFn;
+        isDangerVal = isDanger || false;
       } else {
-         container.style.color = '#0077b6';
-         container.style.background = 'rgba(0, 119, 182, 0.1)';
+        title = titleOrId;
+        message = messageOrTitle;
+        actionText = actionTextOrMessage;
+        actionFn = actionFnOrText;
+        isDangerVal = isDangerOrFn || false;
       }
-      lucide.createIcons();
+      
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
+      
+      // Update Title & Message
+      const titleEl = document.getElementById('unvTitle') || modal.querySelector('h3');
+      const msgEl = document.getElementById('unvMessage') || modal.querySelector('p');
+      if (titleEl) titleEl.textContent = title;
+      if (msgEl) msgEl.innerHTML = message;
+      
+      // Update Confirm Button
+      const btn = document.getElementById('unvConfirmBtn') || modal.querySelector('.confirm-btn');
+      if (btn) {
+        btn.textContent = actionText;
+        btn.style.background = isDangerVal ? '#e11d48' : '#0077b6';
+        btn.style.boxShadow = isDangerVal ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      }
+      
+      // Update Icon
+      const container = document.getElementById('unvIconContainer') || modal.querySelector('.modal-icon-container');
+      if (container) {
+        let iconName = 'help-circle';
+        if (id === 'success') {
+          iconName = 'check-circle';
+          container.style.color = '#10b981';
+        } else if (id === 'warning') {
+          iconName = 'alert-circle';
+          container.style.color = '#f59e0b';
+        } else if (isDangerVal) {
+          iconName = 'alert-triangle';
+          container.style.color = '#e11d48';
+        } else {
+          container.style.color = '#0077b6';
+        }
+        container.style.background = 'transparent';
+        container.style.border = 'none';
+        container.style.boxShadow = 'none';
+        container.style.borderRadius = '0';
+        container.style.padding = '0';
+        container.innerHTML = `<i data-lucide="${iconName}"></i>`;
+      }
+      
       activeModalAction = actionFn;
-      document.getElementById('universalModal').style.display = 'flex';
+      modal.style.display = 'flex';
+      if (window.lucide) lucide.createIcons();
+    };
+    
+    window.closeUniversalModal = function() {
+      const modal = document.getElementById('universalModal');
+      if (modal) modal.style.display = 'none';
+      activeModalAction = null;
+      
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal?.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
+    };
+    
+    // Setup aliases
+    window.openModal = window.openUniversalModal;
+    window.closeModal = window.closeUniversalModal;
+    window.handleConfirm = function() {
+      if (activeModalAction) activeModalAction();
+      closeUniversalModal();
+    };
+    
+    // Register event listener for confirmation button
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('unvConfirmBtn') || document.querySelector('#universalModal .confirm-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (activeModalAction) activeModalAction();
+          closeUniversalModal();
+        });
+      }
+    });
+
+    // ── Referral Modal Logic ──
+    let specializationsCache = [];
+    async function openReferralModal(token, patientName) {
+      document.getElementById('referralToken').value = token;
+      document.getElementById('referralPatientName').value = patientName;
+      document.getElementById('referralNotes').value = '';
+      
+      const select = document.getElementById('referralSpecialization');
+      if (specializationsCache.length === 0) {
+        try {
+          const res = await fetch('/get_specializations');
+          const specs = await res.json();
+          specializationsCache = specs;
+          
+          select.innerHTML = '<option value="" disabled selected>Select specialization...</option>';
+          specs.forEach(spec => {
+            const opt = document.createElement('option');
+            opt.value = spec;
+            opt.textContent = spec;
+            select.appendChild(opt);
+          });
+        } catch (err) {
+          console.error('Error fetching specializations:', err);
+          showToast('Failed to load specializations list.', 'error');
+        }
+      } else {
+        select.innerHTML = '<option value="" disabled selected>Select specialization...</option>';
+        specializationsCache.forEach(spec => {
+          const opt = document.createElement('option');
+          opt.value = spec;
+          opt.textContent = spec;
+          select.appendChild(opt);
+        });
+      }
+      
+      document.getElementById('referralModal').style.display = 'flex';
+      lucide.createIcons(select);
     }
     
-    function closeUniversalModal() {
-      document.getElementById('universalModal').style.display = 'none';
-      activeModalAction = null;
+    function closeReferralModal() {
+      document.getElementById('referralModal').style.display = 'none';
+      document.getElementById('referralForm').reset();
+    }
+    
+    async function submitReferral(event) {
+      event.preventDefault();
+      const token = document.getElementById('referralToken').value;
+      const specialization = document.getElementById('referralSpecialization').value;
+      const notes = document.getElementById('referralNotes').value;
+      
+      if (!specialization) {
+        showToast('Please select a target specialization.', 'error');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/create_referral', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, specialization, notes })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.msg, 'success');
+          closeReferralModal();
+          await fetchStatsAndSync();
+        } else {
+          showToast(data.msg, 'error');
+        }
+      } catch (err) {
+        console.error('Error submitting referral:', err);
+        showToast('Connection error. Please try again.', 'error');
+      }
     }
     
     document.getElementById('unvConfirmBtn').addEventListener('click', () => {
@@ -1819,6 +1970,10 @@
                 badgeClass = 'status-consulted';
                 badgeIcon = 'check-circle';
                 badgeText = 'Consulted';
+            } else if (b.status === 'referred') {
+                badgeClass = 'status-referred';
+                badgeIcon = 'arrow-up-right';
+                badgeText = 'Referred';
             } else if (b.status === 'skipped') {
                 badgeClass = 'status-skipped';
                 badgeIcon = 'user-minus';
@@ -1850,8 +2005,24 @@
                 `;
             } else if (b.status === 'waiting') {
                 actionsHtml = `<span style="color:#94a3b8; font-size:0.75rem; font-weight:700;">Queue #${b.token}</span>`;
+            } else if (b.status === 'referred') {
+                actionsHtml = `
+                    <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
+                        <i data-lucide="arrow-up-right" style="color:#4f46e5; width:16px; height:16px;" title="Referred"></i>
+                        <button class="btn btn-outline" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:#cbd5e1; color:#94a3b8; background:#f1f5f9; cursor:not-allowed; min-width:auto; height:24px; display:flex; align-items:center; gap:3px;" title="Already Referred">
+                            <i data-lucide="send" style="width:10px; height:10px;"></i> Refer
+                        </button>
+                    </div>
+                `;
             } else {
-                actionsHtml = `<i data-lucide="check" style="color:#10b981; width:16px; height:16px; margin:0 auto; display:block;"></i>`;
+                actionsHtml = `
+                    <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
+                        <i data-lucide="check" style="color:#10b981; width:16px; height:16px;" title="Consulted"></i>
+                        <button class="btn btn-outline" onclick="openReferralModal('${b.token}', '${b.name.replace(/'/g, "\\'")}')" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:#0284c7; color:#0284c7; min-width:auto; height:24px; display:flex; align-items:center; gap:3px;" title="Refer Patient">
+                            <i data-lucide="send" style="width:10px; height:10px;"></i> Refer
+                        </button>
+                    </div>
+                `;
             }
 
             const isRowCalling = b.status === 'calling' ? 'background: rgba(16, 185, 129, 0.04); font-weight: 700;' : '';
@@ -1902,6 +2073,10 @@
             statusTextValue = "Live Now";
             badgeClass = "status-active";
             statusIconName = "radio";
+        } else if (data.status === 'waiting_bookings') {
+            statusTextValue = "Waiting for Bookings";
+            badgeClass = "status-waiting-bookings";
+            statusIconName = "clock";
         } else if (data.status === 'completed') {
             statusTextValue = "Completed";
             badgeClass = "status-completed";
@@ -1912,7 +2087,7 @@
         const timelineText = data.start_time ? `Started: ${data.start_time}` : "Awaiting Start";
         document.getElementById('statsTimeline').textContent = data.end_time ? `Ended: ${data.end_time}` : timelineText;
 
-        document.getElementById('statsCurrentToken').textContent = data.status === 'idle' ? '--' : '#' + data.current_token;
+        document.getElementById('statsCurrentToken').textContent = (data.status === 'idle' || data.status === 'waiting_bookings') ? '--' : '#' + data.current_token;
         document.getElementById('statsTotalTokens').textContent = `Up to Token #${data.total_tokens}`;
         document.getElementById('statsBookedCount').textContent = data.total_booked;
         
@@ -1926,7 +2101,7 @@
         // 3. Overview Panel
         document.getElementById('bookedCount').textContent = data.total_booked;
         document.getElementById('totalTokens').textContent = data.total_tokens;
-        document.getElementById('tokenDisplay').textContent = data.status === 'idle' ? '--' : '#' + data.current_token;
+        document.getElementById('tokenDisplay').textContent = (data.status === 'idle' || data.status === 'waiting_bookings') ? '--' : '#' + data.current_token;
 
         const timelineContainer = document.getElementById('sessionTimeline');
         const endContainer = document.getElementById('endTimeContainer');
@@ -1949,22 +2124,32 @@
 
         const sessionBtn = document.getElementById('sessionBtn');
         const skipBtn = document.getElementById('skipBtn');
+        const completeSessionBtn = document.getElementById('completeSessionBtn');
         
         if (data.status === 'idle') {
             sessionBtn.className = 'control-btn btn-start';
             sessionBtn.innerHTML = '<i data-lucide="play"></i> Start Session';
             sessionBtn.disabled = data.total_tokens === 0;
             skipBtn.style.display = 'none';
+            if (completeSessionBtn) completeSessionBtn.style.display = 'none';
         } else if (data.status === 'active') {
             sessionBtn.className = 'control-btn btn-next';
             sessionBtn.innerHTML = '<i data-lucide="arrow-right"></i> Next Patient';
             sessionBtn.disabled = false;
             skipBtn.style.display = 'flex';
+            if (completeSessionBtn) completeSessionBtn.style.display = 'none';
+        } else if (data.status === 'waiting_bookings') {
+            sessionBtn.className = 'control-btn btn-disabled';
+            sessionBtn.innerHTML = '<i data-lucide="hourglass"></i> Waiting for Bookings';
+            sessionBtn.disabled = true;
+            skipBtn.style.display = 'none';
+            if (completeSessionBtn) completeSessionBtn.style.display = 'flex';
         } else {
             sessionBtn.className = 'control-btn btn-disabled';
             sessionBtn.innerHTML = '<i data-lucide="check-circle"></i> Session Completed';
             sessionBtn.disabled = true;
             skipBtn.style.display = 'none';
+            if (completeSessionBtn) completeSessionBtn.style.display = 'none';
         }
 
         // Empty slots listing
@@ -1987,7 +2172,7 @@
         // 4. Render Progress Bar
         const total = data.total_booked || 0;
         if (total > 0) {
-          const bConsulted = data.bookings.filter(b => b.status === 'consulted').length;
+          const bConsulted = data.bookings.filter(b => b.status === 'consulted' || b.status === 'referred').length;
           const bCalling = data.bookings.filter(b => b.status === 'calling').length;
           const bSkipped = data.bookings.filter(b => b.status === 'skipped').length;
           const bWaiting = data.bookings.filter(b => b.status === 'waiting').length;
@@ -2099,6 +2284,39 @@
     };
 
     document.getElementById('skipBtn').addEventListener('click', window.triggerSkipAction);
+
+    // ── Complete Session Action ──
+    window.triggerCompleteAction = function() {
+        openUniversalModal('Complete Session', 'Are you sure you want to complete this session? No more bookings can be made for today after completion.', 'Complete Now', async () => {
+            const completeSessionBtn = document.getElementById('completeSessionBtn');
+            completeSessionBtn.disabled = true;
+            const ogContent = completeSessionBtn.innerHTML;
+            completeSessionBtn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Completing...';
+            lucide.createIcons();
+
+            try {
+                const res = await fetch('/complete_session', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Session completed successfully.', 'success');
+                    await fetchStatsAndSync();
+                } else {
+                    showToast(data.msg, 'error');
+                }
+            } catch (e) {
+                showToast('Network error', 'error');
+            } finally {
+                completeSessionBtn.disabled = false;
+                completeSessionBtn.innerHTML = ogContent;
+                lucide.createIcons();
+            }
+        }, true);
+    };
+
+    const completeBtnEl = document.getElementById('completeSessionBtn');
+    if (completeBtnEl) {
+        completeBtnEl.addEventListener('click', window.triggerCompleteAction);
+    }
 
     // ── Next/Start Patient Action ──
     window.triggerNextAction = async function() {

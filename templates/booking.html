@@ -13,6 +13,8 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
   <link rel="manifest" href="/static/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1343,7 +1345,8 @@
       border: 1px solid transparent !important;
       transition: all 0.25s !important;
     }
-    .tag-day.active-day {
+    .tag-day.active-day,
+    .tag-time.active-time {
       background: rgba(16, 185, 129, 0.08) !important;
       color: #059669 !important;
       border-color: rgba(16, 185, 129, 0.25) !important;
@@ -1363,6 +1366,7 @@
       font-weight: 700 !important;
       font-size: 0.8rem !important;
       border: 1px solid rgba(0, 119, 182, 0.1) !important;
+      transition: all 0.25s !important;
     }
     .spec-doc-grid {
       display: grid !important;
@@ -1394,11 +1398,73 @@
     .spec-doc-timing-row {
       display: flex !important;
       justify-content: space-between !important;
+      align-items: center !important;
       flex-wrap: wrap !important;
       gap: 0.5rem !important;
       font-size: 0.78rem !important;
       color: #64748b !important;
       font-weight: 500 !important;
+      width: 100% !important;
+    }
+    .spec-doc-details {
+      width: 100% !important;
+      margin-top: 0.15rem !important;
+    }
+    .spec-doc-summary {
+      cursor: pointer !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.3rem !important;
+      color: #0077b6 !important;
+      font-weight: 600 !important;
+      font-size: 0.78rem !important;
+      user-select: none !important;
+      outline: none !important;
+      list-style: none !important;
+      transition: color 0.2s !important;
+    }
+    .spec-doc-summary:hover {
+      color: #0096c7 !important;
+    }
+    .spec-doc-summary::-webkit-details-marker {
+      display: none !important;
+    }
+    .spec-doc-summary::marker {
+      display: none !important;
+    }
+    details[open] .spec-doc-summary svg:last-child {
+      transform: rotate(180deg) !important;
+    }
+    .spec-doc-timings-list {
+      margin-top: 0.4rem !important;
+      padding: 0.5rem 0.75rem !important;
+      background: rgba(0, 119, 182, 0.04) !important;
+      border-radius: 8px !important;
+      border: 1px solid rgba(0, 119, 182, 0.08) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.3rem !important;
+      font-size: 0.75rem !important;
+      color: #475569 !important;
+    }
+    .spec-doc-timing-item {
+      display: flex !important;
+      justify-content: space-between !important;
+      gap: 1rem !important;
+      border-bottom: 1px solid rgba(0, 119, 182, 0.05) !important;
+      padding-bottom: 0.15rem !important;
+    }
+    .spec-doc-timing-item:last-child {
+      border-bottom: none !important;
+      padding-bottom: 0 !important;
+    }
+    .spec-doc-timing-day {
+      font-weight: 700 !important;
+      color: #023e8a !important;
+    }
+    .spec-doc-timing-val {
+      font-weight: 600 !important;
+      color: #334155 !important;
     }
 
     /* ── My Bookings / Tickets UI ── */
@@ -1647,8 +1713,7 @@
 </head>
 
 <body class="bg-image">
-  <!-- Global Toast Container -->
-  <div id="globalToast"></div>
+
   <div class="bg-blur"></div>
 
   <!-- HEADER -->
@@ -1767,7 +1832,7 @@
                 {% if b.status == 'cancelled' %}
                 <span class="status-badge-cancelled"><i data-lucide="ban" style="width:12px;height:12px;"></i> {% if b.cancelled_by == 'admin' %}Cancelled by Admin{% else %}Cancelled{% endif %}</span>
                 {% endif %}
-                {% if b.is_skipped %}
+                {% if b.is_skipped and b.status != 'cancelled' %}
                 <span style="background:#fef3c7; color:#d97706; padding:0.2rem 0.55rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
                 {% endif %}
                 
@@ -1835,7 +1900,7 @@
                 {% else %}
                 <span class="status-badge-completed" style="font-size: 0.72rem;"><i data-lucide="check" style="width:11px;height:11px;"></i> Completed</span>
                 {% endif %}
-                {% if b.is_skipped %}
+                {% if b.is_skipped and b.status != 'cancelled' %}
                 <span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.72rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:11px;height:11px;"></i> Skipped</span>
                 {% endif %}
               </div>
@@ -3309,19 +3374,20 @@
   {% endif %}
 
    <!-- Universal Confirmation Modal (Standardized) -->
-   <div class="modal-overlay" id="universalModal">
-     <div class="modal-content" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-       <div class="modal-icon-container" id="unvIconContainer" style="background: rgba(0, 119, 182, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #0077b6; flex-shrink: 0;">
-         <i data-lucide="help-circle" style="width: 32px; height: 32px;"></i>
-       </div>
-       <h3 id="unvTitle" style="margin: 0 auto 0.5rem auto; color: #0f172a; font-size: 1.4rem; font-weight: 800; text-align: center; width: 100%;">Confirm Action</h3>
-       <p id="unvMessage" style="color: #64748b; font-size: 1.05rem; margin: 0 auto 2.2rem auto; line-height: 1.6; text-align: center; width: 100%;">Are you sure you want to proceed with this action?</p>
-       <div class="modal-btns" style="display: flex; gap: 1.2rem; justify-content: center; width: 100%;">
-         <button class="btn btn-outline" onclick="closeUniversalModal()" style="border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Cancel</button>
-         <button id="unvConfirmBtn" class="btn btn-primary" style="background: #0077b6; box-shadow: 0 12px 30px rgba(0, 119, 182, 0.35); border:none; border-radius: 16px; padding: 0.8rem 1.6rem; margin: 0;">Confirm</button>
-       </div>
-     </div>
-   </div>
+     <!-- Universal Confirmation Modal -->
+  <div class="modal-overlay" id="universalModal">
+    <div class="modal-content">
+      <div class="modal-icon-container" id="unvIconContainer">
+        <i data-lucide="help-circle"></i>
+      </div>
+      <h3 id="unvTitle">Confirm Action</h3>
+      <p id="unvMessage">Are you sure you want to proceed with this action?</p>
+      <div class="modal-btns">
+        <button class="btn btn-outline" onclick="closeUniversalModal()">Cancel</button>
+        <button id="unvConfirmBtn" class="btn btn-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // ─── Lucide icons ───────────────────────────────────────────
@@ -3378,73 +3444,7 @@
       if (timeout > 0) setTimeout(() => { div.style.display = 'none'; div.innerHTML = ''; div.style.background='none'; div.style.border='none'; }, timeout);
     }
 
-    function showToast(msg, type = 'success') {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      toast.className = 'toast-' + type;
-      toast.innerHTML = (type === 'success' 
-        ? '<i data-lucide="check-circle" style="width:22px;height:22px;"></i> ' 
-        : '<i data-lucide="alert-circle" style="width:22px;height:22px;"></i> ') + msg;
-      lucide.createIcons();
-      toast.style.display = 'flex';
-      toast.style.transform = 'translateX(-50%)';
-      toast.style.opacity = '1';
-      if (window.toastTimeout) clearTimeout(window.toastTimeout);
-      window.toastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 5000);
-    }
 
-    (function initToastSwipeDismiss() {
-      const toast = document.getElementById('globalToast');
-      if (!toast) return;
-      let startX = 0, startY = 0;
-      let isDragging = false;
-      let diffX = 0, diffY = 0;
-
-      toast.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        isDragging = true;
-        toast.style.transition = 'none';
-      }, { passive: true });
-
-      toast.addEventListener('touchmove', (e) => {
-        if (!isDragging || e.touches.length !== 1) return;
-        diffX = e.touches[0].clientX - startX;
-        diffY = e.touches[0].clientY - startY;
-        let moveX = diffX;
-        let moveY = diffY < 0 ? diffY : 0;
-        const dist = Math.sqrt(diffX * diffX + (diffY < 0 ? diffY * diffY : 0));
-        const opacity = Math.max(0, 1 - dist / 150);
-        toast.style.transform = `translate(calc(-50% + ${moveX}px), ${moveY}px)`;
-        toast.style.opacity = opacity;
-      }, { passive: true });
-
-      toast.addEventListener('touchend', () => {
-        if (!isDragging) return;
-        isDragging = false;
-        toast.style.transition = 'all 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
-        const threshold = 60;
-        if (Math.abs(diffX) > threshold || diffY < -threshold) {
-          if (Math.abs(diffX) > threshold) {
-            toast.style.transform = `translate(calc(-50% + ${diffX > 0 ? 100 : -100}vw), 0)`;
-          } else {
-            toast.style.transform = `translate(-50%, -150px)`;
-          }
-          toast.style.opacity = '0';
-          setTimeout(() => {
-            toast.style.display = 'none';
-            toast.style.transform = 'translateX(-50%)';
-            toast.style.opacity = '1';
-          }, 300);
-        } else {
-          toast.style.transform = 'translateX(-50%)';
-          toast.style.opacity = '1';
-        }
-        diffX = 0;
-        diffY = 0;
-      }, { passive: true });
-    })();
 
     // map section id → panel card id
     const sectionPanelMap = {
@@ -4376,8 +4376,8 @@
             if (data.success) {
                 input.value = '';
                 loadTickerMessages();
-            } else { alert(data.msg); }
-        } catch(e) { alert('Failed to add message'); }
+            } else { showToast(data.msg, 'error'); }
+        } catch(e) { showToast('Failed to add message', 'error'); }
     }
 
     function deleteTickerMsg(id) {
@@ -4475,6 +4475,10 @@
       const timeRanges = Object.values(dayTimes).filter(Boolean);
       const uniqueTimeRanges = [...new Set(timeRanges)];
 
+      // Find the timing range for the selected day
+      const selectedDayName = selectedDayIndex !== -1 ? dayNames[selectedDayIndex] : '';
+      const activeTimeRange = selectedDayName ? dayTimes[selectedDayName] : null;
+
       if (uniqueTimeRanges.length === 0) {
         timesContainer.innerHTML = '<span class="tag-time">No set timing</span>';
       } else {
@@ -4482,6 +4486,9 @@
           const span = document.createElement('span');
           span.className = 'tag-time';
           span.textContent = tr;
+          if (activeTimeRange && tr === activeTimeRange) {
+            span.classList.add('active-time');
+          }
           timesContainer.appendChild(span);
         });
       }
@@ -4520,9 +4527,22 @@
           const daysArr = doc.Days || [];
           const daysText = daysArr.map(d => d.slice(0,3)).join(', ');
           
-          // Timings
-          const timings = Object.values(doc.DayTimes || {}).filter(Boolean);
-          const timingText = timings.length > 0 ? timings[0] : 'No schedule';
+          // Timings dropdown
+          const dayTimes = doc.DayTimes || {};
+          let timingsHtml = '';
+          daysArr.forEach(day => {
+            const time = dayTimes[day] || 'No set timing';
+            timingsHtml += `
+              <div class="spec-doc-timing-item">
+                <span class="spec-doc-timing-day">${day}</span>
+                <span class="spec-doc-timing-val">${time}</span>
+              </div>
+            `;
+          });
+          
+          if (!timingsHtml) {
+            timingsHtml = '<div style="color: #64748b; font-style: italic; padding: 0.2rem 0;">No schedule set</div>';
+          }
 
           item.innerHTML = `
             <div class="spec-doc-name-row">
@@ -4531,7 +4551,15 @@
             </div>
             <div class="spec-doc-timing-row">
               <span class="spec-doc-schedule"><i data-lucide="calendar"></i> ${daysText}</span>
-              <span class="spec-doc-hours"><i data-lucide="clock"></i> ${timingText}</span>
+              <details class="spec-doc-details">
+                <summary class="spec-doc-summary">
+                  <i data-lucide="clock"></i> View Timings
+                  <i data-lucide="chevron-down" style="width:12px; height:12px; margin-left:2px; display:inline-block; vertical-align:middle; transition: transform 0.2s;"></i>
+                </summary>
+                <div class="spec-doc-timings-list">
+                  ${timingsHtml}
+                </div>
+              </details>
             </div>
           `;
           grid.appendChild(item);
@@ -6364,10 +6392,40 @@
 
       lucide.createIcons();
 
-      // 3. Then check admin state and perform other inits
       await initPage();
 
-      // 4. Restore last active admin panel if we are in admin section
+      // 4. Handle specialization URL query parameter if present
+      const specParam = urlParams.get('specialization');
+      if (specParam) {
+        showSection('bookDept', document.getElementById('panelDept'));
+        const specSelect = document.getElementById('specSelect');
+        if (specSelect) {
+          specSelect.value = specParam;
+          specSelect.dispatchEvent(new Event('change'));
+        }
+
+        // Auto-fill patient name and age from referral sessionStorage if set
+        const prefillName = sessionStorage.getItem('ref_prefill_name');
+        const prefillAge  = sessionStorage.getItem('ref_prefill_age');
+        if (prefillName || prefillAge) {
+          // Give the section a moment to become visible before filling
+          setTimeout(() => {
+            if (prefillName) {
+              const nameEl = document.getElementById('depName');
+              if (nameEl) { nameEl.value = prefillName; nameEl.dispatchEvent(new Event('input')); }
+            }
+            if (prefillAge) {
+              const ageEl = document.getElementById('depAge');
+              if (ageEl) { ageEl.value = prefillAge; ageEl.dispatchEvent(new Event('input')); }
+            }
+            // Clear so it only applies once
+            sessionStorage.removeItem('ref_prefill_name');
+            sessionStorage.removeItem('ref_prefill_age');
+          }, 400);
+        }
+      }
+
+      // 5. Restore last active admin panel if we are in admin section
       if (savedSection === 'admin') {
         const urlParams = new URLSearchParams(window.location.search);
         const urlPanel = urlParams.get('panel') || '';
@@ -6482,87 +6540,117 @@ function downloadPDF() {
         inp.addEventListener('change', () => {
           const selected = inp.value;
           if (selected > maxDateStr) {
-            alert('Bookings are only allowed up to 15 days in advance.');
+            showToast('Bookings are only allowed up to 15 days in advance.', 'error');
             inp.value = '';
           }
         });
       });
     })();
   
-    /**
-     * Unified Modal System
-
-
-    /**
-     * Unified Modal System
-     * @param {string} id - legacy param or 'success'
-     */
-    window.openModal = function(id, title, message, actionText, actionFn, isDanger = false) {
-      console.log(`[Modal] Opening: ${title}`);
-      
+        // ─── Unified Modal System ───
+    let activeModalAction = null;
+    
+    window.openUniversalModal = function(titleOrId, messageOrTitle, actionTextOrMessage, actionFnOrText, isDangerOrFn, isDanger) {
       const modal = document.getElementById('universalModal');
-      const titleEl = document.getElementById('unvTitle');
-      const msgEl = document.getElementById('unvMessage');
-      const btn = document.getElementById('unvConfirmBtn');
-      const container = document.getElementById('unvIconContainer');
-
-      // Cleanup
-      const oldCard = modal.querySelector('.success-token-card');
-      if (oldCard) oldCard.remove();
-
-      titleEl.textContent = title;
-      msgEl.innerHTML = message;
+      if (!modal) return;
       
-      btn.textContent = actionText;
-      btn.style.background = isDanger ? '#e11d48' : '#0077b6';
-      btn.style.boxShadow = isDanger ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      let id = 'info';
+      let title, message, actionText, actionFn, isDangerVal = false;
       
-      // Icon Logic
-      let iconName = 'help-circle';
-      if (id === 'success') {
-          iconName = 'check-circle';
-          container.style.color = '#10b981';
-          container.style.background = 'rgba(16, 185, 129, 0.1)';
-      } else if (id === 'warning') {
-          iconName = 'alert-circle';
-          container.style.color = '#f59e0b'; // Amber-600
-          container.style.background = 'rgba(245, 158, 11, 0.1)';
-      } else if (isDanger) {
-          iconName = 'alert-triangle';
-          container.style.color = '#e11d48';
-          container.style.background = 'rgba(225, 29, 72, 0.1)';
+      // Handle variable signatures
+      if (['success', 'warning', 'danger', 'info', 'universalModal', 'delete', 'logout'].includes(titleOrId)) {
+        id = titleOrId;
+        title = messageOrTitle;
+        message = actionTextOrMessage;
+        actionText = actionFnOrText;
+        actionFn = isDangerOrFn;
+        isDangerVal = isDanger || false;
       } else {
-          container.style.color = '#0077b6';
-          container.style.background = 'rgba(0, 119, 182, 0.1)';
+        title = titleOrId;
+        message = messageOrTitle;
+        actionText = actionTextOrMessage;
+        actionFn = actionFnOrText;
+        isDangerVal = isDangerOrFn || false;
       }
       
-      container.innerHTML = `<i data-lucide="${iconName}" style="width: 32px; height: 32px;"></i>`;
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
+      const waBtn = document.getElementById('adminWhatsAppBtn');
+      if (waBtn) waBtn.remove();
+      
+      // Update Title & Message
+      const titleEl = document.getElementById('unvTitle') || modal.querySelector('h3');
+      const msgEl = document.getElementById('unvMessage') || modal.querySelector('p');
+      if (titleEl) titleEl.textContent = title;
+      if (msgEl) msgEl.innerHTML = message;
+      
+      // Update Confirm Button
+      const btn = document.getElementById('unvConfirmBtn') || modal.querySelector('.confirm-btn');
+      if (btn) {
+        btn.textContent = actionText;
+        btn.style.background = isDangerVal ? '#e11d48' : '#0077b6';
+        btn.style.boxShadow = isDangerVal ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
+      }
+      
+      // Update Icon
+      const container = document.getElementById('unvIconContainer') || modal.querySelector('.modal-icon-container');
+      if (container) {
+        let iconName = 'help-circle';
+        if (id === 'success') {
+          iconName = 'check-circle';
+          container.style.color = '#10b981';
+        } else if (id === 'warning') {
+          iconName = 'alert-circle';
+          container.style.color = '#f59e0b';
+        } else if (isDangerVal) {
+          iconName = 'alert-triangle';
+          container.style.color = '#e11d48';
+        } else {
+          container.style.color = '#0077b6';
+        }
+        container.style.background = 'transparent';
+        container.style.border = 'none';
+        container.style.boxShadow = 'none';
+        container.style.borderRadius = '0';
+        container.style.padding = '0';
+        container.innerHTML = `<i data-lucide="${iconName}"></i>`;
+      }
       
       activeModalAction = actionFn;
       modal.style.display = 'flex';
       if (window.lucide) lucide.createIcons();
     };
-
-    window.closeModal = function() {
+    
+    window.closeUniversalModal = function() {
       const modal = document.getElementById('universalModal');
       if (modal) modal.style.display = 'none';
       activeModalAction = null;
-      // Clean up special cards
-      const card = modal.querySelector('.success-token-card');
-      if (card) card.remove();
       
+      // Cleanup legacy token card or WhatsApp buttons if present
+      const oldCard = modal?.querySelector('.success-token-card');
+      if (oldCard) oldCard.remove();
       const waBtn = document.getElementById('adminWhatsAppBtn');
       if (waBtn) waBtn.remove();
     };
     
-    // Alias for backward compatibility or new calls
-    window.closeUniversalModal = window.closeModal;
-    window.openUniversalModal = window.openModal;
-
-    document.getElementById('unvConfirmBtn')?.addEventListener('click', () => {
-      console.log("[Modal] Confirmation clicked");
+    // Setup aliases
+    window.openModal = window.openUniversalModal;
+    window.closeModal = window.closeUniversalModal;
+    window.handleConfirm = function() {
       if (activeModalAction) activeModalAction();
-      closeModal();
+      closeUniversalModal();
+    };
+    
+    // Register event listener for confirmation button
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('unvConfirmBtn') || document.querySelector('#universalModal .confirm-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (activeModalAction) activeModalAction();
+          closeUniversalModal();
+        });
+      }
     });
 
     window.openLogoutModal = function() {
@@ -6602,6 +6690,10 @@ function downloadPDF() {
                 badge.innerHTML = '<span class="blinking-dot-small"></span><span class="live-text"></span>';
               }
               badge.querySelector('.live-text').textContent = `Live: Calling #${liveData.current_token}`;
+            } else if (liveData.status_raw === 'waiting_bookings') {
+              badge.classList.remove('idle');
+              badge.innerHTML = '<i data-lucide="clock" style="width:11px;height:11px;"></i><span class="live-text">Waiting for Patients</span>';
+              lucide.createIcons();
             } else if (liveData.status_raw === 'idle') {
               badge.classList.add('idle');
               if (currentHHMM >= schedStart) {
