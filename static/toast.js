@@ -302,3 +302,119 @@ window.showToast = function(a, b, c) {
   const parsed = parseToastArguments(a, b, c);
   toastManager.create(parsed.type, parsed.title, parsed.message);
 };
+
+// ── GLOBAL LOADING-STATE SYSTEM ──
+
+let lastClickedButton = null;
+
+// Track the last clicked action button to associate it with active fetches
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('button, input[type="submit"], input[type="button"], .btn');
+  if (btn) {
+    lastClickedButton = btn;
+    // Auto-clear after a safe delay if no fetch/action follows
+    setTimeout(() => {
+      if (lastClickedButton === btn) lastClickedButton = null;
+    }, 2000);
+  }
+}, { passive: true });
+
+// Listen for standard form submits to instantly trigger loading indicator and prevent double-clicks
+document.addEventListener('submit', (e) => {
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+  if (submitBtn) {
+    window.setLoadingState(submitBtn, true);
+  }
+});
+
+// Set loading state with custom spinner and contextual action text
+window.setLoadingState = function(button, isLoading, actionText) {
+  if (!button) return;
+
+  if (isLoading) {
+    // Keep track of original text and disabled attribute to restore them later
+    if (!button.dataset.originalHtml) {
+      button.dataset.originalHtml = button.innerHTML;
+    }
+    button.disabled = true;
+
+    // Determine meaningful action-specific loading text
+    let loadingText = 'Processing...';
+    if (actionText) {
+      loadingText = actionText;
+    } else {
+      const btnText = button.textContent.trim().toLowerCase();
+      if (btnText.includes('sign up') || btnText.includes('register') || btnText.includes('create account')) {
+        loadingText = 'Creating...';
+      } else if (btnText.includes('book')) {
+        loadingText = 'Booking...';
+      } else if (btnText.includes('save') || btnText.includes('update') || btnText.includes('edit')) {
+        loadingText = 'Saving...';
+      } else if (btnText.includes('delete') || btnText.includes('remove') || btnText.includes('dismiss')) {
+        loadingText = 'Deleting...';
+      } else if (btnText.includes('send') || btnText.includes('resend')) {
+        loadingText = 'Sending...';
+      } else if (btnText.includes('verify') || btnText.includes('validate')) {
+        loadingText = 'Verifying...';
+      } else if (btnText.includes('upload')) {
+        loadingText = 'Uploading...';
+      } else if (btnText.includes('logout') || btnText.includes('sign out')) {
+        loadingText = 'Logging out...';
+      } else if (btnText.includes('login') || btnText.includes('sign in')) {
+        loadingText = 'Logging in...';
+      } else if (btnText.includes('start')) {
+        loadingText = 'Starting...';
+      } else if (btnText.includes('complete')) {
+        loadingText = 'Completing...';
+      } else if (btnText.includes('skip')) {
+        loadingText = 'Skipping...';
+      } else if (btnText.includes('consult')) {
+        loadingText = 'Consulting...';
+      } else if (btnText.includes('confirm') || btnText.includes('yes')) {
+        loadingText = 'Confirming...';
+      }
+    }
+
+    button.innerHTML = `
+      <svg class="loading-spinner" viewBox="0 0 50 50">
+        <circle cx="25" cy="25" r="20" stroke-dasharray="80, 200" stroke-dashoffset="0"></circle>
+      </svg>
+      <span>${loadingText}</span>
+    `;
+  } else {
+    // Restore button back to normal state
+    if (button.dataset.originalHtml) {
+      button.innerHTML = button.dataset.originalHtml;
+      button.removeAttribute('data-original-html');
+    }
+    button.disabled = false;
+  }
+};
+
+// Hook into window.fetch to automatically trigger loading state on action buttons
+const originalFetch = window.fetch;
+window.fetch = async function(...args) {
+  const btn = lastClickedButton;
+  
+  // Exclude background polls to prevent unwanted loading state triggers
+  const url = args[0] ? String(args[0]).toLowerCase() : '';
+  const isBackgroundPoll = url.includes('/live_tokens') || url.includes('/my_token_status') || url.includes('/api/doctor_stats') || url.includes('/doctor/my_stats');
+  
+  if (btn && !btn.disabled && !isBackgroundPoll) {
+    window.setLoadingState(btn, true);
+    try {
+      const response = await originalFetch(...args);
+      return response;
+    } finally {
+      window.setLoadingState(btn, false);
+      // Clean lastClickedButton state
+      if (lastClickedButton === btn) {
+        lastClickedButton = null;
+      }
+    }
+  } else {
+    return originalFetch(...args);
+  }
+};
+
