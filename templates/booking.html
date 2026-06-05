@@ -129,13 +129,6 @@
     /* ── Panel nav top margin adjustment when header is taller on narrow ── */
     .panel-nav { margin-top: 1.1rem; }
     @media (max-width: 480px) {
-      .common-time-row > div {
-        min-width: 100% !important;
-        flex: 1 1 100% !important;
-      }
-      .common-time-row {
-        gap: 8px !important;
-      }
       .day-row-edit, .day-row {
         gap: 0.35rem;
         padding: 0.4rem;
@@ -343,52 +336,36 @@
     margin-right: 0 !important;
   }
 }
-/* ✅ FIX: Common time inputs responsive (Add + Edit Doctor) */
-#commonTimeBlock,
-#commonTimeBlockEdit {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
+/* ✅ FIX: Common time inputs responsive & contained (Add + Edit Doctor) */
 .common-time-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .common-time-row > div {
-  flex: 1 1 200px; /* Stack automatically if container is narrow */
-  min-width: 0;
-  box-sizing: border-box;
+  width: 50% !important;
+  flex: 1 1 50% !important;
+  min-width: 0 !important;
 }
 
 .common-time-row input {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
+  width: 100% !important;
+  min-width: 0 !important;   /* 🔥 prevents native browser min-width overflow */
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0.35rem 0.5rem !important;
+  font-size: 0.8rem !important;
+  height: 36px !important;
 }
 
-/* Mobile: stack perfectly */
-@media (max-width: 767px) {
-  .common-time-row {
-    flex-direction: column !important;
-    gap: 8px !important;
-  }
-
-  .common-time-row > div {
-    width: 100% !important;
-    flex: 1 1 100% !important;
-    min-width: 0 !important;
-  }
-
-  .common-time-row input {
-    width: 100% !important;
-  }
+.common-time-row label {
+  font-size: 0.75rem !important;
+  margin-top: 0.2rem !important;
+  margin-bottom: 0.2rem !important;
 }
     .holiday-grid {
       display: grid;
