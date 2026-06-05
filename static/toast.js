@@ -351,17 +351,43 @@ window.showToast = function(a, b, c) {
 // ── GLOBAL LOADING-STATE SYSTEM ──
 
 let lastClickedButton = null;
+let actionTimeout = null;
 
 // Track the last clicked action button to associate it with active fetches/requests
 // Use capture phase (true) to run before any stopPropagation in page-specific scripts
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('button, input[type="submit"], input[type="button"], .btn');
-  if (btn) {
-    lastClickedButton = btn;
-    // Auto-clear after a safe delay if no request follows
-    setTimeout(() => {
-      if (lastClickedButton === btn) lastClickedButton = null;
-    }, 2000);
+  if (btn && !btn.disabled && btn.dataset.keepLoading !== 'true') {
+    // Check if it's a critical action button
+    const btnText = btn.textContent.trim().toLowerCase();
+    const actionKeywords = [
+      'sign up', 'register', 'create', 'book', 'appointment', 'save', 'update', 'edit',
+      'delete', 'remove', 'dismiss', 'send', 'verify', 'validate', 'upload', 'login',
+      'sign in', 'logout', 'sign out', 'confirm', 'yes', 'complete', 'skip', 'start',
+      'consult', 'change password', 'reset password', 'force delete'
+    ];
+    
+    const isAction = actionKeywords.some(keyword => btnText.includes(keyword)) || 
+                     btn.getAttribute('type') === 'submit' ||
+                     btn.closest('form') !== null;
+                     
+    if (isAction) {
+      lastClickedButton = btn;
+      
+      // Instantly trigger loading state to block double clicks immediately
+      window.setLoadingState(btn, true);
+      
+      // Auto-restore after a safe delay if no network request is observed
+      if (actionTimeout) clearTimeout(actionTimeout);
+      actionTimeout = setTimeout(() => {
+        if (btn && btn.dataset.loading === 'true' && btn.dataset.keepLoading !== 'true') {
+          window.setLoadingState(btn, false);
+        }
+        if (lastClickedButton === btn) {
+          lastClickedButton = null;
+        }
+      }, 2000);
+    }
   }
 }, true);
 
@@ -387,6 +413,8 @@ window.setLoadingState = function(button, isLoading, actionText) {
   if (!button) return;
 
   if (isLoading) {
+    if (button.dataset.keepLoading === "true") return;
+    
     // Keep track of original text and disabled attribute to restore them later
     if (!button.dataset.originalHtml) {
       button.dataset.originalHtml = button.innerHTML;
@@ -446,6 +474,9 @@ window.setLoadingState = function(button, isLoading, actionText) {
       <span>${loadingText}</span>
     `;
   } else {
+    if (button.dataset.keepLoading === "true") {
+      return; // Never restore if flagged to remain disabled (e.g. successful booking)
+    }
     // Restore button back to normal state
     if (button.dataset.originalHtml) {
       button.innerHTML = button.dataset.originalHtml;
@@ -466,12 +497,37 @@ window.fetch = async function(...args) {
   const isBackgroundPoll = url.includes('/live_tokens') || url.includes('/my_token_status') || url.includes('/api/doctor_stats') || url.includes('/doctor/my_stats');
   
   if (btn && (!btn.disabled || btn.dataset.loading === 'true') && !isBackgroundPoll) {
+    if (actionTimeout) {
+      clearTimeout(actionTimeout);
+      actionTimeout = null;
+    }
+    
     window.setLoadingState(btn, true);
+    let success = false;
     try {
       const response = await originalFetch(...args);
+      try {
+        const clone = response.clone();
+        const json = await clone.json();
+        if (json && json.success !== false) {
+          success = true;
+        }
+      } catch (e) {
+        if (response.status >= 200 && response.status < 300) {
+          success = true;
+        }
+      }
       return response;
     } finally {
-      window.setLoadingState(btn, false);
+      const btnText = btn.textContent.trim().toLowerCase();
+      const isBooking = btnText.includes('booking');
+      
+      if (isBooking && success) {
+        btn.dataset.keepLoading = "true";
+      } else {
+        window.setLoadingState(btn, false);
+      }
+      
       if (lastClickedButton === btn) {
         lastClickedButton = null;
       }
@@ -498,9 +554,34 @@ window.XMLHttpRequest = function() {
   const originalSend = xhr.send;
   xhr.send = function(...args) {
     if (btn && (!btn.disabled || btn.dataset.loading === 'true') && !isBackground) {
+      if (actionTimeout) {
+        clearTimeout(actionTimeout);
+        actionTimeout = null;
+      }
+      
       window.setLoadingState(btn, true);
       const restore = () => {
-        window.setLoadingState(btn, false);
+        let success = false;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            if (json && json.success !== false) {
+              success = true;
+            }
+          } catch(e) {
+            success = true;
+          }
+        }
+        
+        const btnText = btn.textContent.trim().toLowerCase();
+        const isBooking = btnText.includes('booking');
+        
+        if (isBooking && success) {
+          btn.dataset.keepLoading = "true";
+        } else {
+          window.setLoadingState(btn, false);
+        }
+        
         if (lastClickedButton === btn) {
           lastClickedButton = null;
         }

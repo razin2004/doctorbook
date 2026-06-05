@@ -2684,6 +2684,49 @@ def get_filled_booking_count(ws):
     except Exception:
         return 0
 
+def deduplicate_bookings(doctor_name, specialization, date, patient_name, sheet=None):
+    """
+    Ensure only the first booking for a patient with the same doctor, specialization, and date is kept.
+    Deletes any duplicate records from the local SQLite database and the Google Sheet (if provided).
+    """
+    try:
+        # 1. Deduplicate SQLite database
+        bookings = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.patient_name)) == patient_name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == specialization.lower().strip(),
+            PatientBooking.date == date,
+            PatientBooking.status == 'confirmed'
+        ).order_by(PatientBooking.id.asc()).all()
+
+        if len(bookings) > 1:
+            first_booking = bookings[0]
+            duplicates_to_delete = bookings[1:]
+            for dup in duplicates_to_delete:
+                db.session.delete(dup)
+            db.session.commit()
+            print(f"[DEDUPLICATE] Removed {len(duplicates_to_delete)} duplicate SQLite bookings for {patient_name} on {date}.")
+        
+        # 2. Deduplicate Google Sheet
+        if sheet:
+            rows = sheet.get_all_values()
+            if len(rows) > 1:
+                seen = False
+                rows_to_delete = []
+                for idx, row in enumerate(rows[1:], start=2):
+                    if len(row) > 1 and row[1].strip().lower() == patient_name.lower().strip():
+                        if not seen:
+                            seen = True
+                        else:
+                            rows_to_delete.append(idx)
+                
+                if rows_to_delete:
+                    for row_idx in reversed(rows_to_delete):
+                        sheet.delete_rows(row_idx)
+                    print(f"[DEDUPLICATE] Removed {len(rows_to_delete)} duplicate Google Sheet rows for {patient_name} on {date}.")
+    except Exception as e:
+        db.session.rollback()
+        print(f"[WARNING] Deduplication failed: {e}")
 
 @app.route("/book_doctor", methods=["POST"])
 def book_doctor():
@@ -2729,6 +2772,49 @@ def book_doctor():
         day_times = doctor_info.get("DayTimes", {})
         time_for_booking = day_times.get(weekday, "")
 
+        # ─── Server-Side Duplicate Booking Pre-Check & Deduplication ───
+        existing_booking = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_info["Name"].lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doctor_info["Specialization"].lower().strip(),
+            PatientBooking.date == date,
+            PatientBooking.status == 'confirmed'
+        ).order_by(PatientBooking.id.asc()).first()
+
+        if existing_booking:
+            try:
+                spreadsheet = client.open_by_url(sheet_url)
+                sheet = get_or_create_date_sheet(spreadsheet, date)
+                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
+            except Exception:
+                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name)
+
+            clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
+            
+            return jsonify({
+                "success": True,
+                "token": clean_booking.token,
+                "doctor": clean_booking.doctor_name,
+                "specialization": clean_booking.specialization,
+                "date": date,
+                "time": clean_booking.time,
+                "name": name,
+                "age": age,
+                "phone": phone_number,
+                "redirect": url_for(
+                    "confirmation_page",
+                    token=clean_booking.token,
+                    doctor=clean_booking.doctor_name,
+                    specialization=clean_booking.specialization,
+                    date=date,
+                    time=clean_booking.time,
+                    name=name,
+                    age=age,
+                    gender=gender,
+                    phone=phone_number
+                )
+            })
+
         spreadsheet = client.open_by_url(sheet_url)
         sheet = get_or_create_date_sheet(spreadsheet, date)
 
@@ -2766,6 +2852,7 @@ def book_doctor():
             )
             db.session.add(new_booking)
             db.session.commit()
+            deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
             if not is_guest:
                 mark_pending_referrals_booked(user_id, doctor_info["Specialization"], name)
 
@@ -2894,6 +2981,49 @@ def admin_book_patient():
         day_times = doctor_info.get("DayTimes", {})
         time_for_booking = day_times.get(weekday, "")
 
+        # ─── Server-Side Duplicate Booking Pre-Check & Deduplication ───
+        existing_booking = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_info["Name"].lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doctor_info["Specialization"].lower().strip(),
+            PatientBooking.date == date,
+            PatientBooking.status == 'confirmed'
+        ).order_by(PatientBooking.id.asc()).first()
+
+        if existing_booking:
+            try:
+                spreadsheet = client.open_by_url(sheet_url)
+                sheet = get_or_create_date_sheet(spreadsheet, date)
+                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
+            except Exception:
+                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name)
+
+            clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
+            
+            return jsonify({
+                "success": True,
+                "token": clean_booking.token,
+                "doctor": clean_booking.doctor_name,
+                "specialization": clean_booking.specialization,
+                "date": date,
+                "time": clean_booking.time,
+                "name": name,
+                "age": age or "-",
+                "phone": phone_number or "-",
+                "redirect": url_for(
+                    "confirmation_page",
+                    token=clean_booking.token,
+                    doctor=clean_booking.doctor_name,
+                    specialization=clean_booking.specialization,
+                    date=date,
+                    time=clean_booking.time,
+                    name=name,
+                    age=age or "-",
+                    gender=gender,
+                    phone=phone_number or "-"
+                )
+            })
+
         spreadsheet = client.open_by_url(sheet_url)
         sheet = get_or_create_date_sheet(spreadsheet, date)
 
@@ -2924,6 +3054,7 @@ def admin_book_patient():
             )
             db.session.add(new_booking)
             db.session.commit()
+            deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
             if booking_user and not booking_user.email.endswith("guest@primecare.com"):
                 mark_pending_referrals_booked(booking_user_id, doctor_info["Specialization"], name)
 
@@ -2990,6 +3121,49 @@ def book_department():
         return jsonify({"success": False, "msg": "Missing fields"}), 400
 
     try:
+        # ─── Server-Side Duplicate Booking Pre-Check & Deduplication ───
+        existing_booking = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == specialization.lower().strip(),
+            PatientBooking.date == date_str,
+            PatientBooking.status == 'confirmed'
+        ).order_by(PatientBooking.id.asc()).first()
+
+        if existing_booking:
+            try:
+                spreadsheet = client.open_by_url(existing_booking.sheet_url)
+                date_sheet = get_or_create_date_sheet(spreadsheet, date_str)
+                deduplicate_bookings(existing_booking.doctor_name, specialization, date_str, name, date_sheet)
+            except Exception:
+                deduplicate_bookings(existing_booking.doctor_name, specialization, date_str, name)
+
+            clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
+            
+            return jsonify({
+                "success": True,
+                "token": clean_booking.token,
+                "doctor": clean_booking.doctor_name,
+                "specialization": clean_booking.specialization,
+                "date": date_str,
+                "time": clean_booking.time,
+                "name": name,
+                "age": age,
+                "gender": gender,
+                "phone": phone_number,
+                "redirect": url_for(
+                    "confirmation_page",
+                    token=clean_booking.token,
+                    doctor=clean_booking.doctor_name,
+                    specialization=clean_booking.specialization,
+                    date=date_str,
+                    time=clean_booking.time,
+                    name=name,
+                    age=age,
+                    gender=gender,
+                    phone=phone_number
+                )
+            })
+
         # weekday name, e.g. "Monday"
         target_date_obj = datetime.strptime(date_str, "%Y-%m-%d")
         weekday = target_date_obj.strftime("%A")
@@ -3112,6 +3286,7 @@ def book_department():
                 )
                 db.session.add(new_booking)
                 db.session.commit()
+                deduplicate_bookings(chosen_doc["Name"], chosen_doc["Specialization"], date_str, name, date_sheet)
                 if not is_guest:
                     mark_pending_referrals_booked(user_id, chosen_doc["Specialization"], name)
 
@@ -3231,6 +3406,7 @@ def book_department():
             )
             db.session.add(new_booking)
             db.session.commit()
+            deduplicate_bookings(best_doc["Name"], best_doc["Specialization"], date_str, name, best_sheet)
             if not is_guest:
                 mark_pending_referrals_booked(user_id, best_doc["Specialization"], name)
 
@@ -5332,6 +5508,28 @@ Here is the JSON representation of the current clinic settings:
 Here is the JSON representation of the registered clinic doctors and their default schedules:
 {doctors_json}
 
+### DATABASE MODELS & SCHEMAS
+The system operates on an SQLite database. Here is the schema outline:
+1. **User**: stores accounts. Roles: `'patient'`, `'doctor'`, or `'admin'`.
+   Fields: `id`, `name`, `email`, `password_hash`, `role`, `created_at`.
+2. **DoctorSession**: tracks queue sessions. Statuses: `'idle'`, `'active'`, `'waiting_bookings'`, `'completed'`.
+   Fields: `id`, `doctor_name`, `specialization`, `email`, `status`, `current_token`, `session_date`, `total_tokens`, `start_time`, `end_time`, `skipped_tokens` (comma-separated string).
+3. **PatientBooking**: cached appointments. Statuses: `'confirmed'`, `'cancelled'`.
+   Fields: `id`, `user_id` (foreign key to User), `doctor_name`, `specialization`, `date` (YYYY-MM-DD), `time` (time range), `token` (integer), `sheet_url`, `patient_name`, `age`, `created_at`, `status`, `cancelled_by`, `cancellation_reason`, `cancelled_at`, `consultation_start_time`, `consultation_end_time`.
+   - *Note*: Unregistered guest bookings map to user `guest@primecare.com` (user ID is verified dynamically) to maintain database constraints.
+4. **Prescription**: logs prescribed medications.
+   Fields: `id`, `user_id` (patient ID), `patient_name`, `consultation_date`, `doctor_name`, `file_path` (PDF/image uploads), `text_content` (prescribed details), `created_at`.
+5. **TickerMessage**: broadcast messages.
+   Fields: `id`, `content`, `is_active`, `created_at`.
+6. **AppSettings**: configurations.
+   Fields: `id`, `key` (e.g. `'password_login_enabled'`, `'ticker_solo_mode'`, `'admin_password_hash'`, contact details), `value`.
+7. **PushSubscription**: web push data for alerts.
+   Fields: `id`, `user_id`, `patient_name`, `doctor_name`, `endpoint`, `p256dh`, `auth`, `created_at`.
+8. **DoctorReferral**: referrals from doctors. Statuses: `'pending'`, `'booked'`, `'dismissed'`.
+   Fields: `id`, `user_id`, `from_doctor`, `to_specialization`, `notes`, `status`, `patient_name`, `booking_id`, `created_at`.
+9. **OTP**: login/reset verification.
+   Fields: `id`, `email`, `otp`, `expiry`.
+
 ### OPERATIONAL CAPABILITIES & TOOLS
 You must call the appropriate tool(s) to fetch real-time application data to answer the administrator's questions:
 1. `get_system_statistics()`: Get high-level database counts, booking stats, active session count, prescription volume, referral status, and cancellation rates. Use this for general health checks, performance overviews, or operational metrics.
@@ -5350,40 +5548,46 @@ You must call the appropriate tool(s) to fetch real-time application data to ans
 - **Relate Data**: Connect information. For example, if asked about a patient's booking, look at their referrals, prescriptions, or active queue position.
 - **Answer Business Questions**: Provide decision support. E.g., "Which doctor is busiest?", "What is our cancellation rate?", "How many referrals are pending for Cardiology?".
 - **Ground in Real-Time Data**: Make sure every statistic and name you mention is returned by a tool or present in the current context. If a tool returns no data, explicitly state that no records were found matching those criteria.
+- **Conflict Checking**: Before confirming doctor schedules or leaves, verify if there are any conflicting patient bookings.
 
-### ADMIN PANEL OPERATION GUIDE (HOW-TO GUIDES)
-If the admin asks how to perform tasks, tell them exactly which tab/section to use and how to do it. Here is the reference guide:
-1. **How to change homepage contents (e.g. clinical heritage heading, leader bios, phone numbers, or images)**:
-   - Navigate to the **Clinic Settings** panel (click the 'Clinic Settings' card in the admin grid, tab `'settings'`).
-   - Find the field you want to change (e.g., 'Heritage Section Heading', 'Leader 1 Name', etc.).
-   - Make your changes and click the **Save Settings** button at the bottom.
-2. **How to book an appointment for someone who calls (Call-in Booking)**:
-   - Go to the **Patient Booking** panel (click the 'Patient Booking' card in the admin grid, tab `'book'`).
-   - Enter the patient's full Name, Age, Gender, and Phone Number.
-   - Select the Doctor, pick an available Date, and select a Time.
-   - Click the **Book Appointment** button.
-3. **How to enable or disable Email/Password Login**:
-   - Go to the **Admin Security** panel (click the 'Admin Security' card in the admin grid, tab `'security'`).
-   - Toggle the switch/setting for "Allow Email & Password Login". When disabled, admins can only log in using OTP authentication.
-4. **How to add temporary doctor leaves**:
-   - Go to the **Edit Doctor** panel (click the 'Edit Doctor' card in the admin grid, tab `'edit'`).
-   - Select the target doctor from the dropdown.
-   - Scroll down to the **Temporary Leave** section.
-   - Enter the Date and the Reason, then click **Add Leave**.
-5. **How to schedule upcoming clinic holidays**:
-   - Go to the **Clinic Holidays** panel (click the 'Clinic Holidays' card in the admin grid, tab `'holiday'`).
-   - Enter the Holiday Date and the Reason.
-   - Click the **Add Holiday** button.
-6. **How to broadcast live ticker messages**:
-   - Go to the **Live Ticker** panel (click the 'Live Ticker' card in the admin grid, tab `'ticker'`).
-   - Type the announcement message under "Add Ticker Message".
-   - Click the **Add Message** button.
+### QUEUE & SESSION LIFECYCLE GUIDE
+Doctors manage queues via their dashboards. The lifecycle is:
+1. **Start Session**: Status shifts from `'idle'` to `'active'`, starting the first patient's consultation timer (`consultation_start_time = datetime.utcnow()`).
+2. **Call Next Patient**: The current token's consultation ends (`consultation_end_time = datetime.utcnow()`), the token increments, and the next patient's consultation timer starts.
+3. **Skip Token**: The current token is added to the session's `skipped_tokens` list, the token increments, and the next patient's timer starts. Web push notifications notify patients of the skipping.
+4. **Consult/Recall Skipped**: Removes a token from the skipped list, retrospectively setting consultation start/end timers for that booking.
+5. **Complete Session**: Sets status to `'completed'` and records the session end time.
+
+### CLINIC SECURITY & OTP POLICIES
+- **Email/Password Login Toggle**: If `'password_login_enabled'` is `'0'` (Disabled), admins can only log in using email OTP.
+- **OTP Verification Policies**:
+  - Expiry: OTP codes are valid for a maximum of 5 minutes.
+  - Expiry and attempt tracking: Verification routes limit invalid attempts to protect against brute-force attacks.
+  - Password Reset: Forgot password flow uses a 6-digit OTP code sent via email.
+
+### ADMIN PANEL NAVIGATION GUIDE (HOW-TO GUIDES)
+Map admin requests directly to these panels and paths:
+1. **Booking Hub**:
+   - **New Appointment (Tab `'book'`)**: Card **Patient Booking**. Book new appointments by inputting Name, Age, Gender, Phone, Doctor, Date, Time, and Reason.
+   - **Manage Appointments (Tab `'view'`)**: Card **Manage Appointments**. View, search, and sort bookings, and inspect patient details, consultation status, and referrals.
+   - **Cancel Appointments (Tab `'cancel'`)**: Card **Cancel Appointments**. Lists bookings with a **Cancel Booking** button that triggers a cancellation modal requiring a reason. Updates status to `'cancelled'` in DB and sheet.
+2. **Staff Roster**:
+   - **Register Doctor (Tab `'add'`)**: Card **Register Doctor**. Enter name, specialization, email, profile image URL, and weekly working slots (days and hours).
+   - **Edit Schedules (Tab `'edit'`)**: Card **Edit Schedules**. Edit weekly working days, times, and slots for registered doctors.
+   - **Temporary Leaves (Tab `'leaves'`)**: Card **Temporary Leaves**. Select a doctor, view leave history, and add or delete temporary leaves (date and reason) that sync with the Google Sheet.
+   - **Remove Doctor (Tab `'delete'`)**: Card **Remove Doctor**. Select a doctor and delete their registry and credentials.
+3. **Clinic Operations**:
+   - **Queue & Announcements (Tab `'ticker'`)**: Card **Live Ticker**. Add announcements to the scrolling ticker, delete broadcasts, or toggle **Solo Broadcast Mode** (forces the ticker to only display custom announcements and suppress automated doctor queue schedules).
+   - **Manage Holidays (Tab `'holiday'`)**: Card **Clinic Holidays**. Schedule a single holiday or a date range (specifying start and end dates and a reason), view upcoming holidays, and delete holidays.
+   - **System Settings (Tab `'settings'`)**: Card **Clinic Settings**. Edit contact info (Phone, WhatsApp, Address, Map link), Trust statistics (Specialists count, Patients count, Established year, Certification), and HomePage Promotional contents (main headings, subheadings, bios, images, and leaders).
+   - **Security & Access (Tab `'security'`)**: Card **Admin Security**. Toggle the "Allow Email & Password Login" switch, change the admin password, or request/verify OTP for resetting the admin password.
+   - **Analytics (External URL `/admin/analytics`)**: Link **Analytics**. View metrics for clinic performance, doctor loads, cancellation trends, and patient wait times.
 
 ### COMMUNICATION RULES
 - Be direct and precise.
 - When referring to tabs or sections, mention the card name and tab, for example: "Go to Clinic Settings panel (tab `'settings'`)".
 - Bold the names of buttons, inputs, and sections.
-- When summarizing bookings, present the information in a clean, user-friendly markdown list or formatted table.
+- When summarizing bookings or data, present the information in a clean, user-friendly markdown list or formatted table.
 """
     return instruction
 
