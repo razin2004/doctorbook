@@ -344,21 +344,33 @@
   }
 }
 /* ✅ FIX: Common time inputs responsive (Add + Edit Doctor) */
+#commonTimeBlock,
+#commonTimeBlockEdit {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 .common-time-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .common-time-row > div {
-  flex: 1 1 48%;
-  min-width: 0;              /* 🔥 critical */
+  flex: 1 1 200px; /* Stack automatically if container is narrow */
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .common-time-row input {
   width: 100%;
-  box-sizing: border-box;    /* 🔥 prevents overflow */
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Mobile: stack perfectly */
@@ -5011,7 +5023,7 @@
                         if (isToday) {
                             actionHtml = `
                                 <button class="btn btn-outline" style="padding:6px 10px; font-size:0.75rem; color:#ef4444; border-color:rgba(239,68,68,0.2); border-radius:6px; background:white; cursor:pointer; font-weight:600;" onclick="deleteGlobalHoliday('${h.Date}')" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='white'">
-                                    <i data-lucide="trash-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:2px;"></i> Force Delete
+                                    <i data-lucide="trash-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;margin-right:2px;"></i> Remove
                                 </button>
                             `;
                         }
