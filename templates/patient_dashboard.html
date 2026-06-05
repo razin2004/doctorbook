@@ -2433,8 +2433,7 @@
         'Upload & Save',
         async () => {
           const btn = document.getElementById('presSubmitBtn');
-          btn.innerHTML = '<i data-lucide="loader" style="width:16px;height:16px;"></i> Uploading...';
-          btn.disabled = true;
+          window.setLoadingState(btn, true, 'Uploading...');
 
           const fd = new FormData();
           fd.append('patient_name', document.getElementById('pres-name').value);
@@ -2454,9 +2453,7 @@
           } catch (err) {
             showToast('Network error', 'error');
           } finally {
-            btn.innerHTML = '<i data-lucide="upload" style="width:16px;height:16px;"></i> Upload & Save';
-            btn.disabled = false;
-            lucide.createIcons();
+            window.setLoadingState(btn, false);
           }
         }
       );

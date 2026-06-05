@@ -2141,12 +2141,6 @@
 
     // ── Skip Patient Action ──
     window.triggerSkipAction = async function() {
-        const skipBtn = document.getElementById('skipBtn');
-        skipBtn.disabled = true;
-        const ogContent = skipBtn.innerHTML;
-        skipBtn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Skipping...';
-        lucide.createIcons();
-
         try {
             const res = await fetch('/skip_token', { method: 'POST' });
             const data = await res.json();
@@ -2158,10 +2152,6 @@
             }
         } catch (e) {
             showToast('Network error', 'error');
-        } finally {
-            skipBtn.disabled = false;
-            skipBtn.innerHTML = ogContent;
-            lucide.createIcons();
         }
     };
 
@@ -2171,10 +2161,7 @@
     window.triggerCompleteAction = function() {
         openUniversalModal('Complete Session', 'Are you sure you want to complete this session? No more bookings can be made for today after completion.', 'Complete Now', async () => {
             const completeSessionBtn = document.getElementById('completeSessionBtn');
-            completeSessionBtn.disabled = true;
-            const ogContent = completeSessionBtn.innerHTML;
-            completeSessionBtn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Completing...';
-            lucide.createIcons();
+            window.setLoadingState(completeSessionBtn, true);
 
             try {
                 const res = await fetch('/complete_session', { method: 'POST' });
@@ -2188,9 +2175,7 @@
             } catch (e) {
                 showToast('Network error', 'error');
             } finally {
-                completeSessionBtn.disabled = false;
-                completeSessionBtn.innerHTML = ogContent;
-                lucide.createIcons();
+                window.setLoadingState(completeSessionBtn, false);
             }
         }, true);
     };
@@ -2202,12 +2187,6 @@
 
     // ── Next/Start Patient Action ──
     window.triggerNextAction = async function() {
-        const sessionBtn = document.getElementById('sessionBtn');
-        sessionBtn.disabled = true;
-        const ogContent = sessionBtn.innerHTML;
-        sessionBtn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Processing...';
-        lucide.createIcons();
-        
         try {
             if (currentStatus === 'idle') {
                 const res = await fetch('/start_session', { method: 'POST' });
@@ -2217,8 +2196,6 @@
                     await fetchStatsAndSync();
                 } else {
                     showToast(data.msg, 'error');
-                    sessionBtn.disabled = false;
-                    sessionBtn.innerHTML = ogContent;
                 }
             } else if (currentStatus === 'active') {
                 const res = await fetch('/next_token', { method: 'POST' });
@@ -2232,16 +2209,10 @@
                     await fetchStatsAndSync();
                 } else {
                     showToast(data.msg, 'error');
-                    sessionBtn.disabled = false;
-                    sessionBtn.innerHTML = ogContent;
                 }
             }
         } catch (e) {
             showToast('Network error', 'error');
-            sessionBtn.disabled = false;
-            sessionBtn.innerHTML = ogContent;
-        } finally {
-            lucide.createIcons();
         }
     };
 

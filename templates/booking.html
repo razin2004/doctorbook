@@ -3924,10 +3924,7 @@
         'Update Password',
         async () => {
           const btn = document.getElementById('saveSecurityBtn');
-          const originalHtml = btn.innerHTML;
-          btn.disabled = true;
-          btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Updating...';
-          if (window.lucide) lucide.createIcons();
+          window.setLoadingState(btn, true, 'Updating...');
 
           try {
             const res = await fetch('/admin_change_password', {
@@ -3952,20 +3949,13 @@
             console.error(err);
             showToast('Failed to update password.', 'error');
           } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-            if (window.lucide) lucide.createIcons();
+            window.setLoadingState(btn, false);
           }
         }
       );
     }
 
     async function sendAdminResetOtp() {
-      const btn = document.getElementById('sendAdminResetOtpBtn');
-      const originalHtml = SEND_OTP_BTN_DEFAULT_HTML;
-      btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Sending...';
-      if (window.lucide) lucide.createIcons();
       try {
         const res = await fetch('/admin_send_reset_otp', { method: 'POST' });
         const data = await res.json();
@@ -3976,25 +3966,16 @@
           if (window.lucide) lucide.createIcons();
         } else {
           showToast(data.msg || 'Failed to send OTP.', 'error');
-          btn.disabled = false;
-          btn.innerHTML = originalHtml;
-          if (window.lucide) lucide.createIcons();
         }
       } catch (err) {
         console.error(err);
         showToast('Error sending OTP.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-        if (window.lucide) lucide.createIcons();
       }
     }
 
     async function resendAdminResetOtp() {
       const btn = document.getElementById('resendAdminOtpBtn');
       if (!btn) return;
-      const origText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = 'Sending...';
       try {
         const res = await fetch('/admin_send_reset_otp', { method: 'POST' });
         const data = await res.json();
@@ -4009,9 +3990,6 @@
       } catch (err) {
         console.error(err);
         showToast('Error resending OTP.', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = origText;
       }
     }
 
@@ -4023,12 +4001,6 @@
       if (!otp || otp.length < 6) { showToast('Please enter the 6-digit OTP.', 'error'); return; }
       if (!newPass || newPass.length < 6) { showToast('Password must be at least 6 characters.', 'error'); return; }
       if (newPass !== confPass) { showToast('Passwords do not match.', 'error'); return; }
-
-      const btn = document.getElementById('verifyAdminResetBtn');
-      const originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Verifying...';
-      if (window.lucide) lucide.createIcons();
 
       try {
         const res = await fetch('/admin_reset_password_otp', {
@@ -4049,10 +4021,6 @@
       } catch (err) {
         console.error(err);
         showToast('Error resetting password.', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-        if (window.lucide) lucide.createIcons();
       }
     }
 
@@ -4271,10 +4239,7 @@
         'Save Settings',
         async () => {
           const saveBtn = document.getElementById('saveSettingsBtn');
-          const originalHtml = saveBtn.innerHTML;
-          saveBtn.disabled = true;
-          saveBtn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Saving...';
-          lucide.createIcons();
+          window.setLoadingState(saveBtn, true);
           
           try {
             const res = await fetch('/admin_save_settings', {
@@ -4292,9 +4257,7 @@
             console.error('Failed to save settings:', e);
             showToast('Error updating settings', 'error');
           } finally {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = originalHtml;
-            lucide.createIcons();
+            window.setLoadingState(saveBtn, false);
           }
         }
       );
@@ -4915,8 +4878,6 @@
     document.getElementById('doctorBookingForm')?.addEventListener('submit', async e => {
       e.preventDefault();
       cleanAgeInput('docAge');
-      const btn = e.target.querySelector("button[type='submit']");
-      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Booking...'; lucide.createIcons();
       try {
         const sheetname    = document.getElementById('doctorSelect').value;
         const name         = document.getElementById('docName').value.trim();
@@ -4924,14 +4885,13 @@
         const gender       = document.getElementById('docGender').value;
         const phone_number   = document.getElementById('docNumber').value.trim();
         const date         = document.getElementById('doctorDate').value;
-        if (!date) { showMessage('doctorMsg','Please select a date.'); btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); return; }
+        if (!date) { showMessage('doctorMsg','Please select a date.'); return; }
         const res  = await fetch('/book_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sheetname,name,age,gender,phone_number,date}) });
         const data = await res.json();
         if (data.redirect) { window.location.href = data.redirect; }
         else if (data.success) { showMessage('doctorMsg', 'Appointment scheduled successfully. Token: ' + data.token, 'green'); e.target.reset(); }
         else { showMessage('doctorMsg', data.msg || 'Unable to process booking.'); }
       } catch(err) { showMessage('doctorMsg','Communication error. Please try again.'); }
-      finally { btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); }
     });
 
     // ─── Global Holiday Management ──────────────────────────────
@@ -5058,10 +5018,7 @@
             'Declare Holiday',
             async () => {
                 const btn = document.getElementById('addHolidayBtn');
-                const originalHtml = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Adding Holiday...';
-                lucide.createIcons();
+                window.setLoadingState(btn, true);
 
                 try {
                     const res = await fetch('/admin_add_holiday', {
@@ -5088,9 +5045,7 @@
                 } catch(e) { 
                     showToast("Network error", "error"); 
                 } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalHtml;
-                    lucide.createIcons();
+                    window.setLoadingState(btn, false);
                 }
             }
         );
@@ -5129,8 +5084,6 @@
     document.getElementById('departmentBookingForm')?.addEventListener('submit', async e => {
       e.preventDefault();
       cleanAgeInput('depAge');
-      const btn = e.target.querySelector("button[type='submit']");
-      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Booking...'; lucide.createIcons();
       try {
         const specialization = document.getElementById('specSelect').value;
         const name           = document.getElementById('depName').value.trim();
@@ -5139,7 +5092,7 @@
         const phone_number   = document.getElementById('depNumber').value.trim();
         const date           = document.getElementById('specDate').value;
         const messageDiv     = document.getElementById('noDoctorMsg');
-        if (!date) { messageDiv.textContent='Please select a date for your appointment.'; messageDiv.style.display='block'; btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); return; }
+        if (!date) { messageDiv.textContent='Please select a date for your appointment.'; messageDiv.style.display='block'; return; }
         let doctor_sheet_url=null;
         const timeSelect = document.getElementById('depTime');
         if (timeSelect && timeSelect.value) doctor_sheet_url = timeSelect.value;
@@ -5150,7 +5103,6 @@
         else if (data.success) { showToast('Appointment scheduled successfully', 'success'); e.target.reset(); const w=document.getElementById('depTimeWrapper'); if(w) w.style.display='none'; }
         else { messageDiv.textContent = data.msg || 'Unable to complete appointment. Please retry.'; messageDiv.style.display='block'; }
       } catch(err) { showToast('Administrative system error. Please try again.', 'error'); }
-      finally { btn.disabled=false; btn.innerHTML='<i data-lucide="calendar-check"></i> Book Appointment'; lucide.createIcons(); }
     });
 
     document.getElementById('specDate')?.addEventListener('change', async function() {
@@ -5357,12 +5309,7 @@
       if (force) payload.force = true;
       
       const btn = document.querySelector("#adminBookPatientForm button[type='submit']");
-      const RESET_HTML = '<i data-lucide="check-circle" class="btn-icon"></i> Confirm Booking';
-      
-      // Force loading state
-      btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Saving...';
-      if (window.lucide) lucide.createIcons();
+      window.setLoadingState(btn, true);
       
       try {
         const res = await fetch('/admin_book_patient', {
@@ -5374,12 +5321,6 @@
         const data = await res.json();
         
         if (data.success && data.warning) {
-          // IMPORTANT: Reset button BEFORE opening modal 
-          // so if they cancel, the button is already back to normal.
-          btn.disabled = false;
-          btn.innerHTML = RESET_HTML;
-          if (window.lucide) lucide.createIcons();
-
           activeAdminBookingPayload = payload;
           openModal(
             'warning',
@@ -5404,10 +5345,6 @@
             () => { 
                 closeModal(); 
                 document.getElementById('adminBookPatientForm').reset();
-                // Ensure button is back to normal after modal close
-                btn.disabled = false;
-                btn.innerHTML = RESET_HTML;
-                if (window.lucide) lucide.createIcons();
             }
           );
 
@@ -5479,20 +5416,14 @@
                 const waUrl = `https://wa.me/${cleanPhone}/?text=${encodeURIComponent(rawMsg)}`;
                 window.open(waUrl, '_blank');
             };
-            if (window.lucide) lucide.createIcons();
           }
-          
-          btn.disabled = false;
-          btn.innerHTML = RESET_HTML;
         } else {
           showToast(data.msg || 'Booking failed', 'error');
-          btn.disabled = false;
-          btn.innerHTML = RESET_HTML;
         }
       } catch (e) {
         showToast('Communication error', 'error');
-        btn.disabled = false;
-        btn.innerHTML = RESET_HTML;
+      } finally {
+        window.setLoadingState(btn, false);
       }
       if (window.lucide) lucide.createIcons();
     }
@@ -5514,37 +5445,28 @@
     // ─── Admin login ───────────────────────────────────────────
 
     document.getElementById('sendOtpBtn')?.addEventListener('click', async () => {
-      const btn  = document.getElementById('sendOtpBtn');
       const email = document.getElementById('adminEmail')?.value?.trim();
       if (!email) { showToast('Please enter your admin email address.', 'error'); return; }
-      btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Sending...'; lucide.createIcons();
       try {
         const res  = await fetch('/send_admin_otp',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`admin_email=${encodeURIComponent(email)}` });
         const data = await res.json();
         if (data.success) {
           showToast('OTP sent successfully', 'success');
           document.getElementById('otpSection').style.display = 'block';
-          btn.style.display = 'none';
+          const btn  = document.getElementById('sendOtpBtn');
+          if (btn) btn.style.display = 'none';
         } else {
           showToast(data.msg || 'Could not send OTP. Please try again.', 'error');
-          btn.disabled = false;
-          btn.innerHTML = '<i data-lucide="send-horizontal"></i> Send OTP'; lucide.createIcons();
         }
       } catch(err) {
         showToast('Communication error. Please check your connection.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="send-horizontal"></i> Send OTP'; lucide.createIcons();
       }
     });
 
     document.getElementById('adminLoginForm')?.addEventListener('submit', async(e) => {
       e.preventDefault();
-      const btn = e.target.querySelector("button[type='submit']");
       const otp = document.getElementById('adminOtp').value.trim();
       if (!otp || otp.length < 4) { showToast('Please enter the OTP sent to your email.', 'error'); return; }
-      btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Verifying...'; lucide.createIcons();
       try {
         const res  = await fetch('/verify_admin_otp',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`otp=${encodeURIComponent(otp)}` });
         const data = await res.json();
@@ -5571,13 +5493,9 @@
           }, 600);
         } else {
           showToast(data.msg || 'Authentication failed. Please verify the code.', 'error');
-          btn.disabled = false;
-          btn.innerHTML = '<i data-lucide="log-in"></i> Login'; lucide.createIcons();
         }
       } catch(err) {
         showToast('System error during login. Please retry.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="log-in"></i> Login'; lucide.createIcons();
       }
     });
 

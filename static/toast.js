@@ -351,7 +351,6 @@ window.showToast = function(a, b, c) {
 // ── GLOBAL LOADING-STATE SYSTEM ──
 
 let lastClickedButton = null;
-let actionTimeout = null;
 
 // Track the last clicked action button to associate it with active fetches/requests
 // Use capture phase (true) to run before any stopPropagation in page-specific scripts
@@ -373,54 +372,6 @@ document.addEventListener('click', (e) => {
                      
     if (isAction) {
       lastClickedButton = btn;
-      
-      // Check if button is a standard form submit button
-      const isSubmitBtn = (btn.tagName === 'BUTTON' && (!btn.type || btn.type === 'submit')) || 
-                          (btn.tagName === 'INPUT' && btn.type === 'submit');
-
-      // Check if the button triggers a confirmation modal or has inline modal triggering
-      const onclickStr = btn.getAttribute('onclick') || '';
-      const idLower = (btn.id || '').toLowerCase();
-      const classStr = btn.className.toLowerCase();
-      const isModalTrigger = btn.dataset.toggle === 'modal' || 
-                             classStr.includes('modal-trigger') || 
-                             classStr.includes('logout-item') ||
-                             idLower.includes('completesessionbtn') ||
-                             idLower.includes('headerlogoutbtn') ||
-                             onclickStr.includes('openmodal') || 
-                             onclickStr.includes('openuniversalmodal') || 
-                             onclickStr.includes('confirm') || 
-                             onclickStr.includes('cancel') || 
-                             onclickStr.includes('logout') || 
-                             onclickStr.includes('delete') || 
-                             onclickStr.includes('skipped');
-
-      // Check if the button is client-side print/download/share
-      const isPrintOrDownload = idLower.includes('saveimagebtn') || 
-                                idLower.includes('whatsappsharebtn') || 
-                                classStr.includes('print-btn') || 
-                                onclickStr.includes('print') || 
-                                onclickStr.includes('download') || 
-                                onclickStr.includes('share') || 
-                                onclickStr.includes('generatepdf');
-
-      // Do NOT disable the button on click if it's a submit button (let form submit handle it to prevent blocking browser default action),
-      // a modal trigger (let user confirm first), or a print/download button (client side only)
-      if (!isSubmitBtn && !isModalTrigger && !isPrintOrDownload) {
-        // Instantly trigger loading state for ordinary action buttons to block double clicks immediately
-        window.setLoadingState(btn, true);
-        
-        // Auto-restore after a safe delay if no network request is observed
-        if (actionTimeout) clearTimeout(actionTimeout);
-        actionTimeout = setTimeout(() => {
-          if (btn && btn.dataset.loading === 'true' && btn.dataset.keepLoading !== 'true') {
-            window.setLoadingState(btn, false);
-          }
-          if (lastClickedButton === btn) {
-            lastClickedButton = null;
-          }
-        }, 2000);
-      }
     }
   }
 }, true);
@@ -435,7 +386,7 @@ document.addEventListener('submit', (e) => {
     
     // If submission is cancelled by page validation scripts, restore button immediately
     setTimeout(() => {
-      if (e.defaultPrevented) {
+      if (e.defaultPrevented && submitBtn.dataset.fetchActive !== 'true') {
         window.setLoadingState(submitBtn, false);
       }
     }, 0);
@@ -531,11 +482,7 @@ window.fetch = async function(...args) {
   const isBackgroundPoll = url.includes('/live_tokens') || url.includes('/my_token_status') || url.includes('/api/doctor_stats') || url.includes('/doctor/my_stats');
   
   if (btn && (!btn.disabled || btn.dataset.loading === 'true') && !isBackgroundPoll) {
-    if (actionTimeout) {
-      clearTimeout(actionTimeout);
-      actionTimeout = null;
-    }
-    
+    btn.dataset.fetchActive = 'true';
     window.setLoadingState(btn, true);
     let success = false;
     try {
@@ -556,6 +503,7 @@ window.fetch = async function(...args) {
       const btnText = btn.textContent.trim().toLowerCase();
       const isBooking = btnText.includes('booking');
       
+      delete btn.dataset.fetchActive;
       if (isBooking && success) {
         btn.dataset.keepLoading = "true";
       } else {
@@ -588,11 +536,7 @@ window.XMLHttpRequest = function() {
   const originalSend = xhr.send;
   xhr.send = function(...args) {
     if (btn && (!btn.disabled || btn.dataset.loading === 'true') && !isBackground) {
-      if (actionTimeout) {
-        clearTimeout(actionTimeout);
-        actionTimeout = null;
-      }
-      
+      btn.dataset.fetchActive = 'true';
       window.setLoadingState(btn, true);
       const restore = () => {
         let success = false;
@@ -610,6 +554,7 @@ window.XMLHttpRequest = function() {
         const btnText = btn.textContent.trim().toLowerCase();
         const isBooking = btnText.includes('booking');
         
+        delete btn.dataset.fetchActive;
         if (isBooking && success) {
           btn.dataset.keepLoading = "true";
         } else {
