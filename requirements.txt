@@ -56,3 +56,5 @@ cloudinary==1.39.0
 Flask-SQLAlchemy==3.1.1
 google-genai
 psycopg2-binary>=2.9.10
+Flask-WTF>=1.1.1
+pywebpush>=1.14.0

@@ -24,6 +24,23 @@ from google.genai import types as genai_types
 
 load_dotenv()  # Load .env file when running locally
 
+# Bridge namespaced environment variables if standard ones are missing
+def bridge_env_var(std_name, fallback_names):
+    if not os.environ.get(std_name):
+        for fb_name in fallback_names:
+            val = os.environ.get(fb_name)
+            if val:
+                os.environ[std_name] = val
+                break
+
+bridge_env_var('FLASK_SECRET_KEY', ['FLASK_SECRET_KEY_PRIMECARE'])
+bridge_env_var('CLOUDINARY_API_KEY', ['CLOUDINARY_API_KEY_PRIMECARE'])
+bridge_env_var('CLOUDINARY_API_SECRET', ['CLOUDINARY_API_SECRET_PRIMECARE'])
+bridge_env_var('CLOUDINARY_CLOUD_NAME', ['CLOUDINARY_CLOUD_NAME_PRIMECARE'])
+bridge_env_var('MAIL_SENDER_EMAIL', ['MAIL_USERNAME_PRIMECARE', 'MAIL_SENDER_EMAIL_PRIMECARE'])
+bridge_env_var('SMTP_APP_PASSWORD', ['MAIL_PASSWORD_PRIMECARE', 'SMTP_APP_PASSWORD_PRIMECARE'])
+bridge_env_var('ADMIN_EMAIL', ['ADMIN_EMAIL_PRIMECARE'])
+
 # Configure Cloudinary
 cloudinary.config(
     cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
@@ -39,7 +56,27 @@ WHATSAPP_ENABLE = os.environ.get("WHATSAPP_ENABLE", "false").lower() == "true"
 
 
 app = Flask(__name__)
-app.secret_key = 'YOUR_SECRET_KEY'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'primecare_default_secret_key_849203810')
+
+# Enable CSRF Protection globally
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+csrf = CSRFProtect(app)
+
+# Configure Session Cookies for security
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = True if os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true' else False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+@app.after_request
+def set_csrf_cookie(response):
+    response.set_cookie(
+        'csrf_token',
+        generate_csrf(),
+        samesite='Lax',
+        secure=app.config.get('SESSION_COOKIE_SECURE', False),
+        httponly=False  # Must be readable by JavaScript
+    )
+    return response
 
 # Configure Database (Cloud Database First, Local SQLite Fallback)
 db_url = os.environ.get('DATABASE_URL')
@@ -148,6 +185,24 @@ class DoctorReferral(db.Model):
 
 with app.app_context():
     db.create_all()
+    # Create default guest user if it doesn't exist to satisfy the PatientBooking user_id constraint
+    try:
+        guest_email = "guest@primecare.com"
+        guest_user = User.query.filter_by(email=guest_email).first()
+        if not guest_user:
+            guest_user = User(
+                name="Guest Patient",
+                email=guest_email,
+                password_hash=generate_password_hash("guest_placeholder_password_not_for_login"),
+                role="patient"
+            )
+            db.session.add(guest_user)
+            db.session.commit()
+            print("[INFO] Created default guest user placeholder.")
+    except Exception as e:
+        db.session.rollback()
+        print(f"[WARNING] Failed to create default guest user: {e}")
+
     # Safely alter tables to add cancellation columns to PatientBooking if they don't exist
     try:
         from sqlalchemy import text
@@ -729,6 +784,8 @@ def send_admin_otp():
     otp = str(random.randint(100000, 999999))
     session['admin_email'] = admin_email
     session['admin_otp'] = otp
+    session['admin_otp_expiry'] = (datetime.utcnow() + timedelta(minutes=5)).isoformat()
+    session['admin_otp_attempts'] = 0
 
     html_content = get_otp_html(otp)
     success = send_email(admin_email, "Your PrimeCare Admin Login Code", html_content)
@@ -745,16 +802,52 @@ def verify_admin_otp():
     if admin_email != ADMIN_EMAIL.lower():
         return jsonify(success=False, msg="Unauthorized access.")
 
+    # Check brute force attempts
+    attempts = session.get('admin_otp_attempts', 0)
+    if attempts >= 5:
+        session.pop('admin_otp', None)
+        session.pop('admin_otp_expiry', None)
+        return jsonify(success=False, msg="Too many failed attempts. Please request a new OTP.")
+
+    # Check expiration
+    expiry_str = session.get('admin_otp_expiry')
+    if not expiry_str:
+        return jsonify(success=False, msg="No OTP request active.")
+        
+    try:
+        expiry = datetime.fromisoformat(expiry_str)
+    except Exception:
+        expiry = datetime.utcnow()
+        
+    if datetime.utcnow() > expiry:
+        session.pop('admin_otp', None)
+        session.pop('admin_otp_expiry', None)
+        return jsonify(success=False, msg="OTP has expired. Please request a new OTP.")
+
     code_entered = request.form.get('otp')
     correct_code = session.get('admin_otp')
 
+    if not correct_code:
+        return jsonify(success=False, msg="OTP not found or already verified.")
+
     if code_entered == correct_code:
+        session.pop('admin_otp', None)
+        session.pop('admin_otp_expiry', None)
+        session.pop('admin_otp_attempts', None)
+        
         session['admin_logged_in'] = True
         # Trigger an automatic sync on successful admin login
         sync_doctors_from_sheet()
         return jsonify(success=True, msg="Admin logged in successfully and doctor data synchronized")
     else:
-        return jsonify(success=False, msg="Invalid OTP. Try again.")
+        attempts += 1
+        session['admin_otp_attempts'] = attempts
+        remaining = 5 - attempts
+        if remaining <= 0:
+            session.pop('admin_otp', None)
+            session.pop('admin_otp_expiry', None)
+            return jsonify(success=False, msg="Too many failed attempts. OTP has been invalidated.")
+        return jsonify(success=False, msg=f"Invalid OTP. {remaining} attempts remaining.")
 
 @app.route("/admin_sync_doctors", methods=["POST"])
 def admin_sync_doctors():
@@ -2652,6 +2745,13 @@ def book_doctor():
         sheet.append_row([token, name, age, gender, phone_number, date])
 
         user_id = session.get('user_id')
+        is_guest = False
+        if not user_id:
+            is_guest = True
+            guest_user = User.query.filter_by(email="guest@primecare.com").first()
+            if guest_user:
+                user_id = guest_user.id
+
         if user_id:
             new_booking = PatientBooking(
                 user_id=user_id,
@@ -2666,7 +2766,8 @@ def book_doctor():
             )
             db.session.add(new_booking)
             db.session.commit()
-            mark_pending_referrals_booked(user_id, doctor_info["Specialization"], name)
+            if not is_guest:
+                mark_pending_referrals_booked(user_id, doctor_info["Specialization"], name)
 
         # --- Auto-Update Doctor Session Total Tokens for today ---
         ist = pytz.timezone('Asia/Kolkata')
@@ -2683,6 +2784,7 @@ def book_doctor():
                     sync_doctor_session_status(doc_sess)
                     db.session.commit()
             except Exception as e:
+                db.session.rollback()
                 app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
 
         # Set flag for celebratory confetti
@@ -2716,6 +2818,7 @@ def book_doctor():
         })
 
     except Exception as e:
+        db.session.rollback()
         return jsonify({"success": False, "msg": get_friendly_error_message(e)}), 500
 
 @app.route("/admin_book_patient", methods=["POST"])
@@ -2799,6 +2902,31 @@ def admin_book_patient():
 
         sheet.append_row([token, name, age, gender, phone_number, date])
 
+        # Try to find a registered user with a matching name (case-insensitive)
+        booking_user = User.query.filter(db.func.lower(db.func.trim(User.name)) == name.lower().strip()).first()
+        if booking_user:
+            booking_user_id = booking_user.id
+        else:
+            guest_user = User.query.filter_by(email="guest@primecare.com").first()
+            booking_user_id = guest_user.id if guest_user else None
+
+        if booking_user_id:
+            new_booking = PatientBooking(
+                user_id=booking_user_id,
+                doctor_name=doctor_info["Name"],
+                specialization=doctor_info["Specialization"],
+                date=date,
+                time=time_for_booking,
+                token=token,
+                sheet_url=sheet_url,
+                patient_name=name,
+                age=age or "-"
+            )
+            db.session.add(new_booking)
+            db.session.commit()
+            if booking_user and not booking_user.email.endswith("guest@primecare.com"):
+                mark_pending_referrals_booked(booking_user_id, doctor_info["Specialization"], name)
+
         # --- Auto-Update Doctor Session Total Tokens for today ---
         ist = pytz.timezone('Asia/Kolkata')
         today_str = datetime.now(ist).strftime("%Y-%m-%d")
@@ -2814,6 +2942,7 @@ def admin_book_patient():
                     sync_doctor_session_status(doc_sess)
                     db.session.commit()
             except Exception as e:
+                db.session.rollback()
                 app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
 
         increment_booking_counter()
@@ -2843,6 +2972,7 @@ def admin_book_patient():
             )
         })
     except Exception as e:
+        db.session.rollback()
         return jsonify({"success": False, "msg": get_friendly_error_message(e)}), 500
 
 @app.route("/book_department", methods=["POST"])
@@ -2957,9 +3087,17 @@ def book_department():
                         sync_doctor_session_status(doc_sess)
                         db.session.commit()
                 except Exception as e:
+                    db.session.rollback()
                     app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
 
             user_id = session.get('user_id')
+            is_guest = False
+            if not user_id:
+                is_guest = True
+                guest_user = User.query.filter_by(email="guest@primecare.com").first()
+                if guest_user:
+                    user_id = guest_user.id
+
             if user_id:
                 new_booking = PatientBooking(
                     user_id=user_id,
@@ -2974,7 +3112,8 @@ def book_department():
                 )
                 db.session.add(new_booking)
                 db.session.commit()
-                mark_pending_referrals_booked(user_id, chosen_doc["Specialization"], name)
+                if not is_guest:
+                    mark_pending_referrals_booked(user_id, chosen_doc["Specialization"], name)
 
             increment_booking_counter()
             cleanup_old_date_sheets(spreadsheet)
@@ -3067,9 +3206,17 @@ def book_department():
                     sync_doctor_session_status(doc_sess)
                     db.session.commit()
             except Exception as e:
+                db.session.rollback()
                 app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
 
         user_id = session.get('user_id')
+        is_guest = False
+        if not user_id:
+            is_guest = True
+            guest_user = User.query.filter_by(email="guest@primecare.com").first()
+            if guest_user:
+                user_id = guest_user.id
+
         if user_id:
             new_booking = PatientBooking(
                 user_id=user_id,
@@ -3079,11 +3226,13 @@ def book_department():
                 time=time_for_booking,
                 token=token,
                 sheet_url=best_doc["SheetURL"],
-                patient_name=name
+                patient_name=name,
+                age=age or "-"
             )
             db.session.add(new_booking)
             db.session.commit()
-            mark_pending_referrals_booked(user_id, best_doc["Specialization"], name)
+            if not is_guest:
+                mark_pending_referrals_booked(user_id, best_doc["Specialization"], name)
 
         increment_booking_counter()
         cleanup_old_date_sheets(best_spreadsheet)
@@ -3114,6 +3263,7 @@ def book_department():
         })
 
     except Exception as e:
+        db.session.rollback()
         app.logger.exception("Error in /book_department")
         return jsonify({"success": False, "msg": get_friendly_error_message(e)}), 500
 
@@ -3292,8 +3442,8 @@ def get_doctor_stats():
                 ws = s.worksheet(dt_formatted)
                 records = get_worksheet_records_safe(ws)
                 total_tokens = len(records)
-                doc_session.total_tokens = total_tokens
                 sync_doctor_session_status(doc_session)
+                doc_session.total_tokens = total_tokens
                 db.session.commit()
                 
                 skipped_set = set(doc_session.skipped_tokens.split(",")) if doc_session.skipped_tokens else set()
@@ -4047,10 +4197,22 @@ def sync_doctor_session_status(doc_session):
             doc_session.status = 'idle'
             doc_session.current_token = 0
             doc_session.session_date = today_str
-            doc_session.total_tokens = 0
             doc_session.start_time = None
             doc_session.end_time = None
             doc_session.skipped_tokens = ""
+            
+            # Count bookings for this doctor/spec on today's date in local DB
+            try:
+                today_count = PatientBooking.query.filter(
+                    db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+                    db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+                    PatientBooking.date == today_str,
+                    PatientBooking.status != 'cancelled'
+                ).count()
+                doc_session.total_tokens = today_count
+            except Exception:
+                doc_session.total_tokens = 0
+                
             db.session.commit()
             return
 
@@ -4846,6 +5008,284 @@ def get_upcoming_holidays() -> str:
     except Exception as e:
         return f"Error retrieving upcoming holidays: {str(e)}"
 
+def get_system_statistics() -> str:
+    """
+    Returns high-level administrative statistics and operational metrics.
+    Includes user counts by role, database booking states, active wait queues,
+    referral counts, prescription counts, and cancellation rate.
+    """
+    try:
+        total_users = User.query.count()
+        patients_count = User.query.filter_by(role='patient').count()
+        doctors_count = User.query.filter_by(role='doctor').count()
+        admins_count = User.query.filter_by(role='admin').count()
+        
+        total_bookings = PatientBooking.query.count()
+        confirmed_bookings = PatientBooking.query.filter_by(status='confirmed').count()
+        cancelled_bookings = PatientBooking.query.filter_by(status='cancelled').count()
+        completed_bookings = PatientBooking.query.filter(PatientBooking.consultation_end_time.isnot(None)).count()
+        
+        cancellation_rate = 0.0
+        if total_bookings > 0:
+            cancellation_rate = (cancelled_bookings / total_bookings) * 100.0
+            
+        total_referrals = DoctorReferral.query.count()
+        pending_referrals = DoctorReferral.query.filter_by(status='pending').count()
+        booked_referrals = DoctorReferral.query.filter_by(status='booked').count()
+        
+        total_prescriptions = Prescription.query.count()
+        active_ticker_messages = TickerMessage.query.filter_by(is_active=True).count()
+        
+        ist = pytz.timezone('Asia/Kolkata')
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        active_sessions = DoctorSession.query.filter_by(session_date=today_str).count()
+        
+        stats = {
+            "Users Breakdown": {
+                "Total Registered Users": total_users,
+                "Patients": patients_count,
+                "Doctors": doctors_count,
+                "Admins": admins_count
+            },
+            "Bookings Breakdown": {
+                "Total Bookings Record": total_bookings,
+                "Confirmed Bookings": confirmed_bookings,
+                "Cancelled Bookings": cancelled_bookings,
+                "Completed Consultations": completed_bookings,
+                "Cancellation Rate (%)": round(cancellation_rate, 2)
+            },
+            "Referrals & Prescriptions": {
+                "Total Referrals": total_referrals,
+                "Pending Referrals": pending_referrals,
+                "Booked Referrals": booked_referrals,
+                "Total Prescriptions Issued": total_prescriptions
+            },
+            "Real-time Queue": {
+                "Active Doctor Sessions Today": active_sessions,
+                "Live Ticker Messages": active_ticker_messages
+            }
+        }
+        return json.dumps(stats, indent=2)
+    except Exception as e:
+        return f"Error gathering statistics: {str(e)}"
+
+def query_users(role: str = None, search_query: str = None) -> str:
+    """
+    Search and retrieve user accounts.
+    Args:
+        role: Filter by user role ('patient', 'doctor', 'admin').
+        search_query: Search term for name or email.
+    """
+    try:
+        q = User.query
+        if role:
+            q = q.filter_by(role=role)
+        if search_query:
+            search_pattern = f"%{search_query}%"
+            q = q.filter(db.or_(User.name.like(search_pattern), User.email.like(search_pattern)))
+        
+        users = q.all()
+        results = []
+        for u in users:
+            results.append({
+                "ID": u.id,
+                "Name": u.name,
+                "Email": u.email,
+                "Role": u.role,
+                "Registered At": u.created_at.strftime("%Y-%m-%d %H:%M:%S") if u.created_at else "Unknown"
+            })
+        return json.dumps(results, indent=2)
+    except Exception as e:
+        return f"Error querying users: {str(e)}"
+
+def query_appointments(doctor_name: str = None, date_str: str = None, status: str = None, patient_name: str = None) -> str:
+    """
+    Queries patient appointments/bookings from the local database cache.
+    Args:
+        doctor_name: Filter by doctor name (fuzzy search).
+        date_str: Filter by date (YYYY-MM-DD).
+        status: Filter by booking status ('confirmed', 'cancelled').
+        patient_name: Filter by patient name (fuzzy search).
+    """
+    try:
+        q = PatientBooking.query
+        if doctor_name:
+            search_pattern = f"%{doctor_name}%"
+            q = q.filter(PatientBooking.doctor_name.like(search_pattern))
+        if date_str:
+            q = q.filter_by(date=date_str)
+        if status:
+            q = q.filter_by(status=status)
+        if patient_name:
+            search_pattern = f"%{patient_name}%"
+            q = q.filter(PatientBooking.patient_name.like(search_pattern))
+            
+        bookings = q.order_by(PatientBooking.date.desc(), PatientBooking.token.asc()).all()
+        results = []
+        for b in bookings:
+            results.append({
+                "Booking ID": b.id,
+                "Patient Name": b.patient_name,
+                "Age": b.age,
+                "Doctor Name": b.doctor_name,
+                "Specialization": b.specialization,
+                "Date": b.date,
+                "Time": b.time,
+                "Token": b.token,
+                "Status": b.status,
+                "Cancelled By": b.cancelled_by,
+                "Cancellation Reason": b.cancellation_reason,
+                "Cancelled At": b.cancelled_at,
+                "Consultation Start": b.consultation_start_time.strftime("%Y-%m-%d %H:%M:%S") if b.consultation_start_time else None,
+                "Consultation End": b.consultation_end_time.strftime("%Y-%m-%d %H:%M:%S") if b.consultation_end_time else None
+            })
+        return json.dumps(results[:100], indent=2)
+    except Exception as e:
+        return f"Error querying appointments: {str(e)}"
+
+def query_referrals(from_doctor: str = None, to_specialization: str = None, status: str = None) -> str:
+    """
+    Retrieves and filters doctor-to-specialist patient referrals.
+    Args:
+        from_doctor: Filter by referring doctor (fuzzy search).
+        to_specialization: Filter by target specialization.
+        status: Filter by status ('pending', 'booked', 'dismissed').
+    """
+    try:
+        q = DoctorReferral.query
+        if from_doctor:
+            search_pattern = f"%{from_doctor}%"
+            q = q.filter(DoctorReferral.from_doctor.like(search_pattern))
+        if to_specialization:
+            q = q.filter_by(to_specialization=to_specialization)
+        if status:
+            q = q.filter_by(status=status)
+            
+        referrals = q.order_by(DoctorReferral.created_at.desc()).all()
+        results = []
+        for r in referrals:
+            results.append({
+                "Referral ID": r.id,
+                "Patient Name": r.patient_name,
+                "From Doctor": r.from_doctor,
+                "To Specialization": r.to_specialization,
+                "Notes": r.notes,
+                "Status": r.status,
+                "Created At": r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else "Unknown"
+            })
+        return json.dumps(results, indent=2)
+    except Exception as e:
+        return f"Error querying referrals: {str(e)}"
+
+def query_prescriptions(doctor_name: str = None, patient_name: str = None, date_str: str = None) -> str:
+    """
+    Queries prescription history and logs.
+    Args:
+        doctor_name: Filter by prescribing doctor (fuzzy).
+        patient_name: Filter by patient name (fuzzy).
+        date_str: Filter by consultation date (YYYY-MM-DD).
+    """
+    try:
+        q = Prescription.query
+        if doctor_name:
+            search_pattern = f"%{doctor_name}%"
+            q = q.filter(Prescription.doctor_name.like(search_pattern))
+        if patient_name:
+            search_pattern = f"%{patient_name}%"
+            q = q.filter(Prescription.patient_name.like(search_pattern))
+        if date_str:
+            q = q.filter_by(consultation_date=date_str)
+            
+        prescriptions = q.order_by(Prescription.created_at.desc()).all()
+        results = []
+        for p in prescriptions:
+            results.append({
+                "Prescription ID": p.id,
+                "Patient Name": p.patient_name,
+                "Doctor Name": p.doctor_name,
+                "Consultation Date": p.consultation_date,
+                "Text Content": p.text_content,
+                "Uploaded File": p.file_path,
+                "Created At": p.created_at.strftime("%Y-%m-%d %H:%M:%S") if p.created_at else "Unknown"
+            })
+        return json.dumps(results[:50], indent=2)
+    except Exception as e:
+        return f"Error querying prescriptions: {str(e)}"
+
+def query_doctor_sessions_today() -> str:
+    """
+    Retrieves the real-time queue state and status for all active doctor sessions today.
+    Includes current token, total tokens, queue status, start/end times, and skipped tokens.
+    """
+    try:
+        ist = pytz.timezone('Asia/Kolkata')
+        today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        sessions = DoctorSession.query.filter_by(session_date=today_str).all()
+        results = []
+        for s in sessions:
+            results.append({
+                "Doctor Name": s.doctor_name,
+                "Specialization": s.specialization,
+                "Status": s.status,
+                "Current Token": s.current_token,
+                "Total Tokens": s.total_tokens,
+                "Start Time": s.start_time,
+                "End Time": s.end_time,
+                "Skipped Tokens": s.skipped_tokens
+            })
+        return json.dumps(results, indent=2)
+    except Exception as e:
+        return f"Error querying doctor sessions: {str(e)}"
+
+def query_leaves_and_holidays() -> str:
+    """
+    Retrieves all scheduled doctor leaves and general clinic holidays from the system worksheets.
+    """
+    try:
+        leaves = []
+        try:
+            leave_ws = get_leave_worksheet()
+            if leave_ws:
+                all_vals = leave_ws.get_all_values()
+                if all_vals and len(all_vals) > 1:
+                    headers = all_vals[0]
+                    for row in all_vals[1:]:
+                        if not row or len(row) < 3:
+                            continue
+                        row_dict = dict(zip(headers, row))
+                        leaves.append({
+                            "Type": "Doctor Leave",
+                            "Doctor Name": row_dict.get("DoctorName", ""),
+                            "Specialization": row_dict.get("Specialization", ""),
+                            "Date": row_dict.get("Date", ""),
+                            "Reason": row_dict.get("Reason", "")
+                        })
+        except Exception as e:
+            leaves.append({"Type": "Error", "Message": f"Failed to fetch leaves: {str(e)}"})
+
+        holidays = []
+        try:
+            holiday_ws = get_holiday_worksheet()
+            if holiday_ws:
+                all_vals = holiday_ws.get_all_values()
+                if all_vals and len(all_vals) > 1:
+                    headers = all_vals[0]
+                    for row in all_vals[1:]:
+                        if not row or len(row) < 2:
+                            continue
+                        row_dict = dict(zip(headers, row))
+                        holidays.append({
+                            "Type": "Clinic Holiday",
+                            "Date": row_dict.get("HolidayDate", row[0]),
+                            "Reason": row_dict.get("Reason", row[1] if len(row) > 1 else "")
+                        })
+        except Exception as e:
+            holidays.append({"Type": "Error", "Message": f"Failed to fetch holidays: {str(e)}"})
+
+        return json.dumps({"Doctor Leaves": leaves, "Clinic Holidays": holidays}, indent=2)
+    except Exception as e:
+        return f"Error querying leaves and holidays: {str(e)}"
+
 def get_admin_ai_system_instruction():
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
@@ -4872,9 +5312,10 @@ def get_admin_ai_system_instruction():
     login_setting = AppSettings.query.filter_by(key='password_login_enabled').first()
     password_login_status = "Enabled" if (not login_setting or login_setting.value == '1') else "Disabled"
 
-    instruction = f"""You are the official PrimeCare Clinic Admin AI Assistant.
-You have access to the administrative system context, settings, and operation guides.
-Answer queries concisely, professionally, and accurately. Use Markdown formatting for your responses (e.g., list items, bold texts, code-like paths, headers).
+    instruction = f"""You are the official PrimeCare Clinic Admin AI Assistant — a fully data-aware administrative intelligence system.
+You have access to the administrative system context, settings, operations, and database query tools.
+Your goal is to provide highly accurate, context-rich, analytical, and actionable responses instead of generic AI answers.
+Use Markdown formatting for your responses (e.g., tables, list items, bold text, code-like paths, headers).
 
 ### CURRENT CLINIC CONTEXT
 - Today's Date: {today_str} ({day_of_week})
@@ -4891,10 +5332,24 @@ Here is the JSON representation of the current clinic settings:
 Here is the JSON representation of the registered clinic doctors and their default schedules:
 {doctors_json}
 
-### TOOL USAGE GUIDELINES
-- To query bookings or check if a doctor works/has leaves on a specific date, you MUST call the `check_doctor_bookings_and_schedule(doctor_name_query, date_str)` tool.
-- To list all upcoming clinic-wide holidays, call the `get_upcoming_holidays()` tool.
-- Always check the date (e.g. if the user says "tomorrow", map it to {tomorrow_str} and use that as the date_str argument).
+### OPERATIONAL CAPABILITIES & TOOLS
+You must call the appropriate tool(s) to fetch real-time application data to answer the administrator's questions:
+1. `get_system_statistics()`: Get high-level database counts, booking stats, active session count, prescription volume, referral status, and cancellation rates. Use this for general health checks, performance overviews, or operational metrics.
+2. `query_users(role, search_query)`: Find registered users/patients/doctors. Use this when the admin asks about specific accounts or total users.
+3. `query_appointments(doctor_name, date_str, status, patient_name)`: Search appointment bookings in the local cache. Use this to verify booking details, analyze doctor booking load, compare dates, or find cancelled appointments.
+4. `query_referrals(from_doctor, to_specialization, status)`: Search and count clinical referrals between doctors and specialties.
+5. `query_prescriptions(doctor_name, patient_name, date_str)`: Fetch prescription history.
+6. `query_doctor_sessions_today()`: Retrieve live patient queue data for today (current token, total tokens, queue status, skipped tokens). Use this to answer questions about wait times, who is currently consulting, or queue backlogs.
+7. `query_leaves_and_holidays()`: Retrieves all scheduled doctor leaves and clinic holidays.
+8. `check_doctor_bookings_and_schedule(doctor_name_query, date_str)`: Fetch real-time schedule and patient lists for a specific doctor on a specific date (reads from the live Google Sheet).
+9. `get_upcoming_holidays()`: Retrieve clinic holidays.
+
+### BEHAVIOR AND ANALYSIS GUIDELINES
+- **Analyze and Calculate**: Do not just repeat raw JSON output. Perform calculations (e.g., sum up total appointments, calculate percentage of cancelled appointments, count how many bookings a specific doctor has, find busy days).
+- **Compare and Contrast**: When asked, compare booking rates, cancellation patterns, or doctor workloads.
+- **Relate Data**: Connect information. For example, if asked about a patient's booking, look at their referrals, prescriptions, or active queue position.
+- **Answer Business Questions**: Provide decision support. E.g., "Which doctor is busiest?", "What is our cancellation rate?", "How many referrals are pending for Cardiology?".
+- **Ground in Real-Time Data**: Make sure every statistic and name you mention is returned by a tool or present in the current context. If a tool returns no data, explicitly state that no records were found matching those criteria.
 
 ### ADMIN PANEL OPERATION GUIDE (HOW-TO GUIDES)
 If the admin asks how to perform tasks, tell them exactly which tab/section to use and how to do it. Here is the reference guide:
@@ -4928,7 +5383,7 @@ If the admin asks how to perform tasks, tell them exactly which tab/section to u
 - Be direct and precise.
 - When referring to tabs or sections, mention the card name and tab, for example: "Go to Clinic Settings panel (tab `'settings'`)".
 - Bold the names of buttons, inputs, and sections.
-- When summarizing bookings, present the information in a clean, user-friendly markdown list.
+- When summarizing bookings, present the information in a clean, user-friendly markdown list or formatted table.
 """
     return instruction
 
@@ -4967,15 +5422,28 @@ def admin_ai_chat():
                     )
                 )
         
-        # Append the new user message
-        contents.append(
-            genai_types.Content(
-                role="user",
-                parts=[genai_types.Part.from_text(text=message)]
+        system_instruction = get_admin_ai_system_instruction()
+
+        # Initialize chat with history
+        chat = client_genai.chats.create(
+            model='gemini-2.5-flash',
+            history=contents,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                tools=[
+                    check_doctor_bookings_and_schedule,
+                    get_upcoming_holidays,
+                    get_system_statistics,
+                    query_users,
+                    query_appointments,
+                    query_referrals,
+                    query_prescriptions,
+                    query_doctor_sessions_today,
+                    query_leaves_and_holidays
+                ],
+                temperature=0.2
             )
         )
-
-        system_instruction = get_admin_ai_system_instruction()
 
         max_retries = 3
         fallback_reply = ("I’m sorry, the AI service is temporarily unavailable. "
@@ -4983,15 +5451,7 @@ def admin_ai_chat():
                           
         for attempt in range(max_retries):
             try:
-                response = client_genai.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=contents,
-                    config=genai_types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        tools=[check_doctor_bookings_and_schedule, get_upcoming_holidays],
-                        temperature=0.2
-                    )
-                )
+                response = chat.send_message(message)
 
                 if response and response.text:
                     return jsonify({"success": True, "reply": response.text.strip()})

@@ -1,3 +1,30 @@
+/* ── AUTOMATIC CSRF FETCH INTERCEPTOR ── */
+(function() {
+  function getCookie(name) {
+    let value = "; " + document.cookie;
+    let parts = value.split("; " + name + "=");
+    if (parts.length === 2) return parts.pop().split(";").shift();
+  }
+
+  const originalFetch = window.fetch;
+  window.fetch = function(url, options) {
+    options = options || {};
+    const method = options.method ? options.method.toUpperCase() : 'GET';
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      const token = getCookie('csrf_token');
+      if (token) {
+        options.headers = options.headers || {};
+        if (options.headers instanceof Headers) {
+          options.headers.set('X-CSRFToken', token);
+        } else {
+          options.headers['X-CSRFToken'] = token;
+        }
+      }
+    }
+    return originalFetch(url, options);
+  };
+})();
+
 /* ── CENTRAL REUSABLE TOAST MANAGER ── */
 
 class ToastManager {
@@ -325,26 +352,35 @@ window.showToast = function(a, b, c) {
 
 let lastClickedButton = null;
 
-// Track the last clicked action button to associate it with active fetches
+// Track the last clicked action button to associate it with active fetches/requests
+// Use capture phase (true) to run before any stopPropagation in page-specific scripts
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('button, input[type="submit"], input[type="button"], .btn');
   if (btn) {
     lastClickedButton = btn;
-    // Auto-clear after a safe delay if no fetch/action follows
+    // Auto-clear after a safe delay if no request follows
     setTimeout(() => {
       if (lastClickedButton === btn) lastClickedButton = null;
     }, 2000);
   }
-}, { passive: true });
+}, true);
 
 // Listen for standard form submits to instantly trigger loading indicator and prevent double-clicks
+// Runs in capture phase (true) to run before page-specific event listeners
 document.addEventListener('submit', (e) => {
   const form = e.target;
   const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
   if (submitBtn) {
     window.setLoadingState(submitBtn, true);
+    
+    // If submission is cancelled by page validation scripts, restore button immediately
+    setTimeout(() => {
+      if (e.defaultPrevented) {
+        window.setLoadingState(submitBtn, false);
+      }
+    }, 0);
   }
-});
+}, true);
 
 // Set loading state with custom spinner and contextual action text
 window.setLoadingState = function(button, isLoading, actionText) {
@@ -356,6 +392,7 @@ window.setLoadingState = function(button, isLoading, actionText) {
       button.dataset.originalHtml = button.innerHTML;
     }
     button.disabled = true;
+    button.dataset.loading = "true";
 
     // Determine meaningful action-specific loading text
     let loadingText = 'Processing...';
@@ -363,24 +400,32 @@ window.setLoadingState = function(button, isLoading, actionText) {
       loadingText = actionText;
     } else {
       const btnText = button.textContent.trim().toLowerCase();
-      if (btnText.includes('sign up') || btnText.includes('register') || btnText.includes('create account')) {
+      if (btnText.includes('sign up') || btnText.includes('register') || btnText.includes('create account') || btnText.includes('create patient')) {
         loadingText = 'Creating...';
-      } else if (btnText.includes('book')) {
+      } else if (btnText.includes('book') || btnText.includes('appointment')) {
         loadingText = 'Booking...';
-      } else if (btnText.includes('save') || btnText.includes('update') || btnText.includes('edit')) {
+      } else if (btnText.includes('save changes') || btnText.includes('save settings') || btnText.includes('save') || btnText.includes('update') || btnText.includes('edit')) {
         loadingText = 'Saving...';
-      } else if (btnText.includes('delete') || btnText.includes('remove') || btnText.includes('dismiss')) {
+      } else if (btnText.includes('force delete') || btnText.includes('delete') || btnText.includes('remove') || btnText.includes('dismiss')) {
         loadingText = 'Deleting...';
-      } else if (btnText.includes('send') || btnText.includes('resend')) {
+      } else if (btnText.includes('send otp') || btnText.includes('get otp') || btnText.includes('send') || btnText.includes('resend')) {
         loadingText = 'Sending...';
-      } else if (btnText.includes('verify') || btnText.includes('validate')) {
+      } else if (btnText.includes('verify otp') || btnText.includes('verify') || btnText.includes('validate')) {
         loadingText = 'Verifying...';
       } else if (btnText.includes('upload')) {
         loadingText = 'Uploading...';
-      } else if (btnText.includes('logout') || btnText.includes('sign out')) {
-        loadingText = 'Logging out...';
       } else if (btnText.includes('login') || btnText.includes('sign in')) {
         loadingText = 'Logging in...';
+      } else if (btnText.includes('logout') || btnText.includes('sign out')) {
+        loadingText = 'Logging out...';
+      } else if (btnText.includes('change password')) {
+        loadingText = 'Changing...';
+      } else if (btnText.includes('reset password')) {
+        loadingText = 'Resetting...';
+      } else if (btnText.includes('cancel')) {
+        loadingText = 'Cancelling...';
+      } else if (btnText.includes('add')) {
+        loadingText = 'Adding...';
       } else if (btnText.includes('start')) {
         loadingText = 'Starting...';
       } else if (btnText.includes('complete')) {
@@ -407,6 +452,7 @@ window.setLoadingState = function(button, isLoading, actionText) {
       button.removeAttribute('data-original-html');
     }
     button.disabled = false;
+    button.removeAttribute('data-loading');
   }
 };
 
@@ -419,14 +465,13 @@ window.fetch = async function(...args) {
   const url = args[0] ? String(args[0]).toLowerCase() : '';
   const isBackgroundPoll = url.includes('/live_tokens') || url.includes('/my_token_status') || url.includes('/api/doctor_stats') || url.includes('/doctor/my_stats');
   
-  if (btn && !btn.disabled && !isBackgroundPoll) {
+  if (btn && (!btn.disabled || btn.dataset.loading === 'true') && !isBackgroundPoll) {
     window.setLoadingState(btn, true);
     try {
       const response = await originalFetch(...args);
       return response;
     } finally {
       window.setLoadingState(btn, false);
-      // Clean lastClickedButton state
       if (lastClickedButton === btn) {
         lastClickedButton = null;
       }
@@ -434,5 +479,37 @@ window.fetch = async function(...args) {
   } else {
     return originalFetch(...args);
   }
+};
+
+// Hook into XMLHttpRequest to automatically trigger loading state for older AJAX calls
+const originalXHR = window.XMLHttpRequest;
+window.XMLHttpRequest = function() {
+  const xhr = new originalXHR();
+  const btn = lastClickedButton;
+  
+  let isBackground = false;
+  const originalOpen = xhr.open;
+  xhr.open = function(method, url, ...rest) {
+    const lowerUrl = String(url).toLowerCase();
+    isBackground = lowerUrl.includes('/live_tokens') || lowerUrl.includes('/my_token_status') || lowerUrl.includes('/api/doctor_stats') || lowerUrl.includes('/doctor/my_stats');
+    return originalOpen.call(xhr, method, url, ...rest);
+  };
+
+  const originalSend = xhr.send;
+  xhr.send = function(...args) {
+    if (btn && (!btn.disabled || btn.dataset.loading === 'true') && !isBackground) {
+      window.setLoadingState(btn, true);
+      const restore = () => {
+        window.setLoadingState(btn, false);
+        if (lastClickedButton === btn) {
+          lastClickedButton = null;
+        }
+      };
+      xhr.addEventListener('loadend', restore);
+    }
+    return originalSend.call(xhr, ...args);
+  };
+  
+  return xhr;
 };
 
