@@ -382,6 +382,7 @@ document.addEventListener('submit', (e) => {
   const form = e.target;
   const submitBtn = (lastClickedButton && form.contains(lastClickedButton)) ? lastClickedButton : form.querySelector('button[type="submit"], input[type="submit"]');
   if (submitBtn) {
+    lastClickedButton = submitBtn;
     window.setLoadingState(submitBtn, true);
     
     // If submission is cancelled by page validation scripts, restore button immediately

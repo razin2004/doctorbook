@@ -5613,7 +5613,7 @@
         'Register Doctor',
         async () => {
           const btn=e.target.querySelector("button[type='submit']");
-          btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Adding...'; lucide.createIcons();
+          window.setLoadingState(btn, true);
           try {
             const formData=new FormData();
             formData.append('name',name); formData.append('email',email); formData.append('specialization',specialization);
@@ -5625,7 +5625,7 @@
             showToast(data.msg || 'Doctor profile created successfully', data.success ? 'success' : 'error');
             if(data.success) { e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
           } catch(err) { showToast('Unable to complete doctor registration.', 'error'); }
-          finally { btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); }
+          finally { window.setLoadingState(btn, false); }
         }
       );
     });
@@ -5666,14 +5666,14 @@
         'Update Profile',
         async () => {
           const btn=e.target.querySelector("button[type='submit']");
-          btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Saving...'; lucide.createIcons();
+          window.setLoadingState(btn, true);
           try {
             const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined, email, days:selectedDays,day_times}) });
             const data=await res.json();
             showToast(data.msg, data.success ? 'success' : 'error');
             if(data.success){ e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
           } catch(err){ showToast('An error occurred while updating the doctor profile.', 'error'); }
-          finally{ btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); }
+          finally{ window.setLoadingState(btn, false); }
         }
       );
     });
@@ -5681,31 +5681,27 @@
     // ─── Delete doctor ─────────────────────────────────────────
     document.getElementById('adminDeleteDoctorForm')?.addEventListener('submit', async e => {
       e.preventDefault();
-      const btn=e.target.querySelector("button[type='submit']");
-      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Deleting...'; lucide.createIcons();
-      try {
-        const combined=document.getElementById('deleteDoctorSelect').value;
-        if(!combined){ showToast('Select a doctor to remove from the system.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="trash-2"></i> Delete Doctor'; lucide.createIcons(); return; }
-        
-        openModal(
-          'universalModal',
-          'Confirm Removal',
-          'Are you sure you want to permanently remove this doctor from the registry?',
-          'Delete',
-          async () => {
-            btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Deleting...'; lucide.createIcons();
-            try {
-              const res=await fetch('/admin_delete_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined}) });
-              const data=await res.json();
-              showToast(data.msg, data.success ? 'success' : 'error');
-              if(data.success){ loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
-            } catch(err){ showToast('An error occurred during doctor removal.', 'error'); }
-            finally{ btn.disabled=false; btn.innerHTML='<i data-lucide="trash-2"></i> Delete Doctor'; lucide.createIcons(); }
-          },
-          true
-        );
-      } catch(err){ showToast('An error occurred during doctor removal.', 'error'); }
-      finally{ btn.disabled=false; btn.innerHTML='<i data-lucide="trash-2"></i> Delete Doctor'; lucide.createIcons(); }
+      const combined=document.getElementById('deleteDoctorSelect').value;
+      if(!combined){ showToast('Select a doctor to remove from the system.', 'error'); return; }
+      
+      openModal(
+        'universalModal',
+        'Confirm Removal',
+        'Are you sure you want to permanently remove this doctor from the registry?',
+        'Delete',
+        async () => {
+          const btn=e.target.querySelector("button[type='submit']");
+          window.setLoadingState(btn, true);
+          try {
+            const res=await fetch('/admin_delete_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined}) });
+            const data=await res.json();
+            showToast(data.msg, data.success ? 'success' : 'error');
+            if(data.success){ loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
+          } catch(err){ showToast('An error occurred during doctor removal.', 'error'); }
+          finally{ window.setLoadingState(btn, false); }
+        },
+        true
+      );
     });
 
     // ─── Leave management ──────────────────────────────────────
@@ -5825,10 +5821,7 @@
         'Add Leave',
         async () => {
           const btn = document.getElementById('addLeaveBtn');
-          const originalHtml = btn.innerHTML;
-          btn.disabled = true;
-          btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Adding...';
-          lucide.createIcons();
+          window.setLoadingState(btn, true);
 
           try {
             const res=await fetch('/admin_add_leave',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined,date,reason}) });
@@ -5843,9 +5836,7 @@
             }
           } catch(err){ showToast("Couldn't add leave. Please try again.", 'error'); }
           finally {
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-            lucide.createIcons();
+            window.setLoadingState(btn, false);
           }
         }
       );
@@ -5867,12 +5858,9 @@
         return;
       }
 
-      btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Fetching...';
       msgDiv.style.display = 'none';
       tableWrapper.style.display = 'none';
       countBadge.style.display = 'none';
-      lucide.createIcons();
 
       try {
         const res = await fetch('/manage_bookings', {
@@ -5887,10 +5875,6 @@
           msgDiv.style.display = 'block';
           return;
         }
-
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="calendar-days"></i> Fetch Bookings';
-        lucide.createIcons();
 
         const bookings = data.bookings || [];
         if (bookings.length === 0) {
@@ -5927,10 +5911,6 @@
 
       } catch (err) {
         showToast('Failed to fetch bookings. Connection error.', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="search"></i> Show Bookings';
-        lucide.createIcons();
       }
     });
 
