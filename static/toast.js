@@ -159,12 +159,20 @@ class ToastManager {
       const diffX = currentX - startX;
       const diffY = currentY - startY;
 
-      // Allow dragging left, right, or upward. Prevent downward drag.
-      const moveX = diffX;
-      const moveY = diffY < 0 ? diffY : 0;
+      let moveX = 0;
+      let moveY = 0;
+
+      // Lock swipe to either horizontal (left/right) or vertical (upward) axis to prevent diagonal movement
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        moveX = diffX;
+        moveY = 0;
+      } else {
+        moveX = 0;
+        moveY = diffY < 0 ? diffY : 0;
+      }
 
       // Drop opacity gradually as user drags card away
-      const dist = Math.sqrt(moveX * moveX + moveY * moveY);
+      const dist = Math.max(Math.abs(moveX), Math.abs(moveY));
       const opacity = Math.max(0.1, 1 - dist / 220);
 
       card.style.transform = `translate(${moveX}px, ${moveY}px) scale(0.98)`;
@@ -182,16 +190,26 @@ class ToastManager {
       const diffY = currentY - startY;
       const swipeThreshold = 75; // Swipe distance required to trigger dismiss
 
-      if (Math.abs(diffX) > swipeThreshold || diffY < -swipeThreshold) {
+      const isHorizontal = Math.abs(diffX) > Math.abs(diffY);
+
+      if (isHorizontal && Math.abs(diffX) > swipeThreshold) {
         // Cancel auto-dismiss timer
         if (timer) clearTimeout(timer);
 
-        // Fly out in swipe direction
-        if (Math.abs(diffX) > swipeThreshold) {
-          card.style.transform = `translateX(${diffX > 0 ? '120%' : '-120%'})`;
-        } else {
-          card.style.transform = `translateY(-120%)`;
-        }
+        // Fly out in horizontal direction
+        card.style.transform = `translateX(${diffX > 0 ? '120%' : '-120%'})`;
+        card.style.opacity = '0';
+
+        // Trigger dismiss after transition completes
+        setTimeout(() => {
+          this.dismiss(toastData.id);
+        }, 250);
+      } else if (!isHorizontal && diffY < -swipeThreshold) {
+        // Cancel auto-dismiss timer
+        if (timer) clearTimeout(timer);
+
+        // Fly out in vertical upward direction
+        card.style.transform = `translateY(-120%)`;
         card.style.opacity = '0';
 
         // Trigger dismiss after transition completes
