@@ -2024,21 +2024,7 @@
     </div>
   </div>
 
-  <!-- Universal Confirmation Modal -->
-    <!-- Universal Confirmation Modal -->
-  <div class="modal-overlay" id="universalModal">
-    <div class="modal-content">
-      <div class="modal-icon-container" id="unvIconContainer">
-        <i data-lucide="help-circle"></i>
-      </div>
-      <h3 id="unvTitle">Confirm Action</h3>
-      <p id="unvMessage">Are you sure you want to proceed with this action?</p>
-      <div class="modal-btns">
-        <button class="btn btn-outline" onclick="closeUniversalModal()">Cancel</button>
-        <button id="unvConfirmBtn" class="btn btn-primary">Confirm</button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Referral Detail Modal -->
   <div class="modal-overlay" id="referralDetailModal">
@@ -2228,111 +2214,7 @@
       document.getElementById('panel-' + tab).classList.add('active');
     }
 
-        // ─── Unified Modal System ───
-    let activeModalAction = null;
-    
-    window.openUniversalModal = function(titleOrId, messageOrTitle, actionTextOrMessage, actionFnOrText, isDangerOrFn, isDanger) {
-      const modal = document.getElementById('universalModal');
-      if (!modal) return;
-      
-      let id = 'info';
-      let title, message, actionText, actionFn, isDangerVal = false;
-      
-      // Handle variable signatures
-      if (['success', 'warning', 'danger', 'info', 'universalModal', 'delete', 'logout'].includes(titleOrId)) {
-        id = titleOrId;
-        title = messageOrTitle;
-        message = actionTextOrMessage;
-        actionText = actionFnOrText;
-        actionFn = isDangerOrFn;
-        isDangerVal = isDanger || false;
-      } else {
-        title = titleOrId;
-        message = messageOrTitle;
-        actionText = actionTextOrMessage;
-        actionFn = actionFnOrText;
-        isDangerVal = isDangerOrFn || false;
-      }
-      
-      // Cleanup legacy token card or WhatsApp buttons if present
-      const oldCard = modal.querySelector('.success-token-card');
-      if (oldCard) oldCard.remove();
-      const waBtn = document.getElementById('adminWhatsAppBtn');
-      if (waBtn) waBtn.remove();
-      
-      // Update Title & Message
-      const titleEl = document.getElementById('unvTitle') || modal.querySelector('h3');
-      const msgEl = document.getElementById('unvMessage') || modal.querySelector('p');
-      if (titleEl) titleEl.textContent = title;
-      if (msgEl) msgEl.innerHTML = message;
-      
-      // Update Confirm Button
-      const btn = document.getElementById('unvConfirmBtn') || modal.querySelector('.confirm-btn');
-      if (btn) {
-        btn.textContent = actionText;
-        btn.style.background = isDangerVal ? '#e11d48' : '#0077b6';
-        btn.style.boxShadow = isDangerVal ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
-      }
-      
-      // Update Icon
-      const container = document.getElementById('unvIconContainer') || modal.querySelector('.modal-icon-container');
-      if (container) {
-        let iconName = 'help-circle';
-        if (id === 'success') {
-          iconName = 'check-circle';
-          container.style.color = '#10b981';
-        } else if (id === 'warning') {
-          iconName = 'alert-circle';
-          container.style.color = '#f59e0b';
-        } else if (isDangerVal) {
-          iconName = 'alert-triangle';
-          container.style.color = '#e11d48';
-        } else {
-          container.style.color = '#0077b6';
-        }
-        container.style.background = 'transparent';
-        container.style.border = 'none';
-        container.style.boxShadow = 'none';
-        container.style.borderRadius = '0';
-        container.style.padding = '0';
-        container.innerHTML = `<i data-lucide="${iconName}"></i>`;
-      }
-      
-      activeModalAction = actionFn;
-      modal.style.display = 'flex';
-      if (window.lucide) lucide.createIcons();
-    };
-    
-    window.closeUniversalModal = function() {
-      const modal = document.getElementById('universalModal');
-      if (modal) modal.style.display = 'none';
-      activeModalAction = null;
-      
-      // Cleanup legacy token card or WhatsApp buttons if present
-      const oldCard = modal?.querySelector('.success-token-card');
-      if (oldCard) oldCard.remove();
-      const waBtn = document.getElementById('adminWhatsAppBtn');
-      if (waBtn) waBtn.remove();
-    };
-    
-    // Setup aliases
-    window.openModal = window.openUniversalModal;
-    window.closeModal = window.closeUniversalModal;
-    window.handleConfirm = function() {
-      if (activeModalAction) activeModalAction();
-      closeUniversalModal();
-    };
-    
-    // Register event listener for confirmation button
-    document.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('unvConfirmBtn') || document.querySelector('#universalModal .confirm-btn');
-      if (btn) {
-        btn.addEventListener('click', () => {
-          if (activeModalAction) activeModalAction();
-          closeUniversalModal();
-        });
-      }
-    });
+
 
 
     // ── Dismiss Referral ──
@@ -2543,34 +2425,41 @@
       document.getElementById('presForm').reset();
     }
 
-    async function handlePrescriptionSubmit(e) {
+    function handlePrescriptionSubmit(e) {
       e.preventDefault();
-      const btn = document.getElementById('presSubmitBtn');
-      btn.innerHTML = '<i data-lucide="loader" style="width:16px;height:16px;"></i> Uploading...';
-      btn.disabled = true;
+      openModal(
+        'Confirm Upload',
+        'Are you sure you want to upload this medical record to your vault?',
+        'Upload & Save',
+        async () => {
+          const btn = document.getElementById('presSubmitBtn');
+          btn.innerHTML = '<i data-lucide="loader" style="width:16px;height:16px;"></i> Uploading...';
+          btn.disabled = true;
 
-      const fd = new FormData();
-      fd.append('patient_name', document.getElementById('pres-name').value);
-      fd.append('consultation_date', document.getElementById('pres-date').value);
-      fd.append('doctor_name', document.getElementById('pres-doc').value);
-      fd.append('file', document.getElementById('pres-file').files[0]);
+          const fd = new FormData();
+          fd.append('patient_name', document.getElementById('pres-name').value);
+          fd.append('consultation_date', document.getElementById('pres-date').value);
+          fd.append('doctor_name', document.getElementById('pres-doc').value);
+          fd.append('file', document.getElementById('pres-file').files[0]);
 
-      try {
-        const res = await fetch('/add_prescription', { method: 'POST', body: fd });
-        const data = await res.json();
-        if(data.success) {
-          showToast('Prescription added!', 'success');
-          setTimeout(() => window.location.reload(), 1000);
-        } else {
-          showToast(data.msg || 'Error adding prescription', 'error');
+          try {
+            const res = await fetch('/add_prescription', { method: 'POST', body: fd });
+            const data = await res.json();
+            if(data.success) {
+              showToast('Prescription added!', 'success');
+              setTimeout(() => window.location.reload(), 1000);
+            } else {
+              showToast(data.msg || 'Error adding prescription', 'error');
+            }
+          } catch (err) {
+            showToast('Network error', 'error');
+          } finally {
+            btn.innerHTML = '<i data-lucide="upload" style="width:16px;height:16px;"></i> Upload & Save';
+            btn.disabled = false;
+            lucide.createIcons();
+          }
         }
-      } catch (err) {
-        showToast('Network error', 'error');
-      } finally {
-        btn.innerHTML = '<i data-lucide="upload" style="width:16px;height:16px;"></i> Upload & Save';
-        btn.disabled = false;
-        lucide.createIcons();
-      }
+      );
     }
 
     // ── Delete Prescription ──

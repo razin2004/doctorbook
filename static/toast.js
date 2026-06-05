@@ -374,19 +374,53 @@ document.addEventListener('click', (e) => {
     if (isAction) {
       lastClickedButton = btn;
       
-      // Instantly trigger loading state to block double clicks immediately
-      window.setLoadingState(btn, true);
-      
-      // Auto-restore after a safe delay if no network request is observed
-      if (actionTimeout) clearTimeout(actionTimeout);
-      actionTimeout = setTimeout(() => {
-        if (btn && btn.dataset.loading === 'true' && btn.dataset.keepLoading !== 'true') {
-          window.setLoadingState(btn, false);
-        }
-        if (lastClickedButton === btn) {
-          lastClickedButton = null;
-        }
-      }, 2000);
+      // Check if button is a standard form submit button
+      const isSubmitBtn = (btn.tagName === 'BUTTON' && (!btn.type || btn.type === 'submit')) || 
+                          (btn.tagName === 'INPUT' && btn.type === 'submit');
+
+      // Check if the button triggers a confirmation modal or has inline modal triggering
+      const onclickStr = btn.getAttribute('onclick') || '';
+      const idLower = (btn.id || '').toLowerCase();
+      const classStr = btn.className.toLowerCase();
+      const isModalTrigger = btn.dataset.toggle === 'modal' || 
+                             classStr.includes('modal-trigger') || 
+                             classStr.includes('logout-item') ||
+                             idLower.includes('completesessionbtn') ||
+                             idLower.includes('headerlogoutbtn') ||
+                             onclickStr.includes('openmodal') || 
+                             onclickStr.includes('openuniversalmodal') || 
+                             onclickStr.includes('confirm') || 
+                             onclickStr.includes('cancel') || 
+                             onclickStr.includes('logout') || 
+                             onclickStr.includes('delete') || 
+                             onclickStr.includes('skipped');
+
+      // Check if the button is client-side print/download/share
+      const isPrintOrDownload = idLower.includes('saveimagebtn') || 
+                                idLower.includes('whatsappsharebtn') || 
+                                classStr.includes('print-btn') || 
+                                onclickStr.includes('print') || 
+                                onclickStr.includes('download') || 
+                                onclickStr.includes('share') || 
+                                onclickStr.includes('generatepdf');
+
+      // Do NOT disable the button on click if it's a submit button (let form submit handle it to prevent blocking browser default action),
+      // a modal trigger (let user confirm first), or a print/download button (client side only)
+      if (!isSubmitBtn && !isModalTrigger && !isPrintOrDownload) {
+        // Instantly trigger loading state for ordinary action buttons to block double clicks immediately
+        window.setLoadingState(btn, true);
+        
+        // Auto-restore after a safe delay if no network request is observed
+        if (actionTimeout) clearTimeout(actionTimeout);
+        actionTimeout = setTimeout(() => {
+          if (btn && btn.dataset.loading === 'true' && btn.dataset.keepLoading !== 'true') {
+            window.setLoadingState(btn, false);
+          }
+          if (lastClickedButton === btn) {
+            lastClickedButton = null;
+          }
+        }, 2000);
+      }
     }
   }
 }, true);
@@ -395,7 +429,7 @@ document.addEventListener('click', (e) => {
 // Runs in capture phase (true) to run before page-specific event listeners
 document.addEventListener('submit', (e) => {
   const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+  const submitBtn = (lastClickedButton && form.contains(lastClickedButton)) ? lastClickedButton : form.querySelector('button[type="submit"], input[type="submit"]');
   if (submitBtn) {
     window.setLoadingState(submitBtn, true);
     
@@ -593,4 +627,177 @@ window.XMLHttpRequest = function() {
   
   return xhr;
 };
+
+// ── GLOBAL UNIFIED CONFIRMATION DIALOG SYSTEM ──
+(function() {
+  function injectConfirmationModal() {
+    // Remove any existing duplicate overlay to prevent page-specific overrides
+    const existing = document.getElementById('universalModal');
+    if (existing) {
+      existing.remove();
+    }
+
+    const modalHtml = `
+      <div class="modal-content">
+        <div class="modal-icon-container" id="unvIconContainer">
+          <svg class="modal-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </div>
+        <h3 id="unvTitle">Confirm Action</h3>
+        <p id="unvMessage">Are you sure you want to proceed?</p>
+        <div class="modal-btns">
+          <button id="unvCancelBtn" class="btn btn-outline" type="button">Cancel</button>
+          <button id="unvConfirmBtn" class="btn btn-primary" type="button">Confirm</button>
+        </div>
+      </div>
+    `;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'universalModal';
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'none';
+    overlay.innerHTML = modalHtml;
+    document.body.appendChild(overlay);
+
+    // Bind event listeners
+    overlay.querySelector('#unvCancelBtn').addEventListener('click', () => {
+      window.closeUniversalModal();
+    });
+
+    overlay.querySelector('#unvConfirmBtn').addEventListener('click', () => {
+      const action = window.activeModalAction;
+      window.closeUniversalModal();
+      if (action) {
+        action();
+      }
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        window.closeUniversalModal();
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectConfirmationModal);
+  } else {
+    injectConfirmationModal();
+  }
+
+  window.activeModalAction = null;
+
+  window.openUniversalModal = function(titleOrId, messageOrTitle, actionTextOrMessage, actionFnOrText, isDangerOrFn, isDanger) {
+    const modal = document.getElementById('universalModal');
+    if (!modal) return;
+
+    let id = 'info';
+    let title, message, actionText, actionFn, isDangerVal = false;
+
+    if (['success', 'warning', 'danger', 'info', 'universalModal', 'delete', 'logout'].includes(titleOrId)) {
+      id = titleOrId;
+      title = messageOrTitle;
+      message = actionTextOrMessage;
+      actionText = actionFnOrText;
+      actionFn = isDangerOrFn;
+      isDangerVal = isDanger || false;
+    } else {
+      title = titleOrId;
+      message = messageOrTitle;
+      actionText = actionTextOrMessage;
+      actionFn = actionFnOrText;
+      isDangerVal = isDangerOrFn || false;
+    }
+
+    // Update texts
+    const titleEl = modal.querySelector('#unvTitle');
+    const msgEl = modal.querySelector('#unvMessage');
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.innerHTML = message;
+
+    // Update action button
+    const confirmBtn = modal.querySelector('#unvConfirmBtn');
+    if (confirmBtn) {
+      confirmBtn.textContent = actionText;
+      if (isDangerVal || id === 'delete' || id === 'logout' || id === 'danger') {
+        confirmBtn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        confirmBtn.style.boxShadow = '0 8px 22px rgba(239, 68, 68, 0.35)';
+      } else if (id === 'success') {
+        confirmBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        confirmBtn.style.boxShadow = '0 8px 22px rgba(16, 185, 129, 0.35)';
+      } else {
+        confirmBtn.style.background = 'linear-gradient(135deg, #0077b6, #0096c7)';
+        confirmBtn.style.boxShadow = '0 8px 22px rgba(0, 119, 182, 0.35)';
+      }
+    }
+
+    // Update icon
+    const container = modal.querySelector('#unvIconContainer');
+    if (container) {
+      let iconColor = '#0077b6';
+      let iconSvg = '';
+
+      if (id === 'success') {
+        iconColor = '#10b981';
+        iconSvg = `
+          <svg class="modal-icon-svg" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        `;
+      } else if (id === 'warning') {
+        iconColor = '#f59e0b';
+        iconSvg = `
+          <svg class="modal-icon-svg" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        `;
+      } else if (isDangerVal || id === 'delete' || id === 'logout' || id === 'danger') {
+        iconColor = '#ef4444';
+        iconSvg = `
+          <svg class="modal-icon-svg" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        `;
+      } else {
+        iconSvg = `
+          <svg class="modal-icon-svg" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        `;
+      }
+      container.innerHTML = iconSvg;
+    }
+
+    window.activeModalAction = actionFn;
+    modal.style.display = 'flex';
+  };
+
+  window.closeUniversalModal = function() {
+    const modal = document.getElementById('universalModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+    window.activeModalAction = null;
+  };
+
+  window.openModal = window.openUniversalModal;
+  window.closeModal = window.closeUniversalModal;
+  window.handleConfirm = function() {
+    const action = window.activeModalAction;
+    window.closeUniversalModal();
+    if (action) {
+      action();
+    }
+  };
+})();
 

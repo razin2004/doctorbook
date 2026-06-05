@@ -3356,21 +3356,6 @@
 
   {% endif %}
 
-   <!-- Universal Confirmation Modal (Standardized) -->
-     <!-- Universal Confirmation Modal -->
-  <div class="modal-overlay" id="universalModal">
-    <div class="modal-content">
-      <div class="modal-icon-container" id="unvIconContainer">
-        <i data-lucide="help-circle"></i>
-      </div>
-      <h3 id="unvTitle">Confirm Action</h3>
-      <p id="unvMessage">Are you sure you want to proceed with this action?</p>
-      <div class="modal-btns">
-        <button class="btn btn-outline" onclick="closeUniversalModal()">Cancel</button>
-        <button id="unvConfirmBtn" class="btn btn-primary">Confirm</button>
-      </div>
-    </div>
-  </div>
 
   <script>
     // ─── Lucide icons ───────────────────────────────────────────
@@ -3933,39 +3918,46 @@
         return;
       }
 
-      const btn = document.getElementById('saveSecurityBtn');
-      const originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Updating...';
-      if (window.lucide) lucide.createIcons();
+      openModal(
+        'Confirm Password Change',
+        'Are you sure you want to change the administrative password? This will update security settings.',
+        'Update Password',
+        async () => {
+          const btn = document.getElementById('saveSecurityBtn');
+          const originalHtml = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Updating...';
+          if (window.lucide) lucide.createIcons();
 
-      try {
-        const res = await fetch('/admin_change_password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            current_password: currentPass,
-            new_password: newPass
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast(data.msg, 'success');
-          document.getElementById('adminSecurityForm').reset();
-          const cst = document.getElementById('changePassMatchStatus');
-          if (cst) cst.innerHTML = '';
-          checkAdminPasswordStatus();
-        } else {
-          showToast(data.msg, 'error');
+          try {
+            const res = await fetch('/admin_change_password', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                current_password: currentPass,
+                new_password: newPass
+              })
+            });
+            const data = await res.json();
+            if (data.success) {
+              showToast(data.msg, 'success');
+              document.getElementById('adminSecurityForm').reset();
+              const cst = document.getElementById('changePassMatchStatus');
+              if (cst) cst.innerHTML = '';
+              checkAdminPasswordStatus();
+            } else {
+              showToast(data.msg, 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('Failed to update password.', 'error');
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            if (window.lucide) lucide.createIcons();
+          }
         }
-      } catch (err) {
-        console.error(err);
-        showToast('Failed to update password.', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-        if (window.lucide) lucide.createIcons();
-      }
+      );
     }
 
     async function sendAdminResetOtp() {
@@ -4245,12 +4237,6 @@
     async function saveClinicSettings(e) {
       e.preventDefault();
       
-      const saveBtn = document.getElementById('saveSettingsBtn');
-      const originalHtml = saveBtn.innerHTML;
-      saveBtn.disabled = true;
-      saveBtn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Saving...';
-      lucide.createIcons();
-      
       const payload = {
         clinic_phone: document.getElementById('settings_clinic_phone').value.trim(),
         clinic_whatsapp: document.getElementById('settings_clinic_whatsapp').value.trim(),
@@ -4278,27 +4264,40 @@
         promo_leader_2_image: document.getElementById('settings_promo_leader_2_image').value.trim(),
         promo_facility_image: document.getElementById('settings_promo_facility_image').value.trim()
       };
-      
-      try {
-        const res = await fetch('/admin_save_settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast('Clinic settings updated successfully!', 'success');
-        } else {
-          showToast(data.msg || 'Failed to save settings', 'error');
+
+      openModal(
+        'Confirm Update',
+        'Are you sure you want to save the new clinic configuration settings?',
+        'Save Settings',
+        async () => {
+          const saveBtn = document.getElementById('saveSettingsBtn');
+          const originalHtml = saveBtn.innerHTML;
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Saving...';
+          lucide.createIcons();
+          
+          try {
+            const res = await fetch('/admin_save_settings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+              showToast('Clinic settings updated successfully!', 'success');
+            } else {
+              showToast(data.msg || 'Failed to save settings', 'error');
+            }
+          } catch (e) {
+            console.error('Failed to save settings:', e);
+            showToast('Error updating settings', 'error');
+          } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalHtml;
+            lucide.createIcons();
+          }
         }
-      } catch (e) {
-        console.error('Failed to save settings:', e);
-        showToast('Error updating settings', 'error');
-      } finally {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = originalHtml;
-        lucide.createIcons();
-      }
+      );
     }
 
     // ─── Ticker Management Logic ───────────────────────────────
@@ -4349,18 +4348,25 @@
         const message = input.value.trim();
         if (!message) return;
 
-        try {
-            const res = await fetch('/admin_add_ticker_msg', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message })
-            });
-            const data = await res.json();
-            if (data.success) {
-                input.value = '';
-                loadTickerMessages();
-            } else { showToast(data.msg, 'error'); }
-        } catch(e) { showToast('Failed to add message', 'error'); }
+        openModal(
+            'Confirm Announcement',
+            'Are you sure you want to broadcast this ticker message to the queue screen?',
+            'Broadcast Now',
+            async () => {
+                try {
+                    const res = await fetch('/admin_add_ticker_msg', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        input.value = '';
+                        loadTickerMessages();
+                    } else { showToast(data.msg, 'error'); }
+                } catch(e) { showToast('Failed to add message', 'error'); }
+            }
+        );
     }
 
     function deleteTickerMsg(id) {
@@ -5028,7 +5034,6 @@
     }
 
     window.addGlobalHoliday = async function() {
-        const btn = document.getElementById('addHolidayBtn');
         const date = document.getElementById('hDate').value;
         const endDate = document.getElementById('hEndDate').value;
         const useRange = document.getElementById('hUseRange').checked;
@@ -5043,39 +5048,52 @@
             }
         }
         
-        btn.disabled = true;
-        btn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Adding Holiday...';
-        lucide.createIcons();
+        const msgStr = useRange 
+            ? `Are you sure you want to declare a clinic holiday range from ${date} to ${endDate}?`
+            : `Are you sure you want to declare a clinic holiday on ${date}?`;
 
-        try {
-            const res = await fetch('/admin_add_holiday', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    date, 
-                    endDate: useRange ? endDate : null,
-                    reason: reason || 'General Holiday' 
-                })
-            });
-            const data = await res.json();
-            if (data.success) {
-                showToast(data.msg, "success");
-                document.getElementById('hReason').value = "";
-                if(useRange) {
-                    document.getElementById('hUseRange').checked = false;
-                    toggleHolidayRange();
+        openModal(
+            'Confirm Holiday',
+            msgStr,
+            'Declare Holiday',
+            async () => {
+                const btn = document.getElementById('addHolidayBtn');
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader" class="spin-icon"></i> Adding Holiday...';
+                lucide.createIcons();
+
+                try {
+                    const res = await fetch('/admin_add_holiday', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            date, 
+                            endDate: useRange ? endDate : null,
+                            reason: reason || 'General Holiday' 
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast(data.msg, "success");
+                        document.getElementById('hReason').value = "";
+                        if(useRange) {
+                            document.getElementById('hUseRange').checked = false;
+                            toggleHolidayRange();
+                        }
+                        loadGlobalHolidays();
+                    } else {
+                        showToast(data.msg, "error");
+                    }
+                } catch(e) { 
+                    showToast("Network error", "error"); 
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    lucide.createIcons();
                 }
-                loadGlobalHolidays();
-            } else {
-                showToast(data.msg, "error");
             }
-        } catch(e) { 
-            showToast("Network error", "error"); 
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i data-lucide="plus-circle"></i> Add Holiday';
-            lucide.createIcons();
-        }
+        );
     }
 
     window.deleteGlobalHoliday = function(date) {
@@ -5565,15 +5583,9 @@
 
 
 
-    window.handleConfirm = function() {
-      console.log("Modal confirmation triggered");
-      if (activeModalAction) activeModalAction();
-      closeModal();
-    }
-
     window.openLogoutModal = function() {
       console.log("Logout modal requested");
-      openModal('universalModal', 'Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
+      openModal('logout', 'Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
     }
     async function confirmLogout() {
       console.log("Initiating logout...");
@@ -5645,92 +5657,107 @@
     // ─── Add doctor ────────────────────────────────────────────
     document.getElementById('adminAddDoctorForm')?.addEventListener('submit', async e => {
       e.preventDefault();
-      const btn=e.target.querySelector("button[type='submit']");
-      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Adding...'; lucide.createIcons();
-      try {
-        const name           = document.getElementById('addDocName').value.trim();
-        const specialization = document.getElementById('addDocSpec').value.trim();
-        const email          = document.getElementById('addDocEmail').value.trim();
+      const name           = document.getElementById('addDocName').value.trim();
+      const specialization = document.getElementById('addDocSpec').value.trim();
+      const email          = document.getElementById('addDocEmail').value.trim();
 
-        if (!email.includes('@') || !email.includes('.')) {
-          showToast('Please provide a valid email format.', 'error');
-          btn.disabled = false; btn.innerHTML = '<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons();
-          return;
-        }
+      if (!email.includes('@') || !email.includes('.')) {
+        showToast('Please provide a valid email format.', 'error');
+        return;
+      }
 
-        const imageFile      = document.getElementById('addDocImage').files[0];
-        const sameTimeAll    = document.getElementById('sameTimeAll');
-        const selectedDays=[]; const dayTimes={};
-        if (sameTimeAll && sameTimeAll.checked) {
-          const cs=document.getElementById('commonStart').value;
-          const ce=document.getElementById('commonEnd').value;
-          if (!cs||!ce) { showToast('Please enter start and end times for the common slot.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); return; }
-          document.querySelectorAll('.day-check:checked').forEach(cb=>{ const day=cb.dataset.day; selectedDays.push(day); dayTimes[day]=`${cs}-${ce}`; });
-        } else {
-          let hasError=false;
-          document.querySelectorAll('.day-check:checked').forEach(cb=>{
-            if(hasError)return;
-            const day=cb.dataset.day;
-            const container=document.querySelector(`.day-time[data-day-time="${day}"]`);
-            const s=container.querySelector('.start-time').value;
-            const en=container.querySelector('.end-time').value;
-            if(!s||!en) { showToast(`Please enter start and end times for ${day}.`, 'error'); hasError=true; return; }
-            selectedDays.push(day); dayTimes[day]=`${s}-${en}`;
-          });
-          if(hasError) { btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); return; }
+      const imageFile      = document.getElementById('addDocImage').files[0];
+      const sameTimeAll    = document.getElementById('sameTimeAll');
+      const selectedDays=[]; const dayTimes={};
+      if (sameTimeAll && sameTimeAll.checked) {
+        const cs=document.getElementById('commonStart').value;
+        const ce=document.getElementById('commonEnd').value;
+        if (!cs||!ce) { showToast('Please enter start and end times for the common slot.', 'error'); return; }
+        document.querySelectorAll('.day-check:checked').forEach(cb=>{ const day=cb.dataset.day; selectedDays.push(day); dayTimes[day]=`${cs}-${ce}`; });
+      } else {
+        let hasError=false;
+        document.querySelectorAll('.day-check:checked').forEach(cb=>{
+          if(hasError)return;
+          const day=cb.dataset.day;
+          const container=document.querySelector(`.day-time[data-day-time="${day}"]`);
+          const s=container.querySelector('.start-time').value;
+          const en=container.querySelector('.end-time').value;
+          if(!s||!en) { showToast(`Please enter start and end times for ${day}.`, 'error'); hasError=true; return; }
+          selectedDays.push(day); dayTimes[day]=`${s}-${en}`;
+        });
+        if(hasError) { return; }
+      }
+      if(!selectedDays.length) { showToast('Please select at least one working day.', 'error'); return; }
+
+      openModal(
+        'Confirm Registration',
+        `Are you sure you want to register Dr. ${name} under ${specialization}? This will create a new doctor profile.`,
+        'Register Doctor',
+        async () => {
+          const btn=e.target.querySelector("button[type='submit']");
+          btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Adding...'; lucide.createIcons();
+          try {
+            const formData=new FormData();
+            formData.append('name',name); formData.append('email',email); formData.append('specialization',specialization);
+            formData.append('days',selectedDays.join(', ')); formData.append('day_times',JSON.stringify(dayTimes));
+            if(imageFile) formData.append('image',imageFile);
+            const res=await fetch('/admin_add_doctor',{method:'POST',body:formData});
+            const rawText=await res.text(); let data;
+            try { data=JSON.parse(rawText); } catch(pe) { showToast('Response parsing error: '+rawText, 'error'); return; }
+            showToast(data.msg || 'Doctor profile created successfully', data.success ? 'success' : 'error');
+            if(data.success) { e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
+          } catch(err) { showToast('Unable to complete doctor registration.', 'error'); }
+          finally { btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); }
         }
-        if(!selectedDays.length) { showToast('Please select at least one working day.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); return; }
-        const formData=new FormData();
-        formData.append('name',name); formData.append('email',email); formData.append('specialization',specialization);
-        formData.append('days',selectedDays.join(', ')); formData.append('day_times',JSON.stringify(dayTimes));
-        if(imageFile) formData.append('image',imageFile);
-        const res=await fetch('/admin_add_doctor',{method:'POST',body:formData});
-        const rawText=await res.text(); let data;
-        try { data=JSON.parse(rawText); } catch(pe) { showToast('Response parsing error: '+rawText, 'error'); return; }
-        showToast(data.msg || 'Doctor profile created successfully', data.success ? 'success' : 'error');
-        if(data.success) { e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
-      } catch(err) { showToast('Unable to complete doctor registration.', 'error'); }
-      finally { btn.disabled=false; btn.innerHTML='<i data-lucide="plus-circle"></i> Add Doctor'; lucide.createIcons(); }
+      );
     });
 
     // ─── Edit doctor ───────────────────────────────────────────
     document.getElementById('adminEditDoctorForm')?.addEventListener('submit', async e => {
       e.preventDefault();
-      const btn=e.target.querySelector("button[type='submit']");
-      btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Saving...'; lucide.createIcons();
-      try {
-        const combined=document.getElementById('editDoctorSelect').value;
-        const email=document.getElementById('editDocEmail').value.trim();
-        if(!combined) { showToast('Please select a doctor to edit.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
-        if(!email) { showToast('Email is required.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
-        if(!email.includes('@') || !email.includes('.')) { showToast('Please provide a valid email format', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
-        const sameTimeAll=document.getElementById('sameTimeAllEdit');
-        const selectedDays=[]; const day_times={};
-        if(sameTimeAll&&sameTimeAll.checked) {
-          const cs=document.getElementById('commonStartEdit').value;
-          const ce=document.getElementById('commonEndEdit').value;
-          if(!cs||!ce) { showToast('Please enter start and end times for the common slot.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
-          document.querySelectorAll('.day-check-edit:checked').forEach(cb=>{ const day=cb.dataset.day; selectedDays.push(day); day_times[day]=`${cs}-${ce}`; });
-        } else {
-          let hasError=false;
-          document.querySelectorAll('.day-check-edit:checked').forEach(cb=>{
-            if(hasError)return;
-            const day=cb.dataset.day;
-            const timeDiv=document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
-            const s=timeDiv.querySelector('.start-time-edit').value;
-            const en=timeDiv.querySelector('.end-time-edit').value;
-            if(!s||!en){ showToast(`Please enter start and end times for ${day}.`, 'error'); hasError=true; return; }
-            selectedDays.push(day); day_times[day]=`${s}-${en}`;
-          });
-          if(hasError){ btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
+      const combined=document.getElementById('editDoctorSelect').value;
+      const email=document.getElementById('editDocEmail').value.trim();
+      if(!combined) { showToast('Please select a doctor to edit.', 'error'); return; }
+      if(!email) { showToast('Email is required.', 'error'); return; }
+      if(!email.includes('@') || !email.includes('.')) { showToast('Please provide a valid email format', 'error'); return; }
+      const sameTimeAll=document.getElementById('sameTimeAllEdit');
+      const selectedDays=[]; const day_times={};
+      if(sameTimeAll&&sameTimeAll.checked) {
+        const cs=document.getElementById('commonStartEdit').value;
+        const ce=document.getElementById('commonEndEdit').value;
+        if(!cs||!ce) { showToast('Please enter start and end times for the common slot.', 'error'); return; }
+        document.querySelectorAll('.day-check-edit:checked').forEach(cb=>{ const day=cb.dataset.day; selectedDays.push(day); day_times[day]=`${cs}-${ce}`; });
+      } else {
+        let hasError=false;
+        document.querySelectorAll('.day-check-edit:checked').forEach(cb=>{
+          if(hasError)return;
+          const day=cb.dataset.day;
+          const timeDiv=document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
+          const s=timeDiv.querySelector('.start-time-edit').value;
+          const en=timeDiv.querySelector('.end-time-edit').value;
+          if(!s||!en){ showToast(`Please enter start and end times for ${day}.`, 'error'); hasError=true; return; }
+          selectedDays.push(day); day_times[day]=`${s}-${en}`;
+        });
+        if(hasError){ return; }
+      }
+      if(!selectedDays.length){ showToast('At least one working day is required.', 'error'); return; }
+
+      openModal(
+        'Confirm Schedule Change',
+        'Are you sure you want to update this doctor\'s working schedule and email info?',
+        'Update Profile',
+        async () => {
+          const btn=e.target.querySelector("button[type='submit']");
+          btn.disabled=true; btn.innerHTML='<i data-lucide="loader-circle" class="spin-icon"></i> Saving...'; lucide.createIcons();
+          try {
+            const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined, email, days:selectedDays,day_times}) });
+            const data=await res.json();
+            showToast(data.msg, data.success ? 'success' : 'error');
+            if(data.success){ e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
+          } catch(err){ showToast('An error occurred while updating the doctor profile.', 'error'); }
+          finally{ btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); }
         }
-        if(!selectedDays.length){ showToast('At least one working day is required.', 'error'); btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); return; }
-        const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined, email, days:selectedDays,day_times}) });
-        const data=await res.json();
-        showToast(data.msg, data.success ? 'success' : 'error');
-        if(data.success){ e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
-      } catch(err){ showToast('An error occurred while updating the doctor profile.', 'error'); }
-      finally{ btn.disabled=false; btn.innerHTML='<i data-lucide="save"></i> Update Doctor'; lucide.createIcons(); }
+      );
     });
 
     // ─── Delete doctor ─────────────────────────────────────────
@@ -5872,29 +5899,38 @@
       if(!date){ showMessage('leaveMsg','Please select a date for leave.'); return; }
       const todayStr=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
       if(date<todayStr){ showMessage('leaveMsg','Leave cannot be set for past dates.'); return; }
-      const btn = document.getElementById('addLeaveBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Adding...';
-      lucide.createIcons();
 
-      try {
-        const res=await fetch('/admin_add_leave',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined,date,reason}) });
-        const data=await res.json();
-        if (data.success) {
-          const docOnly = combined.split(' - ')[0];
-          showToast(`Leave added for ${docOnly} on ${date}.`, 'success');
-          document.getElementById('leaveDate').value=''; 
-          document.getElementById('leaveReason').value=''; 
-          refreshLeaveListForCurrentDoctor(); 
-        } else {
-          showToast(data.msg || 'Error adding leave.', 'error');
+      const docOnly = combined.split(' - ')[0];
+      openModal(
+        'Confirm Temporary Leave',
+        `Are you sure you want to declare a temporary leave for ${docOnly} on ${date}?`,
+        'Add Leave',
+        async () => {
+          const btn = document.getElementById('addLeaveBtn');
+          const originalHtml = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = '<i data-lucide="loader-circle" class="spin-icon"></i> Adding...';
+          lucide.createIcons();
+
+          try {
+            const res=await fetch('/admin_add_leave',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined,date,reason}) });
+            const data=await res.json();
+            if (data.success) {
+              showToast(`Leave added for ${docOnly} on ${date}.`, 'success');
+              document.getElementById('leaveDate').value=''; 
+              document.getElementById('leaveReason').value=''; 
+              refreshLeaveListForCurrentDoctor(); 
+            } else {
+              showToast(data.msg || 'Error adding leave.', 'error');
+            }
+          } catch(err){ showToast("Couldn't add leave. Please try again.", 'error'); }
+          finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            lucide.createIcons();
+          }
         }
-      } catch(err){ showToast("Couldn't add leave. Please try again.", 'error'); }
-      finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="plus-circle"></i> Add Leave';
-        lucide.createIcons();
-      }
+      );
     });
 
     // ─── Booking Viewer logic ──────────────────────────────────
@@ -6543,115 +6579,8 @@ function downloadPDF() {
       });
     })();
   
-        // ─── Unified Modal System ───
-    let activeModalAction = null;
-    
-    window.openUniversalModal = function(titleOrId, messageOrTitle, actionTextOrMessage, actionFnOrText, isDangerOrFn, isDanger) {
-      const modal = document.getElementById('universalModal');
-      if (!modal) return;
-      
-      let id = 'info';
-      let title, message, actionText, actionFn, isDangerVal = false;
-      
-      // Handle variable signatures
-      if (['success', 'warning', 'danger', 'info', 'universalModal', 'delete', 'logout'].includes(titleOrId)) {
-        id = titleOrId;
-        title = messageOrTitle;
-        message = actionTextOrMessage;
-        actionText = actionFnOrText;
-        actionFn = isDangerOrFn;
-        isDangerVal = isDanger || false;
-      } else {
-        title = titleOrId;
-        message = messageOrTitle;
-        actionText = actionTextOrMessage;
-        actionFn = actionFnOrText;
-        isDangerVal = isDangerOrFn || false;
-      }
-      
-      // Cleanup legacy token card or WhatsApp buttons if present
-      const oldCard = modal.querySelector('.success-token-card');
-      if (oldCard) oldCard.remove();
-      const waBtn = document.getElementById('adminWhatsAppBtn');
-      if (waBtn) waBtn.remove();
-      
-      // Update Title & Message
-      const titleEl = document.getElementById('unvTitle') || modal.querySelector('h3');
-      const msgEl = document.getElementById('unvMessage') || modal.querySelector('p');
-      if (titleEl) titleEl.textContent = title;
-      if (msgEl) msgEl.innerHTML = message;
-      
-      // Update Confirm Button
-      const btn = document.getElementById('unvConfirmBtn') || modal.querySelector('.confirm-btn');
-      if (btn) {
-        btn.textContent = actionText;
-        btn.style.background = isDangerVal ? '#e11d48' : '#0077b6';
-        btn.style.boxShadow = isDangerVal ? '0 12px 30px rgba(225, 29, 72, 0.35)' : '0 12px 30px rgba(0, 119, 182, 0.35)';
-      }
-      
-      // Update Icon
-      const container = document.getElementById('unvIconContainer') || modal.querySelector('.modal-icon-container');
-      if (container) {
-        let iconName = 'help-circle';
-        if (id === 'success') {
-          iconName = 'check-circle';
-          container.style.color = '#10b981';
-        } else if (id === 'warning') {
-          iconName = 'alert-circle';
-          container.style.color = '#f59e0b';
-        } else if (isDangerVal) {
-          iconName = 'alert-triangle';
-          container.style.color = '#e11d48';
-        } else {
-          container.style.color = '#0077b6';
-        }
-        container.style.background = 'transparent';
-        container.style.border = 'none';
-        container.style.boxShadow = 'none';
-        container.style.borderRadius = '0';
-        container.style.padding = '0';
-        container.innerHTML = `<i data-lucide="${iconName}"></i>`;
-      }
-      
-      activeModalAction = actionFn;
-      modal.style.display = 'flex';
-      if (window.lucide) lucide.createIcons();
-    };
-    
-    window.closeUniversalModal = function() {
-      const modal = document.getElementById('universalModal');
-      if (modal) modal.style.display = 'none';
-      activeModalAction = null;
-      
-      // Cleanup legacy token card or WhatsApp buttons if present
-      const oldCard = modal?.querySelector('.success-token-card');
-      if (oldCard) oldCard.remove();
-      const waBtn = document.getElementById('adminWhatsAppBtn');
-      if (waBtn) waBtn.remove();
-    };
-    
-    // Setup aliases
-    window.openModal = window.openUniversalModal;
-    window.closeModal = window.closeUniversalModal;
-    window.handleConfirm = function() {
-      if (activeModalAction) activeModalAction();
-      closeUniversalModal();
-    };
-    
-    // Register event listener for confirmation button
-    document.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('unvConfirmBtn') || document.querySelector('#universalModal .confirm-btn');
-      if (btn) {
-        btn.addEventListener('click', () => {
-          if (activeModalAction) activeModalAction();
-          closeUniversalModal();
-        });
-      }
-    });
 
-    window.openLogoutModal = function() {
-      openModal('logout', 'Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
-    };
+
 
     // ─── Dashboard Sync Poller ──────────────────────────────────
     async function syncMyBookingsLiveStatus() {
