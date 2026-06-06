@@ -694,38 +694,7 @@
       .timing-day .full-day { display: none; }
       .timing-day .short-day { display: inline; }
     }
-    /* ── HIGH-FIDELITY MODAL ── */
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(8px);
-      display: none; align-items: center; justify-content: center;
-      z-index: 10000;
-      animation: modalFade 0.3s ease;
-    }
-    .modal-content {
-      background: #fff;
-      padding: 2.8rem 2.2rem;
-      border-radius: 32px;
-      max-width: 460px;
-      width: 94%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      box-shadow: 0 35px 80px rgba(15, 23, 42, 0.35);
-      border: 1px solid rgba(255,255,255,1);
-      animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-      position: relative;
-    }
-    @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes modalPop  { from { transform: scale(0.92) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
 
-    .modal-btns {
-      display: flex; gap: 1.2rem; margin-top: 2rem; justify-content: center; width: 100%;
-    }
-    .modal-btns .btn { margin-top: 0; min-width: 140px; font-weight: 600; }
 
     /* ── AUTH MODAL ── */
     .auth-modal-overlay {
@@ -2191,7 +2160,7 @@
         // ─── Unified Modal System ───
 
     function openLogoutModal() {
-      openModal('Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
+      openModal('logout', 'Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', confirmLogout, true);
     }
     async function confirmLogout() {
       try {
@@ -3278,7 +3247,7 @@
       const dropdown = document.getElementById('adminDropdownMenu');
       if (dropdown) dropdown.classList.remove('show');
       
-      openModal('Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', async function() {
+      openModal('logout', 'Confirm Logout', 'Are you sure you want to end your current administrative session?', 'Logout', async function() {
         try {
           const res = await fetch('/admin_logout', { method: 'POST' });
           if (res.ok) {
@@ -3300,7 +3269,7 @@
       const currentRole = "{{ session.get('user_role', 'patient') }}";
       const currentRoleDisplay = currentRole === 'doctor' ? 'doctor' : 'User';
       
-      openModal('Confirm Logout', `Are you sure you want to end your current ${currentRoleDisplay} session?`, 'Logout', async function() {
+      openModal('logout', 'Confirm Logout', `Are you sure you want to end your current ${currentRoleDisplay} session?`, 'Logout', async function() {
         try {
           const res = await fetch('/patient_logout', { method: 'POST' });
           if (res.ok) {
@@ -3325,6 +3294,7 @@
       const toDisplay   = targetRole  === 'doctor' ? 'Doctor' : 'User';
 
       openModal(
+        'warning',
         'Switch Account',
         `Are you sure you want to switch from ${fromDisplay} to ${toDisplay}?`,
         'Switch Now',

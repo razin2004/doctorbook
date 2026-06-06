@@ -242,40 +242,6 @@
       align-items: center;
       margin-bottom: 1.5rem;
     }
-    .admin-breadcrumb {
-      display: flex;
-      align-items: center;
-      flex-wrap: nowrap;
-      gap: 0.45rem;
-      font-size: 0.85rem;
-      color: #64748b;
-      font-weight: 600;
-      width: 100%;
-      min-width: 0;
-      overflow: hidden;
-      white-space: nowrap;
-    }
-    .admin-breadcrumb > span {
-      display: inline-block;
-      vertical-align: middle;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      min-width: 0;
-      max-width: 180px;
-    }
-    .admin-breadcrumb > span:has(i) {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: #cbd5e1;
-      flex-shrink: 0;
-    }
-    .breadcrumb-active {
-      color: #0077b6;
-      font-weight: 700;
-    }
-
     /* Filters Section */
     .filters-row {
       display: flex;
@@ -966,10 +932,10 @@
     <main class="admin-content">
       <div class="admin-topbar">
         <div class="admin-breadcrumb">
-          <span>Admin</span>
-          <span><i data-lucide="chevron-right" style="width:14px;height:14px;vertical-align:middle;"></i></span>
-          <span>Business Intelligence</span>
-          <span><i data-lucide="chevron-right" style="width:14px;height:14px;vertical-align:middle;"></i></span>
+          <span class="breadcrumb-root">Admin</span>
+          <span class="breadcrumb-separator"><i data-lucide="chevron-right"></i></span>
+          <span class="breadcrumb-group">Business Intelligence</span>
+          <span class="breadcrumb-separator"><i data-lucide="chevron-right"></i></span>
           <span class="breadcrumb-active">Analytics Dashboard</span>
         </div>
       </div>
@@ -1218,7 +1184,25 @@
       window.location.href = '/booking?view=admin&panel=' + panel.replace(/['"]/g, '');
     }
     function goToCurrentDashboard() {
-      window.location.href = '/booking';
+      {% if session.get('user_id') %}
+        const userRole = "{{ session.get('user_role', 'patient') }}";
+        const targetUrl = (userRole === 'doctor') ? '/doctor_dashboard' : '/patient_dashboard';
+        openModal(
+          'info',
+          'Go to Dashboard',
+          'You are currently authenticated in a User or doctor session. Would you like to navigate to your Doctor/User dashboard?',
+          'Go to Dashboard',
+          () => { window.location.href = targetUrl; }
+        );
+      {% else %}
+        openModal(
+          'warning',
+          'Login Portal Navigation',
+          'You are not logged in as a doctor or User. You will be redirected to the homepage login portal. Do you want to continue?',
+          'Continue to Login',
+          () => { window.location.href = '/?trigger_login=true&msg=Please login to access your dashboard'; }
+        );
+      {% endif %}
     }
     function goToAdminDashboard() {
       window.location.href = '/booking?view=admin';
@@ -1238,7 +1222,7 @@
       }
     }
     function openLogoutModal() {
-      openUniversalModal('Confirm Logout', 'Are you sure you want to log out from the admin session?', 'Logout', () => {
+      openUniversalModal('logout', 'Confirm Logout', 'Are you sure you want to log out from the admin session?', 'Logout', () => {
         fetch('/admin_logout', { method: 'POST' })
           .then(() => {
             window.location.href = '/booking';
