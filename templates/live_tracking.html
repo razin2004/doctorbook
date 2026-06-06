@@ -1127,12 +1127,6 @@
                               )
                         }
                     </div>
-                    <span class="queue-total-tokens">
-                        ${doc.status_raw === 'idle' 
-                            ? 'No tokens active' 
-                            : `Total Booked: <span>${doc.total_tokens || 0}</span>`
-                        }
-                    </span>
                 </div>
                 
                 ${renderUserTickets(doc)}

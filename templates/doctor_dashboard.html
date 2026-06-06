@@ -245,6 +245,13 @@
       border-top: 1px solid rgba(0, 119, 182, 0.06);
       padding-top: 0.8rem;
     }
+    .logout-item {
+      color: var(--danger) !important;
+    }
+    .logout-item:hover {
+      background: rgba(225, 29, 72, 0.05) !important;
+      color: var(--danger) !important;
+    }
     .admin-sidebar-backdrop {
       display: none;
       position: fixed;
@@ -1642,11 +1649,6 @@
       }
     }
     
-    document.getElementById('unvConfirmBtn').addEventListener('click', () => {
-      if (activeModalAction) activeModalAction();
-      closeUniversalModal();
-    });
-
     function goHome() {
       window.location.href = '/';
     }
@@ -1659,7 +1661,7 @@
     }
 
     function confirmRoleSwitch() {
-      openUniversalModal('Switch Account', 'Are you sure you want to switch from Doctor to User?', 'Switch Now', async () => {
+      openUniversalModal('warning', 'Switch Account', 'Are you sure you want to switch from Doctor to User?', 'Switch Now', async () => {
         const res = await fetch('/switch_active_role', { method: 'POST' });
         const data = await res.json();
         if (data.success) {

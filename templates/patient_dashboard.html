@@ -2934,7 +2934,7 @@
     })();
 
     function confirmRoleSwitch() {
-        openUniversalModal('Switch Account', 'Are you sure you want to switch from User to Doctor?', 'Switch Now', async () => {
+        openUniversalModal('warning', 'Switch Account', 'Are you sure you want to switch from User to Doctor?', 'Switch Now', async () => {
             const res = await fetch('/switch_active_role', { method: 'POST' });
             const data = await res.json();
             if (data.success) {
@@ -2943,7 +2943,7 @@
             } else {
                 showToast(data.msg, 'error');
             }
-        }, true);
+        });
     }
 
     // ─── Pull to Refresh Logic ───
