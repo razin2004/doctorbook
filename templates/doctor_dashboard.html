@@ -1649,6 +1649,11 @@
       }
     }
     
+    document.getElementById('unvConfirmBtn').addEventListener('click', () => {
+      if (activeModalAction) activeModalAction();
+      closeUniversalModal();
+    });
+
     function goHome() {
       window.location.href = '/';
     }

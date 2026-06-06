@@ -2203,7 +2203,7 @@
                     </div>
                   </li>
                   <li>
-                    <a href="/admin/analytics" onclick="localStorage.removeItem('activeAdminPanel')" style="text-decoration: none; color: inherit; display: block; width: 100%;">
+                    <a href="/admin/analytics" style="text-decoration: none; color: inherit; display: block; width: 100%;">
                       <div class="admin-sidebar-nav-item">
                         <i data-lucide="bar-chart-3"></i>
                         <span>Analytics</span>
@@ -3452,7 +3452,9 @@
           if (headerLogoutBtn) headerLogoutBtn.style.display = 'inline-flex';
           
           showAdminOptions();
-          const activePanel = lastActiveAdminPanel || localStorage.getItem('activeAdminPanel') || '';
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlPanel = urlParams.get('panel') || '';
+          const activePanel = urlPanel || lastActiveAdminPanel || localStorage.getItem('activeAdminPanel') || '';
           const panelBtn = activePanel ? document.querySelector(`.admin-sidebar-nav-item[data-panel="${activePanel}"]`) : null;
           showAdminPanel(activePanel || 'welcome', panelBtn);
         } else {
