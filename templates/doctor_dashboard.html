@@ -165,11 +165,13 @@
     }
 
     .admin-sidebar-nav {
-      flex: 1;
-      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
     }
     .admin-sidebar-nav-group {
-      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
     }
     .admin-sidebar-nav-title {
       font-size: 0.72rem;
@@ -182,11 +184,11 @@
     }
     .admin-sidebar-nav-list {
       list-style: none;
-      padding: 0;
-      margin: 0;
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
+      padding: 0;
+      margin: 0;
     }
     .admin-sidebar-nav-item {
       display: flex;
@@ -210,7 +212,6 @@
       height: 17px;
       opacity: 0.8;
       transition: transform 0.2s;
-      color: var(--slate-600);
     }
     .admin-sidebar-nav-item:hover {
       background: rgba(0, 119, 182, 0.08) !important;
@@ -220,22 +221,29 @@
     .admin-sidebar-nav-item:hover i,
     .admin-sidebar-nav-item:hover svg {
       opacity: 1;
-      color: var(--primary) !important;
       transform: scale(1.08);
     }
     .admin-sidebar-nav-item.active {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important;
       color: #ffffff !important;
       box-shadow: 0 4px 15px rgba(0, 119, 182, 0.18) !important;
-      font-weight: 700;
     }
     .admin-sidebar-nav-item.active i,
     .admin-sidebar-nav-item.active svg {
       opacity: 1;
-      color: #ffffff !important;
     }
     .admin-sidebar-nav-item.active:hover {
       padding-left: 0.8rem;
+    }
+    .nav-badge-count {
+      margin-left: auto;
+      background: var(--slate-100);
+      color: var(--slate-600);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 99px;
+      transition: all 0.2s;
     }
     .admin-sidebar-nav-item.active .nav-badge-count {
       background: rgba(255, 255, 255, 0.2);
@@ -1060,11 +1068,11 @@
               <i data-lucide="user-round" style="width: 20px; height: 20px;"></i>
             </div>
             <div class="sidebar-user-info">
+              <span class="sidebar-user-badge"><i data-lucide="shield-check" style="width:10px;height:10px;"></i>Verified Practitioner</span>
               <h4>{{ doc.doctor_name }}</h4>
               <p>{{ session.get('user_email') }}</p>
             </div>
           </div>
-          <span class="sidebar-user-badge"><i data-lucide="shield-check" style="width:12px;height:12px;"></i>Verified Practitioner</span>
         </div>
         
         <!-- Sidebar Navigation -->
@@ -1125,7 +1133,7 @@
       
       <div class="admin-sidebar-footer">
         <div class="admin-sidebar-nav-item logout-item" onclick="confirmLogout()">
-          <i data-lucide="log-out"></i>
+          <i data-lucide="log-out" style=""></i>
           <span>Logout Account</span>
         </div>
       </div>
