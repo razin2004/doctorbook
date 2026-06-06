@@ -3647,6 +3647,14 @@
     function showAdminPanel(type, btn) {
       if (!type) type = 'welcome';
       lastActiveAdminPanel = type; // Save state
+      
+      // Update URL query parameter to keep address bar in sync
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('view') === 'admin') {
+        urlParams.set('panel', type);
+        window.history.replaceState(null, '', window.location.pathname + '?' + urlParams.toString());
+      }
+      
       document.querySelectorAll('.adminPanel').forEach(p => p.style.display = 'none');
       document.querySelectorAll('.admin-sidebar-nav-item').forEach(b => b.classList.remove('active'));
       
@@ -5825,6 +5833,8 @@
       tableWrapper.style.display = 'none';
       countBadge.style.display = 'none';
 
+      window.setLoadingState(btn, true, 'Fetching...');
+
       try {
         const res = await fetch('/manage_bookings', {
           method: 'POST',
@@ -5874,6 +5884,8 @@
 
       } catch (err) {
         showToast('Failed to fetch bookings. Connection error.', 'error');
+      } finally {
+        window.setLoadingState(btn, false);
       }
     });
 

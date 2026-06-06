@@ -677,6 +677,11 @@ window.XMLHttpRequest = function() {
     const modal = document.getElementById('universalModal');
     if (!modal) return;
 
+    // Clean up any previously injected elements (e.g. success-token-card, WhatsApp buttons)
+    modal.querySelectorAll('.success-token-card').forEach(card => card.remove());
+    const oldWaBtn = document.getElementById('adminWhatsAppBtn');
+    if (oldWaBtn) oldWaBtn.remove();
+
     let id = 'info';
     let title, message, actionText, actionFn, isDangerVal = false;
 
