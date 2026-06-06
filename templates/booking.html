@@ -2048,7 +2048,7 @@
 
   {% if is_admin_view %}
   <!-- ==================== ADMIN ==================== -->
-  <section id="admin" class="admin-section container" style="display:block;">
+  <section id="admin" class="admin-section container" style="display:none;">
 
     <!-- Login Form – glass panel matching other booking panels -->
     <div id="adminLoginDiv" style="{% if admin_email %}display:none;{% else %}display:block;{% endif %}">
@@ -2104,7 +2104,7 @@
     </div>
 
     <!-- Admin Options (after login) -->
-    <div id="adminOptions" style="{% if admin_email %}display:block;{% else %}display:none;{% endif %}">
+    <div id="adminOptions" style="display:none;">
       <div class="admin-workspace">
         <!-- Sidebar Navigation -->
         <aside class="admin-sidebar" id="adminSidebar">
