@@ -330,23 +330,39 @@
     .admin-breadcrumb {
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 0.4rem;
+      flex-wrap: nowrap;
+      gap: 0.45rem;
       font-size: 0.88rem;
-      color: var(--slate-600);
       font-weight: 500;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .breadcrumb-root,
+    .breadcrumb-active {
+      display: inline-block;
+      vertical-align: middle;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+      max-width: 180px;
     }
     .breadcrumb-root { color: var(--slate-400); }
     .breadcrumb-separator {
-      display: flex;
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
       color: var(--slate-300);
+      flex-shrink: 0;
     }
     .breadcrumb-separator svg,
     .breadcrumb-separator i {
-      width: 13px;
-      height: 13px;
+      width: 14px;
+      height: 14px;
       stroke-width: 3px !important;
+      display: block;
     }
     .breadcrumb-active {
       color: var(--primary);
@@ -2449,10 +2465,10 @@
               setTimeout(() => window.location.reload(), 1000);
             } else {
               showToast(data.msg || 'Error adding prescription', 'error');
+              window.setLoadingState(btn, false);
             }
           } catch (err) {
             showToast('Network error', 'error');
-          } finally {
             window.setLoadingState(btn, false);
           }
         }

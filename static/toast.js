@@ -394,6 +394,16 @@ document.addEventListener('submit', (e) => {
   }
 }, true);
 
+// Listen for standard form resets to clean up loading states
+document.addEventListener('reset', (e) => {
+  const form = e.target;
+  const loadingButtons = form.querySelectorAll('[data-loading="true"], [data-keep-loading]');
+  loadingButtons.forEach(btn => {
+    btn.removeAttribute('data-keep-loading');
+    window.setLoadingState(btn, false);
+  });
+});
+
 // Set loading state with custom spinner and contextual action text
 window.setLoadingState = function(button, isLoading, actionText) {
   if (!button) return;
@@ -414,6 +424,11 @@ window.setLoadingState = function(button, isLoading, actionText) {
       loadingText = actionText;
     } else {
       const btnText = button.textContent.trim().toLowerCase();
+      const btnId = (button.id || '').toLowerCase();
+      const btnName = (button.name || '').toLowerCase();
+      const formId = button.closest('form') ? (button.closest('form').id || '').toLowerCase() : '';
+      const isLogin = btnText.includes('login') || btnText.includes('sign in') || btnId.includes('login') || formId.includes('login') || btnName.includes('login');
+      
       if (btnText.includes('sign up') || btnText.includes('register') || btnText.includes('create account') || btnText.includes('create patient')) {
         loadingText = 'Creating...';
       } else if (btnText.includes('book') || btnText.includes('appointment')) {
@@ -428,7 +443,7 @@ window.setLoadingState = function(button, isLoading, actionText) {
         loadingText = 'Verifying...';
       } else if (btnText.includes('upload')) {
         loadingText = 'Uploading...';
-      } else if (btnText.includes('login') || btnText.includes('sign in')) {
+      } else if (isLogin) {
         loadingText = 'Logging in...';
       } else if (btnText.includes('logout') || btnText.includes('sign out')) {
         loadingText = 'Logging out...';
@@ -502,10 +517,21 @@ window.fetch = async function(...args) {
       return response;
     } finally {
       const btnText = btn.textContent.trim().toLowerCase();
-      const isBooking = btnText.includes('booking');
+      const btnId = (btn.id || '').toLowerCase();
+      const formId = btn.closest('form') ? (btn.closest('form').id || '').toLowerCase() : '';
+      const shouldKeepLoading = success && (
+        btnText.includes('book') || btnText.includes('appointment') ||
+        btnText.includes('login') || btnText.includes('sign in') ||
+        btnText.includes('register') || btnText.includes('sign up') ||
+        btnText.includes('verify') || btnText.includes('otp') ||
+        btnText.includes('reset') || btnText.includes('logout') ||
+        btnText.includes('sign out') || btnText.includes('switch') ||
+        btnId.includes('login') || btnId.includes('register') ||
+        formId.includes('login') || formId.includes('register')
+      );
       
       delete btn.dataset.fetchActive;
-      if (isBooking && success) {
+      if (shouldKeepLoading) {
         btn.dataset.keepLoading = "true";
       } else {
         window.setLoadingState(btn, false);
@@ -553,10 +579,21 @@ window.XMLHttpRequest = function() {
         }
         
         const btnText = btn.textContent.trim().toLowerCase();
-        const isBooking = btnText.includes('booking');
+        const btnId = (btn.id || '').toLowerCase();
+        const formId = btn.closest('form') ? (btn.closest('form').id || '').toLowerCase() : '';
+        const shouldKeepLoading = success && (
+          btnText.includes('book') || btnText.includes('appointment') ||
+          btnText.includes('login') || btnText.includes('sign in') ||
+          btnText.includes('register') || btnText.includes('sign up') ||
+          btnText.includes('verify') || btnText.includes('otp') ||
+          btnText.includes('reset') || btnText.includes('logout') ||
+          btnText.includes('sign out') || btnText.includes('switch') ||
+          btnId.includes('login') || btnId.includes('register') ||
+          formId.includes('login') || formId.includes('register')
+        );
         
         delete btn.dataset.fetchActive;
-        if (isBooking && success) {
+        if (shouldKeepLoading) {
           btn.dataset.keepLoading = "true";
         } else {
           window.setLoadingState(btn, false);
