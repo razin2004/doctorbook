@@ -2101,6 +2101,14 @@ def admin_add_leave():
                 })
 
     leave_ws.append_row([doctor_name, specialization, date_str, reason])
+
+    # Trigger web push notification for patients whose appointments are affected
+    try:
+        from push_services import send_leave_notification
+        send_leave_notification(doctor_name, date_str, reason, app, db, PatientBooking, PushSubscription)
+    except Exception as e:
+        app.logger.error(f"Failed to trigger doctor leave push notification: {e}")
+
     return jsonify({"success": True, "msg": "Leave added successfully."})
 
 
@@ -2140,8 +2148,18 @@ def admin_get_leaves():
                     "reason": str(row_dict.get("Reason", "")).strip()
                 })
 
-    leaves.sort(key=lambda x: x["date"])
-    return jsonify({"success": True, "leaves": leaves})
+    # Split into upcoming (including today) and past
+    today_str = get_india_today().strftime("%Y-%m-%d")
+    upcoming_leaves = [l for l in leaves if l["date"] >= today_str]
+    past_leaves = [l for l in leaves if l["date"] < today_str]
+
+    # Sort upcoming ascending (closest first)
+    upcoming_leaves.sort(key=lambda x: x["date"])
+    # Sort past descending (last finished first)
+    past_leaves.sort(key=lambda x: x["date"], reverse=True)
+
+    sorted_leaves = upcoming_leaves + past_leaves
+    return jsonify({"success": True, "leaves": sorted_leaves})
 
 
 @app.route("/admin_delete_leave", methods=["POST"])
@@ -2251,6 +2269,15 @@ def admin_add_holiday():
             return jsonify({"success": False, "msg": f"Skipped: Date(s) already marked as holidays ({skipped_count} skipped)."})
         
         holiday_ws.append_rows(new_entries)
+
+        # Trigger web push notification for patients whose appointments are affected by the holiday(s)
+        try:
+            from push_services import send_holiday_notification
+            for entry in new_entries:
+                # entry is [date_str, reason]
+                send_holiday_notification(entry[0], entry[1], app, db, PatientBooking, PushSubscription)
+        except Exception as e:
+            app.logger.error(f"Failed to trigger holiday push notifications: {e}")
         
         msg = f"Successfully added {len(new_entries)} holiday(s)."
         if skipped_count > 0:
