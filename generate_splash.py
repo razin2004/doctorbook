@@ -35,7 +35,7 @@ BLUE        = (0, 119, 182)      # #0077b6   primary
 BLUE_DARK   = (2, 62, 138)       # #023e8a   dark
 TEAL        = (0, 150, 199)      # #0096c7   secondary
 WHITE       = (255, 255, 255)
-LIGHT_BLUE  = (240, 249, 255)    # very light blue for splash bg tint
+LIGHT_BLUE  = (230, 244, 255)    # #e6f4ff clean medical light blue
 TEXT_MAIN   = (11, 58, 96)       # #0b3a60   heading colour from CSS
 TEXT_MUTED  = (107, 114, 128)    # #6b7280   .brand-sub colour
 
@@ -160,11 +160,11 @@ def draw_web_icon_on(img, cx, cy, icon_px, bg_alpha=0):
 #  STEP 3 – GENERATE PWA / APP ICONS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def make_icon(size_px, bg_color=WHITE, rounded=False, round_radius_frac=0.22):
+def make_icon(size_px, bg_color=LIGHT_BLUE, rounded=False, round_radius_frac=0.22):
     """
     Create a square PNG icon of size_px × size_px.
-    bg_color  – background fill (default: white, matching the web)
-    rounded   – if True, clip to rounded-rectangle (for maskable/Apple icons)
+    bg_color  - background fill (default: LIGHT_BLUE, matching the web)
+    rounded   - if True, clip to rounded-rectangle (for maskable/Apple icons)
     """
     img = Image.new("RGBA", (size_px, size_px), (0, 0, 0, 0))
     d   = ImageDraw.Draw(img)
@@ -173,9 +173,9 @@ def make_icon(size_px, bg_color=WHITE, rounded=False, round_radius_frac=0.22):
         r = int(size_px * round_radius_frac)
         # Rounded background
         d.rounded_rectangle([0, 0, size_px-1, size_px-1], radius=r,
-                             fill=WHITE + (255,))
+                             fill=bg_color + (255,))
     else:
-        d.rectangle([0, 0, size_px, size_px], fill=WHITE + (255,))
+        d.rectangle([0, 0, size_px, size_px], fill=bg_color + (255,))
 
     # Icon occupies 78 % of the canvas, centred
     padding_frac = 0.11
@@ -257,12 +257,12 @@ def text_center(draw, text, font, y, color, canvas_w):
 
 def make_splash(w, h):
     """
-    Clean white splash screen matching the web look:
-      • Solid white background
+    Clean light blue splash screen matching the web look:
+      • Solid LIGHT_BLUE background
       • The exact SVG icon centred
       • "PrimeCare Clinic" in brand colour #0077b6 (bold)
     """
-    img  = Image.new("RGB", (w, h), WHITE)
+    img  = Image.new("RGB", (w, h), LIGHT_BLUE)
     draw = ImageDraw.Draw(img)
 
     # ── Icon: 38 % of the shorter dimension, capped to look professional
