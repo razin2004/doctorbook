@@ -2760,55 +2760,6 @@ def get_filled_booking_count(ws):
     except Exception:
         return 0
 
-def find_exact_duplicate_booking(rows, name, age, gender, phone_number, date):
-    """
-    Search rows of a date sheet (excluding header) for an exact match of all booking attributes.
-    Columns: [Token, Name, Age, Gender, Phone_Number, Date]
-    """
-    if not rows or len(rows) <= 1:
-        return None
-    
-    target_name = (name or "").strip().lower()
-    target_age = str(age).strip() if age is not None else "-"
-    target_gender = (gender or "").strip().lower()
-    target_phone = (phone_number or "").strip()
-    target_date = (date or "").strip()
-
-    if target_age == "" or target_age == "None":
-         target_age = "-"
-    if target_gender == "":
-         target_gender = "-"
-    if target_phone == "":
-         target_phone = "-"
-
-    for row in rows[1:]:
-        if len(row) < 6:
-            continue
-        r_token = row[0].strip()
-        r_name = row[1].strip().lower()
-        r_age = row[2].strip()
-        r_gender = row[3].strip().lower()
-        r_phone = row[4].strip()
-        r_date = row[5].strip()
-
-        if r_age == "":
-            r_age = "-"
-        if r_gender == "":
-            r_gender = "-"
-        if r_phone == "":
-            r_phone = "-"
-
-        if (r_name == target_name and
-            r_age == target_age and
-            r_gender == target_gender and
-            r_phone == target_phone and
-            r_date == target_date):
-            try:
-                return int(r_token)
-            except ValueError:
-                continue
-    return None
-
 def deduplicate_bookings(doctor_name, specialization, date, patient_name, sheet=None):
     """
     Ensure only the first booking for a patient with the same doctor, specialization, and date is kept.
@@ -2898,59 +2849,50 @@ def book_doctor():
         time_for_booking = day_times.get(weekday, "")
 
         # ─── Server-Side Duplicate Booking Pre-Check & Deduplication ───
+        existing_booking = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_info["Name"].lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doctor_info["Specialization"].lower().strip(),
+            PatientBooking.date == date,
+            PatientBooking.status == 'confirmed'
+        ).order_by(PatientBooking.id.asc()).first()
+
+        if existing_booking:
+            try:
+                spreadsheet = client.open_by_url(sheet_url)
+                sheet = get_or_create_date_sheet(spreadsheet, date)
+                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
+            except Exception:
+                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name)
+
+            clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
+            
+            return jsonify({
+                "success": True,
+                "token": clean_booking.token,
+                "doctor": clean_booking.doctor_name,
+                "specialization": clean_booking.specialization,
+                "date": date,
+                "time": clean_booking.time,
+                "name": name,
+                "age": age,
+                "phone": phone_number,
+                "redirect": url_for(
+                    "confirmation_page",
+                    token=clean_booking.token,
+                    doctor=clean_booking.doctor_name,
+                    specialization=clean_booking.specialization,
+                    date=date,
+                    time=clean_booking.time,
+                    name=name,
+                    age=age,
+                    gender=gender,
+                    phone=phone_number
+                )
+            })
+
         spreadsheet = client.open_by_url(sheet_url)
         sheet = get_or_create_date_sheet(spreadsheet, date)
-        rows = sheet.get_all_values()
-
-        duplicate_token = find_exact_duplicate_booking(rows, name, age, gender, phone_number, date)
-        if duplicate_token is not None:
-            existing_booking = PatientBooking.query.filter_by(
-                token=duplicate_token,
-                doctor_name=doctor_info["Name"],
-                specialization=doctor_info["Specialization"],
-                date=date,
-                status='confirmed'
-            ).first()
-            if not existing_booking:
-                existing_booking = PatientBooking.query.filter(
-                    db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
-                    db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_info["Name"].lower().strip(),
-                    db.func.lower(db.func.trim(PatientBooking.specialization)) == doctor_info["Specialization"].lower().strip(),
-                    PatientBooking.date == date,
-                    PatientBooking.status == 'confirmed'
-                ).order_by(PatientBooking.id.asc()).first()
-
-            if existing_booking:
-                try:
-                    deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
-                except Exception:
-                    deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name)
-
-                clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
-                
-                return jsonify({
-                    "success": True,
-                    "token": clean_booking.token,
-                    "doctor": clean_booking.doctor_name,
-                    "specialization": clean_booking.specialization,
-                    "date": date,
-                    "time": clean_booking.time,
-                    "name": name,
-                    "age": age,
-                    "phone": phone_number,
-                    "redirect": url_for(
-                        "confirmation_page",
-                        token=clean_booking.token,
-                        doctor=clean_booking.doctor_name,
-                        specialization=clean_booking.specialization,
-                        date=date,
-                        time=clean_booking.time,
-                        name=name,
-                        age=age,
-                        gender=gender,
-                        phone=phone_number
-                    )
-                })
 
         # ─── Refined 25-Booking Limit Check (Hard Block) ───
         filled_count = get_filled_booking_count(sheet)
@@ -3116,60 +3058,53 @@ def admin_book_patient():
         time_for_booking = day_times.get(weekday, "")
 
         # ─── Server-Side Duplicate Booking Pre-Check & Deduplication ───
-        rows = sheet.get_all_values()
-        duplicate_token = find_exact_duplicate_booking(rows, name, age, gender, phone_number, date)
+        existing_booking = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_info["Name"].lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doctor_info["Specialization"].lower().strip(),
+            PatientBooking.date == date,
+            PatientBooking.status == 'confirmed'
+        ).order_by(PatientBooking.id.asc()).first()
 
-        if duplicate_token is not None:
-            existing_booking = PatientBooking.query.filter_by(
-                token=duplicate_token,
-                doctor_name=doctor_info["Name"],
-                specialization=doctor_info["Specialization"],
-                date=date,
-                status='confirmed'
-            ).first()
-            if not existing_booking:
-                existing_booking = PatientBooking.query.filter(
-                    db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
-                    db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_info["Name"].lower().strip(),
-                    db.func.lower(db.func.trim(PatientBooking.specialization)) == doctor_info["Specialization"].lower().strip(),
-                    PatientBooking.date == date,
-                    PatientBooking.status == 'confirmed'
-                ).order_by(PatientBooking.id.asc()).first()
+        if existing_booking:
+            try:
+                spreadsheet = client.open_by_url(sheet_url)
+                sheet = get_or_create_date_sheet(spreadsheet, date)
+                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
+            except Exception:
+                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name)
 
-            if existing_booking:
-                try:
-                    deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
-                except Exception:
-                    deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name)
+            clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
+            
+            return jsonify({
+                "success": True,
+                "token": clean_booking.token,
+                "doctor": clean_booking.doctor_name,
+                "specialization": clean_booking.specialization,
+                "date": date,
+                "time": clean_booking.time,
+                "name": name,
+                "age": age or "-",
+                "phone": phone_number or "-",
+                "redirect": url_for(
+                    "confirmation_page",
+                    token=clean_booking.token,
+                    doctor=clean_booking.doctor_name,
+                    specialization=clean_booking.specialization,
+                    date=date,
+                    time=clean_booking.time,
+                    name=name,
+                    age=age or "-",
+                    gender=gender,
+                    phone=phone_number or "-"
+                )
+            })
 
-                clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
-                
-                return jsonify({
-                    "success": True,
-                    "token": clean_booking.token,
-                    "doctor": clean_booking.doctor_name,
-                    "specialization": clean_booking.specialization,
-                    "date": date,
-                    "time": clean_booking.time,
-                    "name": name,
-                    "age": age or "-",
-                    "phone": phone_number or "-",
-                    "redirect": url_for(
-                        "confirmation_page",
-                        token=clean_booking.token,
-                        doctor=clean_booking.doctor_name,
-                        specialization=clean_booking.specialization,
-                        date=date,
-                        time=clean_booking.time,
-                        name=name,
-                        age=age or "-",
-                        gender=gender,
-                        phone=phone_number or "-"
-                    )
-                })
+        spreadsheet = client.open_by_url(sheet_url)
+        sheet = get_or_create_date_sheet(spreadsheet, date)
 
         # Calculate token based on row count to ensure uniqueness
-        token = len(rows)
+        token = len(sheet.get_all_values())
 
         sheet.append_row([token, name, age, gender, phone_number, date])
 
@@ -3263,55 +3198,47 @@ def book_department():
 
     try:
         # ─── Server-Side Duplicate Booking Pre-Check & Deduplication ───
-        existing_bookings = PatientBooking.query.filter(
+        existing_booking = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.specialization)) == specialization.lower().strip(),
             PatientBooking.date == date_str,
             PatientBooking.status == 'confirmed'
-        ).all()
+        ).order_by(PatientBooking.id.asc()).first()
 
-        for eb in existing_bookings:
+        if existing_booking:
             try:
-                spreadsheet = client.open_by_url(eb.sheet_url)
+                spreadsheet = client.open_by_url(existing_booking.sheet_url)
                 date_sheet = get_or_create_date_sheet(spreadsheet, date_str)
-                rows = date_sheet.get_all_values()
-                
-                duplicate_token = find_exact_duplicate_booking(rows, name, age, gender, phone_number, date_str)
-                if duplicate_token == eb.token:
-                    try:
-                        deduplicate_bookings(eb.doctor_name, specialization, date_str, name, date_sheet)
-                    except Exception:
-                        deduplicate_bookings(eb.doctor_name, specialization, date_str, name)
+                deduplicate_bookings(existing_booking.doctor_name, specialization, date_str, name, date_sheet)
+            except Exception:
+                deduplicate_bookings(existing_booking.doctor_name, specialization, date_str, name)
 
-                    clean_booking = PatientBooking.query.filter_by(id=eb.id).first() or eb
-                    
-                    return jsonify({
-                        "success": True,
-                        "token": clean_booking.token,
-                        "doctor": clean_booking.doctor_name,
-                        "specialization": clean_booking.specialization,
-                        "date": date_str,
-                        "time": clean_booking.time,
-                        "name": name,
-                        "age": age,
-                        "gender": gender,
-                        "phone": phone_number,
-                        "redirect": url_for(
-                            "confirmation_page",
-                            token=clean_booking.token,
-                            doctor=clean_booking.doctor_name,
-                            specialization=clean_booking.specialization,
-                            date=date_str,
-                            time=clean_booking.time,
-                            name=name,
-                            age=age,
-                            gender=gender,
-                            phone=phone_number
-                        )
-                    })
-            except Exception as e:
-                print(f"[Duplicate Check Warning] Failed to inspect sheet for booking {eb.id}: {e}")
-                continue
+            clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
+            
+            return jsonify({
+                "success": True,
+                "token": clean_booking.token,
+                "doctor": clean_booking.doctor_name,
+                "specialization": clean_booking.specialization,
+                "date": date_str,
+                "time": clean_booking.time,
+                "name": name,
+                "age": age,
+                "gender": gender,
+                "phone": phone_number,
+                "redirect": url_for(
+                    "confirmation_page",
+                    token=clean_booking.token,
+                    doctor=clean_booking.doctor_name,
+                    specialization=clean_booking.specialization,
+                    date=date_str,
+                    time=clean_booking.time,
+                    name=name,
+                    age=age,
+                    gender=gender,
+                    phone=phone_number
+                )
+            })
 
         # weekday name, e.g. "Monday"
         target_date_obj = datetime.strptime(date_str, "%Y-%m-%d")
