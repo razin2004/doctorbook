@@ -56,7 +56,7 @@ PWA_ICON_SIZES = [48, 72, 96, 128, 144, 152, 192, 384, 512]
 # ══════════════════════════════════════════════════════════════════════════════
 
 def wipe_old():
-    print("\n[1/4] Removing old splash images and app icons…")
+    print("\n[1/4] Removing old splash images and app icons...")
 
     # Delete every file inside static/pwa/
     if os.path.isdir(PWA):
@@ -98,11 +98,11 @@ def _svgS(val, S):
     """Scale a SVG-space value by S to pixel space."""
     return val * S
 
-def draw_web_icon_on(img, cx, cy, icon_px, bg_alpha=255):
+def draw_web_icon_on(img, cx, cy, icon_px, bg_alpha=0):
     """
     Draw the exact primecare-logo.svg icon centred at (cx, cy).
     icon_px = diameter of the icon in pixels (maps to 100×100 SVG viewBox).
-    bg_alpha: alpha for the white fill inside the rings (255=solid white).
+    bg_alpha: alpha for the white fill inside the rings (0=transparent).
     All coordinates match the SVG exactly.
     """
     S   = icon_px / 100.0          # scale factor
@@ -117,10 +117,11 @@ def draw_web_icon_on(img, cx, cy, icon_px, bg_alpha=255):
             rr = r - i
             d.ellipse([cx-rr, cy-rr, cx+rr, cy+rr], outline=c, width=1)
 
-    # ── White fill inside outer ring ─────────────────────────────────────────
-    outer_r = int(_svgS(46, S))
-    d.ellipse([cx-outer_r, cy-outer_r, cx+outer_r, cy+outer_r],
-              fill=WHITE + (bg_alpha,))
+    # ── White fill inside outer ring (only if requested) ─────────────────────
+    if bg_alpha > 0:
+        outer_r = int(_svgS(46, S))
+        d.ellipse([cx-outer_r, cy-outer_r, cx+outer_r, cy+outer_r],
+                  fill=WHITE + (bg_alpha,))
 
     # ── Outer ring (r=46, stroke-width=3.2) ──────────────────────────────────
     stroke_ring(46, 3.2)
@@ -187,7 +188,7 @@ def make_icon(size_px, bg_color=WHITE, rounded=False, round_radius_frac=0.22):
 
 
 def save_icons():
-    print("\n[2/4] Generating app icons…")
+    print("\n[2/4] Generating app icons...")
 
     # ── favicon 16 & 32 ──────────────────────────────────────────────────────
     for sz in (16, 32):
@@ -254,155 +255,54 @@ def text_center(draw, text, font, y, color, canvas_w):
     return bb[3] - bb[1]   # height
 
 
-def interpolate_color(c1, c2, t):
-    return (
-        int(c1[0] + (c2[0] - c1[0]) * t),
-        int(c1[1] + (c2[1] - c1[1]) * t),
-        int(c1[2] + (c2[2] - c1[2]) * t)
-    )
-
 def make_splash(w, h):
     """
-    Premium dark gradient splash screen matching the web look:
-      • Deep navy/indigo gradient matching the web app theme_color and hero section
-      • Logo presented inside a clean white card with rounded corners and soft drop shadow
-      • "PrimeCare Clinic" in bold white
-      • "Quality care · Trusted doctors" in soft blue-gray #caf0f8
-      • Accent line and bottom bar in gold/amber #f59e0b matching the hero accent
+    Clean white splash screen matching the web look:
+      • Solid white background
+      • The exact SVG icon centred
+      • "PrimeCare Clinic" in brand colour #0077b6 (bold)
     """
-    img  = Image.new("RGB", (w, h), (2, 6, 23))
+    img  = Image.new("RGB", (w, h), WHITE)
     draw = ImageDraw.Draw(img)
 
-    # ── Brand colors ─────────────────────────────────────────────────────────
-    C_TOP = (2, 62, 138)       # #023e8a (brand dark blue)
-    C_MID = (1, 32, 79)        # #01204F (manifest background color)
-    C_BOT = (2, 6, 23)         # #020617 (brand ultimate deep navy)
-    GOLD  = (245, 158, 11)     # #f59e0b (brand gold/amber accent)
-    LIGHT_BLUE = (202, 240, 248) # #caf0f8 (brand soft blue)
+    # ── Icon: 38 % of the shorter dimension, capped to look professional
+    icon_px  = max(160, min(int(min(w, h) * 0.38), 500))
 
-    # ── Draw premium background gradient ──────────────────────────────────────
-    for y in range(h):
-        t = y / max(h - 1, 1)
-        if t < 0.6:
-            color = interpolate_color(C_TOP, C_MID, t / 0.6)
-        else:
-            color = interpolate_color(C_MID, C_BOT, (t - 0.6) / 0.4)
-        draw.line([(0, y), (w, y)], fill=color)
+    # ── Typography
+    name_size = max(42, min(int(w * 0.085), 120))
+    font_name = get_font(bold=True, size=name_size)
 
-    # ── Icon size & placement ────────────────────────────────────────────────
-    icon_px = max(140, min(int(min(w, h) * 0.38), 500))
-    cx      = w // 2
-    cy      = int(h * 0.35)
+    # ── Layout: center the combined block of icon and text vertically
+    spacing = int(h * 0.045)
+    estimated_text_h = int(name_size * 1.25)
 
-    # ── Card Container for Logo (Rounded white app-style card with shadow) ────
-    card_padding = int(icon_px * 0.18)
-    card_size    = icon_px + 2 * card_padding
-    radius       = int(card_size * 0.22)
+    total_block_h = icon_px + spacing + estimated_text_h
+    top_of_block = (h - total_block_h) // 2
+    cy = top_of_block + icon_px // 2
+    cx = w // 2
 
-    # 1. Soft Drop Shadow Glow effect (simulated with concentric outlines)
-    shadow_steps = 15
-    shadow_max_offset = int(card_size * 0.08)
-    for i in range(shadow_steps, 0, -1):
-        opacity = int(45 * (1 - (i / shadow_steps) ** 1.5))
-        glow_padding = int(shadow_max_offset * (i / shadow_steps))
-        glow_size = card_size + 2 * glow_padding
-        glow_radius = int(glow_size * 0.22)
-        g_cy = cy + int(shadow_max_offset * 0.25 * (i / shadow_steps))
-        
-        shadow_img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        sd = ImageDraw.Draw(shadow_img)
-        sd.rounded_rectangle(
-            [cx - glow_size // 2, g_cy - glow_size // 2,
-             cx + glow_size // 2, g_cy + glow_size // 2],
-            radius=glow_radius,
-            fill=(0, 0, 0, opacity)
-        )
-        img = img.convert("RGBA")
-        img.alpha_composite(shadow_img)
-        img = img.convert("RGB")
+    # Draw the logo centered at (cx, cy)
+    draw_web_icon_on(img, cx, cy, icon_px)
 
-    # 2. Main white rounded card background & border
-    card_img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    cd = ImageDraw.Draw(card_img)
-    cd.rounded_rectangle(
-        [cx - card_size // 2, cy - card_size // 2,
-         cx + card_size // 2, cy + card_size // 2],
-        radius=radius,
-        fill=(255, 255, 255, 255)
-    )
-    # Card subtle outline
-    cd.rounded_rectangle(
-        [cx - card_size // 2, cy - card_size // 2,
-         cx + card_size // 2, cy + card_size // 2],
-        radius=radius,
-        outline=(0, 119, 182, 35),
-        width=max(1, int(card_size * 0.008))
-    )
+    # Text placement directly below the logo
+    text_y = cy + icon_px // 2 + spacing
 
-    # 3. Draw original logo inside the card
-    draw_web_icon_on(card_img, cx, cy, icon_px)
-    img = img.convert("RGBA")
-    img.alpha_composite(card_img)
-    img = img.convert("RGB")
-    
-    # Re-draw object for main canvas text rendering
     draw_tx = ImageDraw.Draw(img)
-
-    # ── Typography ────────────────────────────────────────────────────────────
-    name_size = max(48, min(int(w * 0.09), 140))
-    sub_size  = max(20, min(int(w * 0.032), 52))
-
-    font_name = get_font(bold=True,  size=name_size)
-    font_sub  = get_font(bold=False, size=sub_size)
-
-    text_y = cy + card_size // 2 + int(h * 0.05)
-
-    # ── "PrimeCare Clinic" in bold white ──────────────────────────────────────
-    name_h = text_center(draw_tx, "PrimeCare Clinic", font_name, text_y, (255, 255, 255), w)
-    text_y += name_h + int(h * 0.015)
-
-    # ── Accent Separator line in brand gold ───────────────────────────────────
-    sep_w  = int(w * 0.12)
-    sep_x  = (w - sep_w) // 2
-    
-    ol  = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    old = ImageDraw.Draw(ol)
-    old.rectangle([sep_x, text_y, sep_x + sep_w, text_y + 2], fill=GOLD + (200,))
-    img = img.convert("RGBA")
-    img.alpha_composite(ol)
-    img = img.convert("RGB")
-    draw_tx = ImageDraw.Draw(img)
-
-    text_y += int(h * 0.025)
-
-    # ── Tagline: "Quality care · Trusted doctors" in soft light blue ──────────
-    text_center(draw_tx, "Quality care · Trusted doctors", font_sub, text_y, LIGHT_BLUE, w)
-
-    # ── Bottom Accent Bar (Gold/Amber) ────────────────────────────────────────
-    bar_h = max(4, int(h * 0.005))
-    draw_tx.rectangle([0, h - bar_h, w, h], fill=GOLD)
-
-    # ── Loading dots (Three elegant pulsing loading dots) ────────────────────
-    dot_y = h - bar_h - int(h * 0.06)
-    dot_r = max(2, int(min(w, h) * 0.007))
-    dot_spacing = dot_r * 4
-    
-    draw_tx.ellipse([cx - dot_spacing - dot_r, dot_y - dot_r, cx - dot_spacing + dot_r, dot_y + dot_r], fill=(255, 255, 255, 100))
-    draw_tx.ellipse([cx - dot_r, dot_y - dot_r, cx + dot_r, dot_y + dot_r], fill=(255, 255, 255, 200))
-    draw_tx.ellipse([cx + dot_spacing - dot_r, dot_y - dot_r, cx + dot_spacing + dot_r, dot_y + dot_r], fill=(255, 255, 255, 100))
+    # Draw "PrimeCare Clinic" in brand primary blue
+    text_center(draw_tx, "PrimeCare Clinic", font_name, text_y, BLUE, w)
 
     return img
 
 
 def save_splashes():
-    print("\n[3/4] Generating Apple / iOS splash screens…")
+    print("\n[3/4] Generating Apple / iOS splash screens...")
     for w, h in APPLE_SIZES:
         spl  = make_splash(w, h)
         fname = f"apple-splash-{w}-{h}.png"
         spl.save(os.path.join(PWA, fname), "PNG", optimize=True)
         print(f"  OK   {fname}")
 
-    print("\n[4/4] Generating Android splash screens…")
+    print("\n[4/4] Generating Android splash screens...")
     for w, h, label in [
         (1080, 1920, "android-splash-1080x1920.png"),
         (720,  1280, "android-splash-720x1280.png"),
@@ -418,14 +318,14 @@ def save_splashes():
     print("  OK   image/pwa_splash.png")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 #  MAIN
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 if __name__ == "__main__":
     print("=" * 60)
     print("  PrimeCare - Icon & Splash Regenerator")
-    print("  Exact web SVG - Dark Background - Brand Colors")
+    print("  Exact web SVG - White background - Brand colours")
     print("=" * 60)
 
     wipe_old()

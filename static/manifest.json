@@ -3,7 +3,7 @@
   "short_name": "PrimeCare",
   "start_url": "/?homescreen=1",
   "display": "standalone",
-  "background_color": "#01204F",
+  "background_color": "#ffffff",
   "theme_color": "#0077b6",
   "orientation": "portrait",
   "description": "Premium patient portal for PrimeCare Clinic - Real-time token tracking and bookings.",
