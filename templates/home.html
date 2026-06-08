@@ -18,6 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="PrimeCare">
   <link rel="apple-touch-icon" href="/static/image/pwa-icon.png">
+  <link rel="apple-touch-startup-image" href="/static/image/pwa_splash.png">
 
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -1367,6 +1368,37 @@
 </head>
 
 <body>
+  <!-- PWA Splash Screen Overlay -->
+  <div id="pwa-splash" class="pwa-splash-wrapper">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:1.5rem; text-align:center;">
+      <div style="width:96px; height:96px; border-radius:24px; background:white; padding:16px; box-shadow:0 12px 32px rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; animation:pulse-splash 2s infinite ease-in-out;">
+        <img src="/static/image/pwa-icon.png" alt="PrimeCare Logo" style="width:100%; height:100%; object-fit:contain;" />
+      </div>
+      <div>
+        <h1 style="color:white; font-size:1.8rem; font-weight:800; margin:0; letter-spacing:-0.02em; text-shadow:none;">PrimeCare Clinic</h1>
+        <p style="color:rgba(255,255,255,0.75); font-size:0.85rem; margin:5px 0 0; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Patient Portal</p>
+      </div>
+      <div style="width:36px; height:36px; border:3px solid rgba(255,255,255,0.25); border-top-color:white; border-radius:50%; animation:spin-splash 0.8s linear infinite; margin-top:1rem;"></div>
+    </div>
+  </div>
+  <script>
+    (function() {
+      const splash = document.getElementById('pwa-splash');
+      if (sessionStorage.getItem('splash_shown')) {
+        splash.style.display = 'none';
+      } else {
+        window.addEventListener('load', () => {
+          setTimeout(() => {
+            splash.style.opacity = '0';
+            setTimeout(() => {
+              splash.remove();
+            }, 400);
+            sessionStorage.setItem('splash_shown', 'true');
+          }, 1000);
+        });
+      }
+    })();
+  </script>
   {% set icons = {'General Physician':'activity','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
 
 

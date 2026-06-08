@@ -181,6 +181,31 @@ assert "The clinic holiday on 2026-06-15 has been cancelled. The clinic will rem
 assert pushed_notifications[0]["tag"] == "holiday-removal-2026-06-15"
 print("Test 7 Passed!")
 
+print("\nTest 8: Verify find_exact_duplicate_booking identifies exact duplicates")
+from app import find_exact_duplicate_booking
+mock_rows = [
+    ["Token", "Name", "Age", "Gender", "Phone_Number", "Date"],
+    ["1", "John Doe", "30", "Male", "1234567890", "2026-06-15"]
+]
+dup_token = find_exact_duplicate_booking(mock_rows, "John Doe", "30", "Male", "1234567890", "2026-06-15")
+assert dup_token == 1
+print("Test 8 Passed!")
+
+print("\nTest 9: Verify find_exact_duplicate_booking allows booking if age, gender, or phone differs")
+# Different age
+dup_age = find_exact_duplicate_booking(mock_rows, "John Doe", "31", "Male", "1234567890", "2026-06-15")
+assert dup_age is None
+
+# Different gender
+dup_gender = find_exact_duplicate_booking(mock_rows, "John Doe", "30", "Female", "1234567890", "2026-06-15")
+assert dup_gender is None
+
+# Different phone
+dup_phone = find_exact_duplicate_booking(mock_rows, "John Doe", "30", "Male", "0987654321", "2026-06-15")
+assert dup_phone is None
+
+print("Test 9 Passed!")
+
 # Restore original webpush
 push_services.webpush = original_webpush
 print("\n=== All verification tests completed successfully! ===")
