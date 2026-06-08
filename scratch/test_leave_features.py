@@ -132,7 +132,7 @@ with app.app_context():
         db.session.add(sub)
         db.session.commit()
 
-from push_services import send_leave_notification, send_holiday_notification
+from push_services import send_leave_notification, send_holiday_notification, send_leave_removal_notification, send_holiday_removal_notification
 
 print("\nTest 4: Verify push notification triggered for doctor leave")
 send_leave_notification("Dr. John Doe", "2026-06-15", "Cardiology conference", app, db, PatientBooking, PushSubscription)
@@ -154,6 +154,32 @@ print("Notifications pushed:", pushed_notifications)
 assert len(pushed_notifications) == 1
 assert "closed on 2026-06-15 due to a holiday" in pushed_notifications[0]["body"]
 print("Test 5 Passed!")
+
+# Reset pushed_notifications list
+pushed_notifications.clear()
+
+print("\nTest 6: Verify push notification triggered for doctor leave removal")
+send_leave_removal_notification("Dr. John Doe", "2026-06-15", app, db, PatientBooking, PushSubscription)
+time.sleep(1)
+print("Notifications pushed:", pushed_notifications)
+assert len(pushed_notifications) == 1
+assert pushed_notifications[0]["title"] == "Doctor Leave Cancelled"
+assert "Dr. John Doe's temporary leave on 2026-06-15 has been cancelled. Your appointment is now active." in pushed_notifications[0]["body"]
+assert pushed_notifications[0]["tag"] == "leave-removal-Dr. John Doe-2026-06-15"
+print("Test 6 Passed!")
+
+# Reset pushed_notifications list
+pushed_notifications.clear()
+
+print("\nTest 7: Verify push notification triggered for clinic holiday removal")
+send_holiday_removal_notification("2026-06-15", app, db, PatientBooking, PushSubscription)
+time.sleep(1)
+print("Notifications pushed:", pushed_notifications)
+assert len(pushed_notifications) == 1
+assert pushed_notifications[0]["title"] == "Clinic Holiday Cancelled"
+assert "The clinic holiday on 2026-06-15 has been cancelled. The clinic will remain open, and your appointment is active." in pushed_notifications[0]["body"]
+assert pushed_notifications[0]["tag"] == "holiday-removal-2026-06-15"
+print("Test 7 Passed!")
 
 # Restore original webpush
 push_services.webpush = original_webpush

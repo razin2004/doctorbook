@@ -2218,6 +2218,13 @@ def admin_delete_leave():
     for row in new_rows:
         leave_ws.append_row(row)
 
+    # Trigger doctor leave cancellation push notification
+    try:
+        from push_services import send_leave_removal_notification
+        send_leave_removal_notification(doctor_name, date_str, app, db, PatientBooking, PushSubscription)
+    except Exception as e:
+        app.logger.error(f"Failed to trigger doctor leave cancellation push notification: {e}")
+
     return jsonify({"success": True, "msg": "Leave entry removed."})
 
 # ===================== Holiday CRUD =====================
@@ -2394,6 +2401,14 @@ def admin_delete_holiday():
     if found:
         holiday_ws.clear()
         holiday_ws.update("A1", new_rows)
+        
+        # Trigger clinic holiday cancellation push notification
+        try:
+            from push_services import send_holiday_removal_notification
+            send_holiday_removal_notification(date_str, app, db, PatientBooking, PushSubscription)
+        except Exception as e:
+            app.logger.error(f"Failed to trigger holiday cancellation push notification: {e}")
+
         return jsonify({"success": True, "msg": "Holiday removed"})
     
     return jsonify({"success": False, "msg": "Holiday not found"})
