@@ -1682,6 +1682,56 @@
 
 <body class="bg-image">
 
+<!-- ═══ PWA Splash Screen (JS-driven — reliable on iOS & Android) ═══ -->
+<div id="pwa-splash" style="
+  display:none;
+  position:fixed;inset:0;z-index:2147483647;
+  background:linear-gradient(160deg,#023e8a 0%,#0077b6 55%,#0096c7 100%);
+  flex-direction:column;align-items:center;justify-content:center;gap:1.4rem;
+  opacity:1;transition:opacity 0.55s ease;
+  -webkit-transition:opacity 0.55s ease;
+">
+  <div style="position:relative;">
+    <img src="/static/pwa/icon-192x192.png"
+         style="width:100px;height:100px;border-radius:24px;
+                box-shadow:0 12px 40px rgba(0,0,0,0.35),0 0 0 4px rgba(255,255,255,0.15);"
+         alt="PrimeCare Icon">
+    <div style="position:absolute;bottom:-4px;right:-4px;width:26px;height:26px;
+                background:#10b981;border-radius:50%;border:3px solid #0077b6;
+                display:flex;align-items:center;justify-content:center;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+  </div>
+  <div style="text-align:center;line-height:1.3;">
+    <div style="color:#fff;font-family:'Inter',system-ui,sans-serif;font-size:1.75rem;font-weight:800;letter-spacing:0.01em;">PrimeCare</div>
+    <div style="color:rgba(255,255,255,0.72);font-family:'Inter',system-ui,sans-serif;font-size:0.88rem;font-weight:500;margin-top:2px;">Clinic Portal</div>
+  </div>
+  <div style="display:flex;gap:6px;margin-top:0.5rem;">
+    <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.9);animation:splashDot 1.2s ease-in-out infinite;"></div>
+    <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.9);animation:splashDot 1.2s ease-in-out 0.2s infinite;"></div>
+    <div style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.9);animation:splashDot 1.2s ease-in-out 0.4s infinite;"></div>
+  </div>
+</div>
+<style>
+@keyframes splashDot{0%,80%,100%{opacity:0.25;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}
+</style>
+<script>
+(function(){
+  var isStandalone = !!(window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches);
+  if(!isStandalone) return;
+  var s = document.getElementById('pwa-splash');
+  s.style.display = 'flex';
+  function hideSplash(){
+    setTimeout(function(){
+      s.style.opacity='0';
+      setTimeout(function(){s.style.display='none';},600);
+    },1200);
+  }
+  if(document.readyState==='complete'){ hideSplash(); }
+  else { window.addEventListener('load', hideSplash); }
+})();
+</script>
+
   <div class="bg-blur"></div>
 
   <!-- HEADER -->
