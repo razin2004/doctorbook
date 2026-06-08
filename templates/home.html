@@ -1382,10 +1382,193 @@
     .dropdown-item.logout-user svg {
       color: #f97316;
     }
+
+    /* ── PWA Startup Splash Screen Styles ── */
+    #pwa-splash-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: linear-gradient(135deg, #03045e 0%, #0077b6 50%, #023e8a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-family: 'Inter', system-ui, sans-serif;
+      opacity: 1;
+      visibility: visible;
+      overflow: hidden;
+    }
+
+    #pwa-splash-screen .splash-bg-glow-1 {
+      position: absolute;
+      top: -20%;
+      left: -20%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(circle, rgba(0, 180, 216, 0.3) 0%, transparent 70%);
+      filter: blur(60px);
+      animation: splashGlowMove1 12s infinite alternate ease-in-out;
+      pointer-events: none;
+    }
+    #pwa-splash-screen .splash-bg-glow-2 {
+      position: absolute;
+      bottom: -20%;
+      right: -20%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+      filter: blur(60px);
+      animation: splashGlowMove2 12s infinite alternate ease-in-out;
+      pointer-events: none;
+    }
+
+    @keyframes splashGlowMove1 {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(15%, 15%) scale(1.2); }
+    }
+    @keyframes splashGlowMove2 {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(-15%, -15%) scale(1.2); }
+    }
+
+    #pwa-splash-screen .splash-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    #pwa-splash-screen .splash-logo-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 140px;
+      height: 140px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 36px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 
+        0 24px 50px rgba(3, 4, 94, 0.3),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+      margin-bottom: 2rem;
+      opacity: 0;
+      animation: splashEntrance 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+                 splashFloat 4s infinite ease-in-out 1.2s;
+    }
+
+    #pwa-splash-screen .splash-logo {
+      width: 85px;
+      height: 85px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+    }
+
+    #pwa-splash-screen h1 {
+      font-size: 2.6rem;
+      font-weight: 800;
+      margin: 0 0 0.6rem 0;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 50%, #caf0f8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      opacity: 0;
+      animation: splashFadeIn 0.8s ease-out 0.4s forwards;
+      text-align: center;
+    }
+
+    #pwa-splash-screen p {
+      font-size: 0.95rem;
+      color: #93c5fd;
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: splashFadeIn 0.8s ease-out 0.6s forwards;
+      text-align: center;
+    }
+
+    #pwa-splash-screen .splash-loader-bar {
+      position: absolute;
+      bottom: 60px;
+      width: 160px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 99px;
+      overflow: hidden;
+      opacity: 0;
+      animation: splashFadeIn 0.8s ease-out 0.8s forwards;
+    }
+
+    #pwa-splash-screen .splash-loader-progress {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #60a5fa, #00b4d8);
+      border-radius: 99px;
+      transform: translateX(-100%);
+      animation: splashLoad 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes splashEntrance {
+      from { transform: scale(0.6); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes splashFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    @keyframes splashFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes splashLoad {
+      0% { transform: translateX(-100%); }
+      30% { transform: translateX(-65%); }
+      70% { transform: translateX(-15%); }
+      100% { transform: translateX(0); }
+    }
   </style>
 </head>
 
 <body>
+  <!-- PWA Startup Splash Screen -->
+  <div id="pwa-splash-screen" style="display: flex;">
+    <div class="splash-bg-glow-1"></div>
+    <div class="splash-bg-glow-2"></div>
+    <div class="splash-content">
+      <div class="splash-logo-container">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}" class="splash-logo" alt="PrimeCare Logo" />
+      </div>
+      <h1>PrimeCare Clinic</h1>
+      <p>Quality Care · Trusted Doctors</p>
+      <div class="splash-loader-bar">
+        <div class="splash-loader-progress"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function() {
+      const isStandalone = window.navigator.standalone 
+                            || window.matchMedia('(display-mode: standalone)').matches 
+                            || window.location.search.includes('homescreen=1');
+      const hasShownSplash = sessionStorage.getItem('pwa_splash_shown');
+      
+      if (!isStandalone || hasShownSplash) {
+        document.getElementById('pwa-splash-screen').style.display = 'none';
+      } else {
+        document.documentElement.style.overflow = 'hidden';
+      }
+    })();
+  </script>
+
   {% set icons = {'General Physician':'activity','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
 
 
@@ -3337,6 +3520,26 @@
       );
     }
 
+    // ─── PWA Startup Splash Screen Fade Out Loader ───
+    window.addEventListener('DOMContentLoaded', () => {
+      const splash = document.getElementById('pwa-splash-screen');
+      if (splash && splash.style.display !== 'none') {
+        const duration = 2500; // 2.5s matching CSS loader
+        
+        setTimeout(() => {
+          splash.style.transition = 'opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.6s';
+          splash.style.opacity = '0';
+          splash.style.visibility = 'hidden';
+          document.documentElement.style.overflow = ''; // Restore scroll
+          
+          sessionStorage.setItem('pwa_splash_shown', 'true');
+          
+          setTimeout(() => {
+            splash.remove();
+          }, 600);
+        }, duration);
+      }
+    });
   </script>
 </body>
 </html>
