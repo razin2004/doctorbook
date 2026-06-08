@@ -1432,6 +1432,27 @@ def patient_dashboard():
             b.holiday_reason = reason
     except: pass
 
+    # Enrichment: Doctor Leaves
+    try:
+        leave_ws = get_leave_worksheet()
+        l_data = leave_ws.get_all_records()
+        for b in upcoming_bookings:
+            b_doc_name = (b.doctor_name or "").strip().lower()
+            b_spec = (b.specialization or "").strip().lower()
+            b_date = (b.date or "").strip()
+            
+            leave_reason = None
+            for l in l_data:
+                l_name = str(l.get("DoctorName", "")).strip().lower()
+                l_spec = str(l.get("Specialization", "")).strip().lower()
+                l_date = str(l.get("Date", "")).strip()
+                if l_name == b_doc_name and l_spec == b_spec and l_date == b_date:
+                    leave_reason = (l.get("Reason") or "Temporary Leave").strip()
+                    break
+            b.is_doctor_on_leave = leave_reason is not None
+            b.doctor_leave_reason = leave_reason
+    except: pass
+
     active_upcoming_count = sum(1 for b in upcoming_bookings if b.status != 'cancelled')
 
     # Get prescriptions
@@ -2055,9 +2076,13 @@ def admin_add_leave():
     doctor_name, specialization = [x.strip() for x in combined.split(" - ", 1)]
 
     try:
-        datetime.strptime(date_str, "%Y-%m-%d")
+        leave_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
         return jsonify({"success": False, "msg": "Invalid date format"})
+
+    today = get_india_today()
+    if leave_date < today:
+        return jsonify({"success": False, "msg": "Leave cannot be set for past dates."})
 
     leave_ws = get_leave_worksheet()
     all_vals = leave_ws.get_all_values()
@@ -2130,6 +2155,15 @@ def admin_delete_leave():
 
     if not combined or not date_str or " - " not in combined:
         return jsonify({"success": False, "msg": "Missing or invalid doctor/date"})
+
+    try:
+        leave_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"success": False, "msg": "Invalid date format"})
+
+    today = get_india_today()
+    if leave_date < today:
+        return jsonify({"success": False, "msg": "Past leaves cannot be deleted."})
 
     doctor_name, specialization = [x.strip() for x in combined.split(" - ", 1)]
 

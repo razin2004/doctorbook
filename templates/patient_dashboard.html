@@ -1678,7 +1678,7 @@
         <div class="next-appointment-box">
           <div class="next-appointment-title">Next Appointment Details</div>
           {% set next_b = next_active.b %}
-          <div class="next-appointment-details-flat" style="display:flex; justify-content:space-between; align-items:center; gap:1.2rem; flex-wrap:wrap; padding: 1.4rem 1.6rem; border-left: 4px solid var(--primary); background: rgba(0, 119, 182, 0.04); border-radius: 16px; {% if next_b.status == 'cancelled' %}opacity:0.65; border-left-color: var(--danger); background: rgba(225, 29, 72, 0.02);{% elif next_b.is_holiday %}border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.03);{% endif %}">
+          <div class="next-appointment-details-flat" style="display:flex; justify-content:space-between; align-items:center; gap:1.2rem; flex-wrap:wrap; padding: 1.4rem 1.6rem; border-left: 4px solid var(--primary); background: rgba(0, 119, 182, 0.04); border-radius: 16px; {% if next_b.status == 'cancelled' %}opacity:0.65; border-left-color: var(--danger); background: rgba(225, 29, 72, 0.02);{% elif next_b.is_holiday %}border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.03);{% elif next_b.is_doctor_on_leave %}border-left-color: #d97706; background: rgba(217, 119, 6, 0.03);{% endif %}">
             <div class="item-info" style="display:flex; flex-direction:column; gap:0.4rem; flex: 1;">
               {% if next_b.is_holiday %}
               <div class="holiday-alert" style="margin-bottom:0.6rem; background: transparent; border: none; padding: 0;">
@@ -1687,6 +1687,16 @@
                   <div style="font-weight:800; color:#d97706; font-size:0.9rem;">Clinic Closed (Holiday)</div>
                   <div style="font-size:0.82rem; color:#b45309; font-weight:500;">
                       {{ next_b.holiday_reason }}. Please book another day.
+                  </div>
+                </div>
+              </div>
+              {% elif next_b.is_doctor_on_leave %}
+              <div class="holiday-alert" style="margin-bottom:0.6rem; background: transparent; border: none; padding: 0;">
+                <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#d97706;flex-shrink:0;"></i>
+                <div>
+                  <div style="font-weight:800; color:#d97706; font-size:0.9rem;">Doctor on Leave</div>
+                  <div style="font-size:0.82rem; color:#92400e; font-weight:500;">
+                      {{ next_b.doctor_name }} is on temporary leave on this day (Reason: {{ next_b.doctor_leave_reason }}). Please book for another day.
                   </div>
                 </div>
               </div>
@@ -1730,7 +1740,7 @@
               </div>
             </div>
             <div class="item-actions" style="flex-shrink:0;">
-              {% if next_b.is_holiday %}
+              {% if next_b.is_holiday or next_b.is_doctor_on_leave %}
               <a href="/booking" id="reschedBtn" class="btn btn-primary" style="border-radius:12px; padding:0.5rem 1rem;"><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Reschedule</a>
               {% endif %}
             </div>
@@ -1763,7 +1773,7 @@
             <div class="item-list">
               {% if upcoming_bookings %}
                 {% for b in upcoming_bookings %}
-                <div class="item-card" style="{% if b.status == 'cancelled' %}opacity:0.65; background:#fafafa; border:1px solid #fee2e2;{% elif b.is_holiday %}border: 2px solid #fca5a5; position: relative;{% endif %}">
+                <div class="item-card" style="{% if b.status == 'cancelled' %}opacity:0.65; background:#fafafa; border:1px solid #fee2e2;{% elif b.is_holiday %}border: 2px solid #fca5a5; position: relative;{% elif b.is_doctor_on_leave %}border: 2px solid #fcd34d; position: relative;{% endif %}">
                   <div class="item-info">
                     {% if b.is_holiday %}
                     <div class="holiday-alert">
@@ -1772,6 +1782,16 @@
                         <div style="font-weight:800; color:#e11d48; font-size:0.9rem;">Clinic Holiday on this Day</div>
                         <div style="font-size:0.82rem; color:#991b1b; font-weight:500;">
                             The clinic is closed for {{ b.holiday_reason }}. Please book for another day.
+                        </div>
+                      </div>
+                    </div>
+                    {% elif b.is_doctor_on_leave %}
+                    <div class="holiday-alert" style="background: #fffbeb; border-color: #fcd34d;">
+                      <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#d97706;flex-shrink:0;"></i>
+                      <div>
+                        <div style="font-weight:800; color:#d97706; font-size:0.9rem;">Doctor on Leave</div>
+                        <div style="font-size:0.82rem; color:#92400e; font-weight:500;">
+                            {{ b.doctor_name }} is on temporary leave on this day (Reason: {{ b.doctor_leave_reason }}). Please book for another day.
                         </div>
                       </div>
                     </div>
@@ -1811,8 +1831,8 @@
                     </div>
                   </div>
                   <div class="item-actions">
-                    {% if b.is_holiday %}
-                    <a href="/booking" id="reschedBtn"><i data-lucide="calendar-plus"></i> Book Another Day</a>
+                    {% if b.is_holiday or b.is_doctor_on_leave %}
+                    <a href="/booking" id="reschedBtn"><i data-lucide="calendar-plus"></i> Book Another</a>
                     {% endif %}
                     {% if b.status == 'cancelled' %}
                     <button class="btn-danger-sm" disabled style="opacity:0.5; cursor:not-allowed; background:#e2e8f0; color:#94a3b8; border-color:#cbd5e1;">

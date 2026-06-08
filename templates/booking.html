@@ -5733,35 +5733,42 @@
           lucide.createIcons(tbody);
           return;
         }
+        const todayStr = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'});
         leaves.forEach(leave=>{
           const tr=document.createElement('tr');
           const tdDate=document.createElement('td'); tdDate.textContent=leave.date; tr.appendChild(tdDate);
           const tdReason=document.createElement('td'); tdReason.textContent=leave.reason||'-'; tr.appendChild(tdReason);
           const tdAction=document.createElement('td');
           const btn=document.createElement('button');
-          btn.innerHTML='<i data-lucide="trash-2"></i> Remove';
-          btn.style.cssText='font-size:0.78rem;margin:0;padding:0.28rem 0.7rem;background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:none;';
-          btn.addEventListener('click', ()=>{
-            openModal(
-              'universalModal',
-              'Remove Leave',
-              `Are you sure you want to remove the leave entry for ${leave.date}?`,
-              'Remove',
-              async () => {
-                try {
-                  const delRes=await fetch('/admin_delete_leave',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined,date:leave.date}) });
-                  const delData=await delRes.json();
-                  if (delData.success) {
-                    showToast(`Leave for ${leave.date} has been removed.`, 'success');
-                    refreshLeaveListForCurrentDoctor();
-                  } else {
-                    showToast(delData.msg || 'Error removing leave.', 'error');
-                  }
-                } catch(err){ showToast("Couldn't remove leave entry. Please try again.", 'error'); }
-              },
-              true
-            );
-          });
+          if (leave.date < todayStr) {
+            btn.innerHTML='<i data-lucide="lock"></i> Locked';
+            btn.disabled = true;
+            btn.style.cssText='font-size:0.78rem;margin:0;padding:0.28rem 0.7rem;background:#94a3b8;cursor:not-allowed;box-shadow:none;opacity:0.7;';
+          } else {
+            btn.innerHTML='<i data-lucide="trash-2"></i> Remove';
+            btn.style.cssText='font-size:0.78rem;margin:0;padding:0.28rem 0.7rem;background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:none;';
+            btn.addEventListener('click', ()=>{
+              openModal(
+                'universalModal',
+                'Remove Leave',
+                `Are you sure you want to remove the leave entry for ${leave.date}?`,
+                'Remove',
+                async () => {
+                  try {
+                    const delRes=await fetch('/admin_delete_leave',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined,date:leave.date}) });
+                    const delData=await delRes.json();
+                    if (delData.success) {
+                      showToast(`Leave for ${leave.date} has been removed.`, 'success');
+                      refreshLeaveListForCurrentDoctor();
+                    } else {
+                      showToast(delData.msg || 'Error removing leave.', 'error');
+                    }
+                  } catch(err){ showToast("Couldn't remove leave entry. Please try again.", 'error'); }
+                },
+                true
+              );
+            });
+          }
           lucide.createIcons(btn);
           tdAction.appendChild(btn); tr.appendChild(tdAction);
           tbody.appendChild(tr);
