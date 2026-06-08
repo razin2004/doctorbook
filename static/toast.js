@@ -776,6 +776,13 @@ window.XMLHttpRequest = function() {
       modal.style.display = 'none';
     }
     window.activeModalAction = null;
+
+    // Reset any buttons stuck in loading state when the modal is closed
+    const loadingButtons = document.querySelectorAll('[data-loading="true"], [data-keep-loading]');
+    loadingButtons.forEach(btn => {
+      btn.removeAttribute('data-keep-loading');
+      window.setLoadingState(btn, false);
+    });
   };
 
   window.openModal = window.openUniversalModal;

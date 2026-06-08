@@ -2762,44 +2762,90 @@ def get_filled_booking_count(ws):
 
 def deduplicate_bookings(doctor_name, specialization, date, patient_name, sheet=None):
     """
-    Ensure only the first booking for a patient with the same doctor, specialization, and date is kept.
-    Deletes any duplicate records from the local SQLite database and the Google Sheet (if provided).
+    Ensure only exact duplicate bookings (same patient name, age, gender, and phone number)
+    for the same doctor on the same date are removed.
     """
     try:
-        # 1. Deduplicate SQLite database
-        bookings = PatientBooking.query.filter(
-            db.func.lower(db.func.trim(PatientBooking.patient_name)) == patient_name.lower().strip(),
-            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_name.lower().strip(),
-            db.func.lower(db.func.trim(PatientBooking.specialization)) == specialization.lower().strip(),
-            PatientBooking.date == date,
-            PatientBooking.status == 'confirmed'
-        ).order_by(PatientBooking.id.asc()).all()
+        if not sheet:
+            # Fallback if sheet is not accessible: deduplicate by patient name and age (the only columns in DB)
+            bookings = PatientBooking.query.filter(
+                db.func.lower(db.func.trim(PatientBooking.patient_name)) == patient_name.lower().strip(),
+                db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_name.lower().strip(),
+                db.func.lower(db.func.trim(PatientBooking.specialization)) == specialization.lower().strip(),
+                PatientBooking.date == date,
+                PatientBooking.status == 'confirmed'
+            ).order_by(PatientBooking.id.asc()).all()
 
-        if len(bookings) > 1:
-            first_booking = bookings[0]
-            duplicates_to_delete = bookings[1:]
-            for dup in duplicates_to_delete:
-                db.session.delete(dup)
-            db.session.commit()
-            print(f"[DEDUPLICATE] Removed {len(duplicates_to_delete)} duplicate SQLite bookings for {patient_name} on {date}.")
-        
-        # 2. Deduplicate Google Sheet
-        if sheet:
-            rows = sheet.get_all_values()
-            if len(rows) > 1:
-                seen = False
-                rows_to_delete = []
-                for idx, row in enumerate(rows[1:], start=2):
-                    if len(row) > 1 and row[1].strip().lower() == patient_name.lower().strip():
-                        if not seen:
-                            seen = True
-                        else:
-                            rows_to_delete.append(idx)
+            seen_ages = set()
+            duplicates_to_delete = []
+            for b in bookings:
+                b_age = str(b.age).strip()
+                if b_age in seen_ages:
+                    duplicates_to_delete.append(b)
+                else:
+                    seen_ages.add(b_age)
+
+            if duplicates_to_delete:
+                for dup in duplicates_to_delete:
+                    db.session.delete(dup)
+                db.session.commit()
+                print(f"[DEDUPLICATE] Fallback removed {len(duplicates_to_delete)} SQLite bookings for {patient_name} on {date}.")
+            return
+
+        # If sheet is provided:
+        rows = sheet.get_all_values()
+        if len(rows) <= 1:
+            return
+
+        headers = [h.strip().lower() for h in rows[0]]
+        name_idx = headers.index("name") if "name" in headers else 1
+        age_idx = headers.index("age") if "age" in headers else 2
+        gender_idx = headers.index("gender") if "gender" in headers else 3
+        phone_idx = headers.index("phone_number") if "phone_number" in headers else 4
+        token_idx = headers.index("token") if "token" in headers else 0
+
+        seen_keys = set()
+        rows_to_delete = []
+        deleted_tokens = set()
+
+        for idx, row in enumerate(rows[1:], start=2):
+            if len(row) > max(name_idx, age_idx, gender_idx, phone_idx):
+                r_name = row[name_idx].lower().strip()
+                r_age = str(row[age_idx]).strip()
+                r_gender = row[gender_idx].lower().strip()
+                r_phone = str(row[phone_idx]).strip()
                 
-                if rows_to_delete:
-                    for row_idx in reversed(rows_to_delete):
-                        sheet.delete_rows(row_idx)
-                    print(f"[DEDUPLICATE] Removed {len(rows_to_delete)} duplicate Google Sheet rows for {patient_name} on {date}.")
+                try:
+                    r_token = int(row[token_idx])
+                except ValueError:
+                    r_token = row[token_idx]
+
+                if r_name == patient_name.lower().strip():
+                    key = (r_name, r_age, r_gender, r_phone)
+                    if key in seen_keys:
+                        rows_to_delete.append(idx)
+                        deleted_tokens.add(r_token)
+                    else:
+                        seen_keys.add(key)
+
+        if rows_to_delete:
+            for row_idx in reversed(rows_to_delete):
+                sheet.delete_rows(row_idx)
+            print(f"[DEDUPLICATE] Removed {len(rows_to_delete)} duplicate Google Sheet rows for {patient_name} on {date}.")
+
+        if deleted_tokens:
+            bookings_to_delete = PatientBooking.query.filter(
+                db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_name.lower().strip(),
+                db.func.lower(db.func.trim(PatientBooking.specialization)) == specialization.lower().strip(),
+                PatientBooking.date == date,
+                PatientBooking.token.in_(list(deleted_tokens)),
+                PatientBooking.status == 'confirmed'
+            ).all()
+            for b in bookings_to_delete:
+                db.session.delete(b)
+            db.session.commit()
+            print(f"[DEDUPLICATE] Removed {len(bookings_to_delete)} duplicate DB bookings for {patient_name} on {date}.")
+
     except Exception as e:
         db.session.rollback()
         print(f"[WARNING] Deduplication failed: {e}")
@@ -2849,22 +2895,61 @@ def book_doctor():
         time_for_booking = day_times.get(weekday, "")
 
         # ─── Server-Side Duplicate Booking Pre-Check & Deduplication ───
-        existing_booking = PatientBooking.query.filter(
+        existing_booking = None
+        db_bookings = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_info["Name"].lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.specialization)) == doctor_info["Specialization"].lower().strip(),
             PatientBooking.date == date,
             PatientBooking.status == 'confirmed'
-        ).order_by(PatientBooking.id.asc()).first()
+        ).order_by(PatientBooking.id.asc()).all()
 
-        if existing_booking:
+        if db_bookings:
             try:
                 spreadsheet = client.open_by_url(sheet_url)
                 sheet = get_or_create_date_sheet(spreadsheet, date)
-                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
-            except Exception:
+                
+                # Check for exact duplicate in sheet rows matching valid DB tokens
+                valid_tokens = {b.token for b in db_bookings}
+                rows = sheet.get_all_values()
+                if len(rows) > 1:
+                    headers = [h.strip().lower() for h in rows[0]]
+                    name_idx = headers.index("name") if "name" in headers else 1
+                    age_idx = headers.index("age") if "age" in headers else 2
+                    gender_idx = headers.index("gender") if "gender" in headers else 3
+                    phone_idx = headers.index("phone_number") if "phone_number" in headers else 4
+                    token_idx = headers.index("token") if "token" in headers else 0
+
+                    c_name = name.lower().strip()
+                    c_age = str(age).strip()
+                    c_gender = gender.lower().strip()
+                    c_phone = str(phone_number).strip()
+
+                    for row in rows[1:]:
+                        if len(row) > max(name_idx, age_idx, gender_idx, phone_idx):
+                            try:
+                                r_token = int(row[token_idx])
+                            except ValueError:
+                                r_token = row[token_idx]
+
+                            if r_token in valid_tokens:
+                                r_name = row[name_idx].lower().strip()
+                                r_age = str(row[age_idx]).strip()
+                                r_gender = row[gender_idx].lower().strip()
+                                r_phone = str(row[phone_idx]).strip()
+
+                                if r_name == c_name and r_age == c_age and r_gender == c_gender and r_phone == c_phone:
+                                    existing_booking = next(b for b in db_bookings if b.token == r_token)
+                                    break
+                
+                if existing_booking:
+                    deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
+            except Exception as e:
+                print(f"[WARNING] Sheet-based precheck failed in book_doctor: {e}")
+                existing_booking = db_bookings[0]
                 deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name)
 
+        if existing_booking:
             clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
             
             return jsonify({
@@ -3058,22 +3143,61 @@ def admin_book_patient():
         time_for_booking = day_times.get(weekday, "")
 
         # ─── Server-Side Duplicate Booking Pre-Check & Deduplication ───
-        existing_booking = PatientBooking.query.filter(
+        existing_booking = None
+        db_bookings = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_info["Name"].lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.specialization)) == doctor_info["Specialization"].lower().strip(),
             PatientBooking.date == date,
             PatientBooking.status == 'confirmed'
-        ).order_by(PatientBooking.id.asc()).first()
+        ).order_by(PatientBooking.id.asc()).all()
 
-        if existing_booking:
+        if db_bookings:
             try:
                 spreadsheet = client.open_by_url(sheet_url)
                 sheet = get_or_create_date_sheet(spreadsheet, date)
-                deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
-            except Exception:
+                
+                # Check for exact duplicate in sheet rows matching valid DB tokens
+                valid_tokens = {b.token for b in db_bookings}
+                rows = sheet.get_all_values()
+                if len(rows) > 1:
+                    headers = [h.strip().lower() for h in rows[0]]
+                    name_idx = headers.index("name") if "name" in headers else 1
+                    age_idx = headers.index("age") if "age" in headers else 2
+                    gender_idx = headers.index("gender") if "gender" in headers else 3
+                    phone_idx = headers.index("phone_number") if "phone_number" in headers else 4
+                    token_idx = headers.index("token") if "token" in headers else 0
+
+                    c_name = name.lower().strip()
+                    c_age = str(age).strip()
+                    c_gender = gender.lower().strip()
+                    c_phone = str(phone_number).strip()
+
+                    for row in rows[1:]:
+                        if len(row) > max(name_idx, age_idx, gender_idx, phone_idx):
+                            try:
+                                r_token = int(row[token_idx])
+                            except ValueError:
+                                r_token = row[token_idx]
+
+                            if r_token in valid_tokens:
+                                r_name = row[name_idx].lower().strip()
+                                r_age = str(row[age_idx]).strip()
+                                r_gender = row[gender_idx].lower().strip()
+                                r_phone = str(row[phone_idx]).strip()
+
+                                if r_name == c_name and r_age == c_age and r_gender == c_gender and r_phone == c_phone:
+                                    existing_booking = next(b for b in db_bookings if b.token == r_token)
+                                    break
+                
+                if existing_booking:
+                    deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
+            except Exception as e:
+                print(f"[WARNING] Sheet-based precheck failed in admin_book_patient: {e}")
+                existing_booking = db_bookings[0]
                 deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name)
 
+        if existing_booking:
             clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
             
             return jsonify({
@@ -3198,21 +3322,61 @@ def book_department():
 
     try:
         # ─── Server-Side Duplicate Booking Pre-Check & Deduplication ───
-        existing_booking = PatientBooking.query.filter(
+        existing_booking = None
+        db_bookings = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.patient_name)) == name.lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.specialization)) == specialization.lower().strip(),
             PatientBooking.date == date_str,
             PatientBooking.status == 'confirmed'
-        ).order_by(PatientBooking.id.asc()).first()
+        ).order_by(PatientBooking.id.asc()).all()
 
-        if existing_booking:
+        if db_bookings:
             try:
-                spreadsheet = client.open_by_url(existing_booking.sheet_url)
+                # Use the sheet url of the first matching database booking to verify
+                spreadsheet = client.open_by_url(db_bookings[0].sheet_url)
                 date_sheet = get_or_create_date_sheet(spreadsheet, date_str)
-                deduplicate_bookings(existing_booking.doctor_name, specialization, date_str, name, date_sheet)
-            except Exception:
+                
+                # Check for exact duplicate in sheet rows matching valid DB tokens
+                valid_tokens = {b.token for b in db_bookings}
+                rows = date_sheet.get_all_values()
+                if len(rows) > 1:
+                    headers = [h.strip().lower() for h in rows[0]]
+                    name_idx = headers.index("name") if "name" in headers else 1
+                    age_idx = headers.index("age") if "age" in headers else 2
+                    gender_idx = headers.index("gender") if "gender" in headers else 3
+                    phone_idx = headers.index("phone_number") if "phone_number" in headers else 4
+                    token_idx = headers.index("token") if "token" in headers else 0
+
+                    c_name = name.lower().strip()
+                    c_age = str(age).strip()
+                    c_gender = gender.lower().strip()
+                    c_phone = str(phone_number).strip()
+
+                    for row in rows[1:]:
+                        if len(row) > max(name_idx, age_idx, gender_idx, phone_idx):
+                            try:
+                                r_token = int(row[token_idx])
+                            except ValueError:
+                                r_token = row[token_idx]
+
+                            if r_token in valid_tokens:
+                                r_name = row[name_idx].lower().strip()
+                                r_age = str(row[age_idx]).strip()
+                                r_gender = row[gender_idx].lower().strip()
+                                r_phone = str(row[phone_idx]).strip()
+
+                                if r_name == c_name and r_age == c_age and r_gender == c_gender and r_phone == c_phone:
+                                    existing_booking = next(b for b in db_bookings if b.token == r_token)
+                                    break
+                
+                if existing_booking:
+                    deduplicate_bookings(existing_booking.doctor_name, specialization, date_str, name, date_sheet)
+            except Exception as e:
+                print(f"[WARNING] Sheet-based precheck failed in book_department: {e}")
+                existing_booking = db_bookings[0]
                 deduplicate_bookings(existing_booking.doctor_name, specialization, date_str, name)
 
+        if existing_booking:
             clean_booking = PatientBooking.query.filter_by(id=existing_booking.id).first() or existing_booking
             
             return jsonify({
