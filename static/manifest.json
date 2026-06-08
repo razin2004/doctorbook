@@ -1,7 +1,7 @@
 {
   "name": "PrimeCare Clinic Portal",
   "short_name": "PrimeCare",
-  "start_url": "/patient_dashboard",
+  "start_url": "/?homescreen=1",
   "display": "standalone",
   "background_color": "#0077b6",
   "theme_color": "#0077b6",
