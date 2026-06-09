@@ -1283,7 +1283,7 @@
           
           <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; max-width: 400px; margin-left: auto; margin-right: auto;">
               <button id="sessionBtn" class="control-btn {% if doc.status == 'idle' %}btn-start{% elif doc.status == 'active' %}btn-next{% else %}btn-disabled{% endif %}"
-                  {% if doc.status == 'completed' or doc.status == 'waiting_bookings' or doc.total_tokens == 0 %}disabled{% endif %} style="width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff;">
+                  {% if doc.status == 'completed' or doc.status == 'waiting_bookings' %}disabled{% endif %} style="width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff;">
                   
                   {% if doc.status == 'idle' %}
                       <i data-lucide="play"></i> Start Session
@@ -1657,10 +1657,7 @@
       }
     }
     
-    document.getElementById('unvConfirmBtn').addEventListener('click', () => {
-      if (activeModalAction) activeModalAction();
-      closeUniversalModal();
-    });
+    // unvConfirmBtn click event is already handled in toast.js
 
     function goHome() {
       window.location.href = '/';
@@ -1877,7 +1874,7 @@
                 actionsHtml = `
                     <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
                         <i data-lucide="check" style="color:#10b981; width:16px; height:16px;" title="Consulted"></i>
-                        <button class="btn btn-outline" onclick="openReferralModal('${b.token}', '${b.name.replace(/'/g, "\\'")}')" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:#0284c7; color:#0284c7; min-width:auto; height:24px; display:flex; align-items:center; gap:3px;" title="Refer Patient">
+                        <button class="btn btn-outline" onclick="openReferralModal('${b.token}', '${(b.name || 'Patient').replace(/'/g, "\\'")}')" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:#0284c7; color:#0284c7; min-width:auto; height:24px; display:flex; align-items:center; gap:3px;" title="Refer Patient">
                             <i data-lucide="send" style="width:10px; height:10px;"></i> Refer
                         </button>
                     </div>
@@ -1988,7 +1985,7 @@
         if (data.status === 'idle') {
             sessionBtn.className = 'control-btn btn-start';
             sessionBtn.innerHTML = '<i data-lucide="play"></i> Start Session';
-            sessionBtn.disabled = data.total_tokens === 0;
+            sessionBtn.disabled = false;
             skipBtn.style.display = 'none';
             if (completeSessionBtn) completeSessionBtn.style.display = 'none';
         } else if (data.status === 'active') {
