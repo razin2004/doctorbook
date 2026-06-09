@@ -50,14 +50,24 @@ self.addEventListener('notificationclick', event => {
     ? event.notification.data.url
     : '/patient_dashboard';
 
+  const absoluteTargetUrl = new URL(targetUrl, self.location.origin).href;
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      // 1. Try to find a client that is already on the exact target URL
       for (const client of clientList) {
-        if (client.url.includes('/patient_dashboard') || client.url === self.location.origin + '/') {
+        if (client.url === absoluteTargetUrl) {
           return client.focus();
         }
       }
-      return clients.openWindow(targetUrl);
+      // 2. Otherwise find any client under the origin and navigate it to targetUrl, then focus
+      for (const client of clientList) {
+        if (client.url.startsWith(self.location.origin) && 'navigate' in client) {
+          return client.navigate(absoluteTargetUrl).then(c => c.focus());
+        }
+      }
+      // 3. Fallback: open a new window
+      return clients.openWindow(absoluteTargetUrl);
     })
   );
 });

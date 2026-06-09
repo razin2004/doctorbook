@@ -93,7 +93,8 @@ def trigger_push(doctor_name, date_str, current_token, status, app, db, PatientB
                             "body": body,
                             "tag": tag,
                             "vibrate": vibrate,
-                            "silent": False
+                            "silent": False,
+                            "url": "/patient_dashboard"
                         })
                         
                         try:
@@ -159,7 +160,8 @@ def send_leave_notification(doctor_name, date_str, reason, app, db, PatientBooki
                             "body": body,
                             "tag": tag,
                             "vibrate": [300, 100, 300],
-                            "silent": False
+                            "silent": False,
+                            "url": "/booking"
                         })
                         try:
                             webpush(
@@ -218,7 +220,8 @@ def send_holiday_notification(date_str, reason, app, db, PatientBooking, PushSub
                             "body": body,
                             "tag": tag,
                             "vibrate": [300, 100, 300],
-                            "silent": False
+                            "silent": False,
+                            "url": "/booking"
                         })
                         try:
                             webpush(
@@ -280,7 +283,8 @@ def send_leave_removal_notification(doctor_name, date_str, app, db, PatientBooki
                             "body": body,
                             "tag": tag,
                             "vibrate": [300, 100, 300],
-                            "silent": False
+                            "silent": False,
+                            "url": "/patient_dashboard"
                         })
                         try:
                             webpush(
@@ -338,7 +342,8 @@ def send_holiday_removal_notification(date_str, app, db, PatientBooking, PushSub
                             "body": body,
                             "tag": tag,
                             "vibrate": [300, 100, 300],
-                            "silent": False
+                            "silent": False,
+                            "url": "/patient_dashboard"
                         })
                         try:
                             webpush(
@@ -356,6 +361,177 @@ def send_holiday_removal_notification(date_str, app, db, PatientBooking, PushSub
                                 print(f"[Push Service] WebPush Error: {repr(ex)}")
             except Exception as e:
                 print(f"[Push Service] Holiday Removal Notification Error: {e}")
+
+    thread = threading.Thread(target=run_push)
+    thread.start()
+
+
+def send_confirmation_notification(booking, app, db, PushSubscription):
+    """
+    Finds subscriptions for the patient and sends a web push notification
+    alerting them that their booking is confirmed.
+    """
+    if not VAPID_PRIVATE_KEY:
+        print("[Push Service] No VAPID keys installed. Aborting push.")
+        return
+
+    def run_push():
+        with app.app_context():
+            try:
+                title = "Appointment Confirmed"
+                doc_disp = booking.doctor_name.strip()
+                if not doc_disp.lower().startswith("dr."):
+                    doc_disp = f"Dr. {doc_disp}"
+                body = f"Your appointment with {doc_disp} on {booking.date} is confirmed. Token #{booking.token}."
+                tag = f"confirm-{booking.id}"
+                
+                subs = PushSubscription.query.filter_by(user_id=booking.user_id).all() if booking.user_id else []
+                for sub in subs:
+                    push_info = {
+                        "endpoint": sub.endpoint,
+                        "keys": {
+                            "p256dh": sub.p256dh,
+                            "auth": sub.auth
+                        }
+                    }
+                    payload = json.dumps({
+                        "title": title,
+                        "body": body,
+                        "tag": tag,
+                        "vibrate": [100, 50, 100],
+                        "silent": False,
+                        "url": "/patient_dashboard"
+                    })
+                    try:
+                        webpush(
+                            subscription_info=push_info,
+                            data=payload,
+                            vapid_private_key=VAPID_PRIVATE_KEY,
+                            vapid_claims=VAPID_CLAIMS
+                        )
+                    except WebPushException as ex:
+                        if ex.response and ex.response.status_code in [404, 410]:
+                            print(f"[Push Service] Unsubscribed endpoint {sub.endpoint}. Deleting...")
+                            db.session.delete(sub)
+                            db.session.commit()
+                        else:
+                            print(f"[Push Service] WebPush Error: {repr(ex)}")
+            except Exception as e:
+                print(f"[Push Service] Confirmation Notification Error: {e}")
+
+    thread = threading.Thread(target=run_push)
+    thread.start()
+
+
+def send_cancellation_notification(booking, app, db, PushSubscription):
+    """
+    Finds subscriptions for the patient and sends a web push notification
+    alerting them that their booking was cancelled by the admin.
+    """
+    if not VAPID_PRIVATE_KEY:
+        print("[Push Service] No VAPID keys installed. Aborting push.")
+        return
+
+    def run_push():
+        with app.app_context():
+            try:
+                title = "Appointment Cancelled"
+                doc_disp = booking.doctor_name.strip()
+                if not doc_disp.lower().startswith("dr."):
+                    doc_disp = f"Dr. {doc_disp}"
+                body = f"Your appointment with {doc_disp} on {booking.date} (Token #{booking.token}) has been cancelled by the admin."
+                tag = f"cancel-{booking.id}"
+                
+                subs = PushSubscription.query.filter_by(user_id=booking.user_id).all() if booking.user_id else []
+                for sub in subs:
+                    push_info = {
+                        "endpoint": sub.endpoint,
+                        "keys": {
+                            "p256dh": sub.p256dh,
+                            "auth": sub.auth
+                        }
+                    }
+                    payload = json.dumps({
+                        "title": title,
+                        "body": body,
+                        "tag": tag,
+                        "vibrate": [300, 100, 300],
+                        "silent": False,
+                        "url": "/booking"
+                    })
+                    try:
+                        webpush(
+                            subscription_info=push_info,
+                            data=payload,
+                            vapid_private_key=VAPID_PRIVATE_KEY,
+                            vapid_claims=VAPID_CLAIMS
+                        )
+                    except WebPushException as ex:
+                        if ex.response and ex.response.status_code in [404, 410]:
+                            print(f"[Push Service] Unsubscribed endpoint {sub.endpoint}. Deleting...")
+                            db.session.delete(sub)
+                            db.session.commit()
+                        else:
+                            print(f"[Push Service] WebPush Error: {repr(ex)}")
+            except Exception as e:
+                print(f"[Push Service] Cancellation Notification Error: {e}")
+
+    thread = threading.Thread(target=run_push)
+    thread.start()
+
+
+def send_referral_notification(referral, app, db, PushSubscription):
+    """
+    Finds subscriptions for the patient and sends a web push notification
+    alerting them that they have a new referral from their doctor.
+    """
+    if not VAPID_PRIVATE_KEY:
+        print("[Push Service] No VAPID keys installed. Aborting push.")
+        return
+
+    def run_push():
+        with app.app_context():
+            try:
+                title = "New Medical Referral"
+                doc_disp = referral.from_doctor.strip()
+                if not doc_disp.lower().startswith("dr."):
+                    doc_disp = f"Dr. {doc_disp}"
+                body = f"You have been referred to {referral.to_specialization} by {doc_disp}."
+                tag = f"referral-{referral.id}"
+                
+                subs = PushSubscription.query.filter_by(user_id=referral.user_id).all() if referral.user_id else []
+                for sub in subs:
+                    push_info = {
+                        "endpoint": sub.endpoint,
+                        "keys": {
+                            "p256dh": sub.p256dh,
+                            "auth": sub.auth
+                        }
+                    }
+                    payload = json.dumps({
+                        "title": title,
+                        "body": body,
+                        "tag": tag,
+                        "vibrate": [100, 50, 100, 50, 200],
+                        "silent": False,
+                        "url": "/patient_dashboard"
+                    })
+                    try:
+                        webpush(
+                            subscription_info=push_info,
+                            data=payload,
+                            vapid_private_key=VAPID_PRIVATE_KEY,
+                            vapid_claims=VAPID_CLAIMS
+                        )
+                    except WebPushException as ex:
+                        if ex.response and ex.response.status_code in [404, 410]:
+                            print(f"[Push Service] Unsubscribed endpoint {sub.endpoint}. Deleting...")
+                            db.session.delete(sub)
+                            db.session.commit()
+                        else:
+                            print(f"[Push Service] WebPush Error: {repr(ex)}")
+            except Exception as e:
+                print(f"[Push Service] Referral Notification Error: {e}")
 
     thread = threading.Thread(target=run_push)
     thread.start()

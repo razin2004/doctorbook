@@ -2732,7 +2732,7 @@
                 // 1. Live Tracking
                 const liveKey = `live_tok_${liveDoc}_${yourTok}`;
                 const lastLive = sessionStorage.getItem(liveKey);
-                if (String(liveTok) !== lastLive && item.status === 'active') {
+                if (ahead <= 5 && ahead >= 0 && String(liveTok) !== lastLive && item.status === 'active') {
                   sessionStorage.setItem(liveKey, String(liveTok));
                   sendSwNotif(
                     '🔄 Live Tracking',

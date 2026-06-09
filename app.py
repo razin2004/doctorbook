@@ -183,6 +183,15 @@ class DoctorReferral(db.Model):
     booking_id = db.Column(db.Integer, db.ForeignKey('patient_booking.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class SavedPatient(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    age = db.Column(db.String(10), nullable=False)
+    gender = db.Column(db.String(20), nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 with app.app_context():
     db.create_all()
     # Create default guest user if it doesn't exist to satisfy the PatientBooking user_id constraint
@@ -1550,6 +1559,11 @@ def create_referral():
     )
     db.session.add(referral)
     db.session.commit()
+    try:
+        from push_services import send_referral_notification
+        send_referral_notification(referral, app, db, PushSubscription)
+    except Exception as push_err:
+        app.logger.error(f"Failed to send referral push: {push_err}")
 
     return jsonify(success=True, msg="Referral created successfully.")
 
@@ -3013,6 +3027,11 @@ def book_doctor():
             )
             db.session.add(new_booking)
             db.session.commit()
+            try:
+                from push_services import send_confirmation_notification
+                send_confirmation_notification(new_booking, app, db, PushSubscription)
+            except Exception as push_err:
+                app.logger.error(f"Failed to send booking confirmation push: {push_err}")
             deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
             if not is_guest:
                 mark_pending_referrals_booked(user_id, doctor_info["Specialization"], name)
@@ -3254,6 +3273,11 @@ def admin_book_patient():
             )
             db.session.add(new_booking)
             db.session.commit()
+            try:
+                from push_services import send_confirmation_notification
+                send_confirmation_notification(new_booking, app, db, PushSubscription)
+            except Exception as push_err:
+                app.logger.error(f"Failed to send booking confirmation push: {push_err}")
             deduplicate_bookings(doctor_info["Name"], doctor_info["Specialization"], date, name, sheet)
             if booking_user and not booking_user.email.endswith("guest@primecare.com"):
                 mark_pending_referrals_booked(booking_user_id, doctor_info["Specialization"], name)
@@ -3526,6 +3550,11 @@ def book_department():
                 )
                 db.session.add(new_booking)
                 db.session.commit()
+                try:
+                    from push_services import send_confirmation_notification
+                    send_confirmation_notification(new_booking, app, db, PushSubscription)
+                except Exception as push_err:
+                    app.logger.error(f"Failed to send booking confirmation push: {push_err}")
                 deduplicate_bookings(chosen_doc["Name"], chosen_doc["Specialization"], date_str, name, date_sheet)
                 if not is_guest:
                     mark_pending_referrals_booked(user_id, chosen_doc["Specialization"], name)
@@ -3646,6 +3675,11 @@ def book_department():
             )
             db.session.add(new_booking)
             db.session.commit()
+            try:
+                from push_services import send_confirmation_notification
+                send_confirmation_notification(new_booking, app, db, PushSubscription)
+            except Exception as push_err:
+                app.logger.error(f"Failed to send booking confirmation push: {push_err}")
             deduplicate_bookings(best_doc["Name"], best_doc["Specialization"], date_str, name, best_sheet)
             if not is_guest:
                 mark_pending_referrals_booked(user_id, best_doc["Specialization"], name)
@@ -4093,6 +4127,11 @@ def admin_delete_booking():
                 booking.cancelled_by = 'admin'
                 booking.cancelled_at = datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d %H:%M:%S")
                 db.session.commit()
+                try:
+                    from push_services import send_cancellation_notification
+                    send_cancellation_notification(booking, app, db, PushSubscription)
+                except Exception as push_err:
+                    app.logger.error(f"Failed to send booking cancellation push: {push_err}")
         except Exception as db_err:
             app.logger.error(f"Failed to sync cancellation in SQLite: {db_err}")
 
@@ -4270,6 +4309,104 @@ def save_subscription():
     
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/api/saved_patients', methods=['GET'])
+def get_saved_patients():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    patients = SavedPatient.query.filter_by(user_id=user_id).order_by(SavedPatient.created_at.desc()).all()
+    results = []
+    for p in patients:
+        results.append({
+            'id': p.id,
+            'name': p.name,
+            'age': p.age,
+            'gender': p.gender,
+            'phone_number': p.phone_number
+        })
+    return jsonify({'success': True, 'patients': results})
+
+@app.route('/api/saved_patients', methods=['POST'])
+def add_saved_patient():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+    
+    name = data.get('name')
+    age = data.get('age')
+    gender = data.get('gender')
+    phone_number = data.get('phone_number')
+    
+    if not all([name, age, gender, phone_number]):
+        return jsonify({'success': False, 'error': 'All fields are required'}), 400
+    
+    new_patient = SavedPatient(
+        user_id=user_id,
+        name=name.strip(),
+        age=str(age).strip(),
+        gender=gender.strip(),
+        phone_number=str(phone_number).strip()
+    )
+    db.session.add(new_patient)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'msg': 'Patient profile added successfully', 'patient': {
+        'id': new_patient.id,
+        'name': new_patient.name,
+        'age': new_patient.age,
+        'gender': new_patient.gender,
+        'phone_number': new_patient.phone_number
+    }})
+
+@app.route('/api/saved_patients/<int:patient_id>', methods=['PUT'])
+def update_saved_patient(patient_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    patient = SavedPatient.query.filter_by(id=patient_id, user_id=user_id).first()
+    if not patient:
+        return jsonify({'success': False, 'error': 'Patient profile not found'}), 404
+        
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+    name = data.get('name')
+    age = data.get('age')
+    gender = data.get('gender')
+    phone_number = data.get('phone_number')
+    
+    if not all([name, age, gender, phone_number]):
+        return jsonify({'success': False, 'error': 'All fields are required'}), 400
+        
+    patient.name = name.strip()
+    patient.age = str(age).strip()
+    patient.gender = gender.strip()
+    patient.phone_number = str(phone_number).strip()
+    db.session.commit()
+    
+    return jsonify({'success': True, 'msg': 'Patient profile updated successfully'})
+
+@app.route('/api/saved_patients/<int:patient_id>', methods=['DELETE'])
+def delete_saved_patient(patient_id):
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+    patient = SavedPatient.query.filter_by(id=patient_id, user_id=user_id).first()
+    if not patient:
+        return jsonify({'success': False, 'error': 'Patient profile not found'}), 404
+        
+    db.session.delete(patient)
+    db.session.commit()
+    return jsonify({'success': True, 'msg': 'Patient profile deleted successfully'})
 
 @app.route("/ai_triage", methods=["POST"])
 def ai_triage():
@@ -5283,6 +5420,7 @@ def my_token_status():
             "current_token": doc_session.current_token,
             "status": "idle",
             "patients_ahead": booking.token - doc_session.current_token,
+            "date": booking.date,
             "msg": ""
         }
 

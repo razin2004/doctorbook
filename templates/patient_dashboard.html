@@ -1492,6 +1492,13 @@
                   <span class="nav-badge-count">{{ prescriptions|length }}</span>
                 </div>
               </li>
+              <li>
+                <div class="admin-sidebar-nav-item" data-panel="patients" onclick="showAdminPanel('patients', this)">
+                  <i data-lucide="users"></i>
+                  <span>Saved Patients</span>
+                  <span class="nav-badge-count" id="sidebarSavedPatientsCount">0</span>
+                </div>
+              </li>
             </ul>
           </div>
           
@@ -1990,6 +1997,21 @@
             {% endif %}
           </div>
         </div>
+
+        <!-- PANEL 4: SAVED PATIENTS (Saved Patient Profiles) -->
+        <div id="patientsPanel" class="adminPanel glass-card-premium">
+          <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid rgba(79,70,229,0.1); padding-bottom: 0.8rem; margin-bottom: 1.25rem;">
+            <h2 style="margin:0; text-align:left; justify-content:flex-start; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="users" style="width:18px;height:18px;color:#4f46e5;"></i> Saved Patients</h2>
+            <button class="btn btn-primary section-action-btn" onclick="openPatientModal()" style="margin:0; min-width:auto; border-radius:12px; padding:0.5rem 0.9rem; background:#4f46e5; box-shadow:0 4px 12px rgba(79,70,229,0.2); border:none; color:white; font-weight:600; cursor:pointer;">
+              <i data-lucide="plus" style="width:14px;height:14px;"></i> <span>Add Profile</span>
+            </button>
+          </div>
+
+          <!-- Patients List Container -->
+          <div id="savedPatientsList" class="vault-timeline" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+             <!-- Rendered dynamically -->
+          </div>
+        </div>
       
       <!-- CENTERED SIMPLE COPYRIGHT FOOTER -->
       <footer class="admin-footer">
@@ -2038,7 +2060,56 @@
     </div>
   </div>
 
-
+  <!-- ADD/EDIT PATIENT PROFILE MODAL -->
+  <div class="modal-overlay" id="patientModal">
+    <div class="modal-content" style="max-width: 420px; padding: 2.2rem 2rem; border-radius: 28px;">
+      <button class="pres-close-btn" onclick="closePatientModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0.25rem;" title="Close"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+      
+      <div class="pres-modal-header" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+        <div class="icon-circle" style="background: rgba(79, 70, 229, 0.1); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #4f46e5; flex-shrink: 0;">
+          <i data-lucide="user-plus" id="patientModalIcon" style="width: 22px; height: 22px;"></i>
+        </div>
+        <div style="text-align: left;">
+          <h3 id="patientModalTitle" style="margin: 0; color: #0f172a; font-size: 1.2rem; font-weight: 800;">Add Patient Profile</h3>
+          <p id="patientModalSubtitle" style="margin: 0; font-size: 0.8rem; color: #64748b; font-weight: 500;">Save patient details for quick booking</p>
+        </div>
+      </div>
+      
+      <form id="patientForm" onsubmit="handlePatientSubmit(event)" style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+        <input type="hidden" id="patientModalId" />
+        
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.35rem; width: 100%; text-align: left;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 0.3rem;"><i data-lucide="user" style="width: 14px; height: 14px;"></i> Full Name</label>
+          <input type="text" id="patientModalName" required placeholder="Enter full name" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.6rem; font-size: 0.9rem;" />
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; width: 100%; text-align: left;">
+          <div class="form-group" style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 0.3rem;"><i data-lucide="cake" style="width: 14px; height: 14px;"></i> Age</label>
+            <input type="number" id="patientModalAge" min="1" max="110" required placeholder="Age" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.6rem; font-size: 0.9rem;" />
+          </div>
+          <div class="form-group" style="display: flex; flex-direction: column; gap: 0.35rem;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 0.3rem;"><i data-lucide="venus" style="width: 14px; height: 14px;"></i> Gender</label>
+            <select id="patientModalGender" required style="width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.6rem; font-size: 0.9rem; background: white;">
+              <option value="">Select</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.35rem; width: 100%; text-align: left;">
+          <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 0.3rem;"><i data-lucide="phone" style="width: 14px; height: 14px;"></i> Phone Number</label>
+          <input type="tel" id="patientModalPhone" pattern="[0-9]{10}" maxlength="10" required placeholder="10-digit phone number" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.6rem; font-size: 0.9rem;" />
+        </div>
+        
+        <button type="submit" class="btn btn-primary" id="patientModalSubmitBtn" style="width: 100%; background: #4f46e5; color: white; border: none; border-radius: 12px; padding: 0.75rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.5rem;">
+          <i data-lucide="check" style="width: 16px; height: 16px;"></i> Save Profile
+        </button>
+      </form>
+    </div>
+  </div>
 
   <!-- Referral Detail Modal -->
   <div class="modal-overlay" id="referralDetailModal">
@@ -2172,6 +2243,7 @@
         let titleText = "Overview";
         if (panelName === 'bookings') titleText = "My Appointments";
         else if (panelName === 'vault') titleText = "Medical Vault";
+        else if (panelName === 'patients') titleText = "Saved Patients";
         breadcrumbActive.textContent = titleText;
       }
       
@@ -2589,139 +2661,156 @@
       async function updateTokenBanner() {
         try {
           const res = await fetch('/my_token_status');
-          const data = await res.json();
+          const resData = await res.json();
           
-          if (data.success && (data.status === 'active' || data.status === 'skipped')) {
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            const isAndroid = /Android/.test(navigator.userAgent);
-            const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+          if (resData.success && resData.data && resData.data.length > 0) {
+            // Find active/skipped booking, or fallback to first booking
+            const data = resData.data.find(b => b.status === 'active' || b.status === 'skipped') || resData.data[0];
 
-            // ── Push Notifications (Android & iOS PWA) ──────────────────
-            const supportsNotif = typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
-            const canReceiveNotif = supportsNotif && Notification.permission === 'granted' && (isAndroid || isStandalone);
+            if (data.status === 'active' || data.status === 'skipped') {
+              const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+              const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+              const isAndroid = /Android/.test(navigator.userAgent);
+              const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
-            if (canReceiveNotif) {
-              const ahead   = data.patients_ahead;
-              const liveDoc = data.doctor_name;
-              const liveTok = data.current_token;
-              const yourTok = data.your_token;
+              // ── Push Notifications (Android & iOS PWA) ──────────────────
+              const supportsNotif = typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
+              const canReceiveNotif = supportsNotif && Notification.permission === 'granted' && (isAndroid || isStandalone);
 
-              function sendSwNotif(title, body, tag, vibrate, renotify) {
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.ready.then(reg => {
-                    if (reg.active) {
-                      reg.active.postMessage({
-                        type: 'SHOW_NOTIFICATION',
-                        title, body, tag,
-                        vibrate: vibrate || null,
-                        renotify: renotify !== false,
-                        url: '/patient_dashboard'
-                      });
-                    } else {
-                      reg.showNotification(title, {
-                        body, tag, icon: '/static/android-chrome-192x192.png',
-                        badge: '/static/favicon-32x32.png',
-                        vibrate: vibrate || undefined,
-                        renotify: renotify !== false,
-                        silent: false,
-                        data: { url: '/patient_dashboard' }
-                      }).catch(() => {});
-                    }
-                  }).catch(() => {});
+              if (canReceiveNotif) {
+                const ahead   = data.patients_ahead;
+                const liveDoc = data.doctor_name;
+                const liveTok = data.current_token;
+                const yourTok = data.your_token;
+
+                function sendSwNotif(title, body, tag, vibrate, renotify) {
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready.then(reg => {
+                      if (reg.active) {
+                        reg.active.postMessage({
+                          type: 'SHOW_NOTIFICATION',
+                          title, body, tag,
+                          vibrate: vibrate || null,
+                          renotify: renotify !== false,
+                          url: '/patient_dashboard'
+                        });
+                      } else {
+                        reg.showNotification(title, {
+                          body, tag, icon: '/static/android-chrome-192x192.png',
+                          badge: '/static/favicon-32x32.png',
+                          vibrate: vibrate || undefined,
+                          renotify: renotify !== false,
+                          silent: false,
+                          data: { url: '/patient_dashboard' }
+                        }).catch(() => {});
+                      }
+                    }).catch(() => {});
+                  }
                 }
-              }
 
-              // 1️⃣ Persistent live-tracking notification
-              const liveKey  = `live_tok_${liveDoc}_${yourTok}`;
-              const lastLive = sessionStorage.getItem(liveKey);
-              if (String(liveTok) !== lastLive && data.status === 'active') {
-                sessionStorage.setItem(liveKey, String(liveTok));
-                sendSwNotif(
-                  'Live Tracking',
-                  `${liveDoc}  ·  Now: #${liveTok}  ·  Your Token: #${yourTok}`,
-                  'primecare-live',
-                  null,
-                  false
-                );
-              }
-  
-              // 2️⃣ Alert: vibrate at 2 / 1 / 0 tokens ahead
-              const alertKey  = `alerted_${liveDoc}_${yourTok}`;
-              const lastAlert = sessionStorage.getItem(alertKey);
-              if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && data.status === 'active') {
-                sessionStorage.setItem(alertKey, String(ahead));
-                const alertBody = ahead === 0
-                  ? `It's your turn! Proceed to ${liveDoc} immediately.`
-                  : ahead === 1
-                  ? `You're next for ${liveDoc}. Please be ready!`
-                  : `2 patients ahead — ${liveDoc}. Get ready soon.`;
-                sendSwNotif(
-                  'Token Alert',
-                  alertBody,
-                  'primecare-alert',
-                  [300, 100, 300, 100, 500],
-                  true
-                );
-              }
-  
-              // 3️⃣ Skipped notification
-              if (data.status === 'skipped') {
-                const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
-                if (!sessionStorage.getItem(skipKey)) {
-                  sessionStorage.setItem(skipKey, '1');
+                // 1️⃣ Persistent live-tracking notification (Proximity filter applied)
+                const liveKey  = `live_tok_${liveDoc}_${yourTok}`;
+                const lastLive = sessionStorage.getItem(liveKey);
+                if (ahead <= 5 && ahead >= 0 && String(liveTok) !== lastLive && data.status === 'active') {
+                  sessionStorage.setItem(liveKey, String(liveTok));
                   sendSwNotif(
-                    'Token Skipped',
-                    `Your token was skipped. Please contact the reception.`,
-                    'primecare-skip',
-                    [400, 200, 400],
+                    'Live Tracking',
+                    `${liveDoc}  ·  Now: #${liveTok}  ·  Your Token: #${yourTok}`,
+                    'primecare-live',
+                    null,
+                    false
+                  );
+                }
+    
+                // 2️⃣ Alert: vibrate at 2 / 1 / 0 tokens ahead
+                const alertKey  = `alerted_${liveDoc}_${yourTok}`;
+                const lastAlert = sessionStorage.getItem(alertKey);
+                if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && data.status === 'active') {
+                  sessionStorage.setItem(alertKey, String(ahead));
+                  const alertBody = ahead === 0
+                    ? `It's your turn! Proceed to ${liveDoc} immediately.`
+                    : ahead === 1
+                    ? `You're next for ${liveDoc}. Please be ready!`
+                    : `2 patients ahead — ${liveDoc}. Get ready soon.`;
+                  sendSwNotif(
+                    'Token Alert',
+                    alertBody,
+                    'primecare-alert',
+                    [300, 100, 300, 100, 500],
                     true
                   );
                 }
+    
+                // 3️⃣ Skipped notification
+                if (data.status === 'skipped') {
+                  const skipKey = `skipped_alert_${liveDoc}_${yourTok}`;
+                  if (!sessionStorage.getItem(skipKey)) {
+                    sessionStorage.setItem(skipKey, '1');
+                    sendSwNotif(
+                      'Token Skipped',
+                      `Your token was skipped. Please contact the reception.`,
+                      'primecare-skip',
+                      [400, 200, 400],
+                      true
+                    );
+                  }
+                }
               }
-            }
 
-            // Show permission card if not yet granted
-            if (isMobile && supportsNotif && Notification.permission === 'default' && (isAndroid || isStandalone)) {
-              showNotifPermCard();
-            }
+              // Show permission card if not yet granted
+              if (isMobile && supportsNotif && Notification.permission === 'default' && (isAndroid || isStandalone)) {
+                showNotifPermCard();
+              }
 
-            hasNotification = true;
-            docName.textContent = data.doctor_name;
-            liveTokenEl.textContent = data.current_token;
-            yourTokenEl.textContent = data.your_token;
-            
-            banner.dataset.doc = data.doctor_name;
-            banner.dataset.date = data.date;
+              hasNotification = true;
+              docName.textContent = data.doctor_name;
+              liveTokenEl.textContent = data.current_token;
+              yourTokenEl.textContent = data.your_token;
+              
+              banner.dataset.doc = data.doctor_name;
+              banner.dataset.date = data.date;
 
-            // Sync with stats panel in Overview
-            const statsLiveQueue = document.getElementById('statsLiveQueue');
-            const statsLiveSub = document.getElementById('statsLiveSub');
-            if (statsLiveQueue && statsLiveSub) {
-              statsLiveQueue.textContent = `#${data.current_token}`;
-              statsLiveSub.innerHTML = `<span style="font-weight:750;color:var(--primary);">${data.doctor_name}</span> (Your: #${data.your_token})`;
-            }
+              // Sync with stats panel in Overview
+              const statsLiveQueue = document.getElementById('statsLiveQueue');
+              const statsLiveSub = document.getElementById('statsLiveSub');
+              if (statsLiveQueue && statsLiveSub) {
+                statsLiveQueue.textContent = `#${data.current_token}`;
+                statsLiveSub.innerHTML = `<span style="font-weight:750;color:var(--primary);">${data.doctor_name}</span> (Your: #${data.your_token})`;
+              }
 
-            const ahead = data.patients_ahead;
-            if (data.status === 'skipped') {
+              const ahead = data.patients_ahead;
+              if (data.status === 'skipped') {
+                banner.classList.remove('show');
+                tray.classList.remove('show');
+                hasNotification = false;
+                return;
+              } else if (ahead === 0) {
+                statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
+              } else if (ahead === 1) {
+                statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
+              } else {
+                statusText.textContent = "Live Status";
+              }
+
+              if (!isDismissed) {
+                banner.classList.add('show');
+              } else {
+                tray.classList.add('show');
+              }
+              lucide.createIcons();
+            } else {
+              hasNotification = false;
               banner.classList.remove('show');
               tray.classList.remove('show');
-              hasNotification = false;
-              return;
-            } else if (ahead === 0) {
-              statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
-            } else if (ahead === 1) {
-              statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
-            } else {
-              statusText.textContent = "Live Status";
+              
+              // Revert queue stats card in overview panel
+              const statsLiveQueue = document.getElementById('statsLiveQueue');
+              const statsLiveSub = document.getElementById('statsLiveSub');
+              if (statsLiveQueue && statsLiveSub) {
+                statsLiveQueue.textContent = "--";
+                statsLiveSub.textContent = "No active session";
+              }
             }
-
-            if (!isDismissed) {
-              banner.classList.add('show');
-            } else {
-              tray.classList.add('show');
-            }
-            lucide.createIcons();
           } else {
             hasNotification = false;
             banner.classList.remove('show');
@@ -2746,6 +2835,7 @@
       if (userLoggedIn && isPatient) {
           updateTokenBanner();
           setInterval(updateTokenBanner, 5000); 
+          loadSavedPatients();
       }
     })();
 
@@ -3081,6 +3171,215 @@
           }
         });
       } catch (e) { console.error("Dashboard Sync Failed", e); }
+    }
+
+    // ── Saved Patients Management ──
+    let savedPatientsList = [];
+
+    async function loadSavedPatients() {
+      try {
+        const res = await fetch('/api/saved_patients');
+        const data = await res.json();
+        if (data.success) {
+          savedPatientsList = data.patients;
+          renderSavedPatients();
+          
+          // Update sidebar badge
+          const badge = document.getElementById('sidebarSavedPatientsCount');
+          if (badge) {
+            badge.textContent = savedPatientsList.length;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load saved patients:", err);
+      }
+    }
+
+    function renderSavedPatients() {
+      const container = document.getElementById('savedPatientsList');
+      if (!container) return;
+      
+      container.innerHTML = "";
+      
+      if (savedPatientsList.length === 0) {
+        container.style.display = "block"; // Reset grid for empty state centering
+        container.innerHTML = `
+          <div class="empty-state" style="padding: 3rem 1rem; text-align: center;">
+            <div style="background:rgba(79, 70, 229, 0.05); width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem; color:#4f46e5;">
+               <i data-lucide="users" style="width:40px;height:40px;opacity:0.6;"></i>
+            </div>
+            <p style="color:#0f172a; margin-bottom:0.5rem; text-align: center; font-weight: 700; font-size: 1.15rem; margin-top: 1rem;">No Saved Patients</p>
+            <p style="font-size:0.9rem; color:#64748b; margin-bottom:1.5rem; max-width: 320px; margin-left: auto; margin-right: auto; line-height: 1.5;">Save details of yourself or your family members to make appointment booking instant.</p>
+            <button class="section-action-btn" onclick="openPatientModal()" style="background:#4f46e5; padding:0.6rem 1.5rem; height:auto; width:auto; margin:0 auto; border:none; color:white; border-radius:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:0.5rem;">
+               <i data-lucide="plus"></i> Add Profile
+            </button>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+      
+      container.style.display = "grid"; // Restore grid layout
+      
+      savedPatientsList.forEach(p => {
+        // Gender specific colors
+        let genderColor = "#4f46e5";
+        let genderBg = "rgba(79, 70, 229, 0.1)";
+        let genderIcon = "circle-user";
+        if (p.gender === "Male") {
+          genderColor = "#0077b6";
+          genderBg = "rgba(0, 119, 182, 0.1)";
+          genderIcon = "mars";
+        } else if (p.gender === "Female") {
+          genderColor = "#ec4899";
+          genderBg = "rgba(236, 72, 153, 0.1)";
+          genderIcon = "venus";
+        }
+        
+        const card = document.createElement('div');
+        card.className = "patient-card glass-card-premium";
+        card.style.background = "rgba(255, 255, 255, 0.5)";
+        card.style.border = "1px solid rgba(255, 255, 255, 0.75)";
+        card.style.borderRadius = "20px";
+        card.style.padding = "1.25rem";
+        card.style.display = "flex";
+        card.style.flexDirection = "column";
+        card.style.gap = "0.9rem";
+        card.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.02)";
+        card.style.transition = "transform 0.2s, box-shadow 0.2s";
+        
+        card.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="background: ${genderBg}; color: ${genderColor}; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i data-lucide="${genderIcon}" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div style="min-width: 0; flex: 1; text-align: left;">
+              <h4 style="margin: 0; color: #0f172a; font-size: 1.05rem; font-weight: 750; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${p.name}</h4>
+              <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;">Saved Profile</span>
+            </div>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.4rem; border-top: 1.5px solid rgba(0,0,0,0.03); padding-top: 0.75rem; text-align: left;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #475569;">
+              <i data-lucide="cake" style="width: 14px; height: 14px; opacity: 0.7;"></i>
+              <span><strong>Age:</strong> ${p.age} Years</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #475569;">
+              <i data-lucide="venus" style="width: 14px; height: 14px; opacity: 0.7;"></i>
+              <span><strong>Gender:</strong> ${p.gender}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #475569;">
+              <i data-lucide="phone" style="width: 14px; height: 14px; opacity: 0.7;"></i>
+              <span style="font-family: monospace; font-weight: 600;">${p.phone_number}</span>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 0.5rem; border-top: 1.5px solid rgba(0,0,0,0.03); padding-top: 0.75rem; margin-top: auto;">
+            <button class="btn btn-outline" onclick="editPatientProfile(${p.id}, '${p.name.replace(/'/g, "\\'")}', '${p.age}', '${p.gender}', '${p.phone_number}')" style="flex: 1; padding: 0.45rem; border-radius: 10px; font-size: 0.8rem; margin: 0; gap: 0.25rem; height: auto;">
+              <i data-lucide="pencil" style="width: 12px; height: 12px;"></i> Edit
+            </button>
+            <button class="btn" onclick="confirmDeletePatient(${p.id})" style="background: #fff1f2; color: #e11d48; border: 1px solid #fecaca; flex: 1; padding: 0.45rem; border-radius: 10px; font-size: 0.8rem; margin: 0; gap: 0.25rem; height: auto;">
+              <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Delete
+            </button>
+          </div>
+        `;
+        
+        container.appendChild(card);
+      });
+      
+      lucide.createIcons();
+    }
+
+    function openPatientModal(id = null, name = '', age = '', gender = '', phone = '') {
+      const modal = document.getElementById('patientModal');
+      if (!modal) return;
+      
+      const modalId = document.getElementById('patientModalId');
+      const modalName = document.getElementById('patientModalName');
+      const modalAge = document.getElementById('patientModalAge');
+      const modalGender = document.getElementById('patientModalGender');
+      const modalPhone = document.getElementById('patientModalPhone');
+      
+      const modalTitle = document.getElementById('patientModalTitle');
+      const modalSubtitle = document.getElementById('patientModalSubtitle');
+      const modalIcon = document.getElementById('patientModalIcon');
+      
+      modalId.value = id || '';
+      modalName.value = name;
+      modalAge.value = age;
+      modalGender.value = gender;
+      modalPhone.value = phone;
+      
+      if (id) {
+        modalTitle.textContent = "Edit Patient Profile";
+        modalSubtitle.textContent = "Modify saved patient details";
+        modalIcon.setAttribute('data-lucide', 'pencil');
+      } else {
+        modalTitle.textContent = "Add Patient Profile";
+        modalSubtitle.textContent = "Save patient details for quick booking";
+        modalIcon.setAttribute('data-lucide', 'user-plus');
+      }
+      
+      lucide.createIcons();
+      modal.style.display = "flex";
+    }
+
+    function closePatientModal() {
+      const modal = document.getElementById('patientModal');
+      if (modal) modal.style.display = "none";
+    }
+
+    window.editPatientProfile = function(id, name, age, gender, phone) {
+      openPatientModal(id, name, age, gender, phone);
+    };
+
+    window.confirmDeletePatient = async function(id) {
+      if (!confirm("Are you sure you want to delete this patient profile?")) return;
+      try {
+        const res = await fetch(`/api/saved_patients/${id}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.msg, 'success');
+          loadSavedPatients();
+        } else {
+          showToast(data.error, 'error');
+        }
+      } catch (err) {
+        showToast("Connection error. Try again.", "error");
+      }
+    };
+
+    async function handlePatientSubmit(event) {
+      event.preventDefault();
+      
+      const id = document.getElementById('patientModalId').value;
+      const name = document.getElementById('patientModalName').value.trim();
+      const age = document.getElementById('patientModalAge').value.trim();
+      const gender = document.getElementById('patientModalGender').value.trim();
+      const phone = document.getElementById('patientModalPhone').value.trim();
+      
+      const url = id ? `/api/saved_patients/${id}` : '/api/saved_patients';
+      const method = id ? 'PUT' : 'POST';
+      
+      try {
+        const res = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, age, gender, phone_number: phone })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.msg || 'Saved!', 'success');
+          closePatientModal();
+          loadSavedPatients();
+        } else {
+          showToast(data.error || 'Failed to save', 'error');
+        }
+      } catch (err) {
+        showToast("Network error. Try again.", "error");
+      }
     }
 
     setInterval(syncDashboardLiveStatus, 5000);
