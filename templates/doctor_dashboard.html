@@ -886,15 +886,18 @@
     /* Modals & Toasts */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px);
+      background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       z-index: 10000; align-items: center; justify-content: center;
-      padding: 1.2rem;
+      padding: 1.25rem; overflow-y: auto;
     }
     .modal-content {
-      background: #fff; padding: 2.2rem 2rem; border-radius: 24px;
-      max-width: 420px; width: 100%; box-shadow: 0 32px 64px rgba(15, 23, 42, 0.25);
-      border: 1px solid rgba(255,255,255,1); position: relative;
-      animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background: #fff; padding: 2.2rem 2rem; border-radius: 28px;
+      max-width: 440px; width: 100%; box-shadow: 0 40px 100px rgba(15, 23, 42, 0.35);
+      border: 1px solid #fff; position: relative;
+      animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-height: calc(100vh - 2.5rem); overflow-y: auto;
+      box-sizing: border-box;
     }
     @keyframes modalPop {
       from { transform: scale(0.9) translateY(20px); opacity: 0; }
@@ -902,6 +905,77 @@
     }
     .modal-btns { display: flex; gap: 1rem; margin-top: 2rem; width: 100%; }
     .modal-btns button { flex: 1; margin-top: 0 !important; }
+    
+    .modal-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .modal-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .modal-content::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 99px;
+    }
+    
+    .modal-close-btn {
+      position: absolute; top: 1.2rem; right: 1.2rem;
+      background: #f8fafc; border: 1px solid #e2e8f0; width: 32px; height: 32px;
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #64748b; transition: all 0.2s;
+      outline: none; z-index: 10;
+    }
+    .modal-close-btn:hover { background: #fee2e2; color: #e11d48; border-color: #fecaca; }
+
+    /* Modal Form styling */
+    .modal-form-group {
+      margin-bottom: 1.25rem;
+      text-align: left;
+    }
+    .modal-form-group label {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 0.5rem;
+    }
+    .modal-form-group label svg {
+      width: 14px;
+      height: 14px;
+      color: var(--primary);
+    }
+    .modal-form-input {
+      width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #e2e8f0;
+      border-radius: 12px; font-size: 0.95rem; font-family: inherit;
+      box-sizing: border-box; background: #f8fafc; transition: all 0.2s ease; color: #0f172a;
+      font-weight: 600;
+    }
+    .modal-form-input:focus {
+      outline: none; border-color: var(--primary); background: #fff;
+      box-shadow: 0 0 0 3.5px rgba(0, 119, 182, 0.1);
+    }
+    .modal-form-input[readonly] {
+      background: #f1f5f9;
+      color: #64748b;
+      cursor: not-allowed;
+      border-color: #e2e8f0;
+    }
+    .modal-form-input[readonly]:focus {
+      box-shadow: none;
+      border-color: #e2e8f0;
+    }
+
+    @media (max-width: 576px) {
+      .modal-content {
+        padding: 1.5rem 1.25rem !important;
+        border-radius: 20px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0.5rem;
+        max-height: calc(100vh - 2rem) !important;
+      }
+    }
 
 
     /* Spin icons animation */
@@ -1524,44 +1598,44 @@
   <!-- Referral Modal -->
   <div class="modal-overlay" id="referralModal">
     <div class="modal-content" style="max-width: 480px;">
-      <button onclick="closeReferralModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0.25rem;" title="Close">
-        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+      <button onclick="closeReferralModal()" class="modal-close-btn" title="Close">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
       </button>
       
       <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
-        <div style="background: rgba(2, 132, 199, 0.1); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0284c7;">
-          <i data-lucide="send" style="width: 24px; height: 24px;"></i>
+        <div style="background: rgba(2, 132, 199, 0.1); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #0284c7; flex-shrink: 0;">
+          <i data-lucide="send" style="width: 22px; height: 22px;"></i>
         </div>
         <div>
-          <h3 style="margin: 0; color: #0f172a; font-size: 1.25rem; font-weight: 800;">Create Specialist Referral</h3>
-          <p style="margin: 0.15rem 0 0; color: #64748b; font-size: 0.85rem; font-weight: 500;">Recommend another department to this patient</p>
+          <h3 style="margin: 0; color: #0f172a; font-size: 1.2rem; font-weight: 800;">Create Specialist Referral</h3>
+          <p style="margin: 0.15rem 0 0; color: #64748b; font-size: 0.8rem; font-weight: 500;">Recommend another department to this patient</p>
         </div>
       </div>
       
       <form id="referralForm" onsubmit="submitReferral(event)">
         <input type="hidden" id="referralToken" name="token">
         
-        <div style="margin-bottom: 1.25rem;">
-          <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem;">Patient Name</label>
-          <input type="text" id="referralPatientName" readonly style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 0.95rem;">
+        <div class="modal-form-group">
+          <label><i data-lucide="user"></i> Patient Name</label>
+          <input type="text" id="referralPatientName" class="modal-form-input" readonly>
         </div>
         
-        <div style="margin-bottom: 1.25rem;">
-          <label for="referralSpecialization" style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem;">Refer to Department / Specialization</label>
+        <div class="modal-form-group">
+          <label for="referralSpecialization"><i data-lucide="send"></i> Refer to Department / Specialization</label>
           <div style="position: relative;">
-            <select id="referralSpecialization" required style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; font-weight: 600; font-size: 0.95rem; appearance: none; -webkit-appearance: none;">
+            <select id="referralSpecialization" class="modal-form-input" required>
               <option value="" disabled selected>Select specialization...</option>
             </select>
             <i data-lucide="chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #94a3b8; pointer-events: none;"></i>
           </div>
         </div>
         
-        <div style="margin-bottom: 1.5rem;">
-          <label for="referralNotes" style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem;">Prescription Notes / Reason (Optional)</label>
-          <textarea id="referralNotes" rows="3" placeholder="Add clinical reason or recommendation notes for the specialist..." style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; font-size: 0.95rem; resize: none; font-family: inherit;"></textarea>
+        <div class="modal-form-group">
+          <label for="referralNotes"><i data-lucide="file-text"></i> Prescription Notes / Reason (Optional)</label>
+          <textarea id="referralNotes" class="modal-form-input" rows="3" placeholder="Add clinical reason or recommendation notes for the specialist..." style="resize: none;"></textarea>
         </div>
         
-        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
           <button type="button" class="btn btn-outline" onclick="closeReferralModal()" style="border-radius: 12px; padding: 0.7rem 1.4rem; margin: 0; min-width: auto; height: auto;">Cancel</button>
           <button type="submit" class="btn btn-primary" style="background: #0284c7; border: none; border-radius: 12px; padding: 0.7rem 1.4rem; margin: 0; min-width: auto; height: auto; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);">Send Referral</button>
         </div>
