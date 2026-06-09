@@ -1364,11 +1364,18 @@ def patient_dashboard():
     for b in bookings:
         b.is_skipped = False
         b_date = b.date or ""
+        # Normalize b_date to YYYY-MM-DD format for reliable comparison
+        b_date_norm = b_date
+        try:
+            b_date_norm = datetime.strptime(b_date, "%d-%m-%Y").strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+            
         is_past = False
         
-        if b_date < today_str:
+        if b_date_norm < today_str:
             is_past = True
-        elif b_date == today_str:
+        elif b_date_norm == today_str:
             # Check Session Status
             b_doc_name = (b.doctor_name or "").strip()
             b_spec = (b.specialization or "").strip()
@@ -1377,7 +1384,8 @@ def patient_dashboard():
             if b_doc_name and b_spec:
                 doc_session = DoctorSession.query.filter(
                     db.func.lower(db.func.trim(DoctorSession.doctor_name)) == b_doc_name.lower(),
-                    db.func.lower(db.func.trim(DoctorSession.specialization)) == b_spec.lower()
+                    db.func.lower(db.func.trim(DoctorSession.specialization)) == b_spec.lower(),
+                    DoctorSession.session_date == today_str
                 ).first()
             
             is_skipped = False
@@ -5493,7 +5501,11 @@ def live_tokens():
     user_id = session.get('user_id')
     if user_id:
         try:
-            my_bookings = PatientBooking.query.filter_by(user_id=user_id, date=today_str).all()
+            dt_formatted = now.strftime("%d-%m-%Y")
+            my_bookings = PatientBooking.query.filter(
+                PatientBooking.user_id == user_id,
+                (PatientBooking.date == today_str) | (PatientBooking.date == dt_formatted)
+            ).all()
             for b in my_bookings:
                 # Key by lowered (doctor, spec) for robust matching
                 key = f"{b.doctor_name.lower().strip()}|{b.specialization.lower().strip()}"
@@ -5529,12 +5541,16 @@ def my_token_status():
         
     ist = pytz.timezone('Asia/Kolkata')
     today_str = datetime.now(ist).strftime("%Y-%m-%d")
+    dt_formatted = datetime.now(ist).strftime("%d-%m-%Y")
     
     # Debug: Print incoming status request details
     print(f"\n[DEBUG] Token Status Request for user_id: {user_id} on {today_str}")
     
-    # Find all patient's bookings for today
-    bookings = PatientBooking.query.filter_by(user_id=user_id, date=today_str).all()
+    # Find all patient's bookings for today (handles both YYYY-MM-DD and DD-MM-YYYY)
+    bookings = PatientBooking.query.filter(
+        PatientBooking.user_id == user_id,
+        (PatientBooking.date == today_str) | (PatientBooking.date == dt_formatted)
+    ).all()
     if not bookings:
         return jsonify({"success": False, "msg": "No booking today", "data": []})
     
@@ -5567,6 +5583,8 @@ def my_token_status():
             skipped = doc_session.skipped_tokens.strip().split(',') if doc_session.skipped_tokens else []
             if str(booking.token) in skipped:
                 item["status"] = "skipped"
+            elif booking.token < doc_session.current_token:
+                item["status"] = "consulted"
         
         results.append(item)
 
