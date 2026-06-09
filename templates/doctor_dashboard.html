@@ -1271,10 +1271,10 @@
           </div>
         </div>
 
-        <div class="session-box-premium" style="text-align: center; padding: 1.5rem 0.5rem;">
+        <div class="session-box-premium" style="text-align: center; padding: 1.5rem 1rem; display: flex; flex-direction: column; align-items: center;">
           <p style="color:#64748b; font-weight: 500; margin-bottom: 1rem;"><i data-lucide="calendar" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Today's Session: {{ doc.session_date }}</p>
           
-          <div class="session-timeline" id="sessionTimeline" style="display: {% if doc.status == 'idle' %}none{% else %}flex{% endif %}; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; padding: 0.8rem; background: rgba(0,0,0,0.03); border-radius: 16px;">
+          <div class="session-timeline" id="sessionTimeline" style="display: {% if doc.status == 'idle' %}none{% else %}flex{% endif %}; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; padding: 0.8rem; background: rgba(0,0,0,0.03); border-radius: 16px; width: 100%;">
               <div class="timeline-item" style="display: flex; flex-direction: column; gap: 0.2rem;">
                   <span class="time-label" style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Started At</span>
                   <span class="time-val" id="startTime" style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">{{ doc.start_time or '--:--' }}</span>
@@ -1303,7 +1303,7 @@
               </div>
           </div>
           
-          <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; max-width: 400px; margin-left: auto; margin-right: auto;">
+          <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; max-width: 400px; width: 100%; margin-left: auto; margin-right: auto; align-items: stretch;">
               <button id="sessionBtn" class="control-btn {% if doc.status == 'idle' %}btn-start{% elif doc.status == 'active' %}btn-next{% else %}btn-disabled{% endif %}"
                   {% if doc.status == 'completed' or doc.status == 'waiting_bookings' %}disabled{% endif %} style="width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff;">
                   

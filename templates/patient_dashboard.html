@@ -870,7 +870,7 @@
 
     /* ── Notification Tray Icon (Bell) ── */
     #notifTrayFab {
-      position: fixed; top: 72px; right: 16px; z-index: 8900;
+      position: fixed; bottom: 88px; right: 16px; z-index: 8900;
       width: 36px; height: 36px; border-radius: 50%;
       background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(0, 119, 182, 0.2); cursor: pointer;
@@ -2758,7 +2758,7 @@
                     sessionStorage.setItem(skipKey, '1');
                     sendSwNotif(
                       'Token Skipped',
-                      `Your token was skipped. Please contact the reception.`,
+                      `Your token was skipped.if any problem please contact the reception.`,
                       'primecare-skip',
                       [400, 200, 400],
                       true
@@ -2780,12 +2780,19 @@
               banner.dataset.doc = data.doctor_name;
               banner.dataset.date = data.date;
 
-              // Sync with stats panel in Overview
+              // Sync with stats panel in Overview — show live token + ahead count
               const statsLiveQueue = document.getElementById('statsLiveQueue');
               const statsLiveSub = document.getElementById('statsLiveSub');
               if (statsLiveQueue && statsLiveSub) {
                 statsLiveQueue.textContent = `#${data.current_token}`;
-                statsLiveSub.innerHTML = `<span style="font-weight:750;color:var(--primary);">${data.doctor_name}</span> (Your: #${data.your_token})`;
+                const aheadCount = data.patients_ahead;
+                if (aheadCount === 0) {
+                  statsLiveSub.innerHTML = `<span style="color:#ef4444;font-weight:700;">🔴 Your Turn Now!</span>`;
+                } else if (aheadCount === 1) {
+                  statsLiveSub.innerHTML = `<span style="color:#f97316;font-weight:700;">Next — 1 ahead</span>`;
+                } else {
+                  statsLiveSub.innerHTML = `<span style="color:#64748b;">${aheadCount} turns ahead</span>`;
+                }
               }
 
               const ahead = data.patients_ahead;
