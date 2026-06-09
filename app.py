@@ -5543,24 +5543,12 @@ def my_token_status():
         # Find active doctor session
         doc_session = DoctorSession.query.filter(
             db.func.lower(db.func.trim(DoctorSession.doctor_name)) == booking.doctor_name.lower().strip(),
-            db.func.lower(db.func.trim(DoctorSession.specialization)) == booking.specialization.lower().strip()
+            db.func.lower(db.func.trim(DoctorSession.specialization)) == booking.specialization.lower().strip(),
+            DoctorSession.session_date == today_str
         ).first()
         
         if not doc_session:
             continue
-
-        # Count skipped tokens between current_token and user's token
-        # to compute actual waiting patients ahead (exclude consulted + currently calling)
-        skipped_list = doc_session.skipped_tokens.strip().split(',') if doc_session.skipped_tokens else []
-        skipped_between = sum(
-            1 for s in skipped_list
-            if s.strip().isdigit()
-            and doc_session.current_token <= int(s.strip()) < booking.token
-        )
-        raw_ahead = booking.token - doc_session.current_token
-        # Subtract 1 so the currently-being-served token is not counted as "ahead"
-        # Subtract skipped tokens between current and user's slot (they won't actually be served)
-        patients_ahead = max(0, raw_ahead - 1 - skipped_between)
 
         item = {
             "doctor_name": booking.doctor_name,
@@ -5568,11 +5556,10 @@ def my_token_status():
             "your_token": booking.token,
             "current_token": doc_session.current_token,
             "status": "idle",
-            "patients_ahead": patients_ahead,
+            "patients_ahead": booking.token - doc_session.current_token,
             "date": booking.date,
             "msg": ""
         }
-
 
         if doc_session.session_date == today_str:
             item["status"] = doc_session.status

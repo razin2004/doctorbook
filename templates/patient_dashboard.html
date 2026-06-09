@@ -2738,9 +2738,9 @@
                 if (ahead <= 2 && ahead >= 0 && String(ahead) !== lastAlert && data.status === 'active') {
                   sessionStorage.setItem(alertKey, String(ahead));
                   const alertBody = ahead === 0
-                    ? `You're next! Please proceed to ${liveDoc} now and get ready.`
+                    ? `It's your turn! Proceed to ${liveDoc} immediately.`
                     : ahead === 1
-                    ? `1 patient ahead of you at ${liveDoc}. Please be ready!`
+                    ? `You're next for ${liveDoc}. Please be ready!`
                     : `2 patients ahead — ${liveDoc}. Get ready soon.`;
                   sendSwNotif(
                     'Token Alert',
@@ -2802,11 +2802,9 @@
                 hasNotification = false;
                 return;
               } else if (ahead === 0) {
-                statusText.innerHTML = `<span style="color:#ef4444;">⚡ You're Next!</span>`;
+                statusText.innerHTML = `<span style="color:#ef4444;">Your Turn Now!</span>`;
               } else if (ahead === 1) {
-                statusText.innerHTML = `<span style="color:#f97316;">1 Ahead — Get Ready</span>`;
-              } else if (ahead === 2) {
-                statusText.innerHTML = `<span style="color:#f59e0b;">2 Ahead</span>`;
+                statusText.innerHTML = `<span style="color:#f97316;">Next You!</span>`;
               } else {
                 statusText.textContent = "Live Status";
               }
