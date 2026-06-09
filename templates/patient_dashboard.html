@@ -952,18 +952,14 @@
     .modal-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
       z-index: 10000; align-items: center; justify-content: center;
-      padding: 1.25rem; overflow-y: auto;
-      animation: modalFade 0.3s ease;
+      padding: 1.25rem; animation: modalFade 0.3s ease;
     }
     .modal-content {
       background: #fff; padding: 2.2rem 2rem; border-radius: 28px;
       max-width: 440px; width: 100%; box-shadow: 0 40px 100px rgba(15, 23, 42, 0.35);
       border: 1px solid #fff; position: relative;
       animation: modalPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-      max-height: calc(100vh - 2.5rem); overflow-y: auto;
-      box-sizing: border-box;
     }
     @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
     @keyframes modalPop { from { transform: scale(0.92) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
@@ -1032,8 +1028,6 @@
       max-width: 480px; width: 92%; position: relative;
       box-shadow: 0 25px 60px rgba(0,0,0,0.15);
       animation: slideUp 0.35s ease;
-      max-height: calc(100vh - 2.5rem); overflow-y: auto;
-      box-sizing: border-box;
     }
     @keyframes slideUp {
       from { opacity: 0; transform: translateY(30px); }
@@ -1408,29 +1402,6 @@
       background: rgba(100, 116, 139, 0.08);
       color: #64748b;
       border: 1px solid rgba(100, 116, 139, 0.15);
-    }
-
-    /* Modal Scrollbar Styles */
-    .modal-content::-webkit-scrollbar, .pres-modal-content::-webkit-scrollbar {
-      width: 6px;
-    }
-    .modal-content::-webkit-scrollbar-track, .pres-modal-content::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .modal-content::-webkit-scrollbar-thumb, .pres-modal-content::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.15);
-      border-radius: 99px;
-    }
-
-    @media (max-width: 576px) {
-      .modal-content, .pres-modal-content {
-        padding: 1.5rem 1.25rem !important;
-        border-radius: 20px !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0.5rem;
-        max-height: calc(100vh - 2rem) !important;
-      }
     }
   </style>
 </head>
@@ -2051,14 +2022,18 @@
 
   <!-- ADD PRESCRIPTION MODAL -->
   <div class="modal-overlay" id="presModal">
-    <div class="pres-modal-content">
-      <button class="pres-close-btn" onclick="closePrescriptionModal()"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
-      <div class="pres-modal-header">
-        <div class="icon-circle"><i data-lucide="file-plus" style="width:20px;height:20px;"></i></div>
-        <div>
-          <h3>Add Prescription</h3>
-          <p>Upload and store your medical document</p>
+    <div class="pres-modal-content" style="max-width: 480px; width: 92%; padding: 1.8rem 1.6rem;">
+      <div class="pres-modal-header" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #f1f5f9;">
+        <div style="display: flex; align-items: center; gap: 0.7rem; min-width: 0; flex: 1;">
+          <div class="icon-circle" style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #0077b6, #0096c7); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+            <i data-lucide="file-plus" style="width:20px;height:20px;"></i>
+          </div>
+          <div style="min-width: 0; text-align: left;">
+            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a; line-height: 1.2;">Add Prescription</h3>
+            <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #94a3b8; font-weight: 500; line-height: 1.2;">Upload and store your medical document</p>
+          </div>
         </div>
+        <button type="button" class="pres-close-btn" onclick="closePrescriptionModal()" style="position: static; flex-shrink: 0; margin-top: 2px;" title="Close"><i data-lucide="x" style="width:16px;height:16px;stroke-width:2.5px;"></i></button>
       </div>
       <form id="presForm" onsubmit="handlePrescriptionSubmit(event)">
         <div class="pres-form-group">
@@ -2091,17 +2066,18 @@
 
   <!-- ADD/EDIT PATIENT PROFILE MODAL -->
   <div class="modal-overlay" id="patientModal">
-    <div class="modal-content" style="max-width: 420px;">
-      <button class="pres-close-btn" onclick="closePatientModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0.25rem;" title="Close"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
-      
-      <div class="pres-modal-header" style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
-        <div class="icon-circle" style="background: rgba(79, 70, 229, 0.1); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #4f46e5; flex-shrink: 0;">
-          <i data-lucide="user-plus" id="patientModalIcon" style="width: 22px; height: 22px;"></i>
+    <div class="modal-content" style="max-width: 420px; padding: 1.8rem 1.6rem; border-radius: 28px; width: 92%;">
+      <div class="pres-modal-header" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #f1f5f9; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;">
+          <div class="icon-circle" style="background: rgba(79, 70, 229, 0.1); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #4f46e5; flex-shrink: 0;">
+            <i data-lucide="user-plus" id="patientModalIcon" style="width: 22px; height: 22px;"></i>
+          </div>
+          <div style="min-width: 0; text-align: left;">
+            <h3 id="patientModalTitle" style="margin: 0; color: #0f172a; font-size: 1.2rem; font-weight: 800; line-height: 1.2;">Add Patient Profile</h3>
+            <p id="patientModalSubtitle" style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #64748b; font-weight: 500; line-height: 1.2;">Save patient details for quick booking</p>
+          </div>
         </div>
-        <div style="text-align: left;">
-          <h3 id="patientModalTitle" style="margin: 0; color: #0f172a; font-size: 1.2rem; font-weight: 800;">Add Patient Profile</h3>
-          <p id="patientModalSubtitle" style="margin: 0; font-size: 0.8rem; color: #64748b; font-weight: 500;">Save patient details for quick booking</p>
-        </div>
+        <button type="button" class="pres-close-btn" onclick="closePatientModal()" style="position: static; flex-shrink: 0; margin-top: 2px;" title="Close"><i data-lucide="x" style="width: 16px; height: 16px; stroke-width: 2.5px;"></i></button>
       </div>
       
       <form id="patientForm" onsubmit="handlePatientSubmit(event)" style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
@@ -2142,16 +2118,18 @@
 
   <!-- Referral Detail Modal -->
   <div class="modal-overlay" id="referralDetailModal">
-    <div class="modal-content" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; max-width: 480px; border: 1px solid rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px);">
-      <button class="pres-close-btn" onclick="closeReferralDetailModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0.25rem;" title="Close"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
-      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; width: 100%;">
-        <div style="background: rgba(79, 70, 229, 0.1); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #4f46e5; flex-shrink: 0;">
-          <i data-lucide="arrow-up-right" style="width: 22px; height: 22px;"></i>
+    <div class="modal-content" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; max-width: 480px; padding: 1.8rem 1.6rem; border: 1px solid rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); border-radius: 24px; width: 92%;">
+      <div class="pres-modal-header" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #f1f5f9; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;">
+          <div class="icon-circle" style="background: rgba(79, 70, 229, 0.1); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #4f46e5; flex-shrink: 0;">
+            <i data-lucide="arrow-up-right" style="width: 22px; height: 22px;"></i>
+          </div>
+          <div style="min-width: 0; text-align: left;">
+            <h3 style="margin: 0; color: #0f172a; font-size: 1.2rem; font-weight: 800; line-height: 1.2;">Specialist Referral</h3>
+            <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #64748b; font-weight: 500; line-height: 1.2;">Referred for specialist consultation</p>
+          </div>
         </div>
-        <div>
-          <h3 style="margin: 0; color: #0f172a; font-size: 1.2rem; font-weight: 800;">Specialist Referral</h3>
-          <p style="margin: 0; font-size: 0.8rem; color: #64748b; font-weight: 500;">Referred for specialist consultation</p>
-        </div>
+        <button type="button" class="pres-close-btn" onclick="closeReferralDetailModal()" style="position: static; flex-shrink: 0; margin-top: 2px;" title="Close"><i data-lucide="x" style="width: 16px; height: 16px; stroke-width: 2.5px;"></i></button>
       </div>
       
       <div style="display: flex; flex-direction: column; gap: 1.1rem; width: 100%; margin-bottom: 1.8rem;">
