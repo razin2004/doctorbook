@@ -3875,25 +3875,38 @@ def get_doctor_stats():
             
         ist = pytz.timezone('Asia/Kolkata')
         today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        dt_formatted = datetime.now(ist).strftime("%d-%m-%Y")
         
-        # Find sheet URL
+        # Find sheet URL (using robust case-insensitive check matching dashboard)
         doctors = get_all_doctors()
-        sheet_url = next((d.get("SheetURL") for d in doctors if d.get("Name") == doc_session.doctor_name), None)
+        sheet_url = None
+        for d in doctors:
+            if d.get("Name").strip().lower() == doc_session.doctor_name.strip().lower() and d.get("Specialization").strip().lower() == doc_session.specialization.strip().lower():
+                sheet_url = d.get("SheetURL")
+                break
         
         total_booked = 0
         empty_slots = []
         total_tokens = 0
         today_bookings = []
         
+        # Pre-fetch SQLite bookings for today as fallback / verification
+        db_bookings_today = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+            (PatientBooking.date == today_str) | (PatientBooking.date == dt_formatted),
+            PatientBooking.status != 'cancelled'
+        ).order_by(PatientBooking.token.asc()).all()
+
+        loaded_from_sheet = False
         if sheet_url:
-            dt_formatted = datetime.strptime(today_str, "%Y-%m-%d").strftime("%d-%m-%Y")
-            s = client.open_by_url(sheet_url)
             try:
+                s = client.open_by_url(sheet_url)
                 ws = s.worksheet(dt_formatted)
                 records = get_worksheet_records_safe(ws)
                 total_tokens = len(records)
-                sync_doctor_session_status(doc_session)
                 doc_session.total_tokens = total_tokens
+                sync_doctor_session_status(doc_session)
                 db.session.commit()
                 
                 skipped_set = set(doc_session.skipped_tokens.split(",")) if doc_session.skipped_tokens else set()
@@ -3902,7 +3915,7 @@ def get_doctor_stats():
                 bookings_today = PatientBooking.query.filter(
                     db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
                     db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
-                    PatientBooking.date == today_str
+                    (PatientBooking.date == today_str) | (PatientBooking.date == dt_formatted)
                 ).all()
                 
                 referred_tokens = set()
@@ -3946,11 +3959,61 @@ def get_doctor_stats():
                         })
                     else:
                         empty_slots.append(t_val)
-            except gspread.exceptions.WorksheetNotFound:
-                doc_session.total_tokens = 0
-                sync_doctor_session_status(doc_session)
-                db.session.commit()
+                loaded_from_sheet = True
+            except Exception as sheet_err:
+                app.logger.warning(f"Could not load Google Sheet for stats of {doc_session.doctor_name}: {sheet_err}")
+
+        # Fallback to local SQLite DB bookings if sheet load failed or returned no records
+        if not loaded_from_sheet or not today_bookings:
+            today_bookings = []
+            total_booked = 0
+            empty_slots = []
+            total_tokens = len(db_bookings_today)
+            doc_session.total_tokens = total_tokens
+            sync_doctor_session_status(doc_session)
+            db.session.commit()
+            
+            skipped_set = set(doc_session.skipped_tokens.split(",")) if doc_session.skipped_tokens else set()
+            
+            # Fetch referrals to identify referred patients
+            referred_tokens = set()
+            if db_bookings_today:
+                booking_ids = [b.id for b in db_bookings_today]
+                referrals_today = DoctorReferral.query.filter(
+                    DoctorReferral.booking_id.in_(booking_ids)
+                ).all()
+                booking_id_to_token = {b.id: b.token for b in db_bookings_today}
+                for ref in referrals_today:
+                    if ref.booking_id in booking_id_to_token:
+                        referred_tokens.add(booking_id_to_token[ref.booking_id])
+
+            for b in db_bookings_today:
+                t_val = b.token
+                p_name = b.patient_name
+                total_booked += 1
                 
+                t_str = str(t_val)
+                if t_str in skipped_set:
+                    b_status = "skipped"
+                elif doc_session.status == "active" and t_val == doc_session.current_token:
+                    b_status = "calling"
+                elif doc_session.status in ["completed", "waiting_bookings"] or (doc_session.status == "active" and t_val < doc_session.current_token):
+                    if t_val in referred_tokens:
+                        b_status = "referred"
+                    else:
+                        b_status = "consulted"
+                else:
+                    b_status = "waiting"
+                    
+                today_bookings.append({
+                    "token": t_val,
+                    "name": p_name,
+                    "age": b.age or "-",
+                    "gender": "Not Specified",
+                    "phone": "",
+                    "status": b_status
+                })
+
         return jsonify({
             "success": True,
             "total_tokens": total_tokens,
@@ -4744,6 +4807,7 @@ def sync_doctor_session_status(doc_session):
     try:
         ist = pytz.timezone('Asia/Kolkata')
         today_str = datetime.now(ist).strftime("%Y-%m-%d")
+        dt_formatted = datetime.now(ist).strftime("%d-%m-%Y")
         
         # Reset session if new day
         if doc_session.session_date != today_str:
@@ -4754,12 +4818,12 @@ def sync_doctor_session_status(doc_session):
             doc_session.end_time = None
             doc_session.skipped_tokens = ""
             
-            # Count bookings for this doctor/spec on today's date in local DB
+            # Count bookings for this doctor/spec on today's date in local DB (handles both formats)
             try:
                 today_count = PatientBooking.query.filter(
                     db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
                     db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
-                    PatientBooking.date == today_str,
+                    (PatientBooking.date == today_str) | (PatientBooking.date == dt_formatted),
                     PatientBooking.status != 'cancelled'
                 ).count()
                 doc_session.total_tokens = today_count
@@ -4775,12 +4839,12 @@ def sync_doctor_session_status(doc_session):
         # Check if the doctor's working hours have finished
         hours_finished = is_doctor_working_hours_finished(doc_session.doctor_name, doc_session.specialization)
         
-        # Check if there are any remaining booked patients for today
+        # Check if there are any remaining booked patients for today (handles both formats)
         cur_tok = doc_session.current_token if doc_session.current_token > 0 else 1
         remaining_bookings = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
-            PatientBooking.date == today_str,
+            (PatientBooking.date == today_str) | (PatientBooking.date == dt_formatted),
             PatientBooking.status != 'cancelled',
             PatientBooking.token >= cur_tok
         ).all()
@@ -4841,6 +4905,7 @@ def doctor_dashboard():
         
     ist = pytz.timezone('Asia/Kolkata')
     today_str = datetime.now(ist).strftime("%Y-%m-%d")
+    dt_formatted = datetime.now(ist).strftime("%d-%m-%Y")
     
     # Reset session if new day
     if doc_session.session_date != today_str:
@@ -4853,10 +4918,20 @@ def doctor_dashboard():
         doc_session.skipped_tokens = ""
         db.session.commit()
     
+    # Fetch local SQLite bookings for today as fallback / verification source
+    db_bookings_today = PatientBooking.query.filter(
+        db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+        db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+        (PatientBooking.date == today_str) | (PatientBooking.date == dt_formatted),
+        PatientBooking.status != 'cancelled'
+    ).order_by(PatientBooking.token.asc()).all()
+
     # Calculate total bookings and empty slots for today
     total_booked = 0
     empty_slots = []
     today_bookings = []
+    loaded_from_sheet = False
+
     try:
         doctors = get_all_doctors()
         sheet_url = None
@@ -4866,7 +4941,6 @@ def doctor_dashboard():
                 break
                 
         if sheet_url:
-            dt_formatted = datetime.strptime(today_str, "%Y-%m-%d").strftime("%d-%m-%Y")
             s = client.open_by_url(sheet_url)
             try:
                 ws = s.worksheet(dt_formatted)
@@ -4902,12 +4976,46 @@ def doctor_dashboard():
                         })
                     else:
                         empty_slots.append(t_val)
-                
+                loaded_from_sheet = True
             except gspread.exceptions.WorksheetNotFound:
                 doc_session.total_tokens = 0
             db.session.commit()
     except Exception as e:
-        app.logger.error(f"Could not calculate total tokens for {doc_session.doctor_name}: {e}")
+        app.logger.warning(f"Could not calculate total tokens for {doc_session.doctor_name} from Google Sheet: {e}")
+
+    # Fallback to local DB bookings if sheet load failed, worksheet not found, or returned no records
+    if not loaded_from_sheet or not today_bookings:
+        today_bookings = []
+        total_booked = 0
+        empty_slots = []
+        doc_session.total_tokens = len(db_bookings_today)
+        sync_doctor_session_status(doc_session)
+        
+        skipped_set = set(doc_session.skipped_tokens.split(",")) if doc_session.skipped_tokens else set()
+        for b in db_bookings_today:
+            t_val = b.token
+            p_name = b.patient_name
+            total_booked += 1
+            
+            t_str = str(t_val)
+            if t_str in skipped_set:
+                b_status = "skipped"
+            elif doc_session.status == "active" and t_val == doc_session.current_token:
+                b_status = "calling"
+            elif doc_session.status in ["completed", "waiting_bookings"] or (doc_session.status == "active" and t_val < doc_session.current_token):
+                b_status = "consulted"
+            else:
+                b_status = "waiting"
+                
+            today_bookings.append({
+                "token": t_val,
+                "name": p_name,
+                "age": b.age or "-",
+                "gender": "Not Specified",
+                "phone": "",
+                "status": b_status
+            })
+        db.session.commit()
         
     return render_template('doctor_dashboard.html', 
                            doc=doc_session, 
@@ -5034,12 +5142,25 @@ def start_session():
     if not doc_session:
         return jsonify(success=False, msg="Doctor not found")
         
+    ist = pytz.timezone('Asia/Kolkata')
+    today_str = datetime.now(ist).strftime("%Y-%m-%d")
+    dt_formatted = datetime.now(ist).strftime("%d-%m-%Y")
+    
+    # Self-healing fallback: If total_tokens is 0 but SQLite has today's bookings, restore the correct count
+    if doc_session.total_tokens == 0:
+        sqlite_count = PatientBooking.query.filter(
+            db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
+            db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
+            (PatientBooking.date == today_str) | (PatientBooking.date == dt_formatted),
+            PatientBooking.status != 'cancelled'
+        ).count()
+        if sqlite_count > 0:
+            doc_session.total_tokens = sqlite_count
+            db.session.commit()
+
     if doc_session.total_tokens == 0:
         return jsonify(success=False, msg="No bookings for today. Cannot start session.")
         
-    ist = pytz.timezone('Asia/Kolkata')
-    today_str = datetime.now(ist).strftime("%Y-%m-%d")
-    
     doc_session.status = "active"
     doc_session.current_token = 1
     doc_session.session_date = today_str
@@ -5047,11 +5168,11 @@ def start_session():
     doc_session.end_time = None
     doc_session.skipped_tokens = ""
     
-    # Start first patient's consultation time
+    # Start first patient's consultation time (using robust date filter)
     first_booking = PatientBooking.query.filter(
         db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
         db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
-        PatientBooking.date == today_str,
+        (PatientBooking.date == today_str) | (PatientBooking.date == dt_formatted),
         PatientBooking.token == 1,
         PatientBooking.status != 'cancelled'
     ).first()
@@ -5105,11 +5226,16 @@ def next_token():
     if not doc_session or doc_session.status != 'active':
         return jsonify(success=False, msg="Session not active")
         
+    try:
+        dt_formatted = datetime.strptime(doc_session.session_date, "%Y-%m-%d").strftime("%d-%m-%Y")
+    except Exception:
+        dt_formatted = doc_session.session_date
+
     # End current consultation
     prev_booking = PatientBooking.query.filter(
         db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
         db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
-        PatientBooking.date == doc_session.session_date,
+        (PatientBooking.date == doc_session.session_date) | (PatientBooking.date == dt_formatted),
         PatientBooking.token == doc_session.current_token,
         PatientBooking.status != 'cancelled'
     ).first()
@@ -5125,7 +5251,7 @@ def next_token():
         next_booking = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
-            PatientBooking.date == doc_session.session_date,
+            (PatientBooking.date == doc_session.session_date) | (PatientBooking.date == dt_formatted),
             PatientBooking.token == doc_session.current_token,
             PatientBooking.status != 'cancelled'
         ).first()
@@ -5159,11 +5285,16 @@ def skip_token():
     if not doc_session or doc_session.status != 'active':
         return jsonify(success=False, msg="Session not active")
  
+    try:
+        dt_formatted = datetime.strptime(doc_session.session_date, "%Y-%m-%d").strftime("%d-%m-%Y")
+    except Exception:
+        dt_formatted = doc_session.session_date
+
     # Clear start time of skipped token so we ignore it
     skipped_booking = PatientBooking.query.filter(
         db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
         db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
-        PatientBooking.date == doc_session.session_date,
+        (PatientBooking.date == doc_session.session_date) | (PatientBooking.date == dt_formatted),
         PatientBooking.token == doc_session.current_token,
         PatientBooking.status != 'cancelled'
     ).first()
@@ -5186,7 +5317,7 @@ def skip_token():
         next_booking = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
-            PatientBooking.date == doc_session.session_date,
+            (PatientBooking.date == doc_session.session_date) | (PatientBooking.date == dt_formatted),
             PatientBooking.token == doc_session.current_token,
             PatientBooking.status != 'cancelled'
         ).first()
@@ -5232,11 +5363,16 @@ def consult_skipped():
         skipped.remove(target_token)
         doc_session.skipped_tokens = ",".join(skipped)
         
+        try:
+            dt_formatted = datetime.strptime(doc_session.session_date, "%Y-%m-%d").strftime("%d-%m-%Y")
+        except Exception:
+            dt_formatted = doc_session.session_date
+
         # Set start and end time for consulted skipped token
         booking = PatientBooking.query.filter(
             db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doc_session.doctor_name.lower().strip(),
             db.func.lower(db.func.trim(PatientBooking.specialization)) == doc_session.specialization.lower().strip(),
-            PatientBooking.date == doc_session.session_date,
+            (PatientBooking.date == doc_session.session_date) | (PatientBooking.date == dt_formatted),
             PatientBooking.token == int(target_token),
             PatientBooking.status != 'cancelled'
         ).first()

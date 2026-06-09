@@ -31,10 +31,18 @@ def trigger_push(doctor_name, date_str, current_token, status, app, db, PatientB
     def run_push():
         with app.app_context():
             try:
-                # 1. Find all active bookings for this doctor today
-                bookings = PatientBooking.query.filter_by(
-                    doctor_name=doctor_name,
-                    date=date_str
+                # 1. Find all active bookings for this doctor today (handling both YYYY-MM-DD and DD-MM-YYYY formats)
+                try:
+                    if len(date_str.split('-')[0]) == 4:
+                        alt_date_str = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    else:
+                        alt_date_str = datetime.strptime(date_str, "%d-%m-%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    alt_date_str = date_str
+
+                bookings = PatientBooking.query.filter(
+                    db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_name.strip().lower(),
+                    (PatientBooking.date == date_str) | (PatientBooking.date == alt_date_str)
                 ).all()
 
                 for b in bookings:
@@ -131,10 +139,18 @@ def send_leave_notification(doctor_name, date_str, reason, app, db, PatientBooki
     def run_push():
         with app.app_context():
             try:
-                # Find all active bookings for this doctor on this date
+                # Find all active bookings for this doctor on this date (handling both YYYY-MM-DD and DD-MM-YYYY formats)
+                try:
+                    if len(date_str.split('-')[0]) == 4:
+                        alt_date_str = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    else:
+                        alt_date_str = datetime.strptime(date_str, "%d-%m-%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    alt_date_str = date_str
+
                 bookings = PatientBooking.query.filter(
                     db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_name.strip().lower(),
-                    PatientBooking.date == date_str,
+                    (PatientBooking.date == date_str) | (PatientBooking.date == alt_date_str),
                     PatientBooking.status != 'cancelled'
                 ).all()
 
@@ -195,9 +211,17 @@ def send_holiday_notification(date_str, reason, app, db, PatientBooking, PushSub
     def run_push():
         with app.app_context():
             try:
-                # Find all active bookings on this date
+                # Find all active bookings on this date (handling both YYYY-MM-DD and DD-MM-YYYY formats)
+                try:
+                    if len(date_str.split('-')[0]) == 4:
+                        alt_date_str = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    else:
+                        alt_date_str = datetime.strptime(date_str, "%d-%m-%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    alt_date_str = date_str
+
                 bookings = PatientBooking.query.filter(
-                    PatientBooking.date == date_str,
+                    (PatientBooking.date == date_str) | (PatientBooking.date == alt_date_str),
                     PatientBooking.status != 'cancelled'
                 ).all()
 
@@ -255,9 +279,18 @@ def send_leave_removal_notification(doctor_name, date_str, app, db, PatientBooki
     def run_push():
         with app.app_context():
             try:
+                # Find bookings today (handling both YYYY-MM-DD and DD-MM-YYYY formats)
+                try:
+                    if len(date_str.split('-')[0]) == 4:
+                        alt_date_str = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    else:
+                        alt_date_str = datetime.strptime(date_str, "%d-%m-%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    alt_date_str = date_str
+
                 bookings = PatientBooking.query.filter(
                     db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_name.strip().lower(),
-                    PatientBooking.date == date_str,
+                    (PatientBooking.date == date_str) | (PatientBooking.date == alt_date_str),
                     PatientBooking.status != 'cancelled'
                 ).all()
 
@@ -318,8 +351,17 @@ def send_holiday_removal_notification(date_str, app, db, PatientBooking, PushSub
     def run_push():
         with app.app_context():
             try:
+                # Find bookings today (handling both YYYY-MM-DD and DD-MM-YYYY formats)
+                try:
+                    if len(date_str.split('-')[0]) == 4:
+                        alt_date_str = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    else:
+                        alt_date_str = datetime.strptime(date_str, "%d-%m-%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    alt_date_str = date_str
+
                 bookings = PatientBooking.query.filter(
-                    PatientBooking.date == date_str,
+                    (PatientBooking.date == date_str) | (PatientBooking.date == alt_date_str),
                     PatientBooking.status != 'cancelled'
                 ).all()
 
