@@ -1398,7 +1398,7 @@
           <h2 style="margin:0; text-align:left; display:flex; align-items:center; gap:0.5rem;">
             <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i> My Statistics
           </h2>
-          <button onclick="fetchDoctorStats()" class="stats-refresh-btn">
+          <button onclick="fetchDoctorStats(true)" class="stats-refresh-btn">
             <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> <span class="refresh-btn-text">Refresh</span>
           </button>
         </div>
@@ -1675,13 +1675,17 @@
 
     function confirmRoleSwitch() {
       openUniversalModal('warning', 'Switch Account', 'Are you sure you want to switch from Doctor to User?', 'Switch Now', async () => {
-        const res = await fetch('/switch_active_role', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-            showToast(data.msg, 'success');
-            setTimeout(() => window.location.href = data.redirect_url, 1000);
-        } else {
-            showToast(data.msg, 'error');
+        try {
+          const res = await fetch('/switch_active_role', { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+              showToast(data.msg, 'success');
+              setTimeout(() => window.location.href = data.redirect_url, 1000);
+          } else {
+              showToast(data.msg, 'error');
+          }
+        } catch (e) {
+            showToast('Connection error. Please try again.', 'error');
         }
       });
     }
@@ -2258,7 +2262,7 @@
     })();
 
     // ── Doctor Statistics Fetch ──
-    async function fetchDoctorStats() {
+    async function fetchDoctorStats(isManual = false) {
       const loading = document.getElementById('statsLoadingState');
       const error   = document.getElementById('statsErrorState');
       const content = document.getElementById('statsContent');
@@ -2299,10 +2303,16 @@
         loading.style.display = 'none';
         content.style.display = 'block';
         lucide.createIcons();
+        if (isManual) {
+          showToast('Statistics refreshed successfully.', 'success');
+        }
       } catch (e) {
         loading.style.display = 'none';
         error.style.display   = 'block';
         lucide.createIcons();
+        if (isManual) {
+          showToast(e.message || 'Failed to refresh statistics.', 'error');
+        }
       }
     }
   </script>
