@@ -1363,6 +1363,7 @@ def patient_dashboard():
     
     for b in bookings:
         b.is_skipped = False
+        b.is_missed = False
         b_date = b.date or ""
         # Normalize b_date to YYYY-MM-DD format for reliable comparison
         b_date_norm = b_date
@@ -1402,14 +1403,18 @@ def patient_dashboard():
                     if "-" in tr: b.sched_start = tr.replace(" ", "").split("-")[0].strip()
                 b.is_start_time_passed = (current_time_str >= b.sched_start)
 
-                # Determine if skipped
+                # Determine if skipped (by doctor) or missed (doctor silently passed without skip)
                 skipped_tokens = doc_session.skipped_tokens.strip().split(',') if doc_session.skipped_tokens else []
+                b.is_missed = False
                 if str(b.token) in skipped_tokens:
                     is_skipped = True
                     b.is_skipped = True
-                
-                if is_skipped:
-                    if doc_session.status == 'completed':
+                elif doc_session.current_token > b.token and b.status != 'cancelled':
+                    # Token was silently bypassed — treat as missed/unconsulted
+                    b.is_missed = True
+
+                if is_skipped or b.is_missed:
+                    if doc_session.status == 'completed' or doc_session.current_token > b.token:
                         is_past = True
                 else:
                     if doc_session.status == 'completed':
@@ -2913,6 +2918,25 @@ def book_doctor():
         if on_leave:
             return jsonify({"success": False, "msg": msg}), 400
 
+        # ─── Completed-Session Block: no new bookings when today's session is done ───
+        if days_diff == 0:
+            try:
+                ist_now = pytz.timezone('Asia/Kolkata')
+                today_chk = datetime.now(ist_now).strftime("%Y-%m-%d")
+                sess_chk = DoctorSession.query.filter(
+                    db.func.lower(db.func.trim(DoctorSession.doctor_name)) == doctor_info["Name"].lower().strip(),
+                    db.func.lower(db.func.trim(DoctorSession.specialization)) == doctor_info["Specialization"].lower().strip(),
+                    DoctorSession.session_date == today_chk,
+                    DoctorSession.status == 'completed'
+                ).first()
+                if sess_chk:
+                    return jsonify({
+                        "success": False,
+                        "msg": f"Today's consultation session for {doctor_info['Name']} ({doctor_info['Specialization']}) has already been completed. New bookings for today are not accepted."
+                    }), 400
+            except Exception:
+                pass
+
         day_times = doctor_info.get("DayTimes", {})
         time_for_booking = day_times.get(weekday, "")
 
@@ -3138,6 +3162,25 @@ def admin_book_patient():
         on_leave, leave_msg = is_doctor_on_leave(doctor_info["Name"], doctor_info["Specialization"], date)
         if on_leave:
             return jsonify({"success": False, "msg": leave_msg}), 400
+
+        # ─── Completed-Session Block (Admin) ───
+        if days_diff == 0:
+            try:
+                ist_now2 = pytz.timezone('Asia/Kolkata')
+                today_chk2 = datetime.now(ist_now2).strftime("%Y-%m-%d")
+                sess_chk2 = DoctorSession.query.filter(
+                    db.func.lower(db.func.trim(DoctorSession.doctor_name)) == doctor_info["Name"].lower().strip(),
+                    db.func.lower(db.func.trim(DoctorSession.specialization)) == doctor_info["Specialization"].lower().strip(),
+                    DoctorSession.session_date == today_chk2,
+                    DoctorSession.status == 'completed'
+                ).first()
+                if sess_chk2:
+                    return jsonify({
+                        "success": False,
+                        "msg": f"Today's session for {doctor_info['Name']} has already been completed. No more bookings for today."
+                    }), 400
+            except Exception:
+                pass
 
         # ─── Refined 25-Booking Limit Check (Admin Warning/Override) ───
         spreadsheet = client.open_by_url(sheet_url)
@@ -5025,11 +5068,27 @@ def doctor_dashboard():
             })
         db.session.commit()
         
-    return render_template('doctor_dashboard.html', 
-                           doc=doc_session, 
-                           total_booked=total_booked, 
+    # Compute today's scheduled start time for the push notification reminder
+    sched_start_today = ""
+    try:
+        all_docs_for_start = get_all_doctors()
+        weekday_today = datetime.now(ist).strftime("%A")
+        for d in all_docs_for_start:
+            if (d.get("Name", "").strip().lower() == doc_session.doctor_name.strip().lower() and
+                    d.get("Specialization", "").strip().lower() == doc_session.specialization.strip().lower()):
+                tr = d.get("DayTimes", {}).get(weekday_today, "")
+                if "-" in tr:
+                    sched_start_today = tr.replace(" ", "").split("-")[0].strip()
+                break
+    except Exception:
+        pass
+
+    return render_template('doctor_dashboard.html',
+                           doc=doc_session,
+                           total_booked=total_booked,
                            empty_slots=empty_slots,
                            today_bookings=today_bookings,
+                           sched_start=sched_start_today,
                            can_switch=True)
 
 @app.route('/doctor/my_stats')

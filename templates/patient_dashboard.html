@@ -1906,6 +1906,9 @@
                       {% if b.is_skipped and b.status != 'cancelled' %}
                       <span style="background:#fef3c7; color:#d97706; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="help-circle" style="width:12px;height:12px;"></i> Skipped</span>
                       {% endif %}
+                      {% if b.is_missed and not b.is_skipped and b.status != 'cancelled' %}
+                      <span style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; padding:0.15rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem; display:inline-flex; align-items:center; gap:3px;"><i data-lucide="clock-x" style="width:12px;height:12px;"></i> Missed / Not Consulted</span>
+                      {% endif %}
                       {% if b.referral %}
                       <span class="referral-status-tag ref-detail-trigger {% if b.referral.status == 'booked' %}status-booked{% elif b.referral.status == 'dismissed' %}status-dismissed{% else %}status-pending{% endif %}"
                             data-patient="{{ b.patient_name|e }}"

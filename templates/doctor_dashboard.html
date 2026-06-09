@@ -2136,6 +2136,66 @@
     // Live poller interval (5s)
     setInterval(fetchStatsAndSync, 5000);
 
+    // ── Doctor Start-Time Push Notification ──
+    (function initDoctorStartNotif() {
+      const schedStart = "{{ sched_start }}";   // e.g. "09:00" from Jinja
+      if (!schedStart || currentStatus !== 'idle') return;
+
+      const notifKey = `doc_start_notif_{{ doc.session_date }}`;
+
+      function sendDoctorStartNotif() {
+        if (sessionStorage.getItem(notifKey)) return;   // already fired today
+
+        const body = `Your consultation was scheduled to start at ${schedStart}. Please start the session now.`;
+
+        // Try Service Worker push first (works on Android PWA / installed)
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: '⏰ Time to Start Consultation',
+            body,
+            tag: 'doctor-start-reminder',
+            vibrate: [300, 100, 300],
+            renotify: false,
+            url: '/doctor_dashboard'
+          });
+          sessionStorage.setItem(notifKey, '1');
+          return;
+        }
+
+        // Fallback: native Notification API
+        if (typeof Notification !== 'undefined') {
+          if (Notification.permission === 'granted') {
+            new Notification('⏰ Time to Start Consultation', { body, icon: '/static/android-chrome-192x192.png', tag: 'doctor-start-reminder' });
+            sessionStorage.setItem(notifKey, '1');
+          } else if (Notification.permission === 'default') {
+            Notification.requestPermission().then(perm => {
+              if (perm === 'granted') {
+                new Notification('⏰ Time to Start Consultation', { body, icon: '/static/android-chrome-192x192.png', tag: 'doctor-start-reminder' });
+                sessionStorage.setItem(notifKey, '1');
+              }
+            });
+          }
+        }
+      }
+
+      function checkAndNotify() {
+        // Re-read current status — if already started, stop checking
+        if (currentStatus !== 'idle') return;
+        if (!schedStart) return;
+
+        const now = new Date();
+        const hhmm = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        if (hhmm >= schedStart) {
+          sendDoctorStartNotif();
+        }
+      }
+
+      // Check immediately + every 30 s
+      checkAndNotify();
+      setInterval(checkAndNotify, 30000);
+    })();
+
     // ── Skip Patient Action ──
     window.triggerSkipAction = async function() {
         try {
