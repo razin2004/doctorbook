@@ -115,6 +115,7 @@ class DoctorSession(db.Model):
     start_time = db.Column(db.String(20), nullable=True)
     end_time = db.Column(db.String(20), nullable=True)
     skipped_tokens = db.Column(db.Text, default="") # Stored as comma-separated string
+    broadcast_message = db.Column(db.String(500), nullable=True)
 
 class OTP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -236,6 +237,11 @@ with app.app_context():
             db.session.execute(text("ALTER TABLE doctor_referral ADD COLUMN patient_name VARCHAR(100)"))
         if 'booking_id' not in columns_ref:
             db.session.execute(text("ALTER TABLE doctor_referral ADD COLUMN booking_id INTEGER"))
+
+        # Safely alter doctor_session table
+        columns_session = [c['name'] for c in inspector.get_columns('doctor_session')]
+        if 'broadcast_message' not in columns_session:
+            db.session.execute(text("ALTER TABLE doctor_session ADD COLUMN broadcast_message VARCHAR(500)"))
             
         db.session.commit()
         
@@ -4868,6 +4874,7 @@ def sync_doctor_session_status(doc_session):
             doc_session.start_time = None
             doc_session.end_time = None
             doc_session.skipped_tokens = ""
+            doc_session.broadcast_message = None
             
             # Count bookings for this doctor/spec on today's date in local DB (handles both formats)
             try:
@@ -5452,6 +5459,31 @@ def consult_skipped():
     
     return jsonify(success=False, msg="Token not found in skipped list")
 
+@app.route('/api/save_doctor_broadcast', methods=['POST'])
+def save_doctor_broadcast():
+    if not session.get('admin_logged_in'):
+        return jsonify(success=False, msg="Unauthorized. Admin access required.")
+    
+    data = request.json or {}
+    doctor_name = data.get('doctor_name', '').strip()
+    specialization = data.get('specialization', '').strip()
+    message = data.get('message', '').strip()
+    
+    if not doctor_name or not specialization:
+        return jsonify(success=False, msg="Doctor name and specialization are required.")
+    
+    doc_session = DoctorSession.query.filter(
+        db.func.lower(db.func.trim(DoctorSession.doctor_name)) == doctor_name.lower().strip(),
+        db.func.lower(db.func.trim(DoctorSession.specialization)) == specialization.lower().strip()
+    ).first()
+    
+    if not doc_session:
+        return jsonify(success=False, msg="Doctor session not found.")
+    
+    doc_session.broadcast_message = message
+    db.session.commit()
+    return jsonify(success=True, msg="Broadcast alert updated.")
+
 @app.route('/live-tracking')
 def live_tracking():
     if not session.get('user_id') and not session.get('admin_logged_in'):
@@ -5514,6 +5546,7 @@ def live_tokens():
             current_token = 0
             total_tokens = 0
             skipped_tokens = ""
+            broadcast_message = ""
             
             if doc_session and doc_session.session_date == today_str:
                 status_raw = doc_session.status
@@ -5524,6 +5557,7 @@ def live_tokens():
                 elif doc_session.status == 'completed': status = "Completed"
                 current_token = doc_session.current_token
                 total_tokens = doc_session.total_tokens
+                broadcast_message = doc_session.broadcast_message or ""
                     
             day_times_map = (d.get("DayTimes") or {})
             time_range_str = day_times_map.get(weekday, "Not Set")
@@ -5551,7 +5585,8 @@ def live_tokens():
                 "session_start": session_start,
                 "session_end": session_end,
                 "sched_start": sched_start,
-                "skipped_tokens": skipped_tokens
+                "skipped_tokens": skipped_tokens,
+                "broadcast_message": broadcast_message
             })
     except: pass
         

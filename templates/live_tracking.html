@@ -624,37 +624,6 @@
 
     /* ── RESPONSIVENESS ── */
     @media (max-width: 900px) {
-      .ds-grid-metrics {
-        grid-template-columns: 1fr !important;
-      }
-    }
-
-    /* ── Ticker & Megaphone Animation ── */
-    #broadcastAlertsBanner {
-      display: none;
-    }
-    .ticker-text {
-      display: inline-block;
-      white-space: nowrap;
-      font-size: 0.92rem;
-      font-weight: 700;
-      color: #b45309;
-      animation: marquee 25s linear infinite;
-      padding-left: 100%;
-    }
-    .ticker-text:hover {
-      animation-play-state: paused;
-    }
-    @keyframes marquee {
-      0% { transform: translate3d(0, 0, 0); }
-      100% { transform: translate3d(-100%, 0, 0); }
-    }
-    @keyframes pulseSoft {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.08); opacity: 0.85; }
-    }
-
-    @media (max-width: 900px) {
       .tracker-grid {
         grid-template-columns: repeat(2, 1fr);
       }
@@ -812,6 +781,10 @@
         font-size: 1.9rem;
       }
     }
+    @keyframes fadeInSoft {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body class="bg-image">
@@ -878,21 +851,6 @@
     <div class="page-hero">
       <h1><span class="blinking-dot-small" style="width:12px;height:12px;"></span> Live Token Tracker</h1>
       <p>Real-time doctor queues and consultation schedules.</p>
-    </div>
-
-    <!-- BROADCAST ALERTS TICKER -->
-    <div id="broadcastAlertsBanner" style="display: none; width: 100%; margin: 0 auto; padding: 0.8rem 1.2rem; border-radius: 20px; border: 1.5px solid rgba(245, 158, 11, 0.3); background: linear-gradient(135deg, rgba(254, 243, 199, 0.7), rgba(254, 243, 199, 0.45)); backdrop-filter: blur(10px); align-items: center; gap: 0.8rem; box-shadow: 0 8px 30px rgba(245, 158, 11, 0.05); overflow: hidden;">
-      <div style="background: rgba(245, 158, 11, 0.15); color: #d97706; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; animation: pulseSoft 2s infinite;">
-        <i data-lucide="megaphone" style="width: 18px; height: 18px;"></i>
-      </div>
-      <div style="flex: 1; min-width: 0; overflow: hidden; display: flex; align-items: center;">
-        <div id="broadcastTickerContent" class="ticker-text">
-          <!-- Active announcements will scroll here -->
-        </div>
-      </div>
-      <div style="background: #d97706; color: #fff; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 0.25rem 0.55rem; border-radius: 6px; letter-spacing: 0.5px; flex-shrink: 0;">
-        Live Alert
-      </div>
     </div>
 
     <!-- QUICK STATS GRID -->
@@ -986,6 +944,7 @@
 
   <!-- SCRIPT -->
   <script>
+    const isAdminLoggedIn = {{ 'true' if session.get('admin_logged_in') else 'false' }};
     lucide.createIcons();
     
     let allTokensData = [];
@@ -1144,6 +1103,25 @@
             // Layout classes
             const sessionClass = (doc.status_raw === 'active') ? 'active-session' : (doc.status_raw === 'completed' ? 'completed-session' : 'pending-session');
             
+            const broadcastBannerHtml = doc.broadcast_message 
+                ? `<div class="broadcast-alert-banner" style="background: #fffbeb; border: 1.5px solid #fef3c7; border-radius: 14px; padding: 0.65rem 0.8rem; display: flex; align-items: flex-start; gap: 0.45rem; font-size: 0.8rem; color: #b45309; font-weight: 600; line-height: 1.4; animation: fadeInSoft 0.3s ease;">
+                     <i data-lucide="megaphone" style="width: 14px; height: 14px; flex-shrink: 0; color: #d97706; margin-top: 2px;"></i>
+                     <span style="flex: 1; word-break: break-word; text-align: left;">${doc.broadcast_message}</span>
+                   </div>`
+                : '';
+                
+            const adminBroadcastConsoleHtml = isAdminLoggedIn
+                ? `<div class="admin-broadcast-console" style="border-top: 1px dashed rgba(0, 0, 0, 0.08); padding-top: 0.8rem; margin-top: 0.2rem; display: flex; flex-direction: column; gap: 0.4rem; text-align: left; width: 100%;">
+                     <label style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: var(--primary-dark); display: flex; align-items: center; gap: 0.3rem;"><i data-lucide="shield-alert" style="width:12px;height:12px;"></i> Admin Alert Broadcast</label>
+                     <div style="display: flex; gap: 0.4rem; width: 100%;">
+                       <input type="text" placeholder="e.g. Doctor is on a short break" class="broadcast-input-field" data-doc-name="${doc.doctor_name}" data-doc-spec="${doc.specialization}" value="${doc.broadcast_message || ''}" style="flex: 1; padding: 0.4rem 0.6rem; font-size: 0.76rem; border: 1.5px solid var(--slate-200); border-radius: 10px; outline: none; background: #fff; color: var(--slate-900); font-weight: 500; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--slate-200)'">
+                       <button onclick="saveDoctorBroadcast('${doc.doctor_name}', '${doc.specialization}', this)" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.76rem; border-radius: 10px; margin: 0; min-width: auto; height: auto; display: flex; align-items: center; justify-content: center; gap: 2px;">
+                         <i data-lucide="send" style="width: 12px; height: 12px;"></i> Save
+                       </button>
+                     </div>
+                   </div>`
+                : '';
+
             const card = document.createElement('div');
             card.className = `tracker-card ${sessionClass}`;
             card.innerHTML = `
@@ -1159,6 +1137,8 @@
                         ${badgeParams.text}
                     </span>
                 </div>
+                
+                ${broadcastBannerHtml}
                 
                 <div class="queue-box">
                     <span class="queue-label">
@@ -1176,11 +1156,47 @@
                 </div>
                 
                 ${renderUserTickets(doc)}
+                
+                ${adminBroadcastConsoleHtml}
             `;
             grid.appendChild(card);
         });
         
         lucide.createIcons();
+    }
+    
+    window.saveDoctorBroadcast = async function(docName, docSpec, btn) {
+        const container = btn.closest('.admin-broadcast-console');
+        const input = container.querySelector('.broadcast-input-field');
+        if (!input) return;
+        
+        const message = input.value.trim();
+        const originalContent = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<i data-lucide="loader" class="spin-icon" style="width:12px;height:12px;"></i>`;
+        lucide.createIcons(btn);
+        
+        try {
+            const res = await fetch('/api/save_doctor_broadcast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ doctor_name: docName, specialization: docSpec, message: message })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                showToast('Broadcast alert updated!', 'success');
+                fetchLiveTokens();
+            } else {
+                showToast(data.msg || 'Failed to update broadcast.', 'error');
+            }
+        } catch (e) {
+            showToast('Network error, please try again.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+            lucide.createIcons(btn);
+        }
     }
 
     function renderUserTickets(doc) {
@@ -1259,20 +1275,6 @@
                 allTokensData = data.data;
                 userTokens = data.user_tokens || {};
                 
-                // ── Update Broadcast Alerts Ticker ──
-                const alertsBanner = document.getElementById('broadcastAlertsBanner');
-                const tickerContent = document.getElementById('broadcastTickerContent');
-                if (alertsBanner && tickerContent) {
-                    if (data.admin_messages && data.admin_messages.length > 0) {
-                        const combinedMsgs = data.admin_messages.join('   ·   ');
-                        tickerContent.textContent = combinedMsgs;
-                        alertsBanner.style.display = 'flex';
-                    } else {
-                        alertsBanner.style.display = 'none';
-                        tickerContent.textContent = '';
-                    }
-                }
-
                 updateStatsGrid(allTokensData);
                 
                 if (isInitialLoad) {
