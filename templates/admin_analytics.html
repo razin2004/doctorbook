@@ -756,6 +756,79 @@
       }
     }
 
+    /* ── Premium Stats Grouping ── */
+    .stats-groups-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .stats-group-wrapper {
+      background: rgba(255, 255, 255, 0.45);
+      border-radius: 24px;
+      padding: 1.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.02);
+    }
+    .stats-group-title {
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #0077b6;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1.5px solid rgba(0, 119, 182, 0.08);
+      padding-bottom: 0.5rem;
+    }
+    .stats-group-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    .stats-group-grid .glass-card-premium {
+      background: rgba(255, 255, 255, 0.6) !important;
+      border: 1px solid rgba(255, 255, 255, 0.8) !important;
+      padding: 1.2rem !important;
+      border-radius: 16px !important;
+      transform: none !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+    }
+    .stats-group-grid .glass-card-premium:hover {
+      background: rgba(255, 255, 255, 0.85) !important;
+      border-color: rgba(0, 119, 182, 0.15) !important;
+      box-shadow: 0 8px 20px rgba(0,119,182,0.06) !important;
+      transform: translateY(-2px) !important;
+    }
+    @media (max-width: 991px) {
+      .stats-groups-container {
+        grid-template-columns: 1fr !important;
+        gap: 1.25rem !important;
+      }
+    }
+    
+    /* ── Table Sorting styles ── */
+    table.premium-table th {
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s, color 0.2s;
+    }
+    table.premium-table th:hover {
+      background-color: rgba(0, 119, 182, 0.05);
+      color: #0077b6;
+    }
+    table.premium-table th .sort-icon {
+      margin-left: 4px;
+      font-size: 0.75rem;
+      vertical-align: middle;
+      color: #0077b6;
+    }
+
   </style>
 </head>
 
@@ -961,59 +1034,74 @@
       </div>
 
       <!-- Summary Cards -->
-      <div class="stats-grid">
-        <div class="glass-card-premium">
-          <div class="card-meta">
-            <span class="card-label">Total Bookings</span>
-            <div class="card-icon icon-bookings"><i data-lucide="calendar"></i></div>
+      <div class="stats-groups-container">
+        <!-- Overview & Volume Group -->
+        <div class="stats-group-wrapper">
+          <h4 class="stats-group-title"><i data-lucide="database" style="width:15px;height:15px;"></i> Clinic Volume</h4>
+          <div class="stats-group-grid">
+            <div class="glass-card-premium">
+              <div class="card-meta">
+                <span class="card-label">Total Bookings</span>
+                <div class="card-icon icon-bookings"><i data-lucide="calendar"></i></div>
+              </div>
+              <div class="card-value">{{ total_bookings_all_time }}</div>
+              <div class="card-subtext">All bookings under selection</div>
+            </div>
+            <div class="glass-card-premium">
+              <div class="card-meta">
+                <span class="card-label">Total Patients</span>
+                <div class="card-icon icon-patients"><i data-lucide="users"></i></div>
+              </div>
+              <div class="card-value">{{ total_patients }}</div>
+              <div class="card-subtext">Unique patient users</div>
+            </div>
           </div>
-          <div class="card-value">{{ total_bookings_all_time }}</div>
-          <div class="card-subtext">All bookings under selection</div>
         </div>
 
-        <div class="glass-card-premium">
-          <div class="card-meta">
-            <span class="card-label">Today's Bookings</span>
-            <div class="card-icon icon-bookings"><i data-lucide="clock"></i></div>
+        <!-- Booking Velocity Group -->
+        <div class="stats-group-wrapper">
+          <h4 class="stats-group-title"><i data-lucide="activity" style="width:15px;height:15px;"></i> Booking Velocity</h4>
+          <div class="stats-group-grid">
+            <div class="glass-card-premium">
+              <div class="card-meta">
+                <span class="card-label">Today's Bookings</span>
+                <div class="card-icon icon-bookings"><i data-lucide="clock"></i></div>
+              </div>
+              <div class="card-value">{{ bookings_today }}</div>
+              <div class="card-subtext">New registrations today</div>
+            </div>
+            <div class="glass-card-premium">
+              <div class="card-meta">
+                <span class="card-label">Weekly Bookings</span>
+                <div class="card-icon icon-bookings"><i data-lucide="calendar-days"></i></div>
+              </div>
+              <div class="card-value">{{ bookings_week }}</div>
+              <div class="card-subtext">This week (since Monday)</div>
+            </div>
           </div>
-          <div class="card-value">{{ bookings_today }}</div>
-          <div class="card-subtext">New registrations today</div>
         </div>
 
-        <div class="glass-card-premium">
-          <div class="card-meta">
-            <span class="card-label">Weekly Bookings</span>
-            <div class="card-icon icon-bookings"><i data-lucide="calendar-days"></i></div>
+        <!-- Outcomes & Performance Group -->
+        <div class="stats-group-wrapper">
+          <h4 class="stats-group-title"><i data-lucide="bar-chart-2" style="width:15px;height:15px;"></i> Outcomes &amp; Performance</h4>
+          <div class="stats-group-grid">
+            <div class="glass-card-premium">
+              <div class="card-meta">
+                <span class="card-label">Completed Consults</span>
+                <div class="card-icon icon-completed"><i data-lucide="check-circle"></i></div>
+              </div>
+              <div class="card-value">{{ total_completed }}</div>
+              <div class="card-subtext">Avg duration: <strong>{{ avg_consultation_duration }} mins</strong></div>
+            </div>
+            <div class="glass-card-premium">
+              <div class="card-meta">
+                <span class="card-label">Cancellations</span>
+                <div class="card-icon icon-cancelled"><i data-lucide="ban"></i></div>
+              </div>
+              <div class="card-value">{{ total_cancelled }}</div>
+              <div class="card-subtext">Cancelled bookings</div>
+            </div>
           </div>
-          <div class="card-value">{{ bookings_week }}</div>
-          <div class="card-subtext">This week (since Monday)</div>
-        </div>
-
-        <div class="glass-card-premium">
-          <div class="card-meta">
-            <span class="card-label">Completed Consults</span>
-            <div class="card-icon icon-completed"><i data-lucide="check-circle"></i></div>
-          </div>
-          <div class="card-value">{{ total_completed }}</div>
-          <div class="card-subtext">Avg duration: <strong>{{ avg_consultation_duration }} mins</strong></div>
-        </div>
-
-        <div class="glass-card-premium">
-          <div class="card-meta">
-            <span class="card-label">Cancellations</span>
-            <div class="card-icon icon-cancelled"><i data-lucide="ban"></i></div>
-          </div>
-          <div class="card-value">{{ total_cancelled }}</div>
-          <div class="card-subtext">Cancelled bookings</div>
-        </div>
-
-        <div class="glass-card-premium">
-          <div class="card-meta">
-            <span class="card-label">Total Patients</span>
-            <div class="card-icon icon-patients"><i data-lucide="users"></i></div>
-          </div>
-          <div class="card-value">{{ total_patients }}</div>
-          <div class="card-subtext">Unique patient users</div>
         </div>
       </div>
 
@@ -1074,21 +1162,22 @@
 
       <!-- Doctor Statistics Table -->
       <div class="glass-card-premium table-card">
-        <div class="section-header" style="margin-bottom: 1.5rem;">
+        <div class="section-header" style="margin-bottom: 0.5rem;">
           <i data-lucide="users-round" style="color:#0077b6;"></i>
           <span>Doctor Consultation statistics</span>
         </div>
-        <table class="premium-table">
+        <p style="margin: 0 0 1.25rem 0; font-size: 0.8rem; color: #64748b; font-weight: 500;">Tip: Click on any column header below to sort the stats dynamically.</p>
+        <table class="premium-table" id="doctorStatsTable">
           <thead>
             <tr>
-              <th>Doctor Name</th>
-              <th>Consults (Today)</th>
-              <th>Consults (Week)</th>
-              <th>Consults (Month)</th>
-              <th>Consults (Year)</th>
-              <th>Avg Consults/Day</th>
-              <th>Hours (Week)</th>
-              <th>Hours (Month)</th>
+              <th onclick="sortTable(0)">Doctor Name <span class="sort-icon"></span></th>
+              <th onclick="sortTable(1)">Consults (Today) <span class="sort-icon"></span></th>
+              <th onclick="sortTable(2)">Consults (Week) <span class="sort-icon"></span></th>
+              <th onclick="sortTable(3)">Consults (Month) <span class="sort-icon"></span></th>
+              <th onclick="sortTable(4)">Consults (Year) <span class="sort-icon"></span></th>
+              <th onclick="sortTable(5)">Avg Consults/Day <span class="sort-icon"></span></th>
+              <th onclick="sortTable(6)">Hours (Week) <span class="sort-icon"></span></th>
+              <th onclick="sortTable(7)">Hours (Month) <span class="sort-icon"></span></th>
             </tr>
           </thead>
           <tbody>
@@ -1230,9 +1319,54 @@
       }, true);
     }
 
-  
-
-
+    // ── Table Sorting Logic ──
+    let currentSort = { col: -1, asc: true };
+    function sortTable(colIndex) {
+      const table = document.getElementById('doctorStatsTable');
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length <= 1)) return; // Skip if empty stats
+      
+      const isNumeric = colIndex > 0;
+      
+      if (currentSort.col === colIndex) {
+        currentSort.asc = !currentSort.asc;
+      } else {
+        currentSort.col = colIndex;
+        currentSort.asc = true;
+      }
+      
+      rows.sort((a, b) => {
+        let valA = a.cells[colIndex].textContent.trim();
+        let valB = b.cells[colIndex].textContent.trim();
+        
+        if (isNumeric) {
+          // Normalize values like "12 hrs", "—"
+          valA = valA === '—' ? 0 : parseFloat(valA.replace(/[^0-9.]/g, '')) || 0;
+          valB = valB === '—' ? 0 : parseFloat(valB.replace(/[^0-9.]/g, '')) || 0;
+          return currentSort.asc ? valA - valB : valB - valA;
+        } else {
+          return currentSort.asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+      });
+      
+      // Re-append rows in sorted order
+      tbody.innerHTML = '';
+      rows.forEach(r => tbody.appendChild(r));
+      
+      // Update arrows
+      const headers = table.querySelectorAll('thead th');
+      headers.forEach((h, idx) => {
+        const icon = h.querySelector('.sort-icon');
+        if (!icon) return;
+        if (idx === colIndex) {
+          icon.innerHTML = currentSort.asc ? ' &#9650;' : ' &#9660;';
+        } else {
+          icon.innerHTML = '';
+        }
+      });
+    }
 </script>
 
 

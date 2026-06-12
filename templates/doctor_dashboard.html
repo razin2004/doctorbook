@@ -1454,8 +1454,19 @@
 
           <!-- SECTION 1: Booking Summary -->
           <div style="margin-bottom:1.8rem;">
-            <div style="font-size:0.72rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Booking Summary (Excl. Cancelled)</div>
-            <div class="doc-stats-grid ds-grid-booking">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:1rem; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="font-size:0.72rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Booking Summary (Excl. Cancelled)</div>
+              <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; color: #64748b;">
+                <span>Sort by:</span>
+                <select id="bookingStatsSort" onchange="sortDoctorStats('booking')" style="padding: 0.25rem 0.6rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.75rem; background: #fff; cursor: pointer; color: #475569; font-weight: 600; outline: none;">
+                  <option value="default">Default Order</option>
+                  <option value="value-desc">Highest Count First</option>
+                  <option value="value-asc">Lowest Count First</option>
+                  <option value="name-asc">Alphabetical</option>
+                </select>
+              </div>
+            </div>
+            <div class="doc-stats-grid ds-grid-booking" id="bookingStatsGrid">
 
               <div class="doc-stat-card" style="--accent-c:#0077b6;">
                 <div class="doc-stat-icon" style="background:rgba(0,119,182,0.1);color:#0077b6;"><i data-lucide="calendar-check" style="width:18px;height:18px;"></i></div>
@@ -1507,8 +1518,19 @@
 
           <!-- SECTION 2: Consultation & Hours -->
           <div style="margin-bottom:1.8rem;">
-            <div style="font-size:0.72rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Consultation Metrics</div>
-            <div class="doc-stats-grid ds-grid-metrics">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:1rem; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="font-size:0.72rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Consultation Metrics</div>
+              <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; color: #64748b;">
+                <span>Sort by:</span>
+                <select id="metricsStatsSort" onchange="sortDoctorStats('metrics')" style="padding: 0.25rem 0.6rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.75rem; background: #fff; cursor: pointer; color: #475569; font-weight: 600; outline: none;">
+                  <option value="default">Default Order</option>
+                  <option value="value-desc">Highest Value First</option>
+                  <option value="value-asc">Lowest Value First</option>
+                  <option value="name-asc">Alphabetical</option>
+                </select>
+              </div>
+            </div>
+            <div class="doc-stats-grid ds-grid-metrics" id="metricsStatsGrid">
 
               <div class="doc-stat-card" style="--accent-c:#10b981;">
                 <div class="doc-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i data-lucide="stethoscope" style="width:18px;height:18px;"></i></div>
@@ -2395,6 +2417,23 @@
 
         loading.style.display = 'none';
         content.style.display = 'block';
+
+        // Reset stored original card order caches
+        const bookingGrid = document.getElementById('bookingStatsGrid');
+        if (bookingGrid) {
+          bookingGrid.dataset.originalOrder = "";
+          bookingGrid.originalCards = null;
+        }
+        const metricsGrid = document.getElementById('metricsStatsGrid');
+        if (metricsGrid) {
+          metricsGrid.dataset.originalOrder = "";
+          metricsGrid.originalCards = null;
+        }
+
+        // Apply current sorting choice
+        sortDoctorStats('booking');
+        sortDoctorStats('metrics');
+
         lucide.createIcons();
         if (isManual) {
           showToast('Statistics refreshed successfully.', 'success');
@@ -2407,6 +2446,54 @@
           showToast(e.message || 'Failed to refresh statistics.', 'error');
         }
       }
+    }
+
+    // ── Doctor Stats Card Sorting Logic ──
+    function sortDoctorStats(type) {
+      const gridId = type === 'booking' ? 'bookingStatsGrid' : 'metricsStatsGrid';
+      const selectId = type === 'booking' ? 'bookingStatsSort' : 'metricsStatsSort';
+      
+      const grid = document.getElementById(gridId);
+      const select = document.getElementById(selectId);
+      if (!grid || !select) return;
+      
+      const cards = Array.from(grid.querySelectorAll('.doc-stat-card'));
+      const sortVal = select.value;
+      
+      if (!grid.dataset.originalOrder) {
+        grid.originalCards = [...cards];
+        grid.dataset.originalOrder = "true";
+      }
+      
+      if (sortVal === 'default') {
+        grid.innerHTML = '';
+        grid.originalCards.forEach(c => grid.appendChild(c));
+        return;
+      }
+      
+      cards.sort((a, b) => {
+        const labelA = a.querySelector('.doc-stat-label').textContent.trim();
+        const labelB = b.querySelector('.doc-stat-label').textContent.trim();
+        
+        let textA = a.querySelector('.doc-stat-value').textContent.trim();
+        let textB = b.querySelector('.doc-stat-value').textContent.trim();
+        
+        if (sortVal === 'name-asc') {
+          return labelA.localeCompare(labelB);
+        }
+        
+        let valA = textA === '—' ? 0 : parseFloat(textA.replace(/[^0-9.]/g, '')) || 0;
+        let valB = textB === '—' ? 0 : parseFloat(textB.replace(/[^0-9.]/g, '')) || 0;
+        
+        if (sortVal === 'value-desc') {
+          return valB - valA;
+        } else if (sortVal === 'value-asc') {
+          return valA - valB;
+        }
+      });
+      
+      grid.innerHTML = '';
+      cards.forEach(c => grid.appendChild(c));
     }
   </script>
 </body>
