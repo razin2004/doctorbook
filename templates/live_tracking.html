@@ -951,6 +951,7 @@
     let userTokens = {};
     let isInitialLoad = true;
     let currentStatusFilter = 'all'; // 'all', 'active', 'idle', 'completed'
+    let localBroadcastEdits = {};
 
     function getStatusBadgeParams(statusRaw) {
         if (statusRaw === 'active') return { class: 'badge-active', icon: 'radio', text: 'Live Now' };
@@ -1094,6 +1095,17 @@
             lucide.createIcons();
             return;
         }
+
+        // ─── Record current focus/selection state to prevent vanishing text on poll refresh ───
+        const activeEl = document.activeElement;
+        let activeKey = null;
+        let activeSelStart = 0;
+        let activeSelEnd = 0;
+        if (activeEl && activeEl.classList.contains('broadcast-input-field')) {
+            activeKey = `${activeEl.getAttribute('data-doc-name').toLowerCase().trim()}|${activeEl.getAttribute('data-doc-spec').toLowerCase().trim()}`;
+            activeSelStart = activeEl.selectionStart;
+            activeSelEnd = activeEl.selectionEnd;
+        }
         
         grid.innerHTML = '';
         data.forEach(doc => {
@@ -1109,13 +1121,16 @@
                      <span style="flex: 1; word-break: break-word; text-align: left;">${doc.broadcast_message}</span>
                    </div>`
                 : '';
+
+            const jsKey = `${doc.doctor_name.toLowerCase().trim()}|${doc.specialization.toLowerCase().trim()}`;
+            const currentBroadcastVal = localBroadcastEdits[jsKey] !== undefined ? localBroadcastEdits[jsKey] : (doc.broadcast_message || '');
                 
             const adminBroadcastConsoleHtml = isAdminLoggedIn
                 ? `<div class="admin-broadcast-console" style="border-top: 1px dashed rgba(0, 0, 0, 0.08); padding-top: 0.8rem; margin-top: 0.2rem; display: flex; flex-direction: column; gap: 0.4rem; text-align: left; width: 100%;">
                      <label style="font-size: 0.68rem; font-weight: 800; text-transform: uppercase; color: var(--primary-dark); display: flex; align-items: center; gap: 0.3rem;"><i data-lucide="shield-alert" style="width:12px;height:12px;"></i> Admin Alert Broadcast</label>
-                     <div style="display: flex; gap: 0.4rem; width: 100%;">
-                       <input type="text" placeholder="e.g. Doctor is on a short break" class="broadcast-input-field" data-doc-name="${doc.doctor_name}" data-doc-spec="${doc.specialization}" value="${doc.broadcast_message || ''}" style="flex: 1; padding: 0.4rem 0.6rem; font-size: 0.76rem; border: 1.5px solid var(--slate-200); border-radius: 10px; outline: none; background: #fff; color: var(--slate-900); font-weight: 500; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--slate-200)'">
-                       <button onclick="saveDoctorBroadcast('${doc.doctor_name}', '${doc.specialization}', this)" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.76rem; border-radius: 10px; margin: 0; min-width: auto; height: auto; display: flex; align-items: center; justify-content: center; gap: 2px;">
+                     <div style="display: flex; gap: 0.4rem; width: 100%; align-items: center;">
+                       <input type="text" placeholder="e.g. Doctor is on a short break" class="broadcast-input-field" data-doc-name="${doc.doctor_name}" data-doc-spec="${doc.specialization}" value="${currentBroadcastVal.replace(/"/g, '&quot;')}" style="flex: 1; min-width: 0; padding: 0.35rem 0.6rem; font-size: 0.76rem; border: 1.5px solid var(--slate-200); border-radius: 8px; outline: none; background: #fff; color: var(--slate-900); font-weight: 500; transition: border-color 0.2s; height: 32px; box-sizing: border-box;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--slate-200)'" oninput="localBroadcastEdits['${jsKey.replace(/'/g, "\\'")}'] = this.value">
+                       <button onclick="saveDoctorBroadcast('${doc.doctor_name}', '${doc.specialization}', this)" class="btn btn-primary" style="padding: 0.35rem 0.6rem !important; font-size: 0.72rem !important; border-radius: 8px !important; margin: 0 !important; min-width: unset !important; width: auto !important; height: 32px !important; display: flex; align-items: center; justify-content: center; gap: 2px; flex-shrink: 0;">
                          <i data-lucide="send" style="width: 12px; height: 12px;"></i> Save
                        </button>
                      </div>
@@ -1163,6 +1178,17 @@
         });
         
         lucide.createIcons();
+
+        // ─── Restore focus and cursor range ───
+        if (activeKey) {
+            const restoredInput = grid.querySelector(`.broadcast-input-field[data-doc-name="${activeEl.getAttribute('data-doc-name')}"][data-doc-spec="${activeEl.getAttribute('data-doc-spec')}"]`);
+            if (restoredInput) {
+                restoredInput.focus();
+                try {
+                    restoredInput.setSelectionRange(activeSelStart, activeSelEnd);
+                } catch(e) {}
+            }
+        }
     }
     
     window.saveDoctorBroadcast = async function(docName, docSpec, btn) {
@@ -1186,6 +1212,8 @@
             
             if (data.success) {
                 showToast('Broadcast alert updated!', 'success');
+                const jsKey = `${docName.toLowerCase().trim()}|${docSpec.toLowerCase().trim()}`;
+                delete localBroadcastEdits[jsKey];
                 fetchLiveTokens();
             } else {
                 showToast(data.msg || 'Failed to update broadcast.', 'error');
