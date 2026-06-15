@@ -640,8 +640,10 @@
       -webkit-backdrop-filter: none !important;
     }
 
-    /* Ensure main header sits on top of sticky sidebar on desktop */
+    /* Ensure main header sits on top of sticky sidebar on desktop and remains sticky */
     .top-bar {
+      position: sticky !important;
+      top: 0 !important;
       z-index: 1000 !important;
     }
 
@@ -1674,6 +1676,110 @@
         height: 12px !important;
       }
     }
+
+    /* Premium style for announcement input fields */
+    .announcement-input {
+      padding: 0.75rem 1rem !important;
+      font-size: 0.9rem !important;
+      border-radius: 14px !important;
+      border: 1px solid rgba(0,0,0,0.1) !important;
+      background: #f8fafc !important;
+      width: 100% !important;
+      font-family: inherit !important;
+      transition: all 0.3s ease !important;
+      outline: none !important;
+      box-sizing: border-box !important;
+    }
+    .announcement-input:focus {
+      border-color: #10b981 !important;
+      background: #ffffff !important;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+    }
+    .announcement-input:disabled {
+      background: #f8fafc !important;
+      color: #64748b !important;
+      cursor: not-allowed !important;
+    }
+
+    /* Date / Time grid on mobile and desktop */
+    .announcement-time-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+      width: 100%;
+    }
+    
+    @media (max-width: 576px) {
+      .announcement-time-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Segmented dot indicator selector */
+    .dot-selector-container {
+      display: flex;
+      gap: 0.8rem;
+      margin-top: 0.4rem;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    .dot-selector-option {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: #f8fafc;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #475569;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .dot-selector-option input[type="radio"] {
+      display: none;
+    }
+    .dot-selector-option:hover {
+      background: #f1f5f9;
+    }
+    .dot-selector-option:has(input[type="radio"]:checked).option-yellow {
+      background: rgba(245, 158, 11, 0.08) !important;
+      border-color: #f59e0b !important;
+      color: #d97706 !important;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15) !important;
+    }
+    .dot-selector-option:has(input[type="radio"]:checked).option-red {
+      background: rgba(239, 68, 68, 0.08) !important;
+      border-color: #ef4444 !important;
+      color: #dc2626 !important;
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15) !important;
+    }
+    .dot-selector-option:has(input[type="radio"]:checked).option-green {
+      background: rgba(16, 185, 129, 0.08) !important;
+      border-color: #10b981 !important;
+      color: #059669 !important;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15) !important;
+    }
+    .dot-selector-option.disabled {
+      cursor: not-allowed !important;
+      opacity: 0.6 !important;
+    }
+
+    /* Mobile overrides for delete broadcast button */
+    @media (max-width: 480px) {
+      .delete-broadcast-btn {
+        padding: 4px !important;
+        border-radius: 6px !important;
+      }
+      .delete-broadcast-btn svg,
+      .delete-broadcast-btn i {
+        width: 12px !important;
+        height: 12px !important;
+      }
+    }
   </style>
 </head>
 
@@ -2400,31 +2506,31 @@
                     onfocus="this.style.border='1px solid #10b981'; this.style.background='white';"></textarea>
           
           <!-- Date / Time Grid -->
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.8rem;">
+          <div class="announcement-time-grid">
             <div>
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569; margin: 0 0 0.3rem 0; display: block;"><i data-lucide="play" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:2px; color:#10b981;"></i> Start Date & Time</label>
-              <input type="datetime-local" id="newTickerStart" style="padding: 0.5rem; font-size: 0.85rem; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: #f8fafc; width:100%;">
+              <input type="datetime-local" id="newTickerStart" class="announcement-input">
             </div>
             <div>
               <label style="font-size: 0.75rem; font-weight: 700; color: #475569; margin: 0 0 0.3rem 0; display: block;"><i data-lucide="square" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:2px; color:#ef4444;"></i> End Date & Time</label>
-              <input type="datetime-local" id="newTickerEnd" style="padding: 0.5rem; font-size: 0.85rem; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: #f8fafc; width:100%;">
+              <input type="datetime-local" id="newTickerEnd" class="announcement-input">
             </div>
           </div>
 
           <!-- Color Dot Selector -->
           <div>
             <label style="font-size: 0.75rem; font-weight: 700; color: #475569; margin: 0 0 0.3rem 0; display: block;"><i data-lucide="palette" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:2px; color:#0077b6;"></i> Dot Indicator Color</label>
-            <div style="display:flex; gap:1rem; align-items:center; margin-top: 0.4rem;">
-              <label style="display:flex; align-items:center; gap:0.35rem; margin:0; cursor:pointer; font-size: 0.85rem; font-weight: 600; color: #475569;">
-                <input type="radio" name="newTickerColor" value="yellow" checked style="width:16px; height:16px; margin:0; accent-color:#f59e0b;">
+            <div class="dot-selector-container">
+              <label class="dot-selector-option option-yellow">
+                <input type="radio" name="newTickerColor" value="yellow" checked>
                 <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#f59e0b; box-shadow: 0 0 6px #f59e0b;"></span> Yellow
               </label>
-              <label style="display:flex; align-items:center; gap:0.35rem; margin:0; cursor:pointer; font-size: 0.85rem; font-weight: 600; color: #475569;">
-                <input type="radio" name="newTickerColor" value="red" style="width:16px; height:16px; margin:0; accent-color:#ef4444;">
+              <label class="dot-selector-option option-red">
+                <input type="radio" name="newTickerColor" value="red">
                 <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#ef4444; box-shadow: 0 0 6px #ef4444;"></span> Red
               </label>
-              <label style="display:flex; align-items:center; gap:0.35rem; margin:0; cursor:pointer; font-size: 0.85rem; font-weight: 600; color: #475569;">
-                <input type="radio" name="newTickerColor" value="green" style="width:16px; height:16px; margin:0; accent-color:#10b981;">
+              <label class="dot-selector-option option-green">
+                <input type="radio" name="newTickerColor" value="green">
                 <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981; box-shadow: 0 0 6px #10b981;"></span> Green
               </label>
             </div>
@@ -4358,11 +4464,11 @@
                             ${statusBadge}
                         </div>
                         ${!m.end_reached ? `
-                        <button onclick="deleteTickerMsg(${m.id})" style="background:rgba(239,68,68,0.05); border:none; color:#ef4444; cursor:pointer; padding:8px; border-radius:10px; flex-shrink:0; transition:all 0.2s ease;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='rgba(239,68,68,0.05)'" title="Delete Broadcast">
+                        <button onclick="deleteTickerMsg(${m.id})" class="delete-broadcast-btn" style="background:rgba(239,68,68,0.05); border:none; color:#ef4444; cursor:pointer; padding:8px; border-radius:10px; flex-shrink:0; transition:all 0.2s ease;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='rgba(239,68,68,0.05)'" title="Delete Broadcast">
                             <i data-lucide="trash-2" style="width:15px; height:15px;"></i>
                         </button>
                         ` : `
-                        <button disabled style="background:rgba(203,213,225,0.2); border:none; color:#94a3b8; cursor:not-allowed; padding:8px; border-radius:10px; flex-shrink:0; opacity:0.5; transition:none;" title="Cannot Delete (Expired)">
+                        <button disabled class="delete-broadcast-btn" style="background:rgba(203,213,225,0.2); border:none; color:#94a3b8; cursor:not-allowed; padding:8px; border-radius:10px; flex-shrink:0; opacity:0.5; transition:none;" title="Cannot Delete (Expired)">
                             <i data-lucide="trash-2" style="width:15px; height:15px;"></i>
                         </button>
                         `}
@@ -4374,34 +4480,34 @@
                                   style="width:100%; min-height:60px; padding:0.6rem 0.8rem; border-radius:10px; border:1px solid rgba(0,0,0,0.1); background:${allDisabled ? '#f8fafc' : '#fff'}; font-size:0.85rem; resize:none; font-weight:500; outline:none;"
                                   placeholder="Broadcast message...">${m.content}</textarea>
                         
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:0.6rem; width:100%;">
+                        <div class="announcement-time-grid">
                             <div>
                                 <label style="font-size:0.7rem; font-weight:700; color:#64748b; margin:0 0 0.2rem 0; display:block;">Start Time</label>
-                                <input type="datetime-local" id="editTickerStart_${m.id}" value="${startVal}" ${startDisabled} 
-                                       style="width:100%; padding:0.4rem 0.5rem; font-size:0.8rem; border-radius:8px; border:1px solid rgba(0,0,0,0.1); background:${startDisabled ? '#f8fafc' : '#fff'}; outline:none;">
+                                <input type="datetime-local" id="editTickerStart_${m.id}" value="${startVal}" ${startDisabled} class="announcement-input" style="padding:0.4rem 0.6rem; font-size:0.82rem; border-radius:10px;">
                             </div>
                             <div>
                                 <label style="font-size:0.7rem; font-weight:700; color:#64748b; margin:0 0 0.2rem 0; display:block;">End Time</label>
-                                <input type="datetime-local" id="editTickerEnd_${m.id}" value="${endVal}" ${endDisabled} 
-                                       style="width:100%; padding:0.4rem 0.5rem; font-size:0.8rem; border-radius:8px; border:1px solid rgba(0,0,0,0.1); background:${endDisabled ? '#f8fafc' : '#fff'}; outline:none;">
+                                <input type="datetime-local" id="editTickerEnd_${m.id}" value="${endVal}" ${endDisabled} class="announcement-input" style="padding:0.4rem 0.6rem; font-size:0.82rem; border-radius:10px;">
                             </div>
                         </div>
 
                         <!-- Color choice during edit -->
-                        <div style="display:flex; gap:0.8rem; align-items:center; margin-top:0.2rem;">
+                        <div style="display:flex; flex-direction:column; gap:0.3rem; margin-top:0.2rem;">
                             <label style="font-size:0.7rem; font-weight:700; color:#64748b; margin:0;">Indicator Dot:</label>
-                            <label style="display:flex; align-items:center; gap:0.25rem; font-size:0.8rem; margin:0; cursor: ${allDisabled ? 'not-allowed' : 'pointer'};">
-                                <input type="radio" name="editTickerColor_${m.id}" value="yellow" ${m.color_dot === 'yellow' ? 'checked' : ''} ${allDisabled ? 'disabled' : ''} style="width:14px; height:14px; accent-color:#f59e0b;">
-                                Yellow
-                            </label>
-                            <label style="display:flex; align-items:center; gap:0.25rem; font-size:0.8rem; margin:0; cursor: ${allDisabled ? 'not-allowed' : 'pointer'};">
-                                <input type="radio" name="editTickerColor_${m.id}" value="red" ${m.color_dot === 'red' ? 'checked' : ''} ${allDisabled ? 'disabled' : ''} style="width:14px; height:14px; accent-color:#ef4444;">
-                                Red
-                            </label>
-                            <label style="display:flex; align-items:center; gap:0.25rem; font-size:0.8rem; margin:0; cursor: ${allDisabled ? 'not-allowed' : 'pointer'};">
-                                <input type="radio" name="editTickerColor_${m.id}" value="green" ${m.color_dot === 'green' ? 'checked' : ''} ${allDisabled ? 'disabled' : ''} style="width:14px; height:14px; accent-color:#10b981;">
-                                Green
-                            </label>
+                            <div class="dot-selector-container">
+                                <label class="dot-selector-option option-yellow ${allDisabled ? 'disabled' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: 8px;">
+                                    <input type="radio" name="editTickerColor_${m.id}" value="yellow" ${m.color_dot === 'yellow' ? 'checked' : ''} ${allDisabled ? 'disabled' : ''}>
+                                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b; box-shadow: 0 0 4px #f59e0b;"></span> Yellow
+                                </label>
+                                <label class="dot-selector-option option-red ${allDisabled ? 'disabled' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: 8px;">
+                                    <input type="radio" name="editTickerColor_${m.id}" value="red" ${m.color_dot === 'red' ? 'checked' : ''} ${allDisabled ? 'disabled' : ''}>
+                                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; box-shadow: 0 0 4px #ef4444;"></span> Red
+                                </label>
+                                <label class="dot-selector-option option-green ${allDisabled ? 'disabled' : ''}" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: 8px;">
+                                    <input type="radio" name="editTickerColor_${m.id}" value="green" ${m.color_dot === 'green' ? 'checked' : ''} ${allDisabled ? 'disabled' : ''}>
+                                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow: 0 0 4px #10b981;"></span> Green
+                                </label>
+                            </div>
                         </div>
                     </div>
 
