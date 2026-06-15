@@ -157,6 +157,9 @@ class TickerMessage(db.Model):
     content = db.Column(db.String(500), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True)
+    color_dot = db.Column(db.String(20), default='yellow')
 
 class AppSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -242,7 +245,33 @@ with app.app_context():
         columns_session = [c['name'] for c in inspector.get_columns('doctor_session')]
         if 'broadcast_message' not in columns_session:
             db.session.execute(text("ALTER TABLE doctor_session ADD COLUMN broadcast_message VARCHAR(500)"))
+
+        # Safely alter ticker_message table
+        columns_ticker = [c['name'] for c in inspector.get_columns('ticker_message')]
+        if 'start_time' not in columns_ticker:
+            db.session.execute(text("ALTER TABLE ticker_message ADD COLUMN start_time TIMESTAMP"))
+        if 'end_time' not in columns_ticker:
+            db.session.execute(text("ALTER TABLE ticker_message ADD COLUMN end_time TIMESTAMP"))
+        if 'color_dot' not in columns_ticker:
+            db.session.execute(text("ALTER TABLE ticker_message ADD COLUMN color_dot VARCHAR(20) DEFAULT 'yellow'"))
             
+        db.session.commit()
+        
+        # Backfill existing ticker messages with default values if null
+        legacy_tickers = TickerMessage.query.all()
+        for t in legacy_tickers:
+            updated = False
+            if not t.start_time:
+                t.start_time = t.created_at or datetime.utcnow()
+                updated = True
+            if not t.end_time:
+                t.end_time = t.start_time + timedelta(days=1)
+                updated = True
+            if not t.color_dot:
+                t.color_dot = "yellow"
+                updated = True
+            if updated:
+                db.session.add(t)
         db.session.commit()
         
         # Backfill existing legacy referrals with booking_id and patient_name
@@ -2357,13 +2386,83 @@ def admin_add_ticker_msg():
     
     data = request.get_json() or {}
     msg_content = (data.get("message") or "").strip()
+    start_time_str = data.get("start_time")
+    end_time_str = data.get("end_time")
+    color_dot = (data.get("color_dot") or "yellow").strip()
+    
     if not msg_content:
         return jsonify({"success": False, "msg": "Message cannot be empty"})
+        
+    try:
+        start_time = datetime.fromisoformat(start_time_str) if start_time_str else datetime.utcnow()
+        end_time = datetime.fromisoformat(end_time_str) if end_time_str else (start_time + timedelta(days=1))
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Invalid date/time format: {e}"})
+
+    if end_time <= start_time:
+        return jsonify({"success": False, "msg": "End time must be after start time"})
     
-    new_msg = TickerMessage(content=msg_content)
+    new_msg = TickerMessage(
+        content=msg_content,
+        start_time=start_time,
+        end_time=end_time,
+        color_dot=color_dot
+    )
     db.session.add(new_msg)
     db.session.commit()
     return jsonify({"success": True, "msg": "Announcement added"})
+
+@app.route("/admin_update_ticker_msg", methods=["POST"])
+def admin_update_ticker_msg():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify({"success": False, "msg": "Unauthorized"})
+
+    data = request.get_json() or {}
+    msg_id = data.get("id")
+    msg_content = (data.get("message") or "").strip()
+    start_time_str = data.get("start_time")
+    end_time_str = data.get("end_time")
+    color_dot = (data.get("color_dot") or "yellow").strip()
+
+    msg = TickerMessage.query.get(msg_id)
+    if not msg:
+        return jsonify({"success": False, "msg": "Announcement not found"})
+
+    ist = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(ist).replace(tzinfo=None)
+
+    # Validate lock constraints
+    # Rule 1: Cannot edit anything if now >= end_time (expired)
+    if msg.end_time and now >= msg.end_time:
+        return jsonify({"success": False, "msg": "Cannot edit an announcement after its ending time has passed."})
+
+    try:
+        req_start_time = datetime.fromisoformat(start_time_str) if start_time_str else None
+        req_end_time = datetime.fromisoformat(end_time_str) if end_time_str else None
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Invalid date/time format: {e}"})
+
+    if not msg_content:
+        return jsonify({"success": False, "msg": "Message cannot be empty"})
+
+    if req_end_time and req_start_time and req_end_time <= req_start_time:
+        return jsonify({"success": False, "msg": "End time must be after start time"})
+
+    # If start time was already reached, cannot edit start time
+    if msg.start_time and now >= msg.start_time:
+        if req_start_time and req_start_time != msg.start_time:
+            return jsonify({"success": False, "msg": "Cannot edit start time once it has been reached."})
+    else:
+        if req_start_time:
+            msg.start_time = req_start_time
+
+    if req_end_time:
+        msg.end_time = req_end_time
+
+    msg.content = msg_content
+    msg.color_dot = color_dot
+    db.session.commit()
+    return jsonify({"success": True, "msg": "Announcement updated"})
 
 @app.route("/admin_delete_ticker_msg", methods=["POST"])
 def admin_delete_ticker_msg():
@@ -2374,6 +2473,11 @@ def admin_delete_ticker_msg():
     msg_id = data.get("id")
     msg = TickerMessage.query.get(msg_id)
     if msg:
+        ist = pytz.timezone('Asia/Kolkata')
+        now = datetime.now(ist).replace(tzinfo=None)
+        if msg.end_time and now >= msg.end_time:
+            return jsonify({"success": False, "msg": "Cannot delete an announcement after its ending time has passed."})
+            
         db.session.delete(msg)
         db.session.commit()
     return jsonify({"success": True, "msg": "Announcement deleted"})
@@ -2404,9 +2508,30 @@ def admin_get_ticker_messages():
     solo_setting = AppSettings.query.filter_by(key="ticker_solo_mode").first()
     is_solo = solo_setting.value == "enabled" if solo_setting else False
     
+    ist = pytz.timezone('Asia/Kolkata')
+    now_naive = datetime.now(ist).replace(tzinfo=None)
+    
+    messages_data = []
+    for m in msgs:
+        start_time_iso = m.start_time.isoformat() if m.start_time else ""
+        end_time_iso = m.end_time.isoformat() if m.end_time else ""
+        
+        start_reached = (m.start_time <= now_naive) if m.start_time else True
+        end_reached = (m.end_time <= now_naive) if m.end_time else False
+        
+        messages_data.append({
+            "id": m.id,
+            "content": m.content,
+            "start_time": start_time_iso,
+            "end_time": end_time_iso,
+            "color_dot": m.color_dot or "yellow",
+            "start_reached": start_reached,
+            "end_reached": end_reached
+        })
+        
     return jsonify({
         "success": True, 
-        "messages": [{"id": m.id, "content": m.content} for m in msgs],
+        "messages": messages_data,
         "solo_mode": is_solo
     })
 
@@ -5519,7 +5644,14 @@ def live_tokens():
     except: pass
 
     # ── Fetch Admin Messages ──
-    admin_msgs = [m.content for m in TickerMessage.query.all()]
+    # Only return messages that are active today (start_time <= now <= end_time)
+    ist = pytz.timezone('Asia/Kolkata')
+    now_naive = datetime.now(ist).replace(tzinfo=None)
+    active_msgs = TickerMessage.query.filter(
+        (TickerMessage.start_time == None) | (TickerMessage.start_time <= now_naive),
+        (TickerMessage.end_time == None) | (TickerMessage.end_time >= now_naive)
+    ).all()
+    admin_msgs = [{"content": m.content, "color_dot": m.color_dot or "yellow"} for m in active_msgs]
     solo_setting = AppSettings.query.filter_by(key="ticker_solo_mode").first()
     is_solo = solo_setting.value == "enabled" if solo_setting else False
     

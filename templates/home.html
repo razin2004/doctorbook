@@ -3093,10 +3093,14 @@
             // 1. Admin Messages (Always show if present)
             if (data.admin_messages && data.admin_messages.length > 0) {
               data.admin_messages.forEach(msg => {
+                let dotColor = '#f59e0b';
+                if (msg.color_dot === 'red') dotColor = '#ef4444';
+                else if (msg.color_dot === 'green') dotColor = '#10b981';
+                
                 tickerItems.push(`
                   <div class="ticker-item">
-                    <div class="status-dot live" style="background:#f59e0b;"></div>
-                    <span><b>NOTICE:</b> ${msg}</span>
+                    <div class="status-dot live" style="background:${dotColor}; box-shadow: 0 0 8px ${dotColor};"></div>
+                    <span>${msg.content}</span>
                   </div>
                 `);
               });

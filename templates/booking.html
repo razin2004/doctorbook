@@ -2398,6 +2398,38 @@
           <textarea id="newTickerMsg" placeholder="Type your message for the home page ticker..." 
                     style="width:100%; min-height:80px; padding:1rem; border-radius:14px; border:1px solid rgba(0,0,0,0.1); background:#f8fafc; font-size:0.9rem; resize:none; transition:all 0.3s ease;"
                     onfocus="this.style.border='1px solid #10b981'; this.style.background='white';"></textarea>
+          
+          <!-- Date / Time Grid -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.8rem;">
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #475569; margin: 0 0 0.3rem 0; display: block;"><i data-lucide="play" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:2px; color:#10b981;"></i> Start Date & Time</label>
+              <input type="datetime-local" id="newTickerStart" style="padding: 0.5rem; font-size: 0.85rem; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: #f8fafc; width:100%;">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #475569; margin: 0 0 0.3rem 0; display: block;"><i data-lucide="square" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:2px; color:#ef4444;"></i> End Date & Time</label>
+              <input type="datetime-local" id="newTickerEnd" style="padding: 0.5rem; font-size: 0.85rem; border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); background: #f8fafc; width:100%;">
+            </div>
+          </div>
+
+          <!-- Color Dot Selector -->
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 700; color: #475569; margin: 0 0 0.3rem 0; display: block;"><i data-lucide="palette" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:2px; color:#0077b6;"></i> Dot Indicator Color</label>
+            <div style="display:flex; gap:1rem; align-items:center; margin-top: 0.4rem;">
+              <label style="display:flex; align-items:center; gap:0.35rem; margin:0; cursor:pointer; font-size: 0.85rem; font-weight: 600; color: #475569;">
+                <input type="radio" name="newTickerColor" value="yellow" checked style="width:16px; height:16px; margin:0; accent-color:#f59e0b;">
+                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#f59e0b; box-shadow: 0 0 6px #f59e0b;"></span> Yellow
+              </label>
+              <label style="display:flex; align-items:center; gap:0.35rem; margin:0; cursor:pointer; font-size: 0.85rem; font-weight: 600; color: #475569;">
+                <input type="radio" name="newTickerColor" value="red" style="width:16px; height:16px; margin:0; accent-color:#ef4444;">
+                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#ef4444; box-shadow: 0 0 6px #ef4444;"></span> Red
+              </label>
+              <label style="display:flex; align-items:center; gap:0.35rem; margin:0; cursor:pointer; font-size: 0.85rem; font-weight: 600; color: #475569;">
+                <input type="radio" name="newTickerColor" value="green" style="width:16px; height:16px; margin:0; accent-color:#10b981;">
+                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981; box-shadow: 0 0 6px #10b981;"></span> Green
+              </label>
+            </div>
+          </div>
+
           <button class="btn btn-primary" onclick="addTickerMsg()" style="width:100%; padding:0.8rem; border-radius:14px; display:flex; align-items:center; justify-content:center; gap:0.6rem; font-weight:600;">
             <i data-lucide="send" style="width:18px;"></i> Broadcast Message
           </button>
@@ -3714,6 +3746,18 @@
       }
       else if (type === 'ticker') {
         document.getElementById('tickerPanel').style.display = 'block';
+        
+        // Initialize add-announcement datetimes
+        const startInput = document.getElementById('newTickerStart');
+        const endInput = document.getElementById('newTickerEnd');
+        if (startInput && endInput) {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const formatLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            startInput.value = formatLocal(now);
+            endInput.value = formatLocal(new Date(now.getTime() + 24*60*60*1000));
+        }
+        
         loadTickerMessages();
       }
       else if (type === 'settings') {
@@ -4273,7 +4317,7 @@
             soloStatus.textContent = data.solo_mode ? "Active" : "Inactive";
             soloStatus.style.background = data.solo_mode ? "#dcfce7" : "#e2e8f0";
             soloStatus.style.color = data.solo_mode ? "#166534" : "#64748b";
-            msgCount.textContent = `${data.messages.length} active`;
+            msgCount.textContent = `${data.messages.length} total`;
 
             if (data.messages.length === 0) {
                 list.innerHTML = `
@@ -4285,25 +4329,110 @@
                 return;
             }
 
-            list.innerHTML = data.messages.map(m => `
-                <div class="card" style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.2rem; background:white; border:1px solid rgba(0,0,0,0.06); border-radius:16px; transition:all 0.3s ease; box-shadow:0 4px 6px -1px rgba(0,0,0,0.02);">
-                    <div style="display:flex; gap:0.75rem;">
-                        <div style="margin-top:0.2rem; color:#10b981;"><i data-lucide="check-circle-2" style="width:16px;"></i></div>
-                        <div style="font-size:0.9rem; color:#1e293b; line-height:1.5; font-weight:500;">${m.content}</div>
+            list.innerHTML = data.messages.map(m => {
+                let dotColor = '#f59e0b';
+                if (m.color_dot === 'red') dotColor = '#ef4444';
+                else if (m.color_dot === 'green') dotColor = '#10b981';
+
+                const startVal = m.start_time ? m.start_time.slice(0, 16) : "";
+                const endVal = m.end_time ? m.end_time.slice(0, 16) : "";
+
+                const startDisabled = m.start_reached ? "disabled" : "";
+                const endDisabled = m.end_reached ? "disabled" : "";
+                const allDisabled = m.end_reached;
+
+                const statusBadge = m.end_reached 
+                    ? `<span style="font-size:0.65rem; padding:0.15rem 0.5rem; border-radius:20px; background:#fee2e2; color:#991b1b; font-weight:700;">Expired</span>`
+                    : (m.start_reached 
+                        ? `<span style="font-size:0.65rem; padding:0.15rem 0.5rem; border-radius:20px; background:#dcfce7; color:#166534; font-weight:700;">Running</span>`
+                        : `<span style="font-size:0.65rem; padding:0.15rem 0.5rem; border-radius:20px; background:#fef3c7; color:#92400e; font-weight:700;">Scheduled</span>`
+                      );
+
+                return `
+                <div class="card" style="display:flex; flex-direction:column; gap:0.9rem; padding:1.2rem; background:white; border:1px solid rgba(0,0,0,0.06); border-radius:20px; transition:all 0.3s ease; box-shadow:0 4px 6px -1px rgba(0,0,0,0.02); opacity: ${m.end_reached ? 0.75 : 1};">
+                    <!-- Top header row -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                        <div style="display:flex; align-items:center; gap:0.4rem;">
+                            <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${dotColor}; box-shadow: 0 0 6px ${dotColor};"></span>
+                            <span style="font-size:0.8rem; font-weight:700; color:#475569;">Broadcast #${m.id}</span>
+                            ${statusBadge}
+                        </div>
+                        ${!m.end_reached ? `
+                        <button onclick="deleteTickerMsg(${m.id})" style="background:rgba(239,68,68,0.05); border:none; color:#ef4444; cursor:pointer; padding:8px; border-radius:10px; flex-shrink:0; transition:all 0.2s ease;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='rgba(239,68,68,0.05)'" title="Delete Broadcast">
+                            <i data-lucide="trash-2" style="width:15px; height:15px;"></i>
+                        </button>
+                        ` : `
+                        <button disabled style="background:rgba(203,213,225,0.2); border:none; color:#94a3b8; cursor:not-allowed; padding:8px; border-radius:10px; flex-shrink:0; opacity:0.5; transition:none;" title="Cannot Delete (Expired)">
+                            <i data-lucide="trash-2" style="width:15px; height:15px;"></i>
+                        </button>
+                        `}
                     </div>
-                    <button onclick="deleteTickerMsg(${m.id})" style="background:rgba(239,68,68,0.05); border:none; color:#ef4444; cursor:pointer; padding:8px; border-radius:10px; flex-shrink:0; transition:all 0.2s ease;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='rgba(239,68,68,0.05)'">
-                        <i data-lucide="trash-2" style="width:16px;"></i>
-                    </button>
+
+                    <!-- Editing Fields -->
+                    <div style="display:flex; flex-direction:column; gap:0.6rem; width:100%;">
+                        <textarea id="editTickerMsg_${m.id}" ${allDisabled ? "disabled" : ""} 
+                                  style="width:100%; min-height:60px; padding:0.6rem 0.8rem; border-radius:10px; border:1px solid rgba(0,0,0,0.1); background:${allDisabled ? '#f8fafc' : '#fff'}; font-size:0.85rem; resize:none; font-weight:500; outline:none;"
+                                  placeholder="Broadcast message...">${m.content}</textarea>
+                        
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:0.6rem; width:100%;">
+                            <div>
+                                <label style="font-size:0.7rem; font-weight:700; color:#64748b; margin:0 0 0.2rem 0; display:block;">Start Time</label>
+                                <input type="datetime-local" id="editTickerStart_${m.id}" value="${startVal}" ${startDisabled} 
+                                       style="width:100%; padding:0.4rem 0.5rem; font-size:0.8rem; border-radius:8px; border:1px solid rgba(0,0,0,0.1); background:${startDisabled ? '#f8fafc' : '#fff'}; outline:none;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.7rem; font-weight:700; color:#64748b; margin:0 0 0.2rem 0; display:block;">End Time</label>
+                                <input type="datetime-local" id="editTickerEnd_${m.id}" value="${endVal}" ${endDisabled} 
+                                       style="width:100%; padding:0.4rem 0.5rem; font-size:0.8rem; border-radius:8px; border:1px solid rgba(0,0,0,0.1); background:${endDisabled ? '#f8fafc' : '#fff'}; outline:none;">
+                            </div>
+                        </div>
+
+                        <!-- Color choice during edit -->
+                        <div style="display:flex; gap:0.8rem; align-items:center; margin-top:0.2rem;">
+                            <label style="font-size:0.7rem; font-weight:700; color:#64748b; margin:0;">Indicator Dot:</label>
+                            <label style="display:flex; align-items:center; gap:0.25rem; font-size:0.8rem; margin:0; cursor: ${allDisabled ? 'not-allowed' : 'pointer'};">
+                                <input type="radio" name="editTickerColor_${m.id}" value="yellow" ${m.color_dot === 'yellow' ? 'checked' : ''} ${allDisabled ? 'disabled' : ''} style="width:14px; height:14px; accent-color:#f59e0b;">
+                                Yellow
+                            </label>
+                            <label style="display:flex; align-items:center; gap:0.25rem; font-size:0.8rem; margin:0; cursor: ${allDisabled ? 'not-allowed' : 'pointer'};">
+                                <input type="radio" name="editTickerColor_${m.id}" value="red" ${m.color_dot === 'red' ? 'checked' : ''} ${allDisabled ? 'disabled' : ''} style="width:14px; height:14px; accent-color:#ef4444;">
+                                Red
+                            </label>
+                            <label style="display:flex; align-items:center; gap:0.25rem; font-size:0.8rem; margin:0; cursor: ${allDisabled ? 'not-allowed' : 'pointer'};">
+                                <input type="radio" name="editTickerColor_${m.id}" value="green" ${m.color_dot === 'green' ? 'checked' : ''} ${allDisabled ? 'disabled' : ''} style="width:14px; height:14px; accent-color:#10b981;">
+                                Green
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Update button row -->
+                    ${!allDisabled ? `
+                    <div style="display:flex; justify-content:flex-end; width:100%; margin-top:0.2rem;">
+                        <button onclick="updateTickerMsg(${m.id}, this)" class="btn btn-primary" style="padding:0.35rem 1rem; font-size:0.8rem; border-radius:8px; margin:0; min-width:auto; height:32px;">
+                            <i data-lucide="save" style="width:14px; height:14px;"></i> Update
+                        </button>
+                    </div>
+                    ` : ''}
                 </div>
-            `).join('');
+                `;
+            }).join('');
             lucide.createIcons();
         } catch(e) { console.error("Failed to load messages:", e); }
     }
 
     async function addTickerMsg() {
         const input = document.getElementById('newTickerMsg');
+        const startInput = document.getElementById('newTickerStart');
+        const endInput = document.getElementById('newTickerEnd');
+        const colorRadio = document.querySelector('input[name="newTickerColor"]:checked');
+        
         const message = input.value.trim();
-        if (!message) return;
+        const start_time = startInput ? startInput.value : '';
+        const end_time = endInput ? endInput.value : '';
+        const color_dot = colorRadio ? colorRadio.value : 'yellow';
+
+        if (!message) { showToast('Message cannot be empty', 'error'); return; }
+        if (!start_time || !end_time) { showToast('Please select start and end date/time', 'error'); return; }
 
         openModal(
             'Confirm Announcement',
@@ -4314,16 +4443,63 @@
                     const res = await fetch('/admin_add_ticker_msg', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message })
+                        body: JSON.stringify({ message, start_time, end_time, color_dot })
                     });
                     const data = await res.json();
                     if (data.success) {
                         input.value = '';
+                        // Reset defaults
+                        const now = new Date();
+                        const pad = (n) => String(n).padStart(2, '0');
+                        const formatLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                        startInput.value = formatLocal(now);
+                        endInput.value = formatLocal(new Date(now.getTime() + 24*60*60*1000));
+                        
                         loadTickerMessages();
+                        showToast(data.msg, 'success');
                     } else { showToast(data.msg, 'error'); }
                 } catch(e) { showToast('Failed to add message', 'error'); }
             }
         );
+    }
+
+    async function updateTickerMsg(id, btn) {
+        const message = document.getElementById(`editTickerMsg_${id}`).value.trim();
+        const startInput = document.getElementById(`editTickerStart_${id}`);
+        const endInput = document.getElementById(`editTickerEnd_${id}`);
+        const colorRadio = document.querySelector(`input[name="editTickerColor_${id}"]:checked`);
+
+        const start_time = startInput ? startInput.value : '';
+        const end_time = endInput ? endInput.value : '';
+        const color_dot = colorRadio ? colorRadio.value : 'yellow';
+
+        if (!message) { showToast('Message cannot be empty', 'error'); return; }
+        
+        const originalContent = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<i data-lucide="loader" class="spin-icon" style="width:14px; height:14px;"></i>`;
+        if (window.lucide) lucide.createIcons(btn);
+
+        try {
+            const res = await fetch('/admin_update_ticker_msg', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, message, start_time, end_time, color_dot })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.msg, 'success');
+                loadTickerMessages();
+            } else {
+                showToast(data.msg, 'error');
+            }
+        } catch(e) {
+            showToast('Failed to update announcement', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+            if (window.lucide) lucide.createIcons(btn);
+        }
     }
 
     function deleteTickerMsg(id) {
@@ -4338,6 +4514,8 @@
                 if (data.success) {
                     loadTickerMessages();
                     showToast('Announcement deleted successfully', 'success');
+                } else {
+                    showToast(data.msg || 'Failed to delete announcement', 'error');
                 }
             } catch(e) {
                 showToast('Failed to delete announcement', 'error');
