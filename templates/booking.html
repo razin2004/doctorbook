@@ -366,7 +366,8 @@
 }
 
 .common-time-row > div {
-  flex: 1 !important;
+  width: 50% !important;
+  flex: 1 1 50% !important;
   min-width: 0 !important;
 }
 
@@ -378,45 +379,12 @@
   padding: 0.35rem 0.5rem !important;
   font-size: 0.8rem !important;
   height: 36px !important;
-  border-radius: 12px !important;
-  border: 1.5px solid rgba(176, 190, 210, 0.85) !important;
-  background-color: rgba(255, 255, 255, 0.96) !important;
-  margin: 0 !important;
 }
 
 .common-time-row label {
   font-size: 0.75rem !important;
   margin-top: 0.2rem !important;
   margin-bottom: 0.2rem !important;
-}
-
-/* ✅ FIX: Individual day time inputs responsive & contained */
-.day-time,
-.day-time-edit {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-  gap: 6px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.day-time input,
-.day-time-edit input {
-  flex: 1 !important;
-  min-width: 0 !important;   /* 🔥 prevents native browser min-width overflow */
-  max-width: 100% !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  padding: 0.35rem 0.5rem !important;
-  font-size: 0.8rem !important;
-  height: 36px !important;
-  border-radius: 12px !important;
-  border: 1.5px solid rgba(176, 190, 210, 0.85) !important;
-  background-color: rgba(255, 255, 255, 0.96) !important;
-  margin: 0 !important;
 }
     .holiday-grid {
       display: grid;
@@ -1716,9 +1684,6 @@
       width: 100%;
       box-sizing: border-box;
     }
-    .ticker-time-grid > div {
-      min-width: 0 !important;
-    }
     @media (max-width: 576px) {
       .ticker-time-grid {
         grid-template-columns: 1fr !important;
@@ -1745,7 +1710,6 @@
       background: #f8fafc !important;
       outline: none !important;
       transition: all 0.2s ease !important;
-      margin: 0 !important;
     }
     .ticker-time-input:focus {
       border-color: #10b981 !important;
@@ -2676,7 +2640,7 @@
             <label>
               <input type="checkbox" class="day-check" data-day="{{ day }}"> {{ day }}
             </label>
-            <div class="day-time" data-day-time="{{ day }}" style="display:none;">
+            <div class="day-time" data-day-time="{{ day }}" style="display:none; margin-left:15px;">
               <input type="time" class="start-time" data-day="{{ day }}" /> &ndash;
               <input type="time" class="end-time" data-day="{{ day }}" />
             </div>
@@ -2735,7 +2699,7 @@
             <label>
               <input type="checkbox" class="day-check-edit" data-day="{{ day }}"> {{ day }}
             </label>
-            <div class="day-time-edit" data-day-time-edit="{{ day }}" style="display:none;">
+            <div class="day-time-edit" data-day-time-edit="{{ day }}" style="display:none; margin-left:15px;">
               <input type="time" class="start-time-edit" data-day="{{ day }}" /> &ndash;
               <input type="time" class="end-time-edit" data-day="{{ day }}" />
             </div>
