@@ -3,6 +3,7 @@ import gspread
 from datetime import datetime, timedelta
 import pytz
 import os
+import re
 from dotenv import load_dotenv
 from PIL import Image
 from io import BytesIO
@@ -21,6 +22,10 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from google import genai
 from google.genai import types as genai_types
+import secrets
+import hashlib
+from phone_utils import normalize_phone_number, format_phone_display
+from whatsapp_role_resolver import resolve_whatsapp_sender_role
 
 load_dotenv()  # Load .env file when running locally
 
@@ -98,7 +103,11 @@ db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    phone_number = db.Column(db.String(20), unique=True, nullable=True, index=True)
+    phone_verified = db.Column(db.Boolean, default=False)
+    phone_verified_at = db.Column(db.DateTime, nullable=True)
+    email_verified = db.Column(db.Boolean, default=False)
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(50), default="patient")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -108,6 +117,9 @@ class DoctorSession(db.Model):
     doctor_name = db.Column(db.String(100))
     specialization = db.Column(db.String(100))
     email = db.Column(db.String(120), unique=True)
+    phone_number = db.Column(db.String(20), nullable=True)
+    phone_updated_by = db.Column(db.String(120), nullable=True)
+    phone_updated_at = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(20), default='idle')
     current_token = db.Column(db.Integer, default=0)
     session_date = db.Column(db.String(20))
@@ -116,6 +128,16 @@ class DoctorSession(db.Model):
     end_time = db.Column(db.String(20), nullable=True)
     skipped_tokens = db.Column(db.Text, default="") # Stored as comma-separated string
     broadcast_message = db.Column(db.String(500), nullable=True)
+
+class DoctorInvitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('doctor_session.id'), nullable=False)
+    email = db.Column(db.String(120), nullable=False, index=True)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_used = db.Column(db.Boolean, default=False)
+    used_at = db.Column(db.DateTime, nullable=True)
 
 class OTP(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -134,6 +156,7 @@ class PatientBooking(db.Model):
     sheet_url = db.Column(db.String(255))
     patient_name = db.Column(db.String(100))
     age = db.Column(db.String(10))
+    phone_number = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50), default="confirmed")
     cancelled_by = db.Column(db.String(50), nullable=True)
@@ -194,8 +217,8 @@ class SavedPatient(db.Model):
     age = db.Column(db.String(10), nullable=False)
     gender = db.Column(db.String(20), nullable=False)
     phone_number = db.Column(db.String(20), nullable=False)
+    relationship = db.Column(db.String(50), default="Self")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 with app.app_context():
     db.create_all()
     # Create default guest user if it doesn't exist to satisfy the PatientBooking user_id constraint
@@ -313,6 +336,7 @@ with app.app_context():
 DEFAULT_SETTINGS = {
     'clinic_phone': '+91 85920 31725',
     'clinic_whatsapp': '918592031725',
+    'admin_whatsapp_phone': '+918592031725',
     'clinic_address': 'Main Road, Koorachundu, Kerala 673627',
     'clinic_map_link': 'https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z/data=!3m1!4b1!4m4!3m3!8m2!3d11.5384625!4d75.8455156?entry=ttu',
     'stat_specialists': '25+',
@@ -364,14 +388,8 @@ def get_all_settings():
 
 @app.context_processor
 def inject_settings():
-    user_email = session.get('user_email')
-    can_switch = False
-    if user_email:
-        try:
-            can_switch = DoctorSession.query.filter_by(email=user_email).first() is not None
-        except Exception:
-            pass
-    return dict(settings=get_all_settings(), can_switch=can_switch)
+    # Role switching strictly eliminated per role-based security requirements
+    return dict(settings=get_all_settings(), can_switch=False)
 
 
 # Email / admin config
@@ -701,6 +719,31 @@ DOCTOR_CACHE = {
     "ttl": 30.0  # seconds to keep cache
 }
 
+def ensure_doctors_sheet_headers():
+    """
+    Safely ensures the 'Phone_Number' column exists in the Doctors Google Sheet roster.
+    Preserves all existing columns and ordering; appends Phone_Number at the end if missing.
+    Does not erase any existing doctor records.
+    """
+    global doctors_ws
+    if not doctors_ws:
+        return []
+    try:
+        header_vals = doctors_ws.row_values(1)
+        if not header_vals:
+            return []
+        has_phone_col = any("phone" in h.lower() for h in header_vals)
+        if not has_phone_col:
+            new_col_idx = len(header_vals) + 1
+            doctors_ws.update_cell(1, new_col_idx, "Phone_Number")
+            header_vals.append("Phone_Number")
+            app.logger.info(f"Appended Phone_Number column to Doctors worksheet at column {new_col_idx}")
+        return header_vals
+    except Exception as e:
+        app.logger.warning(f"Failed to check/update Doctors worksheet headers: {e}")
+        return []
+
+
 def get_all_doctors(force_refresh=False):
     """
     Fetch all doctors from the Google Sheet.
@@ -769,6 +812,23 @@ def get_all_doctors(force_refresh=False):
                 parts.append(f"{short}: {day_times[day]}")
         time_summary = "; ".join(parts)
 
+        phone_val = (rec.get("Phone_Number", "") or rec.get("Phone", "") or "").strip()
+        # Fallback to DoctorSession phone if missing in sheet row
+        doc_sess_match = DoctorSession.query.filter(
+            db.func.lower(DoctorSession.doctor_name) == name.lower(),
+            db.func.lower(DoctorSession.specialization) == spec.lower()
+        ).first()
+        if not phone_val and doc_sess_match and doc_sess_match.phone_number:
+            phone_val = doc_sess_match.phone_number
+
+        # Determine activation status
+        is_activated = False
+        doc_email_val = (rec.get("Email", "") or "").strip().lower()
+        if doc_email_val:
+            u_check = User.query.filter(db.func.lower(User.email) == doc_email_val, User.role == "doctor").first()
+            if u_check and u_check.email_verified:
+                is_activated = True
+
         doctors.append({
             "Name": name,
             "Specialization": spec,
@@ -777,7 +837,10 @@ def get_all_doctors(force_refresh=False):
             "Time": time_summary,
             "SheetURL": sheet_url,
             "Image": image_url,
-            "Email": (rec.get("Email", "") or "").strip()
+            "Email": (rec.get("Email", "") or "").strip(),
+            "Phone_Number": phone_val,
+            "account_status": "Activated" if is_activated else "Invitation Pending",
+            "doctor_id": doc_sess_match.id if doc_sess_match else None
         })
 
     DOCTOR_CACHE = {"data": doctors, "ts": now, "ttl": DOCTOR_CACHE["ttl"]}
@@ -1045,59 +1108,917 @@ def admin_logout():
     session.pop("admin_logged_in", None)
     return jsonify({"success": True, "msg": "Logged out"})
 
-# ===================== Patient Auth Routes =====================
+
+def check_phone_conflict(norm_phone, exclude_user_id=None, exclude_doctor_id=None):
+    """
+    Checks if a normalized E.164 phone number conflicts with:
+    1. Admin WhatsApp setting (AppSettings or DEFAULT_SETTINGS)
+    2. Doctor profiles (DoctorSession)
+    3. User accounts (User - patient or doctor)
+    
+    Returns (has_conflict, error_message)
+    """
+    if not norm_phone:
+        return False, None
+
+    # 1. Check against Admin WhatsApp Number
+    try:
+        admin_setting = AppSettings.query.filter_by(key="admin_whatsapp_phone").first()
+        admin_phone = admin_setting.value if admin_setting and admin_setting.value else DEFAULT_SETTINGS.get("admin_whatsapp_phone")
+        if admin_phone and normalize_phone_number(admin_phone) == norm_phone:
+            return True, "This phone number is reserved for clinic administration."
+    except Exception:
+        pass
+
+    # 2. Check against DoctorSession
+    try:
+        doc_q = DoctorSession.query.filter(DoctorSession.phone_number == norm_phone)
+        if exclude_doctor_id:
+            doc_q = doc_q.filter(DoctorSession.id != exclude_doctor_id)
+        conflict_doc = doc_q.first()
+        if conflict_doc:
+            return True, f"This phone number is already registered to doctor {conflict_doc.doctor_name}."
+    except Exception:
+        pass
+
+    # 3. Check against User table
+    try:
+        user_q = User.query.filter(User.phone_number == norm_phone)
+        if exclude_user_id:
+            user_q = user_q.filter(User.id != exclude_user_id)
+        conflict_user = user_q.first()
+        if conflict_user:
+            return True, f"This phone number is already registered to a {conflict_user.role} account ({conflict_user.name})."
+    except Exception:
+        pass
+
+    return False, None
+
+
+
+def clean_doctor_display_name(doctor_name):
+    """
+    Normalizes doctor name for UI/email presentation.
+    Strips accidental duplicate 'Dr.', 'DR.', 'Doctor' prefixes and ensures
+    a single clean 'Dr. <Name>' title.
+    """
+    if not doctor_name:
+        return "Doctor"
+    name = str(doctor_name).strip()
+    cleaned = re.sub(r'^(?:(dr\.?|doctor)\s*)+', '', name, flags=re.IGNORECASE).strip()
+    if not cleaned:
+        return "Doctor"
+    return f"Dr. {cleaned}"
+
+def get_doctor_invite_html(doctor_name, specialization, activation_url, email=None):
+    """Returns a premium HTML email template for Doctor Account Activation."""
+    display_doctor_name = clean_doctor_display_name(doctor_name)
+    spec_display = specialization if specialization else "Specialist"
+    email_row = f"""
+    <tr>
+        <td style="color: #64748b; font-size: 13px; font-weight: 500; width: 42%; padding: 6px 0;">Invited Email:</td>
+        <td style="color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; padding: 6px 0;">{email}</td>
+    </tr>
+    """ if email else ""
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Portal Invitation - PrimeCare Clinic</title>
+</head>
+<body style="font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 32px 16px; margin: 0; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 540px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 119, 182, 0.08); overflow: hidden; border: 1px solid #e2e8f0; border-collapse: separate;">
+        <tr>
+            <td style="background: linear-gradient(135deg, #0077b6 0%, #023e8a 100%); padding: 36px 28px; text-align: center;">
+                <div style="display: inline-block; width: 48px; height: 48px; background: rgba(255, 255, 255, 0.2); border: 1.5px solid rgba(255, 255, 255, 0.4); border-radius: 14px; line-height: 48px; text-align: center; margin-bottom: 12px;">
+                    <span style="font-size: 24px; color: #ffffff; font-weight: bold;">&#10010;</span>
+                </div>
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">PrimeCare Clinic</h1>
+                <p style="color: #e0f2fe; margin: 6px 0 0 0; font-size: 13px; font-weight: 500;">Quality care &middot; Trusted doctors</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 36px 32px;">
+                <div style="display: inline-block; background-color: #e0f2fe; color: #0077b6; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Doctor Portal Access
+                </div>
+                <h2 style="color: #0f172a; font-size: 20px; margin: 0 0 12px 0; font-weight: 700; letter-spacing: -0.3px;">
+                    Welcome, {display_doctor_name}!
+                </h2>
+                <p style="color: #475569; font-size: 14px; line-height: 1.65; margin: 0 0 24px 0;">
+                    You have been invited by clinic administration to join the <strong>PrimeCare Clinic</strong> clinical team as <strong>{spec_display}</strong>.
+                </p>
+                
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 28px;">
+                    <tr>
+                        <td style="padding: 16px 20px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="color: #64748b; font-size: 13px; font-weight: 500; width: 42%; padding: 6px 0;">Assigned Doctor:</td>
+                                    <td style="color: #0f172a; font-size: 13px; font-weight: 700; text-align: right; padding: 6px 0;">{display_doctor_name}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color: #64748b; font-size: 13px; font-weight: 500; padding: 6px 0;">Specialization:</td>
+                                    <td style="color: #0077b6; font-size: 13px; font-weight: 700; text-align: right; padding: 6px 0;">{spec_display}</td>
+                                </tr>
+                                {email_row}
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <p style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
+                    Please click the button below to choose your password and activate your Doctor Portal access:
+                </p>
+
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+                    <tr>
+                        <td align="center">
+                            <a href="{activation_url}" style="background: linear-gradient(135deg, #0077b6 0%, #023e8a 100%); color: #ffffff; padding: 14px 34px; border-radius: 12px; font-weight: 700; text-decoration: none; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(0, 119, 182, 0.35); text-align: center;">
+                                Set Password &amp; Activate Account &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f9ff; border-left: 4px solid #0077b6; border-radius: 8px; margin-top: 24px;">
+                    <tr>
+                        <td style="padding: 12px 16px;">
+                            <p style="color: #0369a1; font-size: 12px; margin: 0; line-height: 1.5;">
+                                <strong>Security Notice:</strong> This activation link is strictly single-use and will automatically expire in <strong>24 hours</strong>. If you were not expecting this invitation, please notify clinic administration immediately.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+
+                <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
+                    <p style="color: #94a3b8; font-size: 12px; line-height: 1.5; margin: 0; word-break: break-all;">
+                        Button not working? Copy this URL into your browser:<br>
+                        <a href="{activation_url}" style="color: #0077b6; text-decoration: underline;">{activation_url}</a>
+                    </p>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                    &copy; 2026 PrimeCare Clinic &middot; All rights reserved.
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
+# ===================== Patient & Doctor Auth Routes =====================
 
 @app.route('/patient_register', methods=['POST'])
 def patient_register():
     data = request.get_json() or request.form
-    name = data.get('name', '').strip()
-    email = data.get('email', '').strip().lower()
+    name = (data.get('name') or '').strip()
+    raw_phone = (data.get('phone_number') or data.get('mobile') or data.get('phone') or '').strip()
+    password = data.get('password', '')
+    confirm_password = data.get('confirm_password', '')
+    email = (data.get('email') or '').strip().lower()
+
+    if not name or not raw_phone or not password:
+        return jsonify(success=False, msg="Full name, mobile number, and password are required.")
+
+    if confirm_password and password != confirm_password:
+        return jsonify(success=False, msg="Passwords do not match.")
+
+    if len(password) < 6:
+        return jsonify(success=False, msg="Password must be at least 6 characters.")
+
+    # Normalize phone to E.164
+    norm_phone = normalize_phone_number(raw_phone)
+    if not norm_phone:
+        return jsonify(success=False, msg="Invalid mobile number format. Please provide a valid 10-digit number or international format.")
+
+    # Ensure unique mobile number & cross-role conflict checks
+    has_conflict, conflict_msg = check_phone_conflict(norm_phone)
+    if has_conflict:
+        return jsonify(success=False, msg=conflict_msg)
+
+    # Optional email validations
+    if email:
+        if email == ADMIN_EMAIL.lower():
+            return jsonify(success=False, msg="Registration is not allowed for this email address.")
+        existing_email_user = User.query.filter(db.func.lower(User.email) == email).first()
+        if existing_email_user:
+            return jsonify(success=False, msg="This email address is already registered.")
+
+    # Create patient account with phone_verified=False (ready for future WhatsApp OTP)
+    new_user = User(
+        name=name.title(),
+        phone_number=norm_phone,
+        email=email if email else None,
+        password_hash=generate_password_hash(password),
+        role="patient",
+        phone_verified=False,
+        email_verified=False
+    )
+    db.session.add(new_user)
+    db.session.commit()
+
+    # Direct login into patient session
+    session['user_id'] = new_user.id
+    session['user_name'] = new_user.name
+    session['user_role'] = "patient"
+    session['user_phone'] = new_user.phone_number
+    session['user_email'] = new_user.email
+    session.pop('admin_logged_in', None)
+    session.pop('admin_email', None)
+
+    return jsonify(success=True, msg="Account created successfully", redirect_url="/patient_dashboard")
+
+@app.route('/patient_login', methods=['POST'])
+def patient_login():
+    data = request.get_json() or request.form
+    ident = (data.get('phone_number') or data.get('identifier') or data.get('email') or data.get('mobile') or data.get('phone') or '').strip()
     password = data.get('password', '')
 
-    if not email or not password or not name:
-        return jsonify(success=False, msg="Name, email, and password are required")
+    if not ident or not password:
+        return jsonify(success=False, msg="Mobile number and password are required")
 
-    if email == ADMIN_EMAIL.lower():
-        return jsonify(success=False, msg="Registration is not allowed for this email address.")
+    # Check role separation and find user
+    if "@" in ident:
+        clean_email = ident.lower().strip()
+        if clean_email == ADMIN_EMAIL.lower():
+            return jsonify(success=False, msg="Please use the Admin Login.")
+        doc_sess = DoctorSession.query.filter(db.func.lower(DoctorSession.email) == clean_email).first()
+        user = User.query.filter(db.func.lower(User.email) == clean_email).first()
+        if doc_sess or (user and user.role == 'doctor'):
+            return jsonify(success=False, msg="Doctor accounts must sign in using Doctor Login.")
+    else:
+        norm_phone = normalize_phone_number(ident)
+        if norm_phone:
+            doc_sess = DoctorSession.query.filter(DoctorSession.phone_number == norm_phone).first()
+            user = User.query.filter_by(phone_number=norm_phone).first()
+            if doc_sess or (user and user.role == 'doctor'):
+                return jsonify(success=False, msg="Doctor accounts must sign in using Doctor Login.")
+        else:
+            user = None
 
-    user = User.query.filter_by(email=email).first()
-    if user:
-        return jsonify(success=False, msg="Email already registered")
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify(success=False, msg="Invalid mobile number or password")
 
-    # Save details in session temporarily so we can create user after OTP verify
-    session['temp_reg_name'] = name.title()
-    session['temp_reg_email'] = email
-    session['temp_reg_pass'] = generate_password_hash(password)
+    session['user_id'] = user.id
+    session['user_name'] = user.name
+    session['user_role'] = "patient"
+    session['user_phone'] = user.phone_number
+    session['user_email'] = user.email
+    session.pop('admin_logged_in', None)
+    session.pop('admin_email', None)
 
-    # Generate OTP
+    return jsonify(success=True, msg="Logged in successfully", redirect_url="/patient_dashboard")
+
+@app.route('/doctor_login', methods=['POST'])
+def doctor_login():
+    data = request.get_json() or request.form
+    identifier = (data.get('identifier') or data.get('email') or data.get('phone_number') or '').strip()
+    password = data.get('password', '')
+
+    if not identifier or not password:
+        return jsonify(success=False, msg="Doctor email or mobile number and password are required.")
+
+    if '@' in identifier and identifier.lower() == ADMIN_EMAIL.lower():
+        return jsonify(success=False, msg="Please use Admin Login.")
+
+    doc_session = None
+    target_email = None
+
+    if '@' in identifier:
+        target_email = identifier.lower().strip()
+        doc_session = DoctorSession.query.filter(db.func.lower(DoctorSession.email) == target_email).first()
+        if not doc_session:
+            return jsonify(success=False, msg="No doctor account found matching this email address.")
+    else:
+        norm_phone = normalize_phone_number(identifier)
+        if not norm_phone:
+            return jsonify(success=False, msg="Invalid mobile number format. Please provide a valid mobile number.")
+        doc_session = DoctorSession.query.filter(DoctorSession.phone_number == norm_phone).first()
+        if not doc_session:
+            return jsonify(success=False, msg="No doctor account found matching this mobile number.")
+        target_email = doc_session.email.lower() if doc_session.email else None
+
+    if not target_email:
+        return jsonify(success=False, msg="Doctor record has no associated email. Please contact clinic administration.")
+
+    # Check User account
+    user = User.query.filter(db.func.lower(User.email) == target_email).first()
+    if not user:
+        inv = DoctorInvitation.query.filter_by(doctor_id=doc_session.id, is_used=False).order_by(DoctorInvitation.created_at.desc()).first()
+        if inv and datetime.utcnow() <= inv.expires_at:
+            return jsonify(success=False, msg="Your doctor account has not been activated yet. Please click the activation link sent to your email.")
+        return jsonify(success=False, msg="Doctor account is not activated. Please contact clinic administration.")
+
+    if user.role != 'doctor':
+        return jsonify(success=False, msg="This account is registered as a patient. Please use Patient Login.")
+
+    if not user.email_verified:
+        return jsonify(success=False, msg="Your doctor account has not been activated yet. Please activate your account via the link sent to your email.")
+
+    if not check_password_hash(user.password_hash, password):
+        return jsonify(success=False, msg="Invalid credentials. Please check your password.")
+
+    # Successful doctor authentication
+    session['user_id'] = user.id
+    session['user_name'] = user.name
+    session['user_email'] = user.email
+    session['user_role'] = 'doctor'
+    session['user_phone'] = user.phone_number or doc_session.phone_number
+    session['doctor_id'] = doc_session.id
+    session['doctor_name'] = doc_session.doctor_name
+    session.pop('admin_logged_in', None)
+    session.pop('admin_email', None)
+
+    return jsonify(success=True, msg="Doctor signed in successfully.", redirect_url="/doctor_dashboard")
+
+
+
+# ============================================================================
+# DOCTOR FORGOT PASSWORD ENDPOINTS (EMAIL / MOBILE IDENTIFIER -> EMAIL OTP)
+# ============================================================================
+@app.route('/doctor_send_reset_otp', methods=['POST'])
+def doctor_send_reset_otp():
+    """
+    Initiates doctor password reset.
+    Accepts doctor registered email or mobile number.
+    Delivers 6-digit verification code to the doctor's registered email.
+    Applies 60-second resend cooldown and 5-minute expiry.
+    Returns generic response to prevent account enumeration.
+    """
+    data = request.get_json() or request.form
+    identifier = (data.get('identifier') or data.get('email') or data.get('phone_number') or '').strip()
+    generic_msg = "If an active doctor account matches the provided identifier, a password reset code has been sent to the registered email."
+    
+    if not identifier:
+        return jsonify(success=False, msg="Email address or mobile number is required.")
+
+    doc = None
+    if '@' in identifier:
+        clean_email = identifier.lower().strip()
+        doc = DoctorSession.query.filter(db.func.lower(DoctorSession.email) == clean_email).first()
+    else:
+        norm_phone = normalize_phone_number(identifier)
+        if norm_phone:
+            doc = DoctorSession.query.filter(DoctorSession.phone_number == norm_phone).first()
+
+    if not doc or not doc.email:
+        return jsonify(success=True, msg=generic_msg)
+
+    user = User.query.filter(db.func.lower(User.email) == doc.email.lower(), User.role == 'doctor').first()
+    if not user or not user.email_verified:
+        return jsonify(success=True, msg=generic_msg)
+
+    # Check 60-second cooldown
+    last_sent_str = session.get('doc_reset_last_sent')
+    if last_sent_str:
+        try:
+            last_sent = datetime.fromisoformat(last_sent_str)
+            if (datetime.utcnow() - last_sent).total_seconds() < 60:
+                return jsonify(success=False, msg="Please wait 60 seconds before requesting another code.")
+        except Exception:
+            pass
+
+    otp_code = f"{secrets.randbelow(900000) + 100000}"
+    expiry_time = datetime.utcnow() + timedelta(minutes=5)
+    reset_key = f"doctor_reset_{user.email.lower()}"
+
+    OTP.query.filter_by(email=reset_key).delete()
+    new_otp = OTP(email=reset_key, otp=otp_code, expiry=expiry_time)
+    db.session.add(new_otp)
+    db.session.commit()
+
+    session['doc_reset_email'] = user.email.lower()
+    session['doc_reset_attempts'] = 0
+    session['doc_reset_last_sent'] = datetime.utcnow().isoformat()
+
+    html_content = get_otp_html(otp_code)
+    send_email(user.email.lower(), "PrimeCare Clinic - Doctor Password Reset Code", html_content)
+
+    return jsonify(success=True, msg=generic_msg)
+
+
+@app.route('/doctor_verify_reset_otp', methods=['POST'])
+def doctor_verify_reset_otp():
+    """
+    Verifies the 6-digit password reset code for a doctor account.
+    Enforces maximum 3 attempts before code invalidation.
+    """
+    data = request.get_json() or request.form
+    otp_entered = (data.get('otp') or '').strip()
+    identifier = (data.get('identifier') or session.get('doc_reset_email') or '').strip()
+
+    target_email = None
+    if '@' in identifier:
+        target_email = identifier.lower().strip()
+    else:
+        norm_phone = normalize_phone_number(identifier)
+        if norm_phone:
+            doc = DoctorSession.query.filter(DoctorSession.phone_number == norm_phone).first()
+            if doc and doc.email:
+                target_email = doc.email.lower()
+
+    if not target_email or not otp_entered:
+        return jsonify(success=False, msg="Missing identifier or verification code.")
+
+    attempts = session.get('doc_reset_attempts', 0)
+    if attempts >= 3:
+        OTP.query.filter_by(email=f"doctor_reset_{target_email}").delete()
+        db.session.commit()
+        return jsonify(success=False, msg="Too many failed attempts. Please request a new password reset code.")
+
+    otp_rec = OTP.query.filter_by(email=f"doctor_reset_{target_email}").first()
+    if not otp_rec:
+        return jsonify(success=False, msg="No active reset code found. Please request a new code.")
+
+    if datetime.utcnow() > otp_rec.expiry:
+        OTP.query.filter_by(email=f"doctor_reset_{target_email}").delete()
+        db.session.commit()
+        return jsonify(success=False, msg="Reset code has expired. Please request a new code.")
+
+    if otp_rec.otp != otp_entered:
+        session['doc_reset_attempts'] = attempts + 1
+        db.session.commit()
+        remaining = 3 - (attempts + 1)
+        return jsonify(success=False, msg=f"Invalid code. {remaining} attempt(s) remaining.")
+
+    session['doc_reset_verified'] = target_email
+    return jsonify(success=True, msg="Verification code confirmed.")
+
+
+@app.route('/doctor_reset_password', methods=['POST'])
+def doctor_reset_password():
+    """
+    Updates the doctor's password following code verification.
+    Invalidates the OTP and resets attempt trackers.
+    """
+    data = request.get_json() or request.form
+    otp_entered = (data.get('otp') or '').strip()
+    identifier = (data.get('identifier') or session.get('doc_reset_email') or '').strip()
+    new_password = data.get('new_password') or data.get('password') or ''
+    confirm_password = data.get('confirm_password', '')
+
+    if not new_password or len(new_password) < 6:
+        return jsonify(success=False, msg="Password must be at least 6 characters.")
+    if confirm_password and new_password != confirm_password:
+        return jsonify(success=False, msg="Passwords do not match.")
+
+    target_email = None
+    if '@' in identifier:
+        target_email = identifier.lower().strip()
+    else:
+        norm_phone = normalize_phone_number(identifier)
+        if norm_phone:
+            doc = DoctorSession.query.filter(DoctorSession.phone_number == norm_phone).first()
+            if doc and doc.email:
+                target_email = doc.email.lower()
+
+    if not target_email:
+        return jsonify(success=False, msg="Doctor account not identified.")
+
+    is_verified = (session.get('doc_reset_verified') == target_email)
+    if not is_verified:
+        otp_rec = OTP.query.filter_by(email=f"doctor_reset_{target_email}", otp=otp_entered).first()
+        if not otp_rec or datetime.utcnow() > otp_rec.expiry:
+            return jsonify(success=False, msg="Verification code is invalid or has expired.")
+
+    user = User.query.filter(db.func.lower(User.email) == target_email, User.role == 'doctor').first()
+    if not user:
+        return jsonify(success=False, msg="Doctor account not found.")
+
+    user.password_hash = generate_password_hash(new_password)
+    OTP.query.filter_by(email=f"doctor_reset_{target_email}").delete()
+    session.pop('doc_reset_email', None)
+    session.pop('doc_reset_verified', None)
+    session.pop('doc_reset_attempts', None)
+    session.pop('doc_reset_last_sent', None)
+    db.session.commit()
+
+    app.logger.info(f"AUDIT: Doctor password reset successfully for {user.email}")
+    return jsonify(success=True, msg="Password updated successfully. Please sign in with Doctor Login.", redirect_url="/")
+
+def send_whatsapp_otp(phone_number, otp_code):
+    """
+    Delivers a 6-digit verification code to the recipient's WhatsApp number.
+    Uses Kapso / WhatsApp gateway when configured in environment.
+    Falls back to secure application log for development/testing environments.
+    """
+    kapso_api_key = os.getenv("KAPSO_API_KEY")
+    kapso_url = os.getenv("KAPSO_API_URL")
+    message = f"Your PrimeCare Clinic verification code is: {otp_code}. Valid for 5 minutes. Do not share this code with anyone."
+    
+    if kapso_api_key and kapso_url:
+        try:
+            import requests
+            headers = {"Authorization": f"Bearer {kapso_api_key}", "Content-Type": "application/json"}
+            payload = {"phone": phone_number, "message": message}
+            resp = requests.post(kapso_url, json=payload, headers=headers, timeout=10)
+            if resp.status_code in (200, 201):
+                app.logger.info(f"WhatsApp OTP delivered successfully to {phone_number}")
+                return True
+            else:
+                app.logger.warning(f"Kapso WhatsApp OTP delivery returned status {resp.status_code}: {resp.text}")
+        except Exception as e:
+            app.logger.error(f"Failed to deliver WhatsApp OTP via Kapso: {e}")
+            return False
+
+    app.logger.info(f"[WHATSAPP OTP] Delivered to {phone_number}: Code={otp_code}")
+    return True
+
+
+@app.route('/doctor_send_change_phone_otp', methods=['POST'])
+def doctor_send_change_phone_otp():
+    if session.get('user_role') != 'doctor':
+        return jsonify(success=False, msg="Unauthorized: Doctor role required"), 403
+
+    doctor_email = session.get('user_email')
+    if not doctor_email:
+        return jsonify(success=False, msg="Unauthorized"), 401
+
+    data = request.get_json() or request.form
+    new_phone = (data.get('new_phone_number') or data.get('phone_number') or '').strip()
+
+    if not new_phone:
+        return jsonify(success=False, msg="Please provide a new mobile number.")
+
+    norm_phone = normalize_phone_number(new_phone)
+    if not norm_phone:
+        return jsonify(success=False, msg="Invalid mobile number format. Please provide a valid 10-digit number.")
+
+    doc = DoctorSession.query.filter_by(email=doctor_email).first()
+    user = User.query.filter(db.func.lower(User.email) == doctor_email.lower()).first()
+
+    if not doc or not user:
+        return jsonify(success=False, msg="Doctor profile not found"), 404
+
+    if doc.phone_number == norm_phone:
+        return jsonify(success=False, msg="The entered number is already your registered mobile number.")
+
+    has_conflict, err_msg = check_phone_conflict(norm_phone, exclude_doctor_id=doc.id, exclude_user_id=user.id)
+    if has_conflict:
+        return jsonify(success=False, msg=err_msg)
+
+    # 60s cooldown check
+    last_sent_str = session.get('doc_phone_otp_last_sent')
+    if last_sent_str:
+        try:
+            last_sent = datetime.fromisoformat(last_sent_str)
+            if (datetime.utcnow() - last_sent).total_seconds() < 60:
+                return jsonify(success=False, msg="Please wait 60 seconds before requesting another OTP.")
+        except Exception:
+            pass
+
     otp_code = str(random.randint(100000, 999999))
     expiry_time = datetime.utcnow() + timedelta(minutes=5)
-    
-    # Store in OTP Table
-    OTP.query.filter_by(email=email).delete() # Keep only latest
-    new_otp = OTP(email=email, otp=otp_code, expiry=expiry_time)
+
+    otp_key = f"doctor_phone_change_{doctor_email.lower()}"
+    OTP.query.filter_by(email=otp_key).delete()
+    new_otp = OTP(email=otp_key, otp=otp_code, expiry=expiry_time)
+    db.session.add(new_otp)
+    db.session.commit()
+
+    session['doc_pending_new_phone'] = norm_phone
+    session['doc_phone_otp_last_sent'] = datetime.utcnow().isoformat()
+    session['doc_phone_otp_attempts'] = 0
+
+    send_whatsapp_otp(norm_phone, otp_code)
+    app.logger.info(f"AUDIT: Doctor {doctor_email} requested mobile number update to {norm_phone}")
+
+    return jsonify(success=True, msg=f"A 6-digit verification code has been sent to {norm_phone} via WhatsApp.", phone=norm_phone)
+
+
+@app.route('/doctor_verify_change_phone_otp', methods=['POST'])
+def doctor_verify_change_phone_otp():
+    if session.get('user_role') != 'doctor':
+        return jsonify(success=False, msg="Unauthorized: Doctor role required"), 403
+
+    doctor_email = session.get('user_email')
+    if not doctor_email:
+        return jsonify(success=False, msg="Unauthorized"), 401
+
+    data = request.get_json() or request.form
+    otp_entered = (data.get('otp') or '').strip()
+
+    pending_phone = session.get('doc_pending_new_phone')
+    if not pending_phone:
+        return jsonify(success=False, msg="No pending mobile number update found. Please request an OTP first.")
+
+    if not otp_entered:
+        return jsonify(success=False, msg="Please enter the 6-digit OTP code.")
+
+    attempts = session.get('doc_phone_otp_attempts', 0)
+    if attempts >= 3:
+        OTP.query.filter_by(email=f"doctor_phone_change_{doctor_email.lower()}").delete()
+        session.pop('doc_pending_new_phone', None)
+        db.session.commit()
+        return jsonify(success=False, msg="Too many failed attempts. Please request a new OTP.")
+
+    otp_key = f"doctor_phone_change_{doctor_email.lower()}"
+    otp_rec = OTP.query.filter_by(email=otp_key, otp=otp_entered).first()
+
+    if not otp_rec:
+        session['doc_phone_otp_attempts'] = attempts + 1
+        return jsonify(success=False, msg=f"Invalid OTP code. {2 - attempts} attempt(s) remaining.")
+
+    if datetime.utcnow() > otp_rec.expiry:
+        OTP.query.filter_by(email=otp_key).delete()
+        session.pop('doc_pending_new_phone', None)
+        db.session.commit()
+        return jsonify(success=False, msg="OTP has expired. Please request a new code.")
+
+    doc = DoctorSession.query.filter_by(email=doctor_email).first()
+    user = User.query.filter(db.func.lower(User.email) == doctor_email.lower()).first()
+
+    if not doc or not user:
+        return jsonify(success=False, msg="Doctor profile not found"), 404
+
+    old_phone = doc.phone_number
+    doc.phone_number = pending_phone
+    doc.phone_updated_by = doctor_email
+    doc.phone_updated_at = datetime.utcnow()
+
+    user.phone_number = pending_phone
+    user.phone_verified = True
+    user.phone_verified_at = datetime.utcnow()
+
+    # Synchronize Google Sheet row
+    try:
+        ensure_doctors_sheet_headers()
+        all_rows = doctors_ws.get_all_values()
+        if all_rows:
+            headers = all_rows[0]
+            phone_col_idx = headers.index("Phone_Number") if "Phone_Number" in headers else (headers.index("Phone") if "Phone" in headers else -1)
+            name_col_idx = headers.index("Name") if "Name" in headers else 1
+            spec_col_idx = headers.index("Specialization") if "Specialization" in headers else 2
+            
+            for idx, r in enumerate(all_rows[1:], start=2):
+                if len(r) > max(name_col_idx, spec_col_idx):
+                    if (r[name_col_idx].strip().lower() == doc.doctor_name.strip().lower() and 
+                        r[spec_col_idx].strip().lower() == doc.specialization.strip().lower()):
+                        if phone_col_idx >= 0:
+                            col_letter = chr(ord('A') + phone_col_idx) if phone_col_idx < 26 else 'P'
+                            doctors_ws.update(f"{col_letter}{idx}", [[pending_phone]])
+                        break
+    except Exception as sheet_err:
+        app.logger.warning(f"Could not sync phone update to Google Sheet: {sheet_err}")
+
+    OTP.query.filter_by(email=otp_key).delete()
+    session.pop('doc_pending_new_phone', None)
+    session.pop('doc_phone_otp_attempts', None)
+    session.pop('doc_phone_otp_last_sent', None)
+    db.session.commit()
+
+    DOCTOR_CACHE["ts"] = 0
+    app.logger.info(f"AUDIT: Doctor {doctor_email} verified and changed mobile number from {old_phone} to {pending_phone} via WhatsApp OTP")
+
+    return jsonify(success=True, msg="Mobile number updated and verified successfully via WhatsApp!", new_phone=pending_phone)
+
+@app.route('/doctor/pending_verification')
+def doctor_pending_verification():
+    user_role = session.get('user_role')
+    user_email = session.get('user_email')
+    user_id = session.get('user_id')
+
+    if user_role != 'doctor' or not user_id:
+        return redirect(url_for('home'))
+
+    user = User.query.get(user_id)
+    if not user:
+        return redirect(url_for('home'))
+
+    # If mobile verification has succeeded, redirect to full doctor dashboard
+    if user.phone_verified:
+        return redirect(url_for('doctor_dashboard'))
+
+    doc_sess = DoctorSession.query.filter_by(email=user_email).first() if user_email else None
+    doctor_name = doc_sess.doctor_name if doc_sess else user.name
+    specialization = doc_sess.specialization if doc_sess else "Specialist"
+    phone_number = user.phone_number or (doc_sess.phone_number if doc_sess else "")
+
+    return render_template(
+        'doctor_pending_verification.html',
+        doctor_name=doctor_name,
+        specialization=specialization,
+        phone_number=phone_number
+    )
+
+@app.route('/doctor/activate', methods=['GET', 'POST'])
+def doctor_activate():
+    if request.method == 'GET':
+        token = (request.args.get('token') or '').strip()
+        if not token:
+            return render_template('doctor_activate.html', error="Missing invitation token.")
+        token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+        inv = DoctorInvitation.query.filter_by(token_hash=token_hash).first()
+        if not inv:
+            return render_template('doctor_activate.html', error="Invalid or unknown invitation link.")
+        if inv.is_used:
+            return render_template('doctor_activate.html', error="This invitation link has already been used. Please sign in with Doctor Login.")
+        if datetime.utcnow() > inv.expires_at:
+            return render_template('doctor_activate.html', error="This invitation link has expired (24 hours exceeded). Please ask the clinic administrator to resend the invitation.")
+
+        doc = DoctorSession.query.get(inv.doctor_id)
+        raw_name = doc.doctor_name if doc else "Doctor"
+        doctor_name = clean_doctor_display_name(raw_name)
+        specialization = doc.specialization if doc else "Specialist"
+        phone_number = doc.phone_number if doc else ""
+        return render_template('doctor_activate.html',
+                               token=token,
+                               doctor_name=doctor_name,
+                               specialization=specialization,
+                               email=inv.email,
+                               phone_number=phone_number)
+
+    # POST password creation
+    data = request.get_json() or request.form
+    token = (data.get('token') or '').strip()
+    password = data.get('password', '')
+    confirm_password = data.get('confirm_password', '')
+
+    if not token:
+        return jsonify(success=False, msg="Missing activation token.")
+    if not password or not confirm_password:
+        return jsonify(success=False, msg="Password and confirmation are required.")
+    if len(password) < 6:
+        return jsonify(success=False, msg="Password must be at least 6 characters.")
+    if password != confirm_password:
+        return jsonify(success=False, msg="Passwords do not match.")
+
+    token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+    inv = DoctorInvitation.query.filter_by(token_hash=token_hash).first()
+    if not inv:
+        return jsonify(success=False, msg="Invalid or unknown invitation link.")
+    if inv.is_used:
+        return jsonify(success=False, msg="This invitation link has already been used.")
+    if datetime.utcnow() > inv.expires_at:
+        return jsonify(success=False, msg="This invitation link has expired. Please contact administration for a new invite.")
+
+    doc = DoctorSession.query.get(inv.doctor_id)
+    if not doc:
+        return jsonify(success=False, msg="Doctor record not found.")
+
+    # Create or update doctor User account
+    user = User.query.filter(db.func.lower(User.email) == inv.email.lower()).first()
+    if user:
+        user.password_hash = generate_password_hash(password)
+        user.role = "doctor"
+        user.email_verified = True
+        if doc.phone_number and not user.phone_number:
+            user.phone_number = doc.phone_number
+            user.phone_verified = False
+    else:
+        user = User(
+            name=doc.doctor_name,
+            email=inv.email.lower(),
+            phone_number=doc.phone_number,
+            password_hash=generate_password_hash(password),
+            role="doctor",
+            email_verified=True,
+            phone_verified=False
+        )
+        db.session.add(user)
+
+    inv.is_used = True
+    inv.used_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify(success=True, msg="Account activated successfully! Please sign in using Doctor Login.", redirect_url="/?auth=doctorLogin")
+
+@app.route('/admin_resend_doctor_invitation', methods=['POST'])
+def admin_resend_doctor_invitation():
+    if session.get("admin_email") != ADMIN_EMAIL:
+        return jsonify(success=False, msg="Unauthorized")
+
+    data = request.get_json() or request.form
+    doc_id = data.get('doctor_id')
+    email = (data.get('email') or '').strip().lower()
+
+    doc = None
+    if doc_id:
+        doc = DoctorSession.query.get(doc_id)
+    elif email:
+        doc = DoctorSession.query.filter(db.func.lower(DoctorSession.email) == email).first()
+
+    if not doc or not doc.email:
+        return jsonify(success=False, msg="Doctor profile or email not found.")
+
+    # Invalidate previous unused invitations
+    DoctorInvitation.query.filter_by(doctor_id=doc.id, is_used=False).update({'is_used': True})
+
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+    expires_at = datetime.utcnow() + timedelta(hours=24)
+
+    new_inv = DoctorInvitation(
+        doctor_id=doc.id,
+        email=doc.email.lower(),
+        token_hash=token_hash,
+        expires_at=expires_at,
+        is_used=False
+    )
+    db.session.add(new_inv)
+    db.session.commit()
+
+    activation_url = url_for('doctor_activate', token=token, _external=True)
+    html_content = get_doctor_invite_html(doc.doctor_name, doc.specialization, activation_url, email=doc.email)
+    send_email(doc.email.lower(), "Welcome to PrimeCare Clinic - Activate Your Doctor Account", html_content)
+
+    return jsonify(success=True, msg=f"Activation invitation sent to {doc.email}.")
+
+@app.route('/api/patient/update_phone', methods=['POST'])
+def patient_update_phone():
+    user_id = session.get('user_id')
+    user_role = session.get('user_role')
+    if not user_id or user_role != 'patient':
+        return jsonify(success=False, msg="Unauthorized"), 401
+
+    data = request.get_json() or request.form
+    raw_phone = (data.get('phone_number') or '').strip()
+    if not raw_phone:
+        return jsonify(success=False, msg="Mobile number is required.")
+
+    norm_phone = normalize_phone_number(raw_phone)
+    if not norm_phone:
+        return jsonify(success=False, msg="Invalid phone number format. Please provide a valid 10-digit number or international format.")
+
+    # Check cross-role uniqueness
+    has_conflict, conflict_msg = check_phone_conflict(norm_phone, exclude_user_id=user_id)
+    if has_conflict:
+        return jsonify(success=False, msg=conflict_msg)
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify(success=False, msg="User not found.")
+
+    user.phone_number = norm_phone
+    user.phone_verified = False
+    user.phone_verified_at = None
+    db.session.commit()
+
+    session['user_phone'] = norm_phone
+    return jsonify(success=True, msg="Mobile number updated successfully.", phone_number=norm_phone)
+
+@app.route('/patient_logout', methods=['POST', 'GET'])
+def patient_logout():
+    session.pop('user_id', None)
+    session.pop('user_email', None)
+    session.pop('user_name', None)
+    session.pop('user_role', None)
+    session.pop('user_phone', None)
+    session.pop('doctor_id', None)
+    session.pop('doctor_name', None)
+    session.pop('pending_role_id', None)
+    session.pop('pending_role_email', None)
+    session.pop('pending_role_name', None)
+    return jsonify(success=True, msg="Logged out successfully")
+
+@app.route('/send_forgot_otp', methods=['POST'])
+def send_forgot_otp():
+    data = request.get_json() or request.form
+    ident = (data.get('email') or data.get('phone_number') or '').strip().lower()
+
+    if "@" in ident:
+        user = User.query.filter(db.func.lower(User.email) == ident).first()
+    else:
+        norm_phone = normalize_phone_number(ident)
+        user = User.query.filter_by(phone_number=norm_phone).first() if norm_phone else None
+
+    if not user:
+        return jsonify(success=False, msg="Account not found")
+
+    if not user.email:
+        return jsonify(success=False, msg="WhatsApp OTP password reset will be available soon. Please contact clinic reception.")
+
+    session['temp_forgot_email'] = user.email
+    session['forgot_verified'] = False
+
+    otp_code = str(random.randint(100000, 999999))
+    expiry_time = datetime.utcnow() + timedelta(minutes=5)
+
+    OTP.query.filter_by(email=user.email).delete()
+    new_otp = OTP(email=user.email, otp=otp_code, expiry=expiry_time)
     db.session.add(new_otp)
     db.session.commit()
 
     html_content = get_otp_html(otp_code)
-    success = send_email(email, "Your PrimeCare Registration OTP", html_content)
+    success = send_email(user.email, "Your PrimeCare Password Reset Code", html_content)
 
     if success:
-        return jsonify(success=True, msg="OTP sent to email")
-    else:
-        return jsonify(success=False, msg="Failed to send OTP email")
+        return jsonify(success=True, msg="OTP sent to registered email")
+    return jsonify(success=False, msg="Failed to send OTP")
 
 @app.route('/verify_patient_otp', methods=['POST'])
 def verify_patient_otp():
     data = request.get_json() or request.form
-    email = data.get('email', '').strip().lower() or session.get('temp_reg_email') or session.get('temp_forgot_email')
-    otp_entered = data.get('otp', '').strip()
+    email = (data.get('email') or session.get('temp_forgot_email') or '').strip().lower()
+    otp_entered = (data.get('otp') or '').strip()
 
     if not email or not otp_entered:
         return jsonify(success=False, msg="Missing email or OTP")
-
-    if email == ADMIN_EMAIL.lower():
-        return jsonify(success=False, msg="Registration is not allowed for this email address.")
 
     otp_record = OTP.query.filter_by(email=email, otp=otp_entered).first()
     if not otp_record:
@@ -1108,241 +2029,8 @@ def verify_patient_otp():
         db.session.commit()
         return jsonify(success=False, msg="OTP expired")
 
-    # OTP Valid! 
-    # Are we in register flow or forgot password flow?
-    if session.get('temp_reg_email') == email:
-        # Complete Registration
-        new_user = User(
-            name=session.get('temp_reg_name'), 
-            email=email, 
-            password_hash=session.get('temp_reg_pass'), 
-            role="patient" # Default role
-        )
-        db.session.add(new_user)
-        db.session.commit()
-        
-        # Cleanup temp
-        session.pop('temp_reg_name', None)
-        session.pop('temp_reg_email', None)
-        session.pop('temp_reg_pass', None)
-
-        # Detected if doctor session exists for this email
-        doc_session = DoctorSession.query.filter_by(email=email).first()
-        
-        # Determine if we need role selection
-        if doc_session:
-            session['pending_role_id'] = new_user.id
-            session['pending_role_email'] = email
-            session['pending_role_name'] = new_user.name
-            return jsonify(success=True, msg="Account created. Please select portal.", flow="register", require_role_selection=True)
-
-        # auto login standard patient
-        session['user_id'] = new_user.id
-        session['user_name'] = new_user.name
-        session['user_email'] = new_user.email
-        session['user_role'] = "patient"
-        OTP.query.filter_by(email=email).delete()
-        db.session.commit()
-        return jsonify(success=True, msg="Account created successfully", flow="register", redirect_url="/patient_dashboard")
-    elif session.get('temp_forgot_email') == email:
-        # Verified for password reset
-        session['forgot_verified'] = True
-        return jsonify(success=True, msg="OTP verified", flow="forgot")
-
-    return jsonify(success=False, msg="Invalid flow state")
-
-@app.route('/patient_login', methods=['POST'])
-def patient_login():
-    data = request.get_json() or request.form
-    email = data.get('email', '').strip().lower()
-    password = data.get('password', '')
-
-    if email == ADMIN_EMAIL.lower():
-        # Check if password login is enabled
-        login_setting = AppSettings.query.filter_by(key='password_login_enabled').first()
-        if login_setting and login_setting.value == '0':
-            return jsonify(success=False, msg="Admin password login is disabled. Please use Admin Login via OTP.")
-
-        setting = AppSettings.query.filter_by(key='admin_password_hash').first()
-        if setting:
-            if check_password_hash(setting.value, password):
-                session['admin_logged_in'] = True
-                session['admin_email'] = ADMIN_EMAIL
-                session.pop('user_id', None)
-                session.pop('user_role', None)
-                session.pop('user_email', None)
-                session.pop('user_name', None)
-                try:
-                    sync_doctors_from_sheet()
-                except Exception:
-                    pass
-                return jsonify(success=True, msg="Admin logged in successfully", redirect_url="/booking?view=admin")
-            else:
-                return jsonify(success=False, msg="Invalid email or password")
-        else:
-            return jsonify(success=False, msg="Admin password not set. Please login via Admin OTP first to create it.")
-
-    user = User.query.filter_by(email=email).first()
-    if user and check_password_hash(user.password_hash, password):
-        doc_session = DoctorSession.query.filter_by(email=email).first()
-        
-        # If not in local DB, check mapping directly from Google Sheets
-        if not doc_session:
-            try:
-                all_docs = get_all_doctors()
-                for sheet_doc in all_docs:
-                    sheet_email = sheet_doc.get("Email", "").strip().lower()
-                    if sheet_email == email:
-                        # Re-sync doctor automatically
-                        doc_session = DoctorSession(
-                            doctor_name=sheet_doc.get("Name", "").strip(),
-                            specialization=sheet_doc.get("Specialization", "").strip(),
-                            email=email
-                        )
-                        db.session.add(doc_session)
-                        if user.role != "doctor":
-                            user.role = "doctor"
-                        db.session.commit()
-                        break
-            except Exception as e:
-                pass
-
-        if doc_session:
-            session['pending_role_id'] = user.id
-            session['pending_role_email'] = user.email
-            session['pending_role_name'] = user.name
-            return jsonify(success=True, msg="Please select portal.", require_role_selection=True)
-
-        session['user_id'] = user.id
-        session['user_name'] = user.name
-        session['user_email'] = user.email
-        
-        # Determine active role fallback
-        active_role = user.role or "patient"
-        if active_role == "doctor":
-            # Extra safety: if no doctor profile found in DoctorSession table, force patient role
-            doc_profile = DoctorSession.query.filter_by(email=email).first()
-            if not doc_profile:
-                active_role = "patient"
-        
-        session['user_role'] = active_role
-        
-        # Sync role in DB if it was missing
-        if not user.role:
-            user.role = "patient"
-            db.session.commit()
-            
-        redirect_url = "/doctor_dashboard" if active_role == "doctor" else "/patient_dashboard"
-        return jsonify(success=True, msg="Logged in successfully", redirect_url=redirect_url)
-
-    return jsonify(success=False, msg="Invalid email or password")
-
-@app.route('/patient_logout', methods=['POST'])
-def patient_logout():
-    session.pop('user_id', None)
-    session.pop('user_email', None)
-    session.pop('user_name', None)
-    session.pop('user_role', None)
-    session.pop('pending_role_id', None)
-    session.pop('pending_role_email', None)
-    session.pop('pending_role_name', None)
-    return jsonify(success=True, msg="Logged out successfully")
-
-@app.route('/select_active_role', methods=['POST'])
-def select_active_role():
-    data = request.get_json()
-    role = data.get('role') # 'doctor' or 'patient'
-    
-    user_id = session.get('pending_role_id')
-    email = session.get('pending_role_email')
-    name = session.get('pending_role_name')
-    
-    if not user_id or not email:
-        return jsonify(success=False, msg="Session expired or invalid flow")
-        
-    if role == 'doctor':
-        # Verify eligibility
-        doc_session = DoctorSession.query.filter_by(email=email).first()
-        if not doc_session:
-            return jsonify(success=False, msg="You do not have a doctor profile")
-            
-    # Set session
-    session['user_id'] = user_id
-    session['user_email'] = email
-    session['user_name'] = name
-    session['user_role'] = role
-    
-    # Update role in User table for global persistence
-    user = User.query.get(user_id)
-    if user:
-        user.role = role
-        db.session.commit()
-    
-    # Cleanup pending
-    session.pop('pending_role_id', None)
-    session.pop('pending_role_email', None)
-    session.pop('pending_role_name', None)
-    
-    redirect_url = "/doctor_dashboard" if role == "doctor" else "/patient_dashboard"
-    role_display = "Doctor" if role == "doctor" else "User"
-    return jsonify(success=True, msg=f"Welcome to {role_display} portal", redirect_url=redirect_url)
-
-@app.route('/switch_active_role', methods=['POST'])
-def switch_active_role():
-    user_id = session.get('user_id')
-    email = session.get('user_email')
-    current_role = session.get('user_role')
-    
-    if not user_id or not email:
-        return jsonify(success=False, msg="Unauthorized")
-        
-    new_role = "patient" if current_role == "doctor" else "doctor"
-    
-    if new_role == "doctor":
-        # Verify eligibility
-        doc_session = DoctorSession.query.filter_by(email=email).first()
-        if not doc_session:
-            return jsonify(success=False, msg="You do not have a doctor profile")
-            
-    # Switch session
-    session['user_role'] = new_role
-    
-    # Update role in User table for global persistence
-    user = User.query.get(user_id)
-    if user:
-        user.role = new_role
-        db.session.commit()
-        
-    redirect_url = "/doctor_dashboard" if new_role == "doctor" else "/patient_dashboard"
-    role_display = "Doctor" if new_role == "doctor" else "User"
-    return jsonify(success=True, msg=f"Switched to {role_display} portal", redirect_url=redirect_url)
-
-@app.route('/send_forgot_otp', methods=['POST'])
-def send_forgot_otp():
-    data = request.get_json() or request.form
-    email = data.get('email', '').strip().lower()
-
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        return jsonify(success=False, msg="Email not found")
-
-    session['temp_forgot_email'] = email
-    session['forgot_verified'] = False
-
-    otp_code = str(random.randint(100000, 999999))
-    expiry_time = datetime.utcnow() + timedelta(minutes=5)
-    
-    OTP.query.filter_by(email=email).delete()
-    new_otp = OTP(email=email, otp=otp_code, expiry=expiry_time)
-    db.session.add(new_otp)
-    db.session.commit()
-
-    html_content = get_otp_html(otp_code)
-    success = send_email(email, "Your PrimeCare Password Reset Code", html_content)
-    
-    if success:
-        return jsonify(success=True, msg="OTP sent")
-    return jsonify(success=False, msg="Failed to send OTP")
+    session['forgot_verified'] = True
+    return jsonify(success=True, msg="OTP verified", flow="forgot")
 
 @app.route('/reset_password', methods=['POST'])
 def reset_password():
@@ -1353,19 +2041,19 @@ def reset_password():
     if not email or not session.get('forgot_verified'):
         return jsonify(success=False, msg="Unauthorized")
 
-    if not password:
-        return jsonify(success=False, msg="Password required")
+    if not password or len(password) < 6:
+        return jsonify(success=False, msg="Password must be at least 6 characters")
 
-    user = User.query.filter_by(email=email).first()
+    user = User.query.filter(db.func.lower(User.email) == email.lower()).first()
     if user:
         user.password_hash = generate_password_hash(password)
         db.session.commit()
         session.pop('temp_forgot_email', None)
         session.pop('forgot_verified', None)
-        # auto-login
         session['user_id'] = user.id
         session['user_name'] = user.name
         session['user_email'] = user.email
+        session['user_role'] = user.role or "patient"
         OTP.query.filter_by(email=email).delete()
         db.session.commit()
         return jsonify(success=True, msg="Password reset successfully")
@@ -1376,8 +2064,12 @@ def reset_password():
 @app.route('/patient_dashboard')
 def patient_dashboard():
     user_id = session.get('user_id')
-    if not user_id:
+    user_role = session.get('user_role')
+    if not user_id or user_role != 'patient':
+        if user_role == 'doctor':
+            return redirect(url_for('doctor_dashboard'))
         return redirect(url_for('home'))
+    user = User.query.get(user_id)
 
     # Get local bookings
     bookings = PatientBooking.query.filter_by(user_id=user_id).order_by(PatientBooking.date.desc()).all()
@@ -1530,7 +2222,7 @@ def patient_dashboard():
     user_email = session.get('user_email')
     is_doctor = DoctorSession.query.filter_by(email=user_email).first() is not None
 
-    return render_template('patient_dashboard.html', 
+    return render_template('patient_dashboard.html', user=user, 
                            upcoming_bookings=upcoming_bookings,
                            past_bookings=past_bookings,
                            active_upcoming_count=active_upcoming_count,
@@ -1779,35 +2471,85 @@ def admin_add_doctor():
 
     name = request.form.get("name", "").strip()
     email = request.form.get("email", "").strip()
+    phone_number = request.form.get("phone_number", "").strip()
+    confirm_phone_number = request.form.get("confirm_phone_number", "").strip()
+    if not confirm_phone_number:
+        confirm_phone_number = request.form.get("confirm_phone", "").strip()
     specialization = request.form.get("specialization", "").strip()
     days_str = request.form.get("days", "").strip()
     day_times_json = request.form.get("day_times", "").strip()
     image_file = request.files.get("image")
 
+    # 1. Mandatory Field Validations (ALL performed before Sheets/DB writes)
     if not name or not specialization or not days_str or not day_times_json or not email:
-        return jsonify({'success': False, 'msg': 'All fields including email are required'})
+        return jsonify({'success': False, 'msg': 'All fields including email, mobile number, and specialization are required.'})
+
+    if not phone_number:
+        return jsonify({'success': False, 'msg': 'Doctor mobile number is mandatory.'})
+
+    if confirm_phone_number and phone_number != confirm_phone_number:
+        return jsonify({'success': False, 'msg': 'Doctor mobile number and confirmation do not match.'})
+
+    norm_doc_phone = normalize_phone_number(phone_number)
+    if not norm_doc_phone:
+        return jsonify({'success': False, 'msg': 'Invalid doctor mobile number format. Please provide a valid 10-digit number or international format.'})
 
     if "@" not in email or "." not in email:
-        return jsonify({'success': False, 'msg': 'Invalid email structure'})
+        return jsonify({'success': False, 'msg': 'Invalid email structure.'})
 
     if email.strip().lower() == ADMIN_EMAIL.lower():
         return jsonify({'success': False, 'msg': 'Cannot create a doctor profile with the administrator email.'})
 
-    # --- parse day_times safely ---
+    # Prevent silent conversion of patient accounts
+    patient_user = User.query.filter(db.func.lower(User.email) == email.lower(), User.role == "patient").first()
+    if patient_user:
+        return jsonify({'success': False, 'msg': 'Cannot create doctor: Email is already registered to a patient account. Administrative resolution required.'})
+
+    # Cross-role and unique phone conflict check
+    has_conflict, err_msg = check_phone_conflict(norm_doc_phone)
+    if has_conflict:
+        return jsonify({'success': False, 'msg': err_msg})
+
+    # Parse day_times safely
     try:
-        day_times = json.loads(day_times_json)  # {"Monday": "09:00-11:00", ...}
+        day_times = json.loads(day_times_json)
     except Exception:
         return jsonify({'success': False, 'msg': 'Invalid day_times data'})
 
     days = [d.strip() for d in days_str.split(",") if d.strip()]
 
-    # --- IMAGE UPLOAD (wrapped in try/except) ---
+    # Duplicate check in local DB
+    existing_sess = DoctorSession.query.filter(
+        db.func.lower(DoctorSession.doctor_name) == name.lower(),
+        db.func.lower(DoctorSession.specialization) == specialization.lower()
+    ).first()
+    if existing_sess:
+        return jsonify({'success': False, 'msg': 'Doctor already exists with same name and specialization.'})
+
+    existing_email_sess = DoctorSession.query.filter(db.func.lower(DoctorSession.email) == email.lower()).first()
+    if existing_email_sess:
+        return jsonify({'success': False, 'msg': 'Email is already registered by another doctor.'})
+
+    # Check Google Sheets for duplicates
+    try:
+        ensure_doctors_sheet_headers()
+        all_doctors = doctors_ws.get_all_records()
+        for doc in all_doctors:
+            doc_name = (doc.get("Name") or "").strip().lower()
+            doc_spec = (doc.get("Specialization") or "").strip().lower()
+            doc_email = (doc.get("Email") or "").strip().lower()
+            if doc_name == name.strip().lower() and doc_spec == specialization.strip().lower():
+                return jsonify({'success': False, 'msg': 'Doctor already exists with same name and specialization in sheet.'})
+            if email and doc_email == email.strip().lower():
+                return jsonify({'success': False, 'msg': 'Email already registered by another doctor in sheet.'})
+    except Exception as e:
+        app.logger.warning(f"Sheets pre-check warning: {e}")
+
+    # Process image upload
     image_url = ""
     if image_file and image_file.filename:
         try:
             img = Image.open(image_file.stream)
-
-            # Some mobile formats need conversion
             if img.mode not in ("RGB", "RGBA"):
                 img = img.convert("RGB")
 
@@ -1819,13 +2561,9 @@ def admin_add_doctor():
             if abs(aspect_ratio - expected_ratio) > tolerance:
                 return jsonify({
                     'success': False,
-                    'msg': (
-                        f'Image must have a 4:5 ratio (e.g. 400x500). '
-                        f'Uploaded size was {width}×{height}.'
-                    )
+                    'msg': f'Image must have a 4:5 ratio (e.g. 400x500). Uploaded size was {width}x{height}.'
                 })
 
-            # Optional: downscale very large mobile images
             max_w, max_h = 1200, 1500
             img.thumbnail((max_w, max_h))
 
@@ -1840,50 +2578,22 @@ def admin_add_doctor():
                 overwrite=True,
                 resource_type="image"
             )
-
             image_url = upload_result["secure_url"]
-
-        except Exception as e:
+        except Exception:
             app.logger.exception("Error processing doctor image")
-            return jsonify({
-                'success': False,
-                'msg': 'Image upload failed. Please use a JPG/PNG photo and try again.'
-            })
+            return jsonify({'success': False, 'msg': 'Image upload failed. Please use a JPG/PNG photo and try again.'})
 
     sheet_title = f"{name.replace(' ', '_')}_{specialization.replace(' ', '_')}"
 
-    # --- SHEETS PART (already inside try/except) ---
+    # Google Sheets Creation & Append
     try:
-        all_doctors = doctors_ws.get_all_records()
-
-        # Duplicate check
-        for doc in all_doctors:
-            doc_name = (doc.get("Name") or "").strip().lower()
-            doc_spec = (doc.get("Specialization") or "").strip().lower()
-            doc_email = (doc.get("Email") or "").strip().lower()
-            if doc_name == name.strip().lower() and doc_spec == specialization.strip().lower():
-                return jsonify({
-                    'success': False,
-                    'msg': 'Doctor already exists with same name and specialization.'
-                })
-            
-            if email and doc_email == email.strip().lower():
-                return jsonify({
-                    'success': False,
-                    'msg': 'Email already registered by another doctor.'
-                })
-
-        # Create personal sheet for this doctor
         new_doc = client.create(sheet_title)
         new_doc.share(YOUR_EMAIL, perm_type='user', role='writer')
         new_sheet = new_doc.sheet1
-        new_sheet.update(
-            "A1:F1",
-            [["Token", "Name", "Age", "Gender", "Phone_Number", "Date"]]
-        )
+        new_sheet.update("A1:F1", [["Token", "Name", "Age", "Gender", "Phone_Number", "Date"]])
 
         all_rows = doctors_ws.get_all_values()
-        next_number = len(all_rows)  # serial number
+        next_number = len(all_rows)
 
         def time_for(day):
             return day_times.get(day, "")
@@ -1903,30 +2613,58 @@ def admin_add_doctor():
             sheet_title,
             f"https://docs.google.com/spreadsheets/d/{new_doc.id}",
             image_url or "",
-            email.lower()
+            email.lower(),
+            norm_doc_phone
         ]
-
-        # Check if Email header exists, if not, we should probably just append it
-        # but to be safe, we just append to the sheet
         doctors_ws.append_row(row)
-
-        if email:
-            email = email.lower()
-            new_doc_session = DoctorSession(doctor_name=name, specialization=specialization, email=email)
-            db.session.add(new_doc_session)
-            
-            existing_user = User.query.filter_by(email=email).first()
-            if existing_user:
-                existing_user.role = "doctor"
-                
-            db.session.commit()
-
-        return jsonify({'success': True, 'msg': 'Doctor added successfully'})
-
+        DOCTOR_CACHE["ts"] = 0
     except Exception as e:
-        app.logger.exception("Error in admin_add_doctor")
-        return jsonify({'success': False, 'msg': get_friendly_error_message(e)})
+        app.logger.error(f"Error creating doctor Google Sheet: {e}")
+        return jsonify({'success': False, 'msg': f"Failed to register doctor in roster spreadsheet: {str(e)}"})
 
+    # Database Records Creation
+    try:
+        new_doc_session = DoctorSession(
+            doctor_name=name,
+            specialization=specialization,
+            email=email.lower(),
+            phone_number=norm_doc_phone,
+            phone_updated_by=admin_email,
+            phone_updated_at=datetime.utcnow()
+        )
+        db.session.add(new_doc_session)
+        db.session.flush()
+
+        existing_user = User.query.filter(db.func.lower(User.email) == email.lower()).first()
+        if existing_user and existing_user.role == "doctor":
+            existing_user.phone_number = norm_doc_phone
+
+        # Create 24-hour single-use DoctorInvitation
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+        expires_at = datetime.utcnow() + timedelta(hours=24)
+
+        new_inv = DoctorInvitation(
+            doctor_id=new_doc_session.id,
+            email=email.lower(),
+            token_hash=token_hash,
+            expires_at=expires_at,
+            is_used=False
+        )
+        db.session.add(new_inv)
+        db.session.commit()
+
+        # Send welcome invitation email
+        activation_url = url_for('doctor_activate', token=token, _external=True)
+        html_content = get_doctor_invite_html(name, specialization, activation_url, email=email)
+        send_email(email.lower(), "Welcome to PrimeCare Clinic - Activate Your Doctor Account", html_content)
+        app.logger.info(f"AUDIT: Doctor created {name} ({specialization}) with email {email} and phone {norm_doc_phone} by {admin_email}")
+
+        return jsonify({'success': True, 'msg': f"Doctor {name} added successfully. Activation invitation sent to {email}."})
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error creating doctor session/invitation: {e}")
+        return jsonify({'success': False, 'msg': f"Failed to persist doctor credentials: {str(e)}"})
 
 
 @app.route("/admin_edit_doctor", methods=["POST"])
@@ -1937,11 +2675,19 @@ def admin_edit_doctor():
     data = request.get_json()
     combined = data.get("combined", "").strip()
     email = data.get("email", "").strip()
+    phone_raw = (data.get("phone") or data.get("phone_number") or "").strip()
     days = data.get("days", [])
-    day_times = data.get("day_times", {})  # {"Monday": "09:00-11:00", ...}
+    day_times = data.get("day_times", {})
 
     if not combined or not days or not isinstance(day_times, dict) or not email:
-        return jsonify({"success": False, "msg": "Missing or invalid fields. Email is required."})
+        return jsonify({"success": False, "msg": "Missing or invalid fields. Email and schedules are required."})
+
+    if not phone_raw:
+        return jsonify({"success": False, "msg": "Doctor mobile number is mandatory."})
+
+    norm_phone = normalize_phone_number(phone_raw)
+    if not norm_phone:
+        return jsonify({"success": False, "msg": "Invalid doctor mobile number format. Please provide a valid mobile number."})
 
     if "@" not in email or "." not in email:
         return jsonify({"success": False, "msg": "Invalid email structure."})
@@ -1953,11 +2699,39 @@ def admin_edit_doctor():
         return jsonify({"success": False, "msg": "Invalid doctor format"})
 
     name, spec = [x.strip().lower() for x in combined.split(" - ", 1)]
+    email_clean = email.lower().strip()
 
-    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday",
-                 "Friday", "Saturday", "Sunday"]
+    # Prevent silent conversion of patient accounts
+    patient_user = User.query.filter(db.func.lower(User.email) == email_clean, User.role == "patient").first()
+    if patient_user:
+        return jsonify({"success": False, "msg": "Cannot assign email: Email is already registered to a patient account."})
+
+    # Find current DoctorSession
+    current_doc = DoctorSession.query.filter(
+        db.func.lower(db.func.trim(DoctorSession.doctor_name)) == name,
+        db.func.lower(db.func.trim(DoctorSession.specialization)) == spec
+    ).first()
+
+    # Check phone conflict
+    is_conflict, conflict_err = check_phone_conflict(
+        norm_phone,
+        exclude_doctor_id=current_doc.id if current_doc else None
+    )
+    if is_conflict:
+        return jsonify({"success": False, "msg": f"Phone conflict: {conflict_err}"})
+
+    # Check email conflict
+    other_session = DoctorSession.query.filter(
+        DoctorSession.email == email_clean,
+        (db.func.lower(db.func.trim(DoctorSession.doctor_name)) != name) | (db.func.lower(db.func.trim(DoctorSession.specialization)) != spec)
+    ).first()
+    if other_session:
+        return jsonify({"success": False, "msg": f"Email is already assigned to {other_session.doctor_name} in system database."})
+
+    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
     try:
+        ensure_doctors_sheet_headers()
         all_rows = doctors_ws.get_all_values()
         if not all_rows:
             return jsonify({"success": False, "msg": "Doctors sheet is empty"})
@@ -1965,95 +2739,66 @@ def admin_edit_doctor():
         headers = all_rows[0]
         rows = all_rows[1:]
 
-        # Email uniqueness check (excluding currently edited doctor)
-        if email:
-            email_lower = email.lower().strip()
-            
-            # Check Spreadsheet uniqueness
-            for r in rows:
-                r_dict = dict(zip(headers, r))
-                r_name = r_dict.get("Name", "").strip().lower()
-                r_spec = r_dict.get("Specialization", "").strip().lower()
-                r_email = r_dict.get("Email", "").strip().lower()
-                
-                if r_email == email_lower and (r_name != name or r_spec != spec):
-                    return jsonify({"success": False, "msg": "Email already registered by another doctor in spreadsheet"})
+        updated_row_idx = None
+        updated_row_data = None
 
-            # Check SQLite uniqueness (Safety layer)
-            other_session = DoctorSession.query.filter(
-                DoctorSession.email == email_lower,
-                (db.func.lower(db.func.trim(DoctorSession.doctor_name)) != name) | (db.func.lower(db.func.trim(DoctorSession.specialization)) != spec)
-            ).first()
-            if other_session:
-                 return jsonify({"success": False, "msg": f"Email is already assigned to {other_session.doctor_name} in system database."})
-
-        updated = False
-        new_rows = []
-
-        for row in rows:
+        for idx, row in enumerate(rows):
             row_dict = dict(zip(headers, row))
-
             if (row_dict.get("Name", "").strip().lower() == name and
-                    row_dict.get("Specialization", "").strip().lower() == spec):
-
+                row_dict.get("Specialization", "").strip().lower() == spec):
+                
+                updated_row_idx = idx + 2
                 row_dict["Days"] = ", ".join(days)
-                if email:
-                    email_clean = email.lower().strip()
-                    row_dict["Email"] = email_clean
-                    
-                    # Update SQLite (Finding existing or syncing missing)
-                    doc_session = DoctorSession.query.filter(
-                        db.func.lower(db.func.trim(DoctorSession.doctor_name)) == row_dict.get("Name", "").strip().lower(),
-                        db.func.lower(db.func.trim(DoctorSession.specialization)) == row_dict.get("Specialization", "").strip().lower()
-                    ).first()
-                    
-                    if doc_session:
-                        doc_session.email = email_clean
-                    else:
-                        new_doc_session = DoctorSession(
-                            doctor_name=row_dict.get("Name", "").strip(), 
-                            specialization=row_dict.get("Specialization", "").strip(), 
-                            email=email_clean
-                        )
-                        db.session.add(new_doc_session)
-                        
-                    # Sync User roles
-                    existing_user = User.query.filter_by(email=email_clean).first()
-                    if existing_user:
-                        existing_user.role = "doctor"
-                        
-                    try:
-                        db.session.commit()
-                    except Exception as db_err:
-                        db.session.rollback()
-                        app.logger.error(f"DB Auth Sync Error: {db_err}")
-                        return jsonify({"success": False, "msg": "Failed to sync credentials to system database."})
-
+                row_dict["Email"] = email_clean
+                row_dict["Phone_Number"] = norm_phone
                 for day in day_names:
                     col_name = f"{day}Time"
                     if col_name in row_dict:
                         row_dict[col_name] = day_times.get(day, "")
+                
+                updated_row_data = [row_dict.get(h, "") for h in headers]
+                break
 
-                updated = True
-
-            new_rows.append([row_dict.get(h, "") for h in headers])
-
-        if not updated:
+        if not updated_row_idx:
             return jsonify({"success": False, "msg": "Doctor metadata not found in sheet"})
 
-        doctors_ws.clear()
-        doctors_ws.append_row(headers)
-        for i, row in enumerate(new_rows):
-            row[0] = str(i + 1)  # keep serial numbers
-            doctors_ws.append_row(row)
+        # Update specific row in Google Sheets without clearing entire sheet
+        col_count = len(headers)
+        end_col_letter = chr(ord('A') + col_count - 1) if col_count <= 26 else "Z"
+        doctors_ws.update(f"A{updated_row_idx}:{end_col_letter}{updated_row_idx}", [updated_row_data])
 
-        return jsonify({"success": True, "msg": "Doctor updated and credentials synchronized successfully"})
+        # Update DoctorSession in SQLite/Postgres
+        if current_doc:
+            current_doc.email = email_clean
+            current_doc.phone_number = norm_phone
+            current_doc.phone_updated_by = session.get("admin_email")
+            current_doc.phone_updated_at = datetime.utcnow()
+        else:
+            current_doc = DoctorSession(
+                doctor_name=name.title(),
+                specialization=spec.title(),
+                email=email_clean,
+                phone_number=norm_phone,
+                phone_updated_by=session.get("admin_email"),
+                phone_updated_at=datetime.utcnow()
+            )
+            db.session.add(current_doc)
 
+        existing_user = User.query.filter_by(email=email_clean).first()
+        if existing_user and existing_user.role == "doctor":
+            existing_user.phone_number = norm_phone
+
+        db.session.commit()
+        DOCTOR_CACHE["ts"] = 0
+        app.logger.info(f"AUDIT: Doctor contact updated for {name} ({spec}) by {session.get('admin_email')}: Email={email_clean}, Phone={norm_phone}")
+
+        return jsonify({"success": True, "msg": "Doctor updated and credentials synchronized successfully."})
     except Exception as e:
+        db.session.rollback()
         return jsonify({"success": False, "msg": get_friendly_error_message(e)})
 
 
-@app.route("/admin_delete_doctor", methods=["POST"])
+
 def admin_delete_doctor():
     admin_email = session.get("admin_email")
     if admin_email != ADMIN_EMAIL:
@@ -2585,6 +3330,37 @@ def admin_save_settings():
         return jsonify({"success": False, "msg": "Unauthorized"})
     
     data = request.get_json() or {}
+
+    # Validate Admin WhatsApp phone if provided
+    if "admin_whatsapp_phone" in data:
+        raw_admin_phone = str(data.get("admin_whatsapp_phone") or "").strip()
+        raw_confirm_phone = str(data.get("confirm_admin_whatsapp_phone") or "").strip()
+
+        if raw_admin_phone:
+            if not raw_confirm_phone or raw_admin_phone != raw_confirm_phone:
+                return jsonify({"success": False, "msg": "Admin WhatsApp number and confirmation do not match."})
+
+            norm_admin_phone = normalize_phone_number(raw_admin_phone)
+            if not norm_admin_phone:
+                return jsonify({"success": False, "msg": "Invalid Admin WhatsApp phone format. Please provide a valid mobile number with country code."})
+
+            # Check role conflicts against registered patient or doctor numbers
+            conflict_user = User.query.filter_by(phone_number=norm_admin_phone).first()
+            if conflict_user:
+                return jsonify({"success": False, "msg": f"Phone number is already registered to a {conflict_user.role} account ({conflict_user.name})."})
+            
+            conflict_doc = DoctorSession.query.filter_by(phone_number=norm_admin_phone).first()
+            if conflict_doc:
+                return jsonify({"success": False, "msg": f"Phone number is already registered to doctor {conflict_doc.doctor_name}."})
+
+            # Log admin phone number change for security auditing
+            old_admin_rec = AppSettings.query.filter_by(key="admin_whatsapp_phone").first()
+            old_admin_val = old_admin_rec.value if old_admin_rec else DEFAULT_SETTINGS.get("admin_whatsapp_phone")
+            if old_admin_val != norm_admin_phone:
+                app.logger.info(f"[SECURITY AUDIT] Admin WhatsApp phone updated by {session.get('admin_email')} from '{old_admin_val}' to '{norm_admin_phone}' at {datetime.utcnow().isoformat()}")
+
+            data["admin_whatsapp_phone"] = norm_admin_phone
+
     for key, val in data.items():
         if key in DEFAULT_SETTINGS:
             setting = AppSettings.query.filter_by(key=key).first()
@@ -2842,6 +3618,8 @@ def sync_doctors_from_sheet():
                 continue
             
             processed_emails.add(email)
+            phone_raw = (r_dict.get("Phone_Number") or r_dict.get("Phone") or "").strip()
+            norm_phone = normalize_phone_number(phone_raw) if phone_raw else None
                 
             # Match by name AND specialization
             doc_session = DoctorSession.query.filter_by(doctor_name=name, specialization=spec).first()
@@ -2855,16 +3633,21 @@ def sync_doctors_from_sheet():
 
                 if doc_session.email != email:
                     doc_session.email = email
+                if norm_phone:
+                    doc_session.phone_number = norm_phone
                 db.session.flush()
             else:
-                new_session = DoctorSession(doctor_name=name, specialization=spec, email=email)
+                new_session = DoctorSession(doctor_name=name, specialization=spec, email=email, phone_number=norm_phone)
                 db.session.add(new_session)
                 db.session.flush()
 
             # Reconcile User roles
             user = User.query.filter_by(email=email).first()
-            if user and user.role != "doctor":
-                user.role = "doctor"
+            if user:
+                if user.role != "doctor":
+                    user.role = "doctor"
+                if norm_phone and not user.phone_number:
+                    user.phone_number = norm_phone
                 db.session.flush()
 
         # ─── Cleanup Step (Automatic Demotion) ───
@@ -2876,9 +3659,8 @@ def sync_doctors_from_sheet():
         
         stale_sessions = DoctorSession.query.filter(DoctorSession.email.notin_(processed_emails)).all()
         for s in stale_sessions:
-            # We don't delete immediately to be safe, but we mark them inactive or rename if needed.
-            # However, the user asked for cleanup, so deleting the stale session is appropriate.
             print(f"  Cleanup: Removing stale DoctorSession for {s.doctor_name} ({s.email}).")
+            DoctorInvitation.query.filter_by(doctor_id=s.id).delete()
             db.session.delete(s)
 
         db.session.commit()
@@ -3169,9 +3951,8 @@ def book_doctor():
         sheet.append_row([token, name, age, gender, phone_number, date])
 
         user_id = session.get('user_id')
-        is_guest = False
+        norm_b_phone = normalize_phone_number(phone_number) if phone_number else None
         if not user_id:
-            is_guest = True
             guest_user = User.query.filter_by(email="guest@primecare.com").first()
             if guest_user:
                 user_id = guest_user.id
@@ -3186,7 +3967,8 @@ def book_doctor():
                 token=token,
                 sheet_url=sheet_url,
                 patient_name=name,
-                age=age or "-"
+                age=age or "-",
+                phone_number=norm_b_phone or phone_number
             )
             db.session.add(new_booking)
             db.session.commit()
@@ -3433,10 +4215,9 @@ def admin_book_patient():
 
         sheet.append_row([token, name, age, gender, phone_number, date])
 
-        # Try to find a registered user with a matching name (case-insensitive)
-        booking_user = User.query.filter(db.func.lower(db.func.trim(User.name)) == name.lower().strip()).first()
-        if booking_user:
-            booking_user_id = booking_user.id
+        norm_b_phone = normalize_phone_number(phone_number) if phone_number else None
+        if session.get('user_id'):
+            booking_user_id = session['user_id']
         else:
             guest_user = User.query.filter_by(email="guest@primecare.com").first()
             booking_user_id = guest_user.id if guest_user else None
@@ -3451,7 +4232,8 @@ def admin_book_patient():
                 token=token,
                 sheet_url=sheet_url,
                 patient_name=name,
-                age=age or "-"
+                age=age or "-",
+                phone_number=norm_b_phone or phone_number
             )
             db.session.add(new_booking)
             db.session.commit()
@@ -3711,9 +4493,12 @@ def book_department():
                     app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
 
             user_id = session.get('user_id')
-            is_guest = False
+            norm_b_phone = normalize_phone_number(phone_number) if phone_number else None
+            if not user_id and norm_b_phone:
+                matched_user = User.query.filter_by(phone_number=norm_b_phone).first()
+                if matched_user:
+                    user_id = matched_user.id
             if not user_id:
-                is_guest = True
                 guest_user = User.query.filter_by(email="guest@primecare.com").first()
                 if guest_user:
                     user_id = guest_user.id
@@ -3728,7 +4513,8 @@ def book_department():
                     token=token,
                     sheet_url=chosen_doc["SheetURL"],
                     patient_name=name,
-                    age=age or "-"
+                    age=age or "-",
+                    phone_number=norm_b_phone or phone_number
                 )
                 db.session.add(new_booking)
                 db.session.commit()
@@ -3836,9 +4622,8 @@ def book_department():
                 app.logger.exception(f"Error auto-incrementing DoctorSession tokens: {e}")
 
         user_id = session.get('user_id')
-        is_guest = False
+        norm_b_phone = normalize_phone_number(phone_number) if phone_number else None
         if not user_id:
-            is_guest = True
             guest_user = User.query.filter_by(email="guest@primecare.com").first()
             if guest_user:
                 user_id = guest_user.id
@@ -3853,7 +4638,8 @@ def book_department():
                 token=token,
                 sheet_url=best_doc["SheetURL"],
                 patient_name=name,
-                age=age or "-"
+                age=age or "-",
+                phone_number=norm_b_phone or phone_number
             )
             db.session.add(new_booking)
             db.session.commit()
@@ -4569,7 +5355,8 @@ def get_saved_patients():
             'name': p.name,
             'age': p.age,
             'gender': p.gender,
-            'phone_number': p.phone_number
+            'phone_number': p.phone_number,
+            'relationship': p.relationship or 'Self'
         })
     return jsonify({'success': True, 'patients': results})
 
@@ -4591,12 +5378,14 @@ def add_saved_patient():
     if not all([name, age, gender, phone_number]):
         return jsonify({'success': False, 'error': 'All fields are required'}), 400
     
+    relationship = data.get('relationship', 'Self')
     new_patient = SavedPatient(
         user_id=user_id,
         name=name.strip(),
         age=str(age).strip(),
         gender=gender.strip(),
-        phone_number=str(phone_number).strip()
+        phone_number=str(phone_number).strip(),
+        relationship=str(relationship).strip() if relationship else 'Self'
     )
     db.session.add(new_patient)
     db.session.commit()
@@ -4606,7 +5395,8 @@ def add_saved_patient():
         'name': new_patient.name,
         'age': new_patient.age,
         'gender': new_patient.gender,
-        'phone_number': new_patient.phone_number
+        'phone_number': new_patient.phone_number,
+        'relationship': new_patient.relationship
     }})
 
 @app.route('/api/saved_patients/<int:patient_id>', methods=['PUT'])
@@ -4635,6 +5425,8 @@ def update_saved_patient(patient_id):
     patient.age = str(age).strip()
     patient.gender = gender.strip()
     patient.phone_number = str(phone_number).strip()
+    if 'relationship' in data:
+        patient.relationship = str(data.get('relationship', 'Self')).strip()
     db.session.commit()
     
     return jsonify({'success': True, 'msg': 'Patient profile updated successfully'})
@@ -5077,10 +5869,18 @@ def sync_doctor_session_status(doc_session):
 
 @app.route('/doctor_dashboard')
 def doctor_dashboard():
-    if session.get('user_role') != 'doctor':
+    user_role = session.get('user_role')
+    if user_role != 'doctor':
+        if user_role == 'patient':
+            return redirect(url_for('patient_dashboard'))
         return redirect(url_for('home'))
         
     doctor_email = session.get('user_email')
+    user = User.query.filter(db.func.lower(User.email) == (doctor_email or '').lower()).first() if doctor_email else None
+    if not user or not user.email_verified:
+        flash("Your doctor account has not been activated yet.", "warning")
+        return redirect(url_for('home'))
+
     doc_session = DoctorSession.query.filter_by(email=doctor_email).first()
     
     if not doc_session:

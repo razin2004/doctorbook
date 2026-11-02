@@ -1108,6 +1108,16 @@
               <p>{{ session.get('user_email') }}</p>
             </div>
           </div>
+          <div class="sidebar-user-phone-box" style="display:flex; align-items:center; justify-content:space-between; background:white; padding:6px 10px; border-radius:12px; border:1px solid #e2e8f0; font-size:0.75rem;">
+            <div style="display:flex; align-items:center; gap:6px; color:#475569; overflow:hidden;">
+              <i data-lucide="phone" style="width:13px; height:13px; color:#0077b6; flex-shrink:0;"></i>
+              <span id="docCurrentPhoneSpan" style="font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">{{ doc.phone_number or 'No mobile set' }}</span>
+            </div>
+            <button type="button" onclick="openDoctorPhoneModal()" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; border-radius:8px; padding:3px 8px; font-size:0.72rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px; flex-shrink:0;">
+              <i data-lucide="edit-3" style="width:11px; height:11px;"></i>
+              <span>Change</span>
+            </button>
+          </div>
         </div>
         
         <!-- Sidebar Navigation -->
@@ -2496,5 +2506,209 @@
       cards.forEach(c => grid.appendChild(c));
     }
   </script>
+
+  <!-- Modal: Change Doctor Mobile Number with WhatsApp OTP -->
+  <div id="doctorPhoneModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:white; border-radius:24px; max-width:440px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #e2e8f0; overflow:hidden;">
+      <!-- Modal Header -->
+      <div style="background:linear-gradient(135deg, #0077b6, #0096c7); padding:1.25rem 1.5rem; color:white; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <div style="background:rgba(255,255,255,0.2); width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+            <i data-lucide="phone-forwarded" style="width:18px;height:18px;"></i>
+          </div>
+          <div>
+            <h4 style="margin:0; font-size:1.05rem; font-weight:700; color:white;">Update Mobile Number</h4>
+            <p style="margin:0; font-size:0.75rem; opacity:0.85; color:rgba(255,255,255,0.9);">WhatsApp OTP Verification</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeDoctorPhoneModal()" style="background:none; border:none; color:white; opacity:0.85; cursor:pointer; font-size:1.2rem; padding:4px;">
+          <i data-lucide="x" style="width:20px;height:20px;"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div style="padding:1.5rem;">
+        <!-- Step 1: Request OTP -->
+        <div id="docPhoneStep1">
+          <p style="margin:0 0 1rem 0; font-size:0.85rem; color:#64748b; line-height:1.4;">
+            Enter your new mobile number. A 6-digit verification code will be sent to your <strong>WhatsApp</strong>.
+          </p>
+
+          <label style="display:block; font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:0.4rem;">
+            New Mobile Number
+          </label>
+          <div style="position:relative; margin-bottom:1rem;">
+            <input type="tel" id="docNewPhoneInput" placeholder="e.g. 9876543210 or +919876543210" style="width:100%; box-sizing:border-box; padding:0.75rem 1rem; border-radius:12px; border:1.5px solid #cbd5e1; font-size:0.95rem; font-weight:600; color:#0f172a; outline:none;" />
+          </div>
+
+          <div id="docPhoneStep1Err" style="color:#e11d48; font-size:0.8rem; font-weight:600; margin-bottom:0.75rem; display:none;"></div>
+
+          <button type="button" id="docSendPhoneOtpBtn" onclick="handleSendDoctorPhoneOtp()" style="width:100%; background:#0077b6; color:white; border:none; padding:0.75rem; border-radius:12px; font-weight:700; font-size:0.92rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+            <i data-lucide="send" style="width:16px;height:16px;"></i>
+            <span>Send WhatsApp OTP</span>
+          </button>
+        </div>
+
+        <!-- Step 2: Verify OTP -->
+        <div id="docPhoneStep2" style="display:none;">
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:0.75rem 1rem; margin-bottom:1.25rem;">
+            <p style="margin:0; font-size:0.82rem; color:#15803d; line-height:1.4;">
+              OTP sent to WhatsApp: <strong id="docTargetPhoneDisplay"></strong>
+            </p>
+          </div>
+
+          <label style="display:block; font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:0.4rem;">
+            Enter 6-Digit WhatsApp Code
+          </label>
+          <input type="text" id="docPhoneOtpInput" maxlength="6" placeholder="123456" style="width:100%; box-sizing:border-box; padding:0.75rem 1rem; border-radius:12px; border:1.5px solid #cbd5e1; font-size:1.3rem; font-weight:800; letter-spacing:6px; text-align:center; color:#0f172a; outline:none; margin-bottom:1rem;" />
+
+          <div id="docPhoneStep2Err" style="color:#e11d48; font-size:0.8rem; font-weight:600; margin-bottom:0.75rem; display:none;"></div>
+
+          <button type="button" id="docVerifyPhoneOtpBtn" onclick="handleVerifyDoctorPhoneOtp()" style="width:100%; background:#16a34a; color:white; border:none; padding:0.75rem; border-radius:12px; font-weight:700; font-size:0.92rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-bottom:0.75rem;">
+            <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+            <span>Verify & Update Number</span>
+          </button>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:#64748b;">
+            <button type="button" onclick="docBackToStep1()" style="background:none; border:none; color:#0284c7; cursor:pointer; font-weight:600; padding:0;">
+              ← Change Number
+            </button>
+            <span id="docOtpTimerSpan" style="color:#94a3b8;">Resend in 60s</span>
+            <button type="button" id="docResendOtpBtn" onclick="handleSendDoctorPhoneOtp(true)" style="background:none; border:none; color:#0077b6; cursor:pointer; font-weight:700; display:none; padding:0;">
+              Resend WhatsApp OTP
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let docPhoneCooldownInterval = null;
+
+    function openDoctorPhoneModal() {
+      const modal = document.getElementById('doctorPhoneModal');
+      if (modal) modal.style.display = 'flex';
+      document.getElementById('docPhoneStep1').style.display = 'block';
+      document.getElementById('docPhoneStep2').style.display = 'none';
+      document.getElementById('docNewPhoneInput').value = '';
+      document.getElementById('docPhoneStep1Err').style.display = 'none';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeDoctorPhoneModal() {
+      const modal = document.getElementById('doctorPhoneModal');
+      if (modal) modal.style.display = 'none';
+      if (docPhoneCooldownInterval) clearInterval(docPhoneCooldownInterval);
+    }
+
+    function docBackToStep1() {
+      document.getElementById('docPhoneStep1').style.display = 'block';
+      document.getElementById('docPhoneStep2').style.display = 'none';
+      if (docPhoneCooldownInterval) clearInterval(docPhoneCooldownInterval);
+    }
+
+    async function handleSendDoctorPhoneOtp(isResend = false) {
+      const phone = document.getElementById('docNewPhoneInput').value.trim();
+      const errDiv = isResend ? document.getElementById('docPhoneStep2Err') : document.getElementById('docPhoneStep1Err');
+      errDiv.style.display = 'none';
+
+      if (!phone) {
+        errDiv.textContent = 'Please enter a valid mobile number.';
+        errDiv.style.display = 'block';
+        return;
+      }
+
+      const btn = isResend ? document.getElementById('docResendOtpBtn') : document.getElementById('docSendPhoneOtpBtn');
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch('/doctor_send_change_phone_otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ new_phone_number: phone })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          errDiv.textContent = data.msg || 'Failed to send OTP.';
+          errDiv.style.display = 'block';
+          if (btn) btn.disabled = false;
+          return;
+        }
+
+        document.getElementById('docTargetPhoneDisplay').textContent = data.phone || phone;
+        document.getElementById('docPhoneStep1').style.display = 'none';
+        document.getElementById('docPhoneStep2').style.display = 'block';
+        document.getElementById('docPhoneOtpInput').value = '';
+        document.getElementById('docPhoneStep2Err').style.display = 'none';
+
+        // 60s cooldown timer
+        let remaining = 60;
+        const timerSpan = document.getElementById('docOtpTimerSpan');
+        const resendBtn = document.getElementById('docResendOtpBtn');
+        timerSpan.style.display = 'inline';
+        resendBtn.style.display = 'none';
+
+        if (docPhoneCooldownInterval) clearInterval(docPhoneCooldownInterval);
+        docPhoneCooldownInterval = setInterval(() => {
+          remaining--;
+          if (remaining > 0) {
+            timerSpan.textContent = `Resend in ${remaining}s`;
+          } else {
+            clearInterval(docPhoneCooldownInterval);
+            timerSpan.style.display = 'none';
+            resendBtn.style.display = 'inline';
+            resendBtn.disabled = false;
+          }
+        }, 1000);
+
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        errDiv.textContent = 'Network error while requesting OTP.';
+        errDiv.style.display = 'block';
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function handleVerifyDoctorPhoneOtp() {
+      const otp = document.getElementById('docPhoneOtpInput').value.trim();
+      const errDiv = document.getElementById('docPhoneStep2Err');
+      errDiv.style.display = 'none';
+
+      if (!otp || otp.length < 6) {
+        errDiv.textContent = 'Please enter the 6-digit verification code.';
+        errDiv.style.display = 'block';
+        return;
+      }
+
+      const btn = document.getElementById('docVerifyPhoneOtpBtn');
+      if (btn) btn.disabled = true;
+
+      try {
+        const res = await fetch('/doctor_verify_change_phone_otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ otp: otp })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          errDiv.textContent = data.msg || 'OTP verification failed.';
+          errDiv.style.display = 'block';
+          if (btn) btn.disabled = false;
+          return;
+        }
+
+        const span = document.getElementById('docCurrentPhoneSpan');
+        if (span) span.textContent = data.new_phone;
+        closeDoctorPhoneModal();
+        alert('Mobile number updated and verified successfully via WhatsApp!');
+      } catch (err) {
+        errDiv.textContent = 'Network error during verification.';
+        errDiv.style.display = 'block';
+        if (btn) btn.disabled = false;
+      }
+    }
+  </script>
+
 </body>
 </html>

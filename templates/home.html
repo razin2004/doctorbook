@@ -1711,19 +1711,25 @@
 
   <!-- PATIENT AUTH MODAL -->
   <div class="auth-modal-overlay" id="authModal">
-    <div class="auth-modal">
+    <div class="auth-modal" style="position: relative;">
+      <!-- Reciprocal Portal Navigation (Doctor stethoscope <-> Patient user icon) -->
+      <button class="doctor-entry-btn" id="portalSwitchBtn" onclick="switchAuthView('doctorLogin')" title="Doctor Portal Access" aria-label="Doctor Portal" style="position: absolute; top: 1.1rem; right: 3.5rem; background: none; border: 1px solid #e2e8f0; color: #64748b; cursor: pointer; padding: 6px; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.color='#0077b6'; this.style.borderColor='#0077b6'; this.style.background='#f0f9ff';" onmouseout="this.style.color='#64748b'; this.style.borderColor='#e2e8f0'; this.style.background='none';">
+        <i data-lucide="stethoscope" style="width: 17px; height: 17px;"></i>
+      </button>
+
       <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close">
         <i data-lucide="x"></i>
       </button>
 
-      <!-- LOGIN VIEW -->
+      <!-- PATIENT LOGIN VIEW -->
       <div id="authView-login" class="view-section active">
         <h3 class="auth-title">Welcome Back</h3>
-        <p class="auth-subtitle">Login to your account</p>
+        <p class="auth-subtitle">Login to your patient account</p>
         <form onsubmit="handleAuthSubmit(event, 'login')">
           <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" id="login-email" class="form-control" placeholder="Email Address" required>
+            <label>Mobile Number</label>
+            <input type="text" id="login-phone" class="form-control" placeholder="e.g. 9876543210 or +91..." required>
+            <small style="color: #64748b; font-size: 0.76rem; display: block; margin-top: 0.25rem;">Existing account? You may also sign in with your email.</small>
           </div>
           <div class="form-group">
             <div style="display:flex; justify-content:space-between;">
@@ -1737,18 +1743,102 @@
         <div class="auth-switch">Don't have an account? <a onclick="switchAuthView('register')">Sign up</a></div>
       </div>
 
-      <!-- REGISTER VIEW -->
+      <!-- DOCTOR LOGIN VIEW (Reciprocal to Patient Login) -->
+      <div id="authView-doctorLogin" class="view-section">
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.25rem;">
+          <div style="background:rgba(0,119,182,0.1); width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+            <i data-lucide="stethoscope" style="width:18px; height:18px; color:#0077b6;"></i>
+          </div>
+          <h3 class="auth-title" style="margin:0;">Doctor Portal</h3>
+        </div>
+        <p class="auth-subtitle">Sign in to your doctor consultation workspace</p>
+        <form onsubmit="handleAuthSubmit(event, 'doctorLogin')">
+          <div class="form-group">
+            <label>Email or Mobile Number</label>
+            <input type="text" id="doclogin-identifier" class="form-control" placeholder="e.g. doctor@primecare.com or 9876543210" required>
+          </div>
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between;">
+              <label>Password</label>
+              <a href="#" onclick="switchAuthView('doctorForgot')" style="font-size:0.8rem; color:#0077b6; text-decoration:none;">Forgot?</a>
+            </div>
+            <input type="password" id="doclogin-password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="auth-btn" id="docLoginBtnSubmit" style="background:#023e8a;">Doctor Sign In</button>
+        </form>
+        <div style="margin-top: 1rem; font-size: 0.78rem; color: #64748b; line-height: 1.4; text-align: center;">
+          New doctor? Please use the activation link sent to your email by clinic administration.
+        </div>
+        <div class="auth-switch" style="margin-top: 1rem;"><a onclick="switchAuthView('login')">&larr; Back to Patient Login</a></div>
+      </div>
+
+      <!-- DOCTOR FORGOT PASSWORD VIEW -->
+      <div id="authView-doctorForgot" class="view-section">
+        <h3 class="auth-title">Doctor Password Recovery</h3>
+        <p class="auth-subtitle">Enter your registered email or mobile number</p>
+        <form onsubmit="handleAuthSubmit(event, 'doctorForgot')">
+          <div class="form-group">
+            <label>Email or Mobile Number</label>
+            <input type="text" id="docforgot-identifier" class="form-control" placeholder="e.g. doctor@primecare.com or 9876543210" required>
+          </div>
+          <button type="submit" class="auth-btn" id="docForgotBtnSubmit" style="background:#023e8a;">Send Reset Code</button>
+        </form>
+        <div class="auth-switch" style="margin-top: 1rem;"><a onclick="switchAuthView('doctorLogin')">&larr; Back to Doctor Login</a></div>
+      </div>
+
+      <!-- DOCTOR OTP VIEW -->
+      <div id="authView-doctorOtp" class="view-section">
+        <h3 class="auth-title">Enter Verification Code</h3>
+        <p class="auth-subtitle">A 6-digit code was sent to your registered email</p>
+        <form onsubmit="handleAuthSubmit(event, 'doctorOtp')">
+          <div class="otp-inputs" id="docAuthOtpInputs">
+            <input type="text" maxlength="1" class="otp-input doc-otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input doc-otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input doc-otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input doc-otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input doc-otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input doc-otp-input" pattern="[0-9]" required>
+          </div>
+          <button type="submit" class="auth-btn" id="docOtpBtnSubmit" style="background:#023e8a;">Verify Code</button>
+        </form>
+        <div class="auth-switch" style="margin-top: 1rem;"><a onclick="switchAuthView('doctorLogin')">Cancel</a></div>
+      </div>
+
+      <!-- DOCTOR RESET PASSWORD VIEW -->
+      <div id="authView-doctorReset" class="view-section">
+        <h3 class="auth-title">New Doctor Password</h3>
+        <p class="auth-subtitle">Create a secure new password</p>
+        <form onsubmit="handleAuthSubmit(event, 'doctorReset')">
+          <div class="form-group">
+            <label>New Password (min 6 chars)</label>
+            <input type="password" id="docreset-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('doctorReset')">
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="docreset-confirm-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('doctorReset')">
+            <div id="docreset-match-msg" style="font-size:0.75rem; margin-top:0.3rem; font-weight:600; display:none;"></div>
+          </div>
+          <button type="submit" class="auth-btn" id="docResetBtnSubmit" style="background:#023e8a;">Update Password</button>
+        </form>
+        <div class="auth-switch" style="margin-top: 1rem;"><a onclick="switchAuthView('doctorLogin')">Back to Doctor Login</a></div>
+      </div>
+
+      <!-- PATIENT REGISTER VIEW -->
       <div id="authView-register" class="view-section">
-        <h3 class="auth-title">Create Account</h3>
-        <p class="auth-subtitle">Join PrimeCare Clinic</p>
+        <h3 class="auth-title">Create Patient Account</h3>
+        <p class="auth-subtitle">Register with your mobile number</p>
         <form onsubmit="handleAuthSubmit(event, 'register')">
           <div class="form-group">
             <label>Full Name</label>
             <input type="text" id="reg-name" class="form-control" placeholder="Full Name" required>
           </div>
           <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" id="reg-email" class="form-control" placeholder="Email Address" required>
+            <label>Mobile Number</label>
+            <input type="tel" id="reg-phone" class="form-control" placeholder="e.g. 9876543210 or +91..." required>
+          </div>
+          <div class="form-group">
+            <label>Email Address (Optional)</label>
+            <input type="email" id="reg-email" class="form-control" placeholder="name@example.com (optional)">
           </div>
           <div class="form-group">
             <label>Password (min 6 chars)</label>
@@ -1759,15 +1849,29 @@
             <input type="password" id="reg-confirm-password" class="form-control" placeholder="••••••••" required oninput="validateMatch('register')">
             <div id="register-match-msg" style="font-size:0.75rem; margin-top:0.3rem; font-weight:600; display:none;"></div>
           </div>
-          <button type="submit" class="auth-btn" id="regBtnSubmit">Continue</button>
+          <button type="submit" class="auth-btn" id="regBtnSubmit">Create Account</button>
         </form>
         <div class="auth-switch">Already have an account? <a onclick="switchAuthView('login')">Log in</a></div>
       </div>
 
-      <!-- OTP VIEW (Used for both Register and Forgot) -->
+      <!-- FORGOT PASSWORD VIEW -->
+      <div id="authView-forgot" class="view-section">
+        <h3 class="auth-title">Reset Password</h3>
+        <p class="auth-subtitle">Enter your registered email or mobile</p>
+        <form onsubmit="handleAuthSubmit(event, 'forgot')">
+          <div class="form-group">
+            <label>Registered Email or Mobile</label>
+            <input type="text" id="forgot-email" class="form-control" placeholder="name@example.com or mobile" required>
+          </div>
+          <button type="submit" class="auth-btn" id="forgotBtnSubmit">Send Code</button>
+        </form>
+        <div class="auth-switch"><a onclick="switchAuthView('login')">Back to Login</a></div>
+      </div>
+
+      <!-- OTP VIEW -->
       <div id="authView-otp" class="view-section">
-        <h3 class="auth-title">Enter OTP</h3>
-        <p class="auth-subtitle">We sent a 6-digit code to your email.</p>
+        <h3 class="auth-title">Enter Verification Code</h3>
+        <p class="auth-subtitle">We sent a 6-digit verification code</p>
         <form onsubmit="handleAuthSubmit(event, 'otp')">
           <div class="otp-inputs" id="authOtpInputs">
             <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
@@ -1779,47 +1883,7 @@
           </div>
           <button type="submit" class="auth-btn" id="otpBtnSubmit">Verify Code</button>
         </form>
-        <div class="auth-switch" style="margin-top: 1rem; margin-bottom: 0.8rem;">
-          Didn't receive code? <a id="resendOtpBtn" onclick="handleResendOtp()">Resend OTP</a>
-        </div>
         <div class="auth-switch"><a onclick="switchAuthView('login')">Cancel</a></div>
-      </div>
-
-      <!-- ROLE SELECTION VIEW -->
-      <div id="authView-roleSelect" class="view-section">
-        <h3 class="auth-title">Select Portal</h3>
-        <p class="auth-subtitle">Choose which dashboard you'd like to access</p>
-        
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:2rem;">
-            <button onclick="selectRole('patient')" style="display:flex; flex-direction:column; align-items:center; gap:0.8rem; padding:1.5rem 1rem; background:#fff; border:2.5px solid #e2e8f0; border-radius:16px; cursor:pointer; transition:all 0.2s; color:#0f172a;" onmouseover="this.style.borderColor='#0077b6'" onmouseout="this.style.borderColor='#e2e8f0'">
-                <div style="background:rgba(0,119,182,0.1); width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; margin-bottom:0.2rem;">
-                    <i data-lucide="user" style="width:32px; height:32px; color:#0077b6;"></i>
-                </div>
-                <span style="font-weight:800; font-size:1rem;">User Portal</span>
-            </button>
-            <button onclick="selectRole('doctor')" style="display:flex; flex-direction:column; align-items:center; gap:0.8rem; padding:1.5rem 1rem; background:#fff; border:2.5px solid #e2e8f0; border-radius:16px; cursor:pointer; transition:all 0.2s; color:#0f172a;" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#e2e8f0'">
-                <div style="background:rgba(16,185,129,0.1); width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; margin-bottom:0.2rem;">
-                    <i data-lucide="stethoscope" style="width:32px; height:32px; color:#10b981;"></i>
-                </div>
-                <span style="font-weight:800; font-size:1rem;">Doctor Portal</span>
-            </button>
-        </div>
-        
-        <p style="text-align:center; color:#64748b; font-size:0.85rem; margin-top:2rem;">You can switch between these at any time from your dashboard.</p>
-      </div>
-
-      <!-- FORGOT PASSWORD VIEW -->
-      <div id="authView-forgot" class="view-section">
-        <h3 class="auth-title">Reset Password</h3>
-        <p class="auth-subtitle">Enter email to receive reset code</p>
-        <form onsubmit="handleAuthSubmit(event, 'forgot')">
-          <div class="form-group">
-            <label>Email Address</label>
-            <input type="email" id="forgot-email" class="form-control" placeholder="name@example.com" required>
-          </div>
-          <button type="submit" class="auth-btn" id="forgotBtnSubmit">Send Code</button>
-        </form>
-        <div class="auth-switch"><a onclick="switchAuthView('login')">Back to Login</a></div>
       </div>
 
       <!-- RESET PASSWORD VIEW -->
@@ -2007,7 +2071,31 @@
     }
     function switchAuthView(viewId) {
       document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-      document.getElementById('authView-' + viewId).classList.add('active');
+      const target = document.getElementById('authView-' + viewId);
+      if (target) {
+        target.classList.add('active');
+      }
+
+      // Update reciprocal portal toggle button in top right
+      const portalBtn = document.getElementById('portalSwitchBtn');
+      if (portalBtn) {
+        const isDoctorFlow = viewId.startsWith('doctor');
+        if (isDoctorFlow) {
+          portalBtn.setAttribute('title', 'Patient Portal Access');
+          portalBtn.setAttribute('aria-label', 'Patient Portal');
+          portalBtn.setAttribute('onclick', "switchAuthView('login')");
+          portalBtn.innerHTML = '<i data-lucide="user" style="width: 17px; height: 17px;"></i>';
+        } else {
+          portalBtn.setAttribute('title', 'Doctor Portal Access');
+          portalBtn.setAttribute('aria-label', 'Doctor Portal');
+          portalBtn.setAttribute('onclick', "switchAuthView('doctorLogin')");
+          portalBtn.innerHTML = '<i data-lucide="stethoscope" style="width: 17px; height: 17px;"></i>';
+        }
+      }
+
+      if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+      }
     }
 
     // OTP Input Auto-Advance
@@ -2021,10 +2109,23 @@
     });
 
     function validateMatch(flow) {
-      const p1 = document.getElementById(flow === 'register' ? 'reg-password' : 'reset-password').value;
-      const p2 = document.getElementById(flow === 'register' ? 'reg-confirm-password' : 'reset-confirm-password').value;
-      const msg = document.getElementById(flow === 'register' ? 'register-match-msg' : 'reset-match-msg');
-      const btn = document.getElementById(flow === 'register' ? 'regBtnSubmit' : 'resetBtnSubmit');
+      let p1, p2, msg, btn;
+      if (flow === 'register') {
+        p1 = document.getElementById('reg-password').value;
+        p2 = document.getElementById('reg-confirm-password').value;
+        msg = document.getElementById('register-match-msg');
+        btn = document.getElementById('regBtnSubmit');
+      } else if (flow === 'doctorReset') {
+        p1 = document.getElementById('docreset-password').value;
+        p2 = document.getElementById('docreset-confirm-password').value;
+        msg = document.getElementById('docreset-match-msg');
+        btn = document.getElementById('docResetBtnSubmit');
+      } else {
+        p1 = document.getElementById('reset-password').value;
+        p2 = document.getElementById('reset-confirm-password').value;
+        msg = document.getElementById('reset-match-msg');
+        btn = document.getElementById('resetBtnSubmit');
+      }
 
       if (!p1 && !p2) {
         msg.style.display = 'none';
@@ -2044,7 +2145,21 @@
     async function handleAuthSubmit(event, flow) {
       event.preventDefault();
 
-      if (flow === 'register' || flow === 'reset') {
+      if (flow === 'register' || flow === 'reset' || flow === 'doctorReset') {
+        const p1 = document.getElementById(flow === 'register' ? 'reg-password' : (flow === 'doctorReset' ? 'docreset-password' : 'reset-password')).value;
+        const p2 = document.getElementById(flow === 'register' ? 'reg-confirm-password' : (flow === 'doctorReset' ? 'docreset-confirm-password' : 'reset-confirm-password')).value;
+        
+        if (p1.length < 6) {
+          showToast('Password must be at least 6 characters', 'error');
+          return;
+        }
+        if (p1 !== p2) {
+          showToast('Passwords do not match', 'error');
+          return;
+        }
+      }
+
+      if (false) {
         const p1 = document.getElementById(flow === 'register' ? 'reg-password' : 'reset-password').value;
         const p2 = document.getElementById(flow === 'register' ? 'reg-confirm-password' : 'reset-confirm-password').value;
         
@@ -2058,52 +2173,92 @@
         }
       }
 
-
-
       try {
         let endpoint = '';
         let payload = {};
 
         if (flow === 'login') {
           endpoint = '/patient_login';
-          payload = { email: document.getElementById('login-email').value, password: document.getElementById('login-password').value };
+          payload = {
+            phone_number: document.getElementById('login-phone').value.trim(),
+            password: document.getElementById('login-password').value
+          };
+        } else if (flow === 'doctorLogin') {
+          endpoint = '/doctor_login';
+          payload = {
+            identifier: document.getElementById('doclogin-identifier').value.trim(),
+            password: document.getElementById('doclogin-password').value
+          };
+        } else if (flow === 'doctorForgot') {
+          endpoint = '/doctor_send_reset_otp';
+          payload = {
+            identifier: document.getElementById('docforgot-identifier').value.trim()
+          };
+        } else if (flow === 'doctorOtp') {
+          endpoint = '/doctor_verify_reset_otp';
+          const otpStr = Array.from(document.querySelectorAll('#docAuthOtpInputs .otp-input')).map(i => i.value).join('');
+          payload = {
+            identifier: document.getElementById('docforgot-identifier').value.trim(),
+            otp: otpStr
+          };
+        } else if (flow === 'doctorReset') {
+          endpoint = '/doctor_reset_password';
+          const otpStr = Array.from(document.querySelectorAll('#docAuthOtpInputs .otp-input')).map(i => i.value).join('');
+          payload = {
+            identifier: document.getElementById('docforgot-identifier').value.trim(),
+            otp: otpStr,
+            new_password: document.getElementById('docreset-password').value,
+            confirm_password: document.getElementById('docreset-confirm-password').value
+          };
         } else if (flow === 'register') {
           endpoint = '/patient_register';
-          payload = { name: document.getElementById('reg-name').value, email: document.getElementById('reg-email').value, password: document.getElementById('reg-password').value };
+          payload = {
+            name: document.getElementById('reg-name').value.trim(),
+            phone_number: document.getElementById('reg-phone').value.trim(),
+            email: document.getElementById('reg-email').value.trim(),
+            password: document.getElementById('reg-password').value,
+            confirm_password: document.getElementById('reg-confirm-password').value
+          };
         } else if (flow === 'otp') {
           endpoint = '/verify_patient_otp';
           const otpStr = Array.from(document.querySelectorAll('.otp-input')).map(i => i.value).join('');
           payload = { otp: otpStr };
         } else if (flow === 'forgot') {
           endpoint = '/send_forgot_otp';
-          payload = { email: document.getElementById('forgot-email').value };
+          payload = { email: document.getElementById('forgot-email').value.trim() };
         } else if (flow === 'reset') {
           endpoint = '/reset_password';
           payload = { password: document.getElementById('reset-password').value };
         }
 
         const res = await fetch(endpoint, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         const data = await res.json();
 
         if (data.success) {
           showToast(data.msg, 'success');
-          if (data.require_role_selection) {
-            switchAuthView('roleSelect');
-          } else if (flow === 'login' || flow === 'reset' || (flow === 'otp' && data.flow === 'register')) {
+          if (flow === 'login' || flow === 'doctorLogin' || flow === 'register' || flow === 'reset') {
+            const defaultTarget = flow === 'doctorLogin' ? '/doctor_dashboard' : '/patient_dashboard';
             const nextUrl = sessionStorage.getItem('auth_next');
-            if (nextUrl) {
-                sessionStorage.removeItem('auth_next');
-                setTimeout(() => window.location.href = nextUrl, 1000);
+            if (nextUrl && flow !== 'doctorLogin') {
+              sessionStorage.removeItem('auth_next');
+              setTimeout(() => window.location.href = nextUrl, 800);
             } else {
-                setTimeout(() => window.location.href = data.redirect_url || '/patient_dashboard', 1000);
+              setTimeout(() => window.location.href = data.redirect_url || defaultTarget, 800);
             }
-          } else if (flow === 'register' || flow === 'forgot') {
+          } else if (flow === 'forgot') {
             switchAuthView('otp');
           } else if (flow === 'otp' && data.flow === 'forgot') {
             switchAuthView('reset');
+          } else if (flow === 'doctorForgot') {
+            switchAuthView('doctorOtp');
+          } else if (flow === 'doctorOtp') {
+            switchAuthView('doctorReset');
+          } else if (flow === 'doctorReset') {
+            setTimeout(() => switchAuthView('doctorLogin'), 1000);
           }
         } else {
           showToast(data.msg || 'An error occurred', 'error');
@@ -2293,6 +2448,8 @@
           }
         }
         openAuthModal('login');
+      } else if (params.get('auth')) {
+        openAuthModal(params.get('auth'));
       }
 
       // Check if URL hash is #timings to automatically open doctor timings

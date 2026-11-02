@@ -366,9 +366,9 @@
 }
 
 .common-time-row > div {
-  width: 50% !important;
-  flex: 1 1 50% !important;
+  flex: 1 1 0% !important;
   min-width: 0 !important;
+  width: auto !important;
 }
 
 .common-time-row input {
@@ -386,12 +386,47 @@
   margin-top: 0.2rem !important;
   margin-bottom: 0.2rem !important;
 }
-    .holiday-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
+
+/* Fix day times checkbox row inputs and containers */
+.day-time,
+.day-time-edit {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.day-time input,
+.day-time-edit input {
+  width: calc(50% - 6px) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0.35rem 0.4rem !important;
+  font-size: 0.78rem !important;
+  height: 34px !important;
+}
+
+.holiday-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.holiday-grid > div {
+  min-width: 0 !important;
+}
+
+.holiday-grid input {
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
     @media (max-width: 600px) {
       .holiday-grid { grid-template-columns: 1fr; }
     }
@@ -1684,6 +1719,9 @@
       width: 100%;
       box-sizing: border-box;
     }
+    .ticker-time-grid > div {
+      min-width: 0 !important;
+    }
     @media (max-width: 576px) {
       .ticker-time-grid {
         grid-template-columns: 1fr !important;
@@ -2603,8 +2641,11 @@
         <label for="addDocName"><i data-lucide="user"></i> Doctor Name</label>
         <input id="addDocName" required placeholder="e.g. Dr.Razin Muhammad" />
 
-        <label for="addDocEmail"><i data-lucide="mail"></i> Doctor Email (For Login)</label>
+        <label for="addDocEmail"><i data-lucide="mail"></i> Doctor Email (For Login & Invitation)</label>
         <input id="addDocEmail" type="email" required placeholder="e.g. doctor@primecare.com" />
+
+        <label for="addDocPhone"><i data-lucide="phone"></i> Doctor Mobile Number *</label>
+        <input id="addDocPhone" type="tel" required placeholder="e.g. +91 9876543210 or 9876543210" />
 
         <label for="addDocSpec"><i data-lucide="activity"></i> Specialization</label>
         <input id="addDocSpec" required placeholder="Type or select specialization" list="specializationSuggestions" />
@@ -2640,7 +2681,7 @@
             <label>
               <input type="checkbox" class="day-check" data-day="{{ day }}"> {{ day }}
             </label>
-            <div class="day-time" data-day-time="{{ day }}" style="display:none; margin-left:15px;">
+            <div class="day-time" data-day-time="{{ day }}" style="display:none;">
               <input type="time" class="start-time" data-day="{{ day }}" /> &ndash;
               <input type="time" class="end-time" data-day="{{ day }}" />
             </div>
@@ -2688,8 +2729,23 @@
           <option value="">-- Select Doctor --</option>
         </select>
 
-        <label for="editDocEmail" style="margin-top:1rem;"><i data-lucide="mail"></i> Update Email</label>
-        <input id="editDocEmail" type="email" placeholder="New login email" />
+        <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:0.9rem 1rem; margin-top:1.1rem;">
+          <div style="font-size:0.75rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.6rem; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="badge-info" style="width:14px;height:14px;color:#0077b6;"></i>
+            <span>Current Registered Doctor Credentials</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+            <div>
+              <label for="editDocEmail" style="font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:0.25rem; display:block;"><i data-lucide="mail"></i> Doctor Email *</label>
+              <input id="editDocEmail" type="email" required placeholder="Doctor login email" style="width:100%; box-sizing:border-box;" />
+            </div>
+            <div>
+              <label for="editDocPhone" style="font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:0.25rem; display:block;"><i data-lucide="phone"></i> Doctor Mobile Number *</label>
+              <input id="editDocPhone" type="tel" required placeholder="e.g. +91 9876543210 or 9876543210" style="width:100%; box-sizing:border-box;" />
+            </div>
+          </div>
+          <div id="editDocStatusBadge" style="margin-top:0.6rem;"></div>
+        </div>
 
         <label style="margin-top:1rem;"><i data-lucide="calendar-days"></i> Working Days &amp; Time</label>
 
@@ -2699,7 +2755,7 @@
             <label>
               <input type="checkbox" class="day-check-edit" data-day="{{ day }}"> {{ day }}
             </label>
-            <div class="day-time-edit" data-day-time-edit="{{ day }}" style="display:none; margin-left:15px;">
+            <div class="day-time-edit" data-day-time-edit="{{ day }}" style="display:none;">
               <input type="time" class="start-time-edit" data-day="{{ day }}" /> &ndash;
               <input type="time" class="end-time-edit" data-day="{{ day }}" />
             </div>
@@ -2730,6 +2786,21 @@
           <i data-lucide="save"></i> Update Doctor
         </button>
       </form>
+
+      <!-- DOCTOR DIRECTORY & INVITATION STATUS MANAGEMENT -->
+      <div id="doctorDirectoryCard" style="margin-top: 2rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h4 style="margin: 0; font-size: 1rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
+            <i data-lucide="users" style="width: 18px; height: 18px; color: #0077b6;"></i> Doctor Roster &amp; Contact Directory
+          </h4>
+          <button type="button" class="btn btn-sm btn-outline" onclick="loadDoctorsForEdit()" style="padding:4px 10px; font-size:0.75rem;">
+            <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Refresh
+          </button>
+        </div>
+        <div id="adminDoctorRosterList" style="display: flex; flex-direction: column; gap: 0.65rem;">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
     </div>
 
     <!-- DOCTOR LEAVES PANEL -->
@@ -3079,6 +3150,26 @@
             <label for="settings_clinic_whatsapp"><i data-lucide="phone-forwarded"></i> WhatsApp Number (Digits Only)</label>
             <input id="settings_clinic_whatsapp" required placeholder="e.g. 918592031725" pattern="[0-9]+" title="Please enter numbers only without spaces or symbols" />
             <small style="color: #64748b; font-size: 0.78rem; display: block; margin-top: 0.25rem;">Include country code, e.g. 91 for India, with no leading + or zeros.</small>
+          </div>
+        </div>
+
+        <!-- DEDICATED ADMIN WHATSAPP NUMBER -->
+        <div style="background: rgba(0, 119, 182, 0.04); border: 1.5px solid rgba(0, 119, 182, 0.15); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+          <h4 style="margin: 0 0 0.5rem 0; color: #0077b6; display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem;">
+            <i data-lucide="shield" style="width: 18px; height: 18px;"></i> Dedicated Admin WhatsApp Number
+          </h4>
+          <p style="color: #64748b; font-size: 0.8rem; margin: 0 0 1rem 0;">
+            This authorized mobile number identifies clinic administration commands for the WhatsApp chatbot system.
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+            <div>
+              <label for="settings_admin_whatsapp_phone"><i data-lucide="phone"></i> Admin WhatsApp Number</label>
+              <input id="settings_admin_whatsapp_phone" placeholder="e.g. +91 85920 31725 or 8592031725" />
+            </div>
+            <div>
+              <label for="settings_confirm_admin_whatsapp_phone"><i data-lucide="check-check"></i> Confirm Admin WhatsApp Number</label>
+              <input id="settings_confirm_admin_whatsapp_phone" placeholder="Re-enter Admin WhatsApp number" />
+            </div>
           </div>
         </div>
 
@@ -3869,7 +3960,10 @@
       
       if (type === 'welcome') document.getElementById('welcomePanel').style.display = 'block';
       else if (type === 'add')    document.getElementById('addDoctorPanel').style.display    = 'block';
-      else if (type === 'edit')   document.getElementById('editDoctorPanel').style.display   = 'block';
+      else if (type === 'edit') {
+        document.getElementById('editDoctorPanel').style.display   = 'block';
+        loadDoctorsForEdit();
+      }
       else if (type === 'leaves') {
         document.getElementById('leavesPanel').style.display = 'block';
         loadDoctorsForEdit();
@@ -4337,6 +4431,8 @@
         const settings = data.settings;
         document.getElementById('settings_clinic_phone').value = settings.clinic_phone || '';
         document.getElementById('settings_clinic_whatsapp').value = settings.clinic_whatsapp || '';
+        document.getElementById('settings_admin_whatsapp_phone').value = settings.admin_whatsapp_phone || '';
+        document.getElementById('settings_confirm_admin_whatsapp_phone').value = settings.admin_whatsapp_phone || '';
         document.getElementById('settings_clinic_address').value = settings.clinic_address || '';
         document.getElementById('settings_clinic_map_link').value = settings.clinic_map_link || '';
         document.getElementById('settings_stat_specialists').value = settings.stat_specialists || '';
@@ -4395,6 +4491,8 @@
       const payload = {
         clinic_phone: document.getElementById('settings_clinic_phone').value.trim(),
         clinic_whatsapp: document.getElementById('settings_clinic_whatsapp').value.trim(),
+        admin_whatsapp_phone: document.getElementById('settings_admin_whatsapp_phone')?.value.trim() || '',
+        confirm_admin_whatsapp_phone: document.getElementById('settings_confirm_admin_whatsapp_phone')?.value.trim() || '',
         clinic_address: document.getElementById('settings_clinic_address').value.trim(),
         clinic_map_link: document.getElementById('settings_clinic_map_link').value.trim(),
         stat_specialists: document.getElementById('settings_stat_specialists').value.trim(),
@@ -4972,15 +5070,26 @@
           opt.dataset.days = daysArr.join(',');
           opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
           opt.dataset.email = d.Email || '';
+          opt.dataset.phone = d.Phone_Number || '';
+          opt.dataset.status = d.account_status || 'Invitation Pending';
+          opt.dataset.docId = d.doctor_id || '';
           
           if (select) select.appendChild(opt.cloneNode(true));
           if (viewSelect) viewSelect.appendChild(opt.cloneNode(true));
           if (leavesSelect) leavesSelect.appendChild(opt.cloneNode(true));
           if (cancelSelect) cancelSelect.appendChild(opt);
         });
+        renderDoctorDirectory(doctors);
 
         // Restore values
-        if (select && prevSelectVal) { select.value = prevSelectVal; select.dispatchEvent(new Event('change')); }
+        if (select) {
+          if (prevSelectVal && Array.from(select.options).some(o => o.value === prevSelectVal)) {
+            select.value = prevSelectVal;
+          } else if (select.options.length > 1) {
+            select.selectedIndex = 1;
+          }
+          select.dispatchEvent(new Event('change'));
+        }
         if (viewSelect && prevViewVal) { viewSelect.value = prevViewVal; viewSelect.dispatchEvent(new Event('change')); }
         if (leavesSelect && prevLeavesVal) { leavesSelect.value = prevLeavesVal; leavesSelect.dispatchEvent(new Event('change')); }
         if (cancelSelect && prevCancelVal) { cancelSelect.value = prevCancelVal; cancelSelect.dispatchEvent(new Event('change')); }
@@ -5094,6 +5203,15 @@
       const selectedDays = (selected.dataset.days||'').split(',').map(d=>d.trim()).filter(Boolean);
       const dayTimes = selected.dataset.dayTimes ? JSON.parse(selected.dataset.dayTimes) : {};
       document.getElementById('editDocEmail').value = selected.dataset.email || '';
+      document.getElementById('editDocPhone').value = selected.dataset.phone || '';
+      const badgeDiv = document.getElementById('editDocStatusBadge');
+      if (badgeDiv) {
+        const isAct = selected.dataset.status === 'Activated';
+        badgeDiv.innerHTML = isAct 
+          ? '<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">Account: Activated</span>'
+          : '<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">Account: Invitation Pending</span>' + 
+            (selected.dataset.docId ? ` <button type="button" class="btn btn-sm btn-outline" style="padding:2px 6px; font-size:0.7rem; margin-left:6px;" onclick="resendDoctorInvite('${selected.dataset.docId}')">Resend Invite</button>` : '');
+      }
       document.querySelectorAll('.day-check-edit').forEach(cb => {
         const day = cb.dataset.day;
         const timeDiv = document.querySelector(`.day-time-edit[data-day-time-edit="${day}"]`);
@@ -5939,6 +6057,9 @@
             const formData=new FormData();
             formData.append('name',name); formData.append('email',email); formData.append('specialization',specialization);
             formData.append('days',selectedDays.join(', ')); formData.append('day_times',JSON.stringify(dayTimes));
+            const docPhone = document.getElementById('addDocPhone')?.value.trim() || '';
+            if (!docPhone) { showToast('Doctor mobile number is mandatory.', 'error'); return; }
+            formData.append('phone_number', docPhone);
             if(imageFile) formData.append('image',imageFile);
             const res=await fetch('/admin_add_doctor',{method:'POST',body:formData});
             const rawText=await res.text(); let data;
@@ -5956,8 +6077,10 @@
       e.preventDefault();
       const combined=document.getElementById('editDoctorSelect').value;
       const email=document.getElementById('editDocEmail').value.trim();
+      const phone=document.getElementById('editDocPhone').value.trim();
       if(!combined) { showToast('Please select a doctor to edit.', 'error'); return; }
       if(!email) { showToast('Email is required.', 'error'); return; }
+      if(!phone) { showToast('Doctor mobile number is mandatory.', 'error'); return; }
       if(!email.includes('@') || !email.includes('.')) { showToast('Please provide a valid email format', 'error'); return; }
       const sameTimeAll=document.getElementById('sameTimeAllEdit');
       const selectedDays=[]; const day_times={};
@@ -5989,7 +6112,7 @@
           const btn=e.target.querySelector("button[type='submit']");
           window.setLoadingState(btn, true);
           try {
-            const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined, email, days:selectedDays,day_times}) });
+            const res=await fetch('/admin_edit_doctor',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({combined, email, phone, days:selectedDays,day_times}) });
             const data=await res.json();
             showToast(data.msg, data.success ? 'success' : 'error');
             if(data.success){ e.target.reset(); loadDoctors(); loadDoctorPairs(); loadDoctorsForEdit(); }
@@ -7264,7 +7387,76 @@ function downloadPDF() {
     // Initialize poller
     setInterval(syncMyBookingsLiveStatus, 5000);
 
-  </script>
+  
+    function validateAddDocPhoneMatch() {
+      const p1 = document.getElementById('addDocPhone')?.value.trim() || '';
+      const p2 = document.getElementById('confirmAddDocPhone')?.value.trim() || '';
+      const msg = document.getElementById('addDocPhoneMatchMsg');
+      if (!msg) return;
+      if (!p1 && !p2) { msg.style.display = 'none'; return; }
+      msg.style.display = 'block';
+      if (p1 === p2) {
+        msg.textContent = 'Mobile numbers match';
+        msg.style.color = '#16a34a';
+      } else {
+        msg.textContent = 'Mobile numbers do not match';
+        msg.style.color = '#e11d48';
+      }
+    }
+
+    function renderDoctorDirectory(doctors) {
+      const container = document.getElementById('adminDoctorRosterList');
+      if (!container) return;
+      if (!doctors || doctors.length === 0) {
+        container.innerHTML = '<div style="color: #64748b; font-size: 0.85rem;">No doctors registered on the roster.</div>';
+        return;
+      }
+      container.innerHTML = doctors.map(d => {
+        const isActivated = d.account_status === 'Activated';
+        const badgeHtml = isActivated
+          ? '<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">Activated</span>'
+          : '<span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">Invitation Pending</span>';
+        const resendBtnHtml = (!isActivated && d.doctor_id)
+          ? `<button type="button" class="btn btn-sm btn-outline" style="padding: 3px 8px; font-size: 0.75rem;" onclick="resendDoctorInvite('${d.doctor_id}')"><i data-lucide="send" style="width:12px;height:12px;"></i> Resend Invite</button>`
+          : '';
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0.75rem 1rem; border-radius:8px; border:1px solid #e2e8f0; font-size:0.85rem;">
+            <div>
+              <div style="font-weight:700; color:#0f172a;">${d.Name} <span style="font-weight:400; color:#64748b;">(${d.Specialization})</span></div>
+              <div style="color:#475569; font-size:0.78rem; margin-top:2px;">
+                <i data-lucide="phone" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> ${d.Phone_Number || '<span style="color:#ef4444;">No mobile</span>'} &bull; 
+                <i data-lucide="mail" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> ${d.Email || 'No email'}
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+              ${badgeHtml}
+              ${resendBtnHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    }
+
+    async function resendDoctorInvite(docId) {
+      if (!docId) return;
+      try {
+        const res = await fetch('/admin_resend_doctor_invitation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doctor_id: docId })
+        });
+        const data = await res.json();
+        showToast(data.msg, data.success ? 'success' : 'error');
+        if (data.success) {
+          loadDoctorsForEdit();
+        }
+      } catch (err) {
+        showToast('Failed to resend doctor invitation.', 'error');
+      }
+    }
+
+</script>
   {% if not is_admin_view %}
   <footer class="site-footer">
     <div class="footer-content">

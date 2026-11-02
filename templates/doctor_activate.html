@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Doctor Account Activation · PrimeCare Clinic</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='primecare-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="{{ url_for('static', filename='toast.js') }}"></script>
+  <style>
+    :root {
+      --primary: #0077b6;
+      --primary-dark: #023e8a;
+      --primary-light: #0096c7;
+      --primary-tint: #e0f2fe;
+      --accent: #48cae4;
+      --success: #10b981;
+      --success-light: #ecfdf5;
+      --danger: #ef4444;
+      --danger-light: #fef2f2;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-400: #94a3b8;
+      --slate-500: #64748b;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--slate-800);
+      background: #f0f4f8;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Fixed Background exactly matching other PrimeCare pages */
+    .bg-image {
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-attachment: fixed;
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+    }
+    .bg-blur {
+      position: fixed;
+      inset: 0;
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-attachment: fixed;
+      filter: blur(8px);
+      -webkit-filter: blur(8px);
+      z-index: -2;
+    }
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.68);
+      z-index: -1;
+    }
+
+    /* ── TOP BAR (Consistent with Main App) ── */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.96);
+      border-bottom: 1px solid rgba(0, 119, 182, 0.1);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      padding: 0.65rem 1.5rem;
+    }
+
+    .top-bar-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo-img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .brand-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      color: var(--slate-500);
+      font-weight: 500;
+    }
+
+    .top-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: #ffffff;
+      color: var(--primary);
+      border: 1.5px solid var(--slate-200);
+      padding: 0.45rem 1rem;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    }
+
+    .top-nav-btn:hover {
+      border-color: var(--primary);
+      background: var(--primary-tint);
+      color: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    /* ── MAIN WORKSPACE CONTAINER ── */
+    .page-main-layout {
+      flex: 1;
+      width: 100%;
+      max-width: 1240px;
+      margin: 2rem auto 3.5rem;
+      padding: 0 1.5rem;
+      box-sizing: border-box;
+    }
+
+    /* ── DESKTOP HORIZONTAL TWO-COLUMN GRID ── */
+    .activation-desktop-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.05fr;
+      gap: 2.2rem;
+      align-items: stretch;
+      width: 100%;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── LEFT SHOWCASE COLUMN ── */
+    .showcase-card {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      border-radius: 24px;
+      box-shadow: 0 20px 45px -12px rgba(0, 119, 182, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+      padding: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .showcase-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+    }
+
+    .portal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: var(--primary-tint);
+      color: var(--primary);
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid rgba(0, 119, 182, 0.15);
+      margin-bottom: 0.9rem;
+    }
+
+    .showcase-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      margin-bottom: 0.6rem;
+    }
+
+    .showcase-desc {
+      font-size: 0.94rem;
+      color: var(--slate-600);
+      line-height: 1.6;
+    }
+
+    /* Doctor Profile Card (Inside Showcase) */
+    .doctor-profile-card {
+      background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+      border: 1.5px solid #bae6fd;
+      border-radius: 20px;
+      padding: 1.4rem 1.6rem;
+      box-shadow: 0 4px 16px rgba(0, 119, 182, 0.06);
+    }
+
+    .doctor-avatar-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.15rem;
+      padding-bottom: 1.15rem;
+      border-bottom: 1px dashed var(--slate-200);
+    }
+
+    .avatar-icon-wrap {
+      width: 58px;
+      height: 58px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #ffffff;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 6px 14px rgba(0, 119, 182, 0.28);
+    }
+
+    .doc-name-wrap {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .doc-display-name {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.25rem;
+      line-height: 1.2;
+    }
+
+    .verified-icon {
+      color: var(--primary);
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .spec-badge {
+      display: inline-block;
+      background: var(--primary-tint);
+      color: var(--primary-dark);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.2rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 119, 182, 0.2);
+    }
+
+    .doctor-meta-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.86rem;
+    }
+
+    .meta-label {
+      color: var(--slate-500);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 600;
+    }
+
+    .meta-val {
+      color: var(--slate-900);
+      font-weight: 700;
+      word-break: break-all;
+      text-align: right;
+    }
+
+    .status-badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--success-light);
+      color: #065f46;
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+    }
+
+    /* Clinical Feature Highlights */
+    .portal-features-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      background: rgba(248, 250, 252, 0.85);
+      border: 1px solid var(--slate-200);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+    }
+
+    .feature-icon-box {
+      width: 36px;
+      height: 36px;
+      background: var(--primary-tint);
+      color: var(--primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .feature-content h4 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin-bottom: 0.15rem;
+    }
+
+    .feature-content p {
+      font-size: 0.8rem;
+      color: var(--slate-500);
+      line-height: 1.4;
+    }
+
+    /* ── RIGHT ACTIVATION FORM COLUMN ── */
+    .form-card {
+      background: rgba(255, 255, 255, 0.97);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 24px;
+      box-shadow: 0 20px 45px -12px rgba(0, 119, 182, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+      padding: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+
+    .form-card-header {
+      margin-bottom: 1.8rem;
+    }
+
+    .step-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(0, 119, 182, 0.08);
+      color: var(--primary-dark);
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 0.7rem;
+    }
+
+    .form-card-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+    }
+
+    .form-card-subtitle {
+      font-size: 0.9rem;
+      color: var(--slate-600);
+      line-height: 1.5;
+    }
+
+    .form-group {
+      margin-bottom: 1.35rem;
+    }
+
+    .form-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--slate-800);
+      margin-bottom: 0.45rem;
+    }
+
+    .form-label-left {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-input {
+      width: 100%;
+      height: 48px;
+      padding: 0 2.8rem 0 1rem;
+      border: 1.5px solid var(--slate-200);
+      border-radius: 12px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--slate-900);
+      background-color: #ffffff;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.15);
+    }
+
+    .toggle-pw-btn {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 44px;
+      height: 48px;
+      background: none;
+      border: none;
+      color: var(--slate-400);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      transition: color 0.15s ease;
+    }
+
+    .toggle-pw-btn:hover {
+      color: var(--slate-700);
+    }
+
+    /* Live Password Requirement Checklist */
+    .pw-checklist {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      background: #f8fafc;
+      padding: 0.65rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid var(--slate-200);
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--slate-500);
+      transition: color 0.2s;
+    }
+
+    .checklist-item.valid {
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    .checklist-item i {
+      width: 14px;
+      height: 14px;
+    }
+
+    .match-status-box {
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: none;
+    }
+
+    .match-status-box.match {
+      display: block;
+      color: var(--success);
+    }
+
+    .match-status-box.mismatch {
+      display: block;
+      color: var(--danger);
+    }
+
+    /* Submit Button */
+    .submit-btn {
+      width: 100%;
+      height: 52px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      font-size: 1.02rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      box-shadow: 0 4px 16px rgba(0, 119, 182, 0.32);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      margin-top: 1.6rem;
+      touch-action: manipulation;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      box-shadow: 0 6px 22px rgba(0, 119, 182, 0.45);
+      transform: translateY(-1.5px);
+    }
+
+    .submit-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Security Notice Banner */
+    .security-notice-card {
+      margin-top: 1.6rem;
+      background: var(--primary-tint);
+      border-left: 4px solid var(--primary);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+    }
+
+    .security-notice-icon {
+      color: var(--primary);
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .security-notice-text {
+      color: var(--slate-700);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .security-notice-text strong {
+      color: var(--primary-dark);
+    }
+
+    .card-footer-nav {
+      margin-top: 1.5rem;
+      text-align: center;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--slate-200);
+    }
+
+    .card-footer-link {
+      color: var(--slate-500);
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: color 0.15s;
+    }
+
+    .card-footer-link:hover {
+      color: var(--primary);
+    }
+
+    /* ── ERROR STATE CARD (Desktop & Mobile) ── */
+    .error-card-wrapper {
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      padding: 3.5rem 2.5rem;
+      text-align: center;
+      max-width: 680px;
+      margin: 2rem auto;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .error-badge-icon {
+      width: 76px;
+      height: 76px;
+      background: #fef2f2;
+      border: 1.5px solid #fee2e2;
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--danger);
+      margin: 0 auto 1.5rem;
+      box-shadow: 0 6px 16px rgba(239, 68, 68, 0.12);
+    }
+
+    .error-card-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin-bottom: 0.6rem;
+    }
+
+    .error-card-desc {
+      color: var(--slate-600);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .error-actions-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-login-doctor {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #ffffff;
+      padding: 0.85rem 1.6rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.94rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 14px rgba(0, 119, 182, 0.28);
+      transition: all 0.2s;
+    }
+
+    .btn-login-doctor:hover {
+      box-shadow: 0 6px 20px rgba(0, 119, 182, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-return-home {
+      background: #ffffff;
+      color: var(--slate-700);
+      border: 1.5px solid var(--slate-200);
+      padding: 0.85rem 1.6rem;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.94rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .btn-return-home:hover {
+      border-color: var(--slate-300);
+      background: var(--slate-50);
+      color: var(--slate-900);
+    }
+
+    /* Toast Notification */
+    .toast-pill {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      background: var(--slate-900);
+      color: #ffffff;
+      padding: 0.8rem 1.6rem;
+      border-radius: 50px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .toast-pill.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .toast-pill.success {
+      background: #065f46;
+      border: 1px solid #10b981;
+    }
+
+    .toast-pill.error {
+      background: #991b1b;
+      border: 1px solid #ef4444;
+    }
+
+    .spinning {
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* ── RESPONSIVE MOBILE VIEW (Optimized for Small Screens) ── */
+    @media (max-width: 959px) {
+      .page-main-layout {
+        margin: 1.2rem auto 2.5rem;
+        padding: 0 1rem;
+      }
+
+      .activation-desktop-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        max-width: 540px;
+        margin: 0 auto;
+      }
+
+      .showcase-card {
+        padding: 1.6rem 1.4rem;
+        border-radius: 20px;
+        gap: 1.3rem;
+      }
+
+      .showcase-title {
+        font-size: 1.45rem;
+      }
+
+      .showcase-desc {
+        font-size: 0.88rem;
+      }
+
+      .doctor-profile-card {
+        padding: 1.2rem;
+        border-radius: 16px;
+      }
+
+      .avatar-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+      }
+
+      .doc-display-name {
+        font-size: 1.1rem;
+      }
+
+      .portal-features-grid {
+        display: none; /* Keep mobile view clean and focused on activation */
+      }
+
+      .form-card {
+        padding: 1.6rem 1.35rem;
+        border-radius: 20px;
+      }
+
+      .form-card-title {
+        font-size: 1.4rem;
+      }
+
+      .form-input {
+        font-size: 16px; /* Prevents auto-zoom on iOS Safari */
+      }
+
+      .submit-btn {
+        height: 48px;
+        font-size: 0.96rem;
+      }
+
+      .error-card-wrapper {
+        padding: 2.2rem 1.25rem;
+      }
+
+      .error-actions-group {
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .btn-login-doctor, .btn-return-home {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .top-bar {
+        padding: 0.5rem 0.85rem;
+      }
+      .brand-title {
+        font-size: 1.05rem;
+      }
+      .brand-sub {
+        font-size: 0.66rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fixed Background exactly matching other PrimeCare pages -->
+  <div class="bg-image"></div>
+  <div class="bg-blur"></div>
+  <div class="bg-overlay"></div>
+
+  <!-- Shared PrimeCare Top Navigation Header -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <a href="/" class="brand-link" title="PrimeCare Clinic Homepage">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+             class="brand-logo-img"
+             alt="PrimeCare Logo" />
+        <div class="brand-text">
+          <span class="brand-title">PrimeCare Clinic</span>
+          <span class="brand-sub">Quality care · Trusted doctors</span>
+        </div>
+      </a>
+      <a href="/" class="top-nav-btn" aria-label="Return to Homepage">
+        <i data-lucide="home" style="width: 16px; height: 16px;"></i>
+        <span>Home</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Workspace: Wide Desktop Layout / Streamlined Mobile Layout -->
+  <main class="page-main-layout">
+    {% if error or error_state %}
+      <!-- Error or Expired Invitation Link View -->
+      <div class="error-card-wrapper">
+        <div class="error-badge-icon">
+          <i data-lucide="alert-circle" style="width: 38px; height: 38px;"></i>
+        </div>
+        <h2 class="error-card-title">Invitation Link Unavailable</h2>
+        <p class="error-card-desc">
+          {{ error or error_message or "This activation link is invalid, has expired, or has already been used to set up an account." }}
+        </p>
+
+        <div class="error-actions-group">
+          <a href="/?auth=doctorLogin" class="btn-login-doctor">
+            <i data-lucide="log-in" style="width: 18px; height: 18px;"></i>
+            <span>Go to Doctor Sign In</span>
+          </a>
+          <a href="/" class="btn-return-home">
+            <i data-lucide="home" style="width: 16px; height: 16px;"></i>
+            <span>Back to Clinic Homepage</span>
+          </a>
+        </div>
+
+        <div style="margin-top: 2rem; font-size: 0.8rem; color: var(--slate-400); line-height: 1.5;">
+          If your invitation has expired, please request a new link from the clinic administrator.
+        </div>
+      </div>
+
+    {% else %}
+      <!-- Active Invitation: Horizontal Split on Desktop / Stacked on Mobile -->
+      <div class="activation-desktop-grid">
+        
+        <!-- Left Column: Doctor Profile & Clinical Overview -->
+        <div class="showcase-card">
+          <div>
+            <div class="portal-badge">
+              <i data-lucide="stethoscope" style="width: 14px; height: 14px;"></i>
+              <span>Doctor Portal Onboarding</span>
+            </div>
+            <h1 class="showcase-title">Welcome to PrimeCare Clinic</h1>
+            <p class="showcase-desc">
+              You have been invited to join the clinic medical team. Complete your account activation below to access your patient consultation queue and digital dashboard.
+            </p>
+          </div>
+
+          <!-- Doctor Credentials Summary -->
+          <div class="doctor-profile-card">
+            <div class="doctor-avatar-row">
+              <div class="avatar-icon-wrap" aria-hidden="true">
+                <i data-lucide="user-check" style="width: 28px; height: 28px;"></i>
+              </div>
+              <div class="doc-name-wrap">
+                <div class="doc-display-name">
+                  <span>{{ doctor_name or (inv.doctor_name if inv is defined else 'Doctor') }}</span>
+                  <i data-lucide="check-circle-2" class="verified-icon" title="Verified Doctor Profile"></i>
+                </div>
+                <span class="spec-badge">
+                  {{ specialization or (inv.specialization if inv is defined else 'Specialist') }}
+                </span>
+              </div>
+            </div>
+
+            <div class="doctor-meta-list">
+              <div class="meta-row">
+                <span class="meta-label">
+                  <i data-lucide="mail" style="width: 14px; height: 14px;"></i>
+                  <span>Registered Email</span>
+                </span>
+                <span class="meta-val">{{ email or (inv.email if inv is defined else '') }}</span>
+              </div>
+
+              {% if phone_number or (inv is defined and inv.phone_number) %}
+              <div class="meta-row">
+                <span class="meta-label">
+                  <i data-lucide="phone" style="width: 14px; height: 14px;"></i>
+                  <span>Mobile Number</span>
+                </span>
+                <span class="meta-val">{{ phone_number or (inv.phone_number if inv is defined else '') }}</span>
+              </div>
+              {% endif %}
+
+              <div class="meta-row">
+                <span class="meta-label">
+                  <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i>
+                  <span>Invitation Status</span>
+                </span>
+                <span class="status-badge-live">
+                  <span class="status-pulse-dot"></span>
+                  <span>Active &middot; Single-Use</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clinical Portal Features Highlight (Displayed in Desktop view) -->
+          <div class="portal-features-grid">
+            <div class="feature-item">
+              <div class="feature-icon-box">
+                <i data-lucide="activity" style="width: 18px; height: 18px;"></i>
+              </div>
+              <div class="feature-content">
+                <h4>Live Consultation Queue</h4>
+                <p>Track waiting patients, update token status, and coordinate patient consults smoothly.</p>
+              </div>
+            </div>
+
+            <div class="feature-item">
+              <div class="feature-icon-box">
+                <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+              </div>
+              <div class="feature-content">
+                <h4>Digital Prescriptions &amp; Notes</h4>
+                <p>Instantly generate prescriptions and maintain structured clinical histories.</p>
+              </div>
+            </div>
+
+            <div class="feature-item">
+              <div class="feature-icon-box">
+                <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
+              </div>
+              <div class="feature-content">
+                <h4>Automated Schedule Sync</h4>
+                <p>Your consulting slots and daily schedules stay synchronized with the clinic master sheet.</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size: 0.78rem; color: var(--slate-400); line-height: 1.5;">
+            Clinic Administration Portal &middot; PrimeCare Healthcare System
+          </div>
+        </div>
+
+        <!-- Right Column: Account Password Creation Form -->
+        <div class="form-card">
+          <div class="form-card-header">
+            <div class="step-pill">
+              <i data-lucide="lock" style="width: 13px; height: 13px;"></i>
+              <span>Credential Setup</span>
+            </div>
+            <h2 class="form-card-title">Set Your Password</h2>
+            <p class="form-card-subtitle">
+              Choose a secure password to activate your doctor account and unlock dashboard access.
+            </p>
+          </div>
+
+          <form id="doctorActivationForm" onsubmit="handleActivation(event)" novalidate>
+            <input type="hidden" id="activation-token" value="{{ token }}">
+
+            <!-- Create Password -->
+            <div class="form-group">
+              <label for="new-password" class="form-label">
+                <span class="form-label-left">
+                  <i data-lucide="lock" style="width: 15px; height: 15px; color: var(--primary);"></i>
+                  <span>Create Password</span>
+                </span>
+              </label>
+              <div class="input-wrapper">
+                <input type="password"
+                       id="new-password"
+                       class="form-input"
+                       placeholder="Enter secure password"
+                       autocomplete="new-password"
+                       required
+                       minlength="6"
+                       oninput="handlePasswordInput()">
+                <button type="button"
+                        class="toggle-pw-btn"
+                        onclick="togglePasswordVisibility('new-password', 'eye-icon-1')"
+                        aria-label="Toggle password visibility">
+                  <i data-lucide="eye" id="eye-icon-1" style="width: 18px; height: 18px;"></i>
+                </button>
+              </div>
+
+              <!-- Live Requirement Indicators -->
+              <div class="pw-checklist">
+                <div class="checklist-item" id="req-length">
+                  <i data-lucide="circle" id="req-length-icon"></i>
+                  <span>At least 6 characters</span>
+                </div>
+                <div class="checklist-item" id="req-combo">
+                  <i data-lucide="circle" id="req-combo-icon"></i>
+                  <span>Contains letters and numbers</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group">
+              <label for="confirm-password" class="form-label">
+                <span class="form-label-left">
+                  <i data-lucide="shield-check" style="width: 15px; height: 15px; color: var(--primary);"></i>
+                  <span>Confirm Password</span>
+                </span>
+              </label>
+              <div class="input-wrapper">
+                <input type="password"
+                       id="confirm-password"
+                       class="form-input"
+                       placeholder="Re-enter password"
+                       autocomplete="new-password"
+                       required
+                       minlength="6"
+                       oninput="handlePasswordInput()">
+                <button type="button"
+                        class="toggle-pw-btn"
+                        onclick="togglePasswordVisibility('confirm-password', 'eye-icon-2')"
+                        aria-label="Toggle confirm password visibility">
+                  <i data-lucide="eye" id="eye-icon-2" style="width: 18px; height: 18px;"></i>
+                </button>
+              </div>
+              <div class="match-status-box" id="matchFeedback"></div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="submit-btn" id="activateBtn">
+              <i data-lucide="arrow-right-circle" style="width: 19px; height: 19px;" id="btnIcon"></i>
+              <span id="btnText">Set Password &amp; Activate Account</span>
+            </button>
+          </form>
+
+          <!-- Security Notice Banner -->
+          <div class="security-notice-card">
+            <i data-lucide="shield-alert" class="security-notice-icon"></i>
+            <div class="security-notice-text">
+              <strong>Single-Use Security Notice:</strong> This activation link is strictly single-use and will automatically expire in 24 hours. Your credentials are securely encrypted.
+            </div>
+          </div>
+
+          <!-- Bottom Navigation -->
+          <div class="card-footer-nav">
+            <a href="/" class="card-footer-link">
+              <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+              <span>Back to PrimeCare Clinic Homepage</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </main>
+
+  <!-- Toast Notification Pill -->
+  <div class="toast-pill" id="toastPill" role="alert">
+    <i data-lucide="info" id="toastIcon" style="width: 18px; height: 18px;"></i>
+    <span id="toastText"></span>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    });
+
+    function togglePasswordVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (!input) return;
+
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    function handlePasswordInput() {
+      const p1 = document.getElementById('new-password')?.value || '';
+      const p2 = document.getElementById('confirm-password')?.value || '';
+
+      const reqLength = document.getElementById('req-length');
+      const reqLengthIcon = document.getElementById('req-length-icon');
+      const reqCombo = document.getElementById('req-combo');
+      const reqComboIcon = document.getElementById('req-combo-icon');
+      const fb = document.getElementById('matchFeedback');
+
+      // Check Length
+      if (p1.length >= 6) {
+        reqLength.classList.add('valid');
+        reqLengthIcon.setAttribute('data-lucide', 'check-circle-2');
+      } else {
+        reqLength.classList.remove('valid');
+        reqLengthIcon.setAttribute('data-lucide', 'circle');
+      }
+
+      // Check Combination
+      const hasLetter = /[a-zA-Z]/.test(p1);
+      const hasNumber = /[0-9]/.test(p1);
+      if (hasLetter && hasNumber) {
+        reqCombo.classList.add('valid');
+        reqComboIcon.setAttribute('data-lucide', 'check-circle-2');
+      } else {
+        reqCombo.classList.remove('valid');
+        reqComboIcon.setAttribute('data-lucide', 'circle');
+      }
+
+      // Check Match
+      if (p2.length === 0) {
+        fb.className = 'match-status-box';
+        fb.textContent = '';
+      } else if (p1 === p2) {
+        fb.className = 'match-status-box match';
+        fb.textContent = '✓ Passwords match';
+      } else {
+        fb.className = 'match-status-box mismatch';
+        fb.textContent = '✕ Passwords do not match';
+      }
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    function showToast(message, isSuccess = true) {
+      const pill = document.getElementById('toastPill');
+      const text = document.getElementById('toastText');
+      const icon = document.getElementById('toastIcon');
+
+      if (!pill || !text) return;
+
+      text.textContent = message;
+      pill.className = 'toast-pill ' + (isSuccess ? 'success' : 'error') + ' show';
+      if (icon) {
+        icon.setAttribute('data-lucide', isSuccess ? 'check-circle' : 'alert-triangle');
+      }
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+
+      setTimeout(() => {
+        pill.classList.remove('show');
+      }, 4000);
+    }
+
+    async function handleActivation(event) {
+      event.preventDefault();
+      const token = (document.getElementById('activation-token')?.value || '').trim();
+      const password = document.getElementById('new-password')?.value || '';
+      const confirm_password = document.getElementById('confirm-password')?.value || '';
+
+      const btn = document.getElementById('activateBtn');
+      const btnIcon = document.getElementById('btnIcon');
+      const btnText = document.getElementById('btnText');
+
+      if (!token) {
+        showToast('Activation token is missing. Please check your invitation link.', false);
+        return;
+      }
+
+      if (password.length < 6) {
+        showToast('Password must be at least 6 characters long.', false);
+        return;
+      }
+
+      if (password !== confirm_password) {
+        showToast('Passwords do not match. Please verify.', false);
+        return;
+      }
+
+      btn.disabled = true;
+      btnText.textContent = 'Activating Account...';
+      btnIcon.setAttribute('data-lucide', 'loader-2');
+      btnIcon.classList.add('spinning');
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+
+      function getCsrfToken() {
+        let value = "; " + document.cookie;
+        let parts = value.split("; csrf_token=");
+        if (parts.length === 2) return parts.pop().split(";").shift();
+        return '';
+      }
+
+      const headers = { 'Content-Type': 'application/json' };
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
+
+      try {
+        const response = await fetch('/doctor/activate', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ token, password, confirm_password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showToast(data.msg || 'Doctor account activated successfully!', true);
+          btnText.textContent = 'Account Activated!';
+          btnIcon.setAttribute('data-lucide', 'check-circle-2');
+          btnIcon.classList.remove('spinning');
+          if (window.lucide) {
+            lucide.createIcons();
+          }
+
+          setTimeout(() => {
+            window.location.href = data.redirect_url || '/?auth=doctorLogin';
+          }, 1400);
+        } else {
+          showToast(data.msg || 'Activation failed. Please try again.', false);
+          btn.disabled = false;
+          btnText.textContent = 'Set Password & Activate Account';
+          btnIcon.setAttribute('data-lucide', 'arrow-right-circle');
+          btnIcon.classList.remove('spinning');
+          if (window.lucide) {
+            lucide.createIcons();
+          }
+        }
+      } catch (err) {
+        console.error('Activation network error:', err);
+        showToast('Connection error. Please check your network and try again.', false);
+        btn.disabled = false;
+        btnText.textContent = 'Set Password & Activate Account';
+        btnIcon.setAttribute('data-lucide', 'arrow-right-circle');
+        btnIcon.classList.remove('spinning');
+        if (window.lucide) {
+          lucide.createIcons();
+        }
+      }
+    }
+  </script>
+</body>
+</html>

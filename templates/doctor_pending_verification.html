@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Doctor Verification Pending · PrimeCare Clinic</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='primecare-logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --primary: #0077b6;
+      --primary-dark: #023e8a;
+      --primary-light: #0096c7;
+      --primary-tint: #e0f2fe;
+      --accent: #48cae4;
+      --warning: #d97706;
+      --warning-bg: #fffbeb;
+      --warning-border: #fde68a;
+      --success: #10b981;
+      --success-light: #ecfdf5;
+      --danger: #ef4444;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-400: #94a3b8;
+      --slate-500: #64748b;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--slate-800);
+      background: #f0f4f8;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Fixed Background exactly matching other PrimeCare pages */
+    .bg-image {
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-attachment: fixed;
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+    }
+    .bg-blur {
+      position: fixed;
+      inset: 0;
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-attachment: fixed;
+      filter: blur(8px);
+      -webkit-filter: blur(8px);
+      z-index: -2;
+    }
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.68);
+      z-index: -1;
+    }
+
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.96);
+      border-bottom: 1px solid rgba(0, 119, 182, 0.1);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      padding: 0.65rem 1.5rem;
+    }
+
+    .top-bar-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo-img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      color: var(--slate-500);
+      font-weight: 500;
+    }
+
+    .top-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: #ffffff;
+      color: var(--primary);
+      border: 1.5px solid var(--slate-200);
+      padding: 0.45rem 1rem;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .top-nav-btn:hover {
+      border-color: var(--primary);
+      background: var(--primary-tint);
+    }
+
+    .page-container {
+      flex: 1;
+      width: 100%;
+      max-width: 600px;
+      margin: 2.5rem auto 3.5rem;
+      padding: 0 1.25rem;
+    }
+
+    .verification-card {
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 24px;
+      box-shadow: 0 20px 45px -12px rgba(0, 119, 182, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+      animation: cardAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes cardAppear {
+      from { opacity: 0; transform: translateY(18px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header-banner {
+      background: linear-gradient(135deg, #0077b6 0%, #023e8a 100%);
+      padding: 2.2rem 2rem 2rem;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .portal-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 0.85rem;
+      color: #ffffff;
+    }
+
+    .card-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      color: #ffffff;
+    }
+
+    .card-subtitle {
+      font-size: 0.88rem;
+      color: #e0f2fe;
+      line-height: 1.45;
+    }
+
+    .card-body {
+      padding: 2rem;
+    }
+
+    .status-box {
+      background: var(--warning-bg);
+      border: 1.5px solid var(--warning-border);
+      border-radius: 16px;
+      padding: 1.25rem 1.4rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .status-title {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #92400e;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-desc {
+      font-size: 0.86rem;
+      color: #78350f;
+      line-height: 1.5;
+    }
+
+    .doctor-info-table {
+      background: var(--slate-50);
+      border: 1.5px solid var(--slate-200);
+      border-radius: 16px;
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      font-size: 0.86rem;
+    }
+
+    .info-row:not(:last-child) {
+      border-bottom: 1px dashed var(--slate-200);
+    }
+
+    .info-label {
+      color: var(--slate-600);
+      font-weight: 600;
+    }
+
+    .info-val {
+      color: var(--slate-900);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-align: right;
+    }
+
+    .badge-verified {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .badge-pending {
+      background: #fffbeb;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .btn-logout {
+      width: 100%;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 0.85rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .btn-logout:hover {
+      background: #dc2626;
+    }
+
+    .btn-home {
+      width: 100%;
+      background: white;
+      color: var(--slate-800);
+      border: 1.5px solid var(--slate-200);
+      border-radius: 12px;
+      padding: 0.85rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-home:hover {
+      background: var(--slate-50);
+      border-color: var(--slate-400);
+    }
+
+    @media (max-width: 600px) {
+      .top-bar { padding: 0.5rem 0.9rem; }
+      .brand-title { font-size: 1.1rem; }
+      .page-container { margin: 1rem auto 2.5rem; padding: 0 0.85rem; }
+      .card-header-banner { padding: 1.6rem 1.25rem 1.4rem; }
+      .card-title { font-size: 1.35rem; }
+      .card-body { padding: 1.35rem 1.15rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-image"></div>
+  <div class="bg-blur"></div>
+  <div class="bg-overlay"></div>
+
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <a href="/" class="brand-link">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
+             class="brand-logo-img"
+             alt="PrimeCare Logo" />
+        <div class="brand-text">
+          <span class="brand-title">PrimeCare Clinic</span>
+          <span class="brand-sub">Quality care · Trusted doctors</span>
+        </div>
+      </a>
+      <a href="/" class="top-nav-btn">
+        <i data-lucide="home" style="width: 15px; height: 15px;"></i>
+        <span>Home</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="page-container">
+    <div class="verification-card">
+      <div class="card-header-banner">
+        <div class="portal-pill">
+          <i data-lucide="stethoscope" style="width: 14px; height: 14px;"></i>
+          <span>Doctor Portal Security</span>
+        </div>
+        <h1 class="card-title">Access Restricted</h1>
+        <p class="card-subtitle">Mobile Verification Required for Clinical Permissions</p>
+      </div>
+
+      <div class="card-body">
+        <div class="status-box">
+          <div class="status-title">
+            <i data-lucide="shield-alert" style="width: 20px; height: 20px;"></i>
+            Mobile Verification Pending
+          </div>
+          <p class="status-desc">
+            Your account credentials have been created and your email ownership is verified. In accordance with PrimeCare clinical safety standards, access to patient consultation queues requires a verified WhatsApp mobile number.
+          </p>
+        </div>
+
+        <div class="doctor-info-table">
+          <div class="info-row">
+            <span class="info-label">Doctor</span>
+            <span class="info-val">{{ doctor_name or session.get('doctor_name', 'Doctor') }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Specialization</span>
+            <span class="info-val">{{ specialization or 'Specialist' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Email Ownership</span>
+            <span class="info-val">
+              <span class="badge-verified"><i data-lucide="check" style="width: 12px; height: 12px;"></i> Verified</span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Mobile Number</span>
+            <span class="info-val">
+              {{ phone_number or session.get('user_phone', 'Pending Registration') }}
+              <span class="badge-pending"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> Pending</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button onclick="handleLogout()" class="btn-logout">
+            <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+            Sign Out of Doctor Session
+          </button>
+          <a href="/" class="btn-home">
+            <i data-lucide="home" style="width: 16px; height: 16px;"></i>
+            Return to PrimeCare Homepage
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    async function handleLogout() {
+      try {
+        await fetch('/patient_logout', { method: 'POST' });
+        window.location.href = '/';
+      } catch (e) {
+        window.location.href = '/';
+      }
+    }
+  </script>
+</body>
+</html>
