@@ -27,10 +27,22 @@ from typing import Optional
 KNOWN_PRODUCTION_ENDPOINT = "ep-small-dream"
 
 
-def assert_database_safety(db_uri: str, allow_dev_db: bool = False) -> None:
+def assert_database_safety(
+    db_uri: str,
+    allow_dev_db: bool = False,
+    allow_production_migration: bool = False
+) -> None:
     """
     Enforces strict database safety.
     Raises RuntimeError or ValueError if the target database is dangerous, unauthorized, or production.
+
+    Production Migration Authorization:
+      Targeting the production Neon database is strictly prohibited EXCEPT when ALL of the following
+      conditions are simultaneously satisfied:
+        1. allow_production_migration is True (explicit --confirm-production CLI flag in migration tool).
+        2. PRIMECARE_ALLOW_PRODUCTION_MIGRATION is set to '1' in the environment.
+        3. PRIMECARE_TEST_MODE is NOT enabled (tests are strictly prohibited from targeting production).
+        4. Target hostname strictly matches the configured production DATABASE_URL host.
     """
     if not db_uri or not isinstance(db_uri, str) or not db_uri.strip():
         raise ValueError("Database URI cannot be empty or invalid.")
@@ -44,24 +56,39 @@ def assert_database_safety(db_uri: str, allow_dev_db: bool = False) -> None:
     db_name = parsed.path.lstrip('/')
     username = parsed.username
 
-    # 2. Always reject known production endpoint anywhere in URI or hostname
-    if KNOWN_PRODUCTION_ENDPOINT in hostname or KNOWN_PRODUCTION_ENDPOINT in raw_uri.lower():
-        raise RuntimeError(
-            f"CRITICAL SAFETY ABORT: Target database matches known production endpoint '{KNOWN_PRODUCTION_ENDPOINT}'! "
-            "Connecting to production Neon database is strictly prohibited."
-        )
-
-    # 3. Reject any connection matching production DATABASE_URL host
+    # Evaluate production migration authorization criteria
     prod_env_url = os.environ.get("DATABASE_URL", "").strip()
-    if prod_env_url:
-        prod_parsed = urlparse(prod_env_url)
-        prod_host = (prod_parsed.hostname or "").lower()
-        if prod_host and prod_host not in ('127.0.0.1', 'localhost'):
-            if hostname == prod_host:
+    prod_parsed = urlparse(prod_env_url) if prod_env_url else None
+    prod_host = (prod_parsed.hostname or "").lower() if prod_parsed else ""
+
+    is_target_prod = (
+        (KNOWN_PRODUCTION_ENDPOINT in hostname or KNOWN_PRODUCTION_ENDPOINT in raw_uri.lower())
+        or (bool(prod_host) and prod_host not in ('127.0.0.1', 'localhost') and hostname == prod_host)
+    )
+
+    is_test_mode = os.environ.get("PRIMECARE_TEST_MODE", "").strip().lower() in ("true", "1")
+    allow_prod_flag = os.environ.get("PRIMECARE_ALLOW_PRODUCTION_MIGRATION", "").strip() == "1"
+
+    if is_target_prod:
+        # Check strict migration-specific authorization requirements
+        if allow_production_migration and allow_prod_flag and not is_test_mode:
+            # Must strictly match the configured production DATABASE_URL
+            if prod_host and hostname == prod_host:
+                masked_host = f"{hostname[:8]}..." if len(hostname) > 8 else hostname
+                print(f"[SAFETY AUDIT] Production Neon database migration explicitly authorized for host: {masked_host}")
+                return
+            else:
                 raise RuntimeError(
-                    "CRITICAL SAFETY ABORT: Target database host matches production DATABASE_URL host! "
-                    "Execution rejected to prevent production tampering."
+                    "CRITICAL SAFETY ABORT: Production migration flag provided but target host does not match "
+                    "the configured production DATABASE_URL host! Arbitrary production targets rejected."
                 )
+
+        # Fail-closed abort if any criteria missing
+        raise RuntimeError(
+            f"CRITICAL SAFETY ABORT: Target database matches known production endpoint '{KNOWN_PRODUCTION_ENDPOINT}' "
+            f"or production DATABASE_URL! Connecting to production Neon database is strictly prohibited "
+            "without explicit dual-factor migration authorization (--confirm-production and PRIMECARE_ALLOW_PRODUCTION_MIGRATION=1)."
+        )
 
     # 4. Handle Neon connections (*.neon.tech or host containing 'neon')
     if "neon.tech" in hostname or (hostname and "neon" in hostname):

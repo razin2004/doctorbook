@@ -1254,3 +1254,170 @@ class WhatsAppWebhookTestSuite(unittest.TestCase):
         )
         self.assertEqual(res2.status_code, 200)
         self.assertEqual(res2.get_json().get("message"), "duplicate_event_ignored")
+
+    # -----------------------------------------------------------------
+    # Test 26: Asynchronous webhook prompt acknowledgement
+    # -----------------------------------------------------------------
+    def test_26_async_background_webhook_prompt_acknowledgement(self):
+        """26. Prompt webhook acknowledgement returns sub-second 200 with durable PostgreSQL queue persistence."""
+        test_phone = "+919847055099"
+        wamid = f"wamid.HBgL{uuid.uuid4().hex[:16]}"
+        payload = build_text_payload(
+            sender_phone=test_phone,
+            text_body="Hello clinic",
+            wamid=wamid
+        )
+        raw_body = json.dumps(payload).encode("utf-8")
+        sig = generate_signature(raw_body)
+
+        with patch("services.whatsapp_webhook_service.should_process_async", return_value=True):
+            res = self.client.post(
+                "/api/whatsapp/webhook",
+                data=raw_body,
+                content_type="application/json",
+                headers={"X-Webhook-Signature": sig}
+            )
+
+            self.assertEqual(res.status_code, 200)
+            data = res.get_json()
+            self.assertEqual(data.get("status"), "ok")
+            self.assertEqual(data.get("message"), "queued")
+            self.assertIsNotNone(data.get("conversation_uuid"))
+
+            # Inbound message is persisted immediately
+            inbound_msg = WhatsAppMessage.query.filter_by(wamid=wamid).first()
+            self.assertIsNotNone(inbound_msg)
+            self.assertEqual(inbound_msg.direction, "inbound")
+            self.assertEqual(inbound_msg.status, "received")
+
+            # Queue job is created in WhatsAppWebhookEvent with pending status and payload
+            job = WhatsAppWebhookEvent.query.filter_by(event_id=wamid).first()
+            self.assertIsNotNone(job)
+            self.assertEqual(job.status, "pending")
+            self.assertIsNotNone(job.payload_json)
+            payload_data = json.loads(job.payload_json)
+            self.assertEqual(payload_data.get("sender_phone"), test_phone)
+
+    # -----------------------------------------------------------------
+    # Test 27: Kapso v2 payload structure with nested message and contact
+    # -----------------------------------------------------------------
+    def test_27_kapso_v2_payload_structure(self):
+        """27. Verifies Kapso v2 payload format with root phone_number_id, nested message, and contact."""
+        wamid = f"wamid.V2_MSG_{uuid.uuid4().hex[:8]}"
+        payload = {
+            "event": "whatsapp.message.received",
+            "phone_number_id": "1387431517794285",
+            "payload_version": "v2",
+            "data": [
+                {
+                    "message": {
+                        "id": wamid,
+                        "from": "+919847055999",
+                        "type": "text",
+                        "text": {"body": "I need Dr Smith on Monday"},
+                        "timestamp": "1730800000"
+                    },
+                    "contact": {
+                        "name": "Alice Smith",
+                        "wa_id": "919847055999"
+                    }
+                }
+            ]
+        }
+        raw_body = json.dumps(payload).encode("utf-8")
+        sig = generate_signature(raw_body)
+
+        with patch("services.whatsapp_webhook_service.generate_whatsapp_ai_response") as mock_ai:
+            mock_ai.return_value = "Dr. Smith is available on Monday."
+
+            res = self.client.post(
+                "/api/whatsapp/webhook",
+                data=raw_body,
+                content_type="application/json",
+                headers={
+                    "X-Webhook-Signature": sig,
+                    "X-Webhook-Event": "whatsapp.message.received",
+                    "X-Webhook-Payload-Version": "v2"
+                }
+            )
+
+            self.assertEqual(res.status_code, 200)
+            data = res.get_json()
+            self.assertEqual(data.get("status"), "ok")
+
+            # Verify persisted message
+            msg = WhatsAppMessage.query.filter_by(wamid=wamid).first()
+            self.assertIsNotNone(msg)
+            self.assertEqual(msg.content, "I need Dr Smith on Monday")
+            self.assertEqual(msg.direction, "inbound")
+
+            # Verify conversation created for Alice
+            convo = WhatsAppConversation.query.filter_by(sender_phone="+919847055999").first()
+            self.assertIsNotNone(convo)
+
+    # -----------------------------------------------------------------
+    # Test 28: Kapso v2 delivery status update
+    # -----------------------------------------------------------------
+    def test_28_kapso_v2_delivery_status_update(self):
+        """28. Verifies Kapso v2 status delivery structure."""
+        out_wamid = f"wamid.OUT_V2_{uuid.uuid4().hex[:8]}"
+        convo = WhatsAppConversation(
+            conversation_uuid=str(uuid.uuid4()),
+            sender_phone="+919847055998",
+            status="active"
+        )
+        db.session.add(convo)
+        db.session.commit()
+
+        out_msg = WhatsAppMessage(
+            conversation_id=convo.id,
+            wamid=out_wamid,
+            direction="outbound",
+            message_type="text",
+            content="Your appointment is confirmed.",
+            status="sent"
+        )
+        db.session.add(out_msg)
+        db.session.commit()
+
+        payload = {
+            "event": "whatsapp.message.delivered",
+            "phone_number_id": "1387431517794285",
+            "payload_version": "v2",
+            "data": [
+                {
+                    "status": {
+                        "id": out_wamid,
+                        "status": "delivered",
+                        "recipient_id": "919847055998",
+                        "timestamp": "1730800005"
+                    }
+                }
+            ]
+        }
+        raw_body = json.dumps(payload).encode("utf-8")
+        sig = generate_signature(raw_body)
+
+        res = self.client.post(
+            "/api/whatsapp/webhook",
+            data=raw_body,
+            content_type="application/json",
+            headers={
+                "X-Webhook-Signature": sig,
+                "X-Webhook-Event": "whatsapp.message.delivered",
+                "X-Webhook-Payload-Version": "v2"
+            }
+        )
+
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data.get("status"), "ok")
+        self.assertEqual(data.get("message"), "delivery_status_acknowledged")
+
+        # Verify message status updated
+        db.session.refresh(out_msg)
+        self.assertEqual(out_msg.status, "delivered")
+
+
+if __name__ == "__main__":
+    unittest.main()

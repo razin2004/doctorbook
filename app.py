@@ -669,23 +669,32 @@ class WhatsAppMessage(db.Model):
 
 class WhatsAppWebhookEvent(db.Model):
     """
-    Stores webhook event processing state and deduplication keys.
+    Stores webhook event processing state, deduplication keys, and durable queue jobs.
     Duplicate event/message IDs are rejected via database uniqueness constraints.
+    Provides database-backed queue persistence surviving crashes and dyno restarts.
     """
     __tablename__ = 'whatsapp_webhook_event'
 
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.String(128), unique=True, nullable=False, index=True) # Provider event ID or idempotency key
     event_type = db.Column(db.String(50), nullable=False, index=True) # 'messages', 'statuses', etc.
-    status = db.Column(db.String(20), default='received', nullable=False, index=True) # 'received', 'processing', 'processed', 'failed', 'duplicate'
-    attempt_count = db.Column(db.Integer, default=1, nullable=False)
+    status = db.Column(db.String(20), default='received', nullable=False, index=True) # 'received', 'pending', 'processing', 'completed', 'processed', 'failed', 'duplicate'
+    payload_json = db.Column(db.Text, nullable=True) # Durable inbound event payload for background worker
+    conversation_id = db.Column(db.Integer, db.ForeignKey('whatsapp_conversation.id', ondelete='SET NULL'), nullable=True, index=True)
+    inbound_message_id = db.Column(db.Integer, db.ForeignKey('whatsapp_message.id', ondelete='SET NULL'), nullable=True, index=True)
+    locked_at = db.Column(db.DateTime, nullable=True)
+    locked_by = db.Column(db.String(64), nullable=True)
+    attempt_count = db.Column(db.Integer, default=0, nullable=False)
+    max_attempts = db.Column(db.Integer, default=3, nullable=False)
+    next_retry_at = db.Column(db.DateTime, nullable=True, index=True)
     error_code = db.Column(db.String(50), nullable=True)
+    last_error = db.Column(db.Text, nullable=True)
     received_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     processed_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    VALID_STATUSES = {'received', 'processing', 'processed', 'failed', 'duplicate'}
+    VALID_STATUSES = {'received', 'pending', 'processing', 'completed', 'processed', 'failed', 'duplicate'}
 
     @validates('status')
     def validate_status(self, key, value):
@@ -698,11 +707,23 @@ class WhatsAppWebhookEvent(db.Model):
     def mark_processed(self):
         self.status = 'processed'
         self.processed_at = datetime.utcnow()
+        self.locked_at = None
+        self.locked_by = None
 
-    def mark_failed(self, error_code=None):
+    def mark_completed(self):
+        self.status = 'completed'
+        self.processed_at = datetime.utcnow()
+        self.locked_at = None
+        self.locked_by = None
+
+    def mark_failed(self, error_code=None, last_error=None):
         self.status = 'failed'
         if error_code:
             self.error_code = str(error_code)[:50]
+        if last_error:
+            self.last_error = str(last_error)[:500]
+        self.locked_at = None
+        self.locked_by = None
 
 
 class WhatsAppBookingSession(db.Model):

@@ -157,6 +157,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Simulate migration without modifying data")
     parser.add_argument("--rollback", action="store_true", help="Roll back Phase 4A changes")
     parser.add_argument("--allow-dev-db", action="store_true", help="Allow running against instance/primecare.db")
+    parser.add_argument("--confirm-production", action="store_true", help="Explicit confirmation if targeting production databases.")
     args = parser.parse_args()
 
     target_uri = args.db_url or args.database_url or args.db_uri
@@ -164,7 +165,11 @@ def main():
         test_db_path = os.path.abspath(os.path.join(BASE_DIR, 'instance', 'test_primecare.db'))
         target_uri = f"sqlite:///{test_db_path}"
 
-    assert_database_safety(target_uri, allow_dev_db=args.allow_dev_db)
+    assert_database_safety(
+        target_uri,
+        allow_dev_db=args.allow_dev_db,
+        allow_production_migration=args.confirm_production
+    )
 
     print(f"Target Database: {target_uri}")
     engine = create_engine(target_uri)

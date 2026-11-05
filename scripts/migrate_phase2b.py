@@ -698,7 +698,11 @@ def main():
         db_url = f"sqlite:///{os.path.join(BASE_DIR, 'instance', 'test_primecare.db')}"
 
     # Strict centralized safety assertion
-    assert_database_safety(db_url, allow_dev_db=args.allow_dev_db)
+    assert_database_safety(
+        db_url,
+        allow_dev_db=args.allow_dev_db,
+        allow_production_migration=args.confirm_production
+    )
 
     print(f"[MIGRATION TOOL] Target database: {db_url.split('@')[-1] if '@' in db_url else db_url}")
 

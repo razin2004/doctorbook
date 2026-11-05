@@ -146,6 +146,65 @@ class DatabaseSafetyTestSuite(unittest.TestCase):
         with self.assertRaises(ValueError):
             assert_database_safety(None)
 
+    # 14. Production migration authorized when ALL strict criteria are met
+    def test_14_production_migration_authorized_when_all_conditions_met(self):
+        env = {
+            "PRIMECARE_ALLOW_PRODUCTION_MIGRATION": "1",
+            "DATABASE_URL": self.prod_neon_url,
+            "PRIMECARE_TEST_MODE": "0"
+        }
+        with patch.dict(os.environ, env, clear=True):
+            # Must succeed without exception
+            assert_database_safety(self.prod_neon_url, allow_production_migration=True)
+
+    # 15. Production migration rejected if CLI flag is missing
+    def test_15_production_migration_rejected_without_cli_flag(self):
+        env = {
+            "PRIMECARE_ALLOW_PRODUCTION_MIGRATION": "1",
+            "DATABASE_URL": self.prod_neon_url,
+            "PRIMECARE_TEST_MODE": "0"
+        }
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaises(RuntimeError) as ctx:
+                assert_database_safety(self.prod_neon_url, allow_production_migration=False)
+            self.assertIn("CRITICAL SAFETY ABORT", str(ctx.exception))
+
+    # 16. Production migration rejected if environment variable is missing
+    def test_16_production_migration_rejected_without_env_flag(self):
+        env = {
+            "DATABASE_URL": self.prod_neon_url,
+            "PRIMECARE_TEST_MODE": "0"
+        }
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaises(RuntimeError) as ctx:
+                assert_database_safety(self.prod_neon_url, allow_production_migration=True)
+            self.assertIn("CRITICAL SAFETY ABORT", str(ctx.exception))
+
+    # 17. Production migration rejected under test mode
+    def test_17_production_migration_rejected_in_test_mode(self):
+        env = {
+            "PRIMECARE_ALLOW_PRODUCTION_MIGRATION": "1",
+            "DATABASE_URL": self.prod_neon_url,
+            "PRIMECARE_TEST_MODE": "1"
+        }
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaises(RuntimeError) as ctx:
+                assert_database_safety(self.prod_neon_url, allow_production_migration=True)
+            self.assertIn("CRITICAL SAFETY ABORT", str(ctx.exception))
+
+    # 18. Production migration rejected if target host does not match DATABASE_URL
+    def test_18_production_migration_rejected_if_host_mismatches_database_url(self):
+        mismatched_url = "postgresql://user:pass@ep-other-target-999.us-east-2.aws.neon.tech/neondb?sslmode=require"
+        env = {
+            "PRIMECARE_ALLOW_PRODUCTION_MIGRATION": "1",
+            "DATABASE_URL": self.prod_neon_url,
+            "PRIMECARE_TEST_MODE": "0"
+        }
+        with patch.dict(os.environ, env, clear=True):
+            with self.assertRaises(RuntimeError) as ctx:
+                assert_database_safety(mismatched_url, allow_production_migration=True)
+            self.assertIn("CRITICAL SAFETY ABORT", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

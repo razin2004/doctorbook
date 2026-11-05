@@ -218,13 +218,18 @@ if __name__ == '__main__':
     parser.add_argument('--dry-run', action='store_true', help="Inspect without modifying")
     parser.add_argument('--rollback', action='store_true', help="Revert migration")
     parser.add_argument('--allow-dev-db', action='store_true', help="Allow modifying primecare.db")
+    parser.add_argument('--confirm-production', action='store_true', help="Explicit confirmation if targeting production databases.")
     args = parser.parse_args()
 
     target_uri = args.db_uri or args.database_url or args.db_url
     if not target_uri:
         target_uri = "sqlite:///" + os.path.join(BASE_DIR, "instance", "test_primecare.db")
 
-    assert_database_safety(target_uri, allow_dev_db=args.allow_dev_db)
+    assert_database_safety(
+        target_uri,
+        allow_dev_db=args.allow_dev_db,
+        allow_production_migration=args.confirm_production
+    )
 
     engine = create_engine(target_uri)
     if args.rollback:

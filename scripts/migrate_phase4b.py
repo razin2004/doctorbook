@@ -119,6 +119,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Inspect without modifying")
     parser.add_argument("--rollback", action="store_true", help="Revert Phase 4B migration")
     parser.add_argument("--allow-dev-db", action="store_true", help="Allow updating instance/primecare.db")
+    parser.add_argument("--confirm-production", action="store_true", help="Explicit confirmation if targeting production databases.")
     parser.add_argument("--database-url", type=str, default=None, help="Explicit database URL")
     parser.add_argument("--db-url", type=str, default=None, help="Explicit database URL (alias)")
     parser.add_argument("--db-uri", type=str, default=None, help="Explicit database URL (alias)")
@@ -129,7 +130,11 @@ def main():
         target_uri = "sqlite:///" + os.path.join(BASE_DIR, "instance", "test_primecare.db")
 
     print(f"Target Database URI: {target_uri}")
-    assert_database_safety(target_uri, allow_dev_db=args.allow_dev_db)
+    assert_database_safety(
+        target_uri,
+        allow_dev_db=args.allow_dev_db,
+        allow_production_migration=args.confirm_production
+    )
 
     engine = create_engine(target_uri)
 

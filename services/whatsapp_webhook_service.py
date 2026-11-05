@@ -39,6 +39,7 @@ import uuid
 import json
 import hashlib
 import logging
+import concurrent.futures
 from datetime import datetime
 from typing import Optional, Dict, Any, Tuple, List
 
@@ -51,6 +52,380 @@ from services.whatsapp_ai_service import generate_whatsapp_ai_response
 from whatsapp_role_resolver import resolve_whatsapp_sender_role
 
 logger = logging.getLogger("whatsapp_webhook_service")
+
+# Module-level ThreadPoolExecutor for prompt, non-blocking webhook acknowledgement
+_webhook_executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
+
+
+def get_webhook_executor() -> concurrent.futures.ThreadPoolExecutor:
+    """Returns or initializes the bounded background ThreadPoolExecutor for asynchronous AI dispatch."""
+    global _webhook_executor
+    if _webhook_executor is None:
+        max_threads = int(os.environ.get("WHATSAPP_WORKER_THREADS", "4"))
+        _webhook_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=max(2, min(max_threads, 16)),
+            thread_name_prefix="whatsapp_ai_worker"
+        )
+    return _webhook_executor
+
+
+def should_process_async() -> bool:
+    """
+    Determines whether inbound message AI processing and outbound reply dispatch
+    should run asynchronously in a background thread for sub-50ms webhook acknowledgement.
+
+    Returns False:
+      - In automated test suites (PRIMECARE_TEST_MODE == '1' or FLASK_ENV == 'testing').
+      - When WHATSAPP_ASYNC_PROCESSING is explicitly configured to 'false' or '0'.
+    Returns True:
+      - In production (Render or Neon DB) when not in test mode.
+      - When WHATSAPP_ASYNC_PROCESSING is explicitly configured to 'true' or '1'.
+    """
+    if os.environ.get("PRIMECARE_TEST_MODE", "").strip().lower() in ("true", "1"):
+        return False
+    if os.environ.get("FLASK_ENV", "").strip().lower() == "testing":
+        return False
+
+    async_env = os.environ.get("WHATSAPP_ASYNC_PROCESSING")
+    if async_env is not None:
+        return async_env.strip().lower() in ("true", "1", "yes")
+
+    from app import is_production_environment
+    return is_production_environment()
+
+
+def dispatch_inbound_message_reply(
+    conversation_id: int,
+    inbound_msg_id: int,
+    webhook_event_id: int,
+    message: Dict[str, Any],
+    sender_phone: Optional[str],
+    scoped_user_id: Optional[str],
+    parent_scoped_id: Optional[str],
+    contact_name: Optional[str],
+    client: Optional[KapsoClient] = None,
+    groq_client: Optional[Any] = None
+) -> Dict[str, Any]:
+    """
+    Executes the conversational AI pipeline and dispatches the outbound WhatsApp reply.
+    Callable synchronously (for automated tests) or inside a background worker thread
+    (for immediate production webhook acknowledgement).
+    """
+    db, WhatsAppConversation, WhatsAppMessage, WhatsAppWebhookEvent = get_db_and_models()
+    active_client = client or KapsoClient()
+
+    conversation = db.session.get(WhatsAppConversation, conversation_id) if hasattr(db.session, 'get') else WhatsAppConversation.query.get(conversation_id)
+    inbound_msg = db.session.get(WhatsAppMessage, inbound_msg_id) if hasattr(db.session, 'get') else WhatsAppMessage.query.get(inbound_msg_id)
+    webhook_event = db.session.get(WhatsAppWebhookEvent, webhook_event_id) if hasattr(db.session, 'get') else WhatsAppWebhookEvent.query.get(webhook_event_id)
+
+    if not conversation or not inbound_msg:
+        logger.error(f"Cannot dispatch reply: missing conversation ({conversation_id}) or message ({inbound_msg_id})")
+        return {"status": "error", "reason": "missing_record"}
+
+    # Duplicate Outbound Dispatch Protection (Idempotent Retry Safety):
+    # If an outbound reply message was already recorded in this conversation following this inbound message,
+    # suppress re-dispatch to Kapso to guarantee zero duplicate messages sent to patients upon worker retries.
+    existing_outbound = WhatsAppMessage.query.filter(
+        WhatsAppMessage.conversation_id == conversation.id,
+        WhatsAppMessage.direction == "outbound",
+        WhatsAppMessage.id > inbound_msg.id
+    ).order_by(WhatsAppMessage.id.asc()).first()
+
+    if existing_outbound:
+        logger.info(sanitize_log_message(
+            f"Outbound reply already recorded for conversation {conversation.id} "
+            f"(outbound_id={existing_outbound.id}, inbound_id={inbound_msg.id}). "
+            "Suppressing duplicate outbound dispatch."
+        ))
+        return {
+            "status": "ok",
+            "message": "duplicate_outbound_suppressed",
+            "conversation_uuid": conversation.conversation_uuid,
+            "sender_role": "patient",
+            "reply": existing_outbound.content
+        }
+
+    msg_type = message.get("type", "text")
+    inbound_body = inbound_msg.content or ""
+
+    try:
+        # -------------------------------------------------------------
+        # Branch 1: Non-Text Message Handling
+        # -------------------------------------------------------------
+        if msg_type != "text":
+            reply_text = (
+                "PrimeCare Clinic WhatsApp Assistant: We currently support text messages only. "
+                "Please send your inquiry as a text message, or call the clinic directly at +91 85920 31725."
+            )
+            dispatch_res = active_client.send_text_message(
+                recipient_phone=sender_phone,
+                bsuid=scoped_user_id,
+                text_body=reply_text
+            )
+            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+            outbound_msg = WhatsAppMessage(
+                conversation_id=conversation.id,
+                wamid=out_wamid,
+                direction="outbound",
+                message_type="text",
+                content=reply_text,
+                status=out_status
+            )
+            db.session.add(outbound_msg)
+
+            if webhook_event:
+                webhook_event.status = "processed"
+                webhook_event.processed_at = datetime.utcnow()
+            db.session.commit()
+
+            return {
+                "conversation_uuid": conversation.conversation_uuid,
+                "message": "unsupported_media_handled",
+                "reply": reply_text,
+                "scoped_user_id": scoped_user_id
+            }
+
+        # -------------------------------------------------------------
+        # Branch 2: Human Handoff Active
+        # -------------------------------------------------------------
+        if conversation.is_human_handoff or conversation.status == "handed_off":
+            handoff_reply = (
+                "Your conversation has been handed off to PrimeCare clinic staff. "
+                "A team member will respond to you shortly. For immediate assistance, please call +91 85920 31725."
+            )
+            dispatch_res = active_client.send_text_message(
+                recipient_phone=sender_phone,
+                bsuid=scoped_user_id,
+                text_body=handoff_reply
+            )
+            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+            outbound_msg = WhatsAppMessage(
+                conversation_id=conversation.id,
+                wamid=out_wamid,
+                direction="outbound",
+                message_type="text",
+                content=handoff_reply,
+                status=out_status
+            )
+            db.session.add(outbound_msg)
+
+            if webhook_event:
+                webhook_event.status = "processed"
+                webhook_event.processed_at = datetime.utcnow()
+            db.session.commit()
+
+            return {
+                "conversation_uuid": conversation.conversation_uuid,
+                "message": "human_handoff_active",
+                "reply": handoff_reply,
+                "scoped_user_id": scoped_user_id
+            }
+
+        # -------------------------------------------------------------
+        # Branch 3: Standard Text Message -> Deterministic AI Response
+        # -------------------------------------------------------------
+        if sender_phone:
+            role_info = resolve_whatsapp_sender_role(sender_phone)
+            sender_role = role_info.get("role") or "guest"
+            display_name = role_info.get("name") or contact_name
+            user_id = role_info.get("user_id")
+        else:
+            # BSUID-only sender: strictly guest role; never infer patient/doctor/admin
+            sender_role = "guest"
+            display_name = contact_name or message.get("username") or "Guest"
+            user_id = None
+
+        # -------------------------------------------------------------
+        # Branch 3A-bis: WhatsApp Appointment Management (Phase 4B)
+        # Runs BEFORE booking flow so cancel/reschedule intents are
+        # intercepted before booking intent detection.
+        # -------------------------------------------------------------
+        from services.whatsapp_appointment_mgmt import handle_whatsapp_appointment_mgmt
+        mgmt_result = handle_whatsapp_appointment_mgmt(
+            conversation=conversation,
+            message_body=inbound_body,
+            sender_phone=sender_phone,
+            sender_role=sender_role,
+            user_id=user_id,
+            display_name=display_name
+        )
+
+        if mgmt_result.get("handled"):
+            reply_text = mgmt_result.get("reply")
+            dispatch_res = active_client.send_text_message(
+                recipient_phone=sender_phone,
+                bsuid=scoped_user_id,
+                text_body=reply_text
+            )
+            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+            outbound_msg = WhatsAppMessage(
+                conversation_id=conversation.id,
+                wamid=out_wamid,
+                direction="outbound",
+                message_type="text",
+                content=reply_text,
+                status=out_status
+            )
+            db.session.add(outbound_msg)
+
+            if webhook_event:
+                webhook_event.status = "processed"
+                webhook_event.processed_at = datetime.utcnow()
+            db.session.commit()
+
+            return {
+                "conversation_uuid": conversation.conversation_uuid,
+                "sender_role": sender_role,
+                "reply": reply_text,
+                "mgmt_handled": True,
+                "scoped_user_id": scoped_user_id
+            }
+
+        # -------------------------------------------------------------
+        # Branch 3A: WhatsApp Appointment Booking Flow (Phase 4A)
+        # -------------------------------------------------------------
+        from services.whatsapp_booking_flow import handle_whatsapp_booking_flow
+        booking_flow_result = handle_whatsapp_booking_flow(
+            conversation=conversation,
+            message_body=inbound_body,
+            sender_phone=sender_phone,
+            sender_role=sender_role,
+            user_id=user_id,
+            display_name=display_name
+        )
+
+        if booking_flow_result.get("handled"):
+            reply_text = booking_flow_result.get("reply")
+            dispatch_res = active_client.send_text_message(
+                recipient_phone=sender_phone,
+                bsuid=scoped_user_id,
+                text_body=reply_text
+            )
+            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+            outbound_msg = WhatsAppMessage(
+                conversation_id=conversation.id,
+                wamid=out_wamid,
+                direction="outbound",
+                message_type="text",
+                content=reply_text,
+                status=out_status
+            )
+            db.session.add(outbound_msg)
+
+            if webhook_event:
+                webhook_event.status = "processed"
+                webhook_event.processed_at = datetime.utcnow()
+            db.session.commit()
+
+            return {
+                "conversation_uuid": conversation.conversation_uuid,
+                "sender_role": sender_role,
+                "reply": reply_text,
+                "booking_handled": True,
+                "scoped_user_id": scoped_user_id
+            }
+
+        # -------------------------------------------------------------
+        # Branch 3B: General Conversational Groq AI Response
+        # -------------------------------------------------------------
+        # Query isolated conversation history strictly for this conversation ID
+        history_records = WhatsAppMessage.query.filter(
+            WhatsAppMessage.conversation_id == conversation.id,
+            WhatsAppMessage.id != inbound_msg_id
+        ).order_by(WhatsAppMessage.created_at.asc()).all()
+
+        conversation_history = []
+        for m in history_records[-10:]:
+            conversation_history.append({
+                "role": "user" if m.direction == "inbound" else "assistant",
+                "content": m.content
+            })
+
+        ai_reply = generate_whatsapp_ai_response(
+            sender_role=sender_role,
+            user_message=inbound_body,
+            conversation_history=conversation_history,
+            sender_display_name=display_name,
+            client=groq_client
+        )
+
+        dispatch_res = active_client.send_text_message(
+            recipient_phone=sender_phone,
+            bsuid=scoped_user_id,
+            text_body=ai_reply
+        )
+        out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+        out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+        outbound_msg = WhatsAppMessage(
+            conversation_id=conversation.id,
+            wamid=out_wamid,
+            direction="outbound",
+            message_type="text",
+            content=ai_reply,
+            status=out_status
+        )
+        db.session.add(outbound_msg)
+
+        if webhook_event:
+            webhook_event.status = "processed"
+            webhook_event.processed_at = datetime.utcnow()
+        db.session.commit()
+
+        return {
+            "conversation_uuid": conversation.conversation_uuid,
+            "sender_role": sender_role,
+            "reply": ai_reply,
+            "scoped_user_id": scoped_user_id
+        }
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(sanitize_log_message(f"Error executing WhatsApp inbound message reply: {str(e)}"))
+        if webhook_event:
+            webhook_event.status = "failed"
+            webhook_event.error_code = type(e).__name__[:50]
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+        raise
+
+
+def _run_async_reply(
+    app,
+    conversation_id: int,
+    inbound_msg_id: int,
+    webhook_event_id: int,
+    message: Dict[str, Any],
+    sender_phone: Optional[str],
+    scoped_user_id: Optional[str],
+    parent_scoped_id: Optional[str],
+    contact_name: Optional[str]
+) -> None:
+    """Worker function executed inside the ThreadPoolExecutor with Flask application context."""
+    with app.app_context():
+        try:
+            dispatch_inbound_message_reply(
+                conversation_id=conversation_id,
+                inbound_msg_id=inbound_msg_id,
+                webhook_event_id=webhook_event_id,
+                message=message,
+                sender_phone=sender_phone,
+                scoped_user_id=scoped_user_id,
+                parent_scoped_id=parent_scoped_id,
+                contact_name=contact_name
+            )
+        except Exception as e:
+            logger.error(sanitize_log_message(f"Unhandled exception in asynchronous WhatsApp reply worker: {e}"))
 
 
 def get_clinic_whatsapp_numbers() -> set:
@@ -192,9 +567,9 @@ def parse_webhook_payload(
     headers: Optional[Any] = None
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
-    Extracts messages and statuses from Kapso native payloads and Meta payloads.
+    Extracts messages and statuses from Kapso native payloads (v1 & v2) and Meta payloads.
     Supports:
-      1. Kapso native buffered format with data[] and X-Webhook-Event
+      1. Kapso native buffered format with data[] and X-Webhook-Event (v1 flat and v2 nested)
       2. Meta standard nested structure (entry -> changes -> value)
       3. Flat payloads (messages / statuses)
 
@@ -216,8 +591,9 @@ def parse_webhook_payload(
 
     payload_event = str(data.get("event") or "").strip().lower()
     effective_event = header_event or payload_event
+    root_phone_number_id = str(data.get("phone_number_id") or "").strip()
 
-    # 1. Kapso Native Mode: data[] buffered payload
+    # 1. Kapso Native Mode: data[] buffered or single object payload (v1 & v2)
     if "data" in data:
         raw_items = data.get("data")
         items = raw_items if isinstance(raw_items, list) else [raw_items] if isinstance(raw_items, dict) else []
@@ -231,35 +607,51 @@ def parse_webhook_payload(
             if not isinstance(item, dict):
                 continue
 
+            # In Kapso v2, payload may nest: {"message": {...}, "contact": {...}} or {"status": {...}}
+            msg_obj = item.get("message") if isinstance(item.get("message"), dict) else item
+            status_obj = item.get("status") if isinstance(item.get("status"), dict) else item
+
             # Check if this item represents a status update
-            if is_status_event or ("status" in item and "body" not in item and "text" not in item):
-                statuses.append(item)
+            if is_status_event or ("status" in item and "body" not in item and "text" not in item and "message" not in item) or ("status" in item and isinstance(item["status"], dict)):
+                statuses.append(status_obj)
             else:
                 # Extract text body: body or text.body or text
-                text_val = item.get("body")
+                text_val = msg_obj.get("body")
                 if not text_val:
-                    raw_text = item.get("text")
+                    raw_text = msg_obj.get("text")
                     if isinstance(raw_text, dict):
                         text_val = raw_text.get("body", "")
                     elif isinstance(raw_text, str):
                         text_val = raw_text
 
                 # Extract sender phone
-                sender_val = item.get("from") or item.get("phone_number")
+                sender_val = msg_obj.get("from") or msg_obj.get("phone_number") or item.get("from") or item.get("phone_number")
 
                 # Extract BSUID and portfolio scope fields
-                bsuid_val = item.get("business_scoped_user_id")
-                parent_bsuid_val = item.get("parent_business_scoped_user_id") or item.get("parent_scoped_id")
-                username_val = item.get("username")
+                bsuid_val = msg_obj.get("business_scoped_user_id") or item.get("business_scoped_user_id")
+                parent_bsuid_val = (
+                    msg_obj.get("parent_business_scoped_user_id")
+                    or msg_obj.get("parent_scoped_id")
+                    or item.get("parent_business_scoped_user_id")
+                    or item.get("parent_scoped_id")
+                )
+                username_val = msg_obj.get("username") or item.get("username")
 
                 # Extract contact name
                 contact_name = None
-                if isinstance(item.get("contact"), dict):
-                    contact_name = item["contact"].get("name")
+                contact_dict = (
+                    item.get("contact") if isinstance(item.get("contact"), dict)
+                    else (data.get("contact") if isinstance(data.get("contact"), dict)
+                    else (msg_obj.get("contact") if isinstance(msg_obj.get("contact"), dict) else None))
+                )
+                if contact_dict:
+                    contact_name = contact_dict.get("name")
                     if not bsuid_val:
-                        bsuid_val = item["contact"].get("business_scoped_user_id")
+                        bsuid_val = contact_dict.get("business_scoped_user_id")
                     if not username_val:
-                        username_val = item["contact"].get("username")
+                        username_val = contact_dict.get("username")
+                    if not sender_val and contact_dict.get("wa_id"):
+                        sender_val = contact_dict.get("wa_id")
                 elif isinstance(item.get("profile"), dict):
                     contact_name = item["profile"].get("name")
                     if not username_val:
@@ -267,16 +659,17 @@ def parse_webhook_payload(
 
                 # Extract direction and echo flags
                 direction_val = (
-                    item.get("direction")
+                    msg_obj.get("direction")
+                    or item.get("direction")
                     or (item.get("kapso") or {}).get("direction")
                     or (item.get("metadata") or {}).get("direction")
-                    or (item.get("message") or {}).get("direction")
                 )
                 if direction_val:
                     direction_val = str(direction_val).strip().lower()
 
                 is_echo_val = (
-                    item.get("is_echo")
+                    msg_obj.get("is_echo")
+                    or item.get("is_echo")
                     or (item.get("metadata") or {}).get("is_echo")
                     or False
                 )
@@ -287,18 +680,24 @@ def parse_webhook_payload(
                 else:
                     is_echo_val = False
 
+                item_phone_id = (
+                    root_phone_number_id
+                    or str(msg_obj.get("phone_number_id") or item.get("phone_number_id") or "").strip()
+                )
+
                 norm_msg = {
-                    "id": item.get("id") or item.get("message_id"),
+                    "id": msg_obj.get("id") or msg_obj.get("message_id") or item.get("id"),
                     "from": sender_val,
                     "phone_number": sender_val,
+                    "phone_number_id": item_phone_id,
                     "business_scoped_user_id": bsuid_val,
                     "bsuid": item.get("bsuid") or bsuid_val,
                     "parent_business_scoped_user_id": parent_bsuid_val,
                     "parent_bsuid": parent_bsuid_val,
                     "username": username_val,
-                    "type": item.get("type", "text"),
+                    "type": msg_obj.get("type", "text"),
                     "text": {"body": text_val or ""},
-                    "timestamp": str(item.get("timestamp") or ""),
+                    "timestamp": str(msg_obj.get("timestamp") or item.get("timestamp") or ""),
                     "direction": direction_val,
                     "is_echo": is_echo_val,
                     "_contacts": [{"profile": {"name": contact_name or username_val}}] if (contact_name or username_val) else []
@@ -677,242 +1076,50 @@ def process_inbound_webhook(
             )
             db.session.add(inbound_msg)
             conversation.last_message_at = datetime.utcnow()
-            db.session.commit()
 
-            # -------------------------------------------------------------
-            # Branch 1: Non-Text Message Handling
-            # -------------------------------------------------------------
-            if msg_type != "text":
-                reply_text = (
-                    "PrimeCare Clinic WhatsApp Assistant: We currently support text messages only. "
-                    "Please send your inquiry as a text message, or call the clinic directly at +91 85920 31725."
-                )
-                dispatch_res = active_client.send_text_message(
-                    recipient_phone=sender_phone,
-                    bsuid=scoped_user_id,
-                    text_body=reply_text
-                )
-                out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
-                out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
-
-                outbound_msg = WhatsAppMessage(
-                    conversation_id=conversation.id,
-                    wamid=out_wamid,
-                    direction="outbound",
-                    message_type="text",
-                    content=reply_text,
-                    status=out_status
-                )
-                db.session.add(outbound_msg)
-
-                webhook_event.status = "processed"
-                webhook_event.processed_at = datetime.utcnow()
-                db.session.commit()
-
-                processed_replies.append({
-                    "conversation_uuid": conversation.conversation_uuid,
-                    "message": "unsupported_media_handled",
-                    "reply": reply_text,
-                    "scoped_user_id": scoped_user_id
-                })
-                continue
-
-            # -------------------------------------------------------------
-            # Branch 2: Human Handoff Active
-            # -------------------------------------------------------------
-            if conversation.is_human_handoff or conversation.status == "handed_off":
-                handoff_reply = (
-                    "Your conversation has been handed off to PrimeCare clinic staff. "
-                    "A team member will respond to you shortly. For immediate assistance, please call +91 85920 31725."
-                )
-                dispatch_res = active_client.send_text_message(
-                    recipient_phone=sender_phone,
-                    bsuid=scoped_user_id,
-                    text_body=handoff_reply
-                )
-                out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
-                out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
-
-                outbound_msg = WhatsAppMessage(
-                    conversation_id=conversation.id,
-                    wamid=out_wamid,
-                    direction="outbound",
-                    message_type="text",
-                    content=handoff_reply,
-                    status=out_status
-                )
-                db.session.add(outbound_msg)
-
-                webhook_event.status = "processed"
-                webhook_event.processed_at = datetime.utcnow()
-                db.session.commit()
-
-                processed_replies.append({
-                    "conversation_uuid": conversation.conversation_uuid,
-                    "message": "human_handoff_active",
-                    "reply": handoff_reply,
-                    "scoped_user_id": scoped_user_id
-                })
-                continue
-
-            # -------------------------------------------------------------
-            # Branch 3: Standard Text Message -> Deterministic AI Response
-            # -------------------------------------------------------------
-            if sender_phone:
-                role_info = resolve_whatsapp_sender_role(sender_phone)
-                sender_role = role_info.get("role") or "guest"
-                display_name = role_info.get("name") or contact_name
-                user_id = role_info.get("user_id")
-            else:
-                # BSUID-only sender: strictly guest role; never infer patient/doctor/admin
-                sender_role = "guest"
-                display_name = contact_name or username or "Guest"
-                user_id = None
-
-            # -------------------------------------------------------------
-            # Branch 3A-bis: WhatsApp Appointment Management (Phase 4B)
-            # Runs BEFORE booking flow so cancel/reschedule intents are
-            # intercepted before booking intent detection.
-            # -------------------------------------------------------------
-            from services.whatsapp_appointment_mgmt import handle_whatsapp_appointment_mgmt
-            mgmt_result = handle_whatsapp_appointment_mgmt(
-                conversation=conversation,
-                message_body=inbound_body,
-                sender_phone=sender_phone,
-                sender_role=sender_role,
-                user_id=user_id,
-                display_name=display_name
-            )
-
-            if mgmt_result.get("handled"):
-                reply_text = mgmt_result.get("reply")
-                dispatch_res = active_client.send_text_message(
-                    recipient_phone=sender_phone,
-                    bsuid=scoped_user_id,
-                    text_body=reply_text
-                )
-                out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
-                out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
-
-                outbound_msg = WhatsAppMessage(
-                    conversation_id=conversation.id,
-                    wamid=out_wamid,
-                    direction="outbound",
-                    message_type="text",
-                    content=reply_text,
-                    status=out_status
-                )
-                db.session.add(outbound_msg)
-
-                webhook_event.status = "processed"
-                webhook_event.processed_at = datetime.utcnow()
-                db.session.commit()
-
-                processed_replies.append({
-                    "conversation_uuid": conversation.conversation_uuid,
-                    "sender_role": sender_role,
-                    "reply": reply_text,
-                    "mgmt_handled": True,
-                    "scoped_user_id": scoped_user_id
-                })
-                continue
-
-            # -------------------------------------------------------------
-            # Branch 3A: WhatsApp Appointment Booking Flow (Phase 4A)
-            # -------------------------------------------------------------
-            from services.whatsapp_booking_flow import handle_whatsapp_booking_flow
-            booking_flow_result = handle_whatsapp_booking_flow(
-                conversation=conversation,
-                message_body=inbound_body,
-                sender_phone=sender_phone,
-                sender_role=sender_role,
-                user_id=user_id,
-                display_name=display_name
-            )
-
-            if booking_flow_result.get("handled"):
-                reply_text = booking_flow_result.get("reply")
-                dispatch_res = active_client.send_text_message(
-                    recipient_phone=sender_phone,
-                    bsuid=scoped_user_id,
-                    text_body=reply_text
-                )
-                out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
-                out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
-
-                outbound_msg = WhatsAppMessage(
-                    conversation_id=conversation.id,
-                    wamid=out_wamid,
-                    direction="outbound",
-                    message_type="text",
-                    content=reply_text,
-                    status=out_status
-                )
-                db.session.add(outbound_msg)
-
-                webhook_event.status = "processed"
-                webhook_event.processed_at = datetime.utcnow()
-                db.session.commit()
-
-                processed_replies.append({
-                    "conversation_uuid": conversation.conversation_uuid,
-                    "sender_role": sender_role,
-                    "reply": reply_text,
-                    "booking_handled": True,
-                    "scoped_user_id": scoped_user_id
-                })
-                continue
-
-            # Query isolated conversation history strictly for this conversation ID
-            history_records = WhatsAppMessage.query.filter(
-                WhatsAppMessage.conversation_id == conversation.id,
-                WhatsAppMessage.id != inbound_msg.id
-            ).order_by(WhatsAppMessage.created_at.asc()).all()
-
-            conversation_history = []
-            for m in history_records[-10:]:
-                conversation_history.append({
-                    "role": "user" if m.direction == "inbound" else "assistant",
-                    "content": m.content
-                })
-
-            ai_reply = generate_whatsapp_ai_response(
-                sender_role=sender_role,
-                user_message=inbound_body,
-                conversation_history=conversation_history,
-                sender_display_name=display_name,
-                client=groq_client
-            )
-
-            dispatch_res = active_client.send_text_message(
-                recipient_phone=sender_phone,
-                bsuid=scoped_user_id,
-                text_body=ai_reply
-            )
-            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
-            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
-
-            outbound_msg = WhatsAppMessage(
-                conversation_id=conversation.id,
-                wamid=out_wamid,
-                direction="outbound",
-                message_type="text",
-                content=ai_reply,
-                status=out_status
-            )
-            db.session.add(outbound_msg)
-
-            webhook_event.status = "processed"
-            webhook_event.processed_at = datetime.utcnow()
-            db.session.commit()
-
-            processed_replies.append({
-                "conversation_uuid": conversation.conversation_uuid,
-                "sender_role": sender_role,
-                "reply": ai_reply,
-                "scoped_user_id": scoped_user_id
+            # Store durable database-backed queue payload on webhook_event
+            webhook_event.status = 'pending'
+            webhook_event.conversation_id = conversation.id
+            webhook_event.inbound_message_id = inbound_msg.id
+            webhook_event.attempt_count = 0
+            webhook_event.max_attempts = 3
+            webhook_event.next_retry_at = datetime.utcnow()
+            webhook_event.payload_json = json.dumps({
+                "message": message,
+                "sender_phone": sender_phone,
+                "scoped_user_id": scoped_user_id,
+                "parent_scoped_id": parent_scoped_id,
+                "contact_name": contact_name
             })
+            db.session.commit()
 
+            # Determine synchronous vs asynchronous reply processing
+            if should_process_async():
+                # Asynchronous durable queue processing:
+                # Inbound message and queue job are durably committed in PostgreSQL.
+                # Immediately return sub-25ms HTTP 200 acknowledgement to Kapso.
+                # The dedicated background worker processes the job from the database.
+                processed_replies.append({
+                    "conversation_uuid": conversation.conversation_uuid,
+                    "message": "queued",
+                    "event_id": event_id,
+                    "scoped_user_id": scoped_user_id
+                })
+            else:
+                # Synchronous execution (used in automated tests and synchronous fallback mode)
+                reply_result = dispatch_inbound_message_reply(
+                    conversation_id=conversation.id,
+                    inbound_msg_id=inbound_msg.id,
+                    webhook_event_id=webhook_event.id,
+                    message=message,
+                    sender_phone=sender_phone,
+                    scoped_user_id=scoped_user_id,
+                    parent_scoped_id=parent_scoped_id,
+                    contact_name=contact_name,
+                    client=active_client,
+                    groq_client=groq_client
+                )
+                processed_replies.append(reply_result)
         except Exception as e:
             db.session.rollback()
             logger.error(sanitize_log_message(f"Error processing WhatsApp webhook message: {str(e)}"))

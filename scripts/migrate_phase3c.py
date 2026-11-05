@@ -113,8 +113,16 @@ def apply_phase3c_migration(db_engine, dry_run: bool = False):
                 event_id VARCHAR(128) NOT NULL,
                 event_type VARCHAR(50) NOT NULL,
                 status VARCHAR(20) NOT NULL DEFAULT 'received',
-                attempt_count INTEGER NOT NULL DEFAULT 1,
+                payload_json TEXT,
+                conversation_id INTEGER,
+                inbound_message_id INTEGER,
+                locked_at TIMESTAMP,
+                locked_by VARCHAR(64),
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                max_attempts INTEGER NOT NULL DEFAULT 3,
+                next_retry_at TIMESTAMP,
                 error_code VARCHAR(50),
+                last_error TEXT,
                 received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 processed_at TIMESTAMP,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -142,7 +150,8 @@ def apply_phase3c_migration(db_engine, dry_run: bool = False):
         "whatsapp_webhook_event": [
             "CREATE UNIQUE INDEX IF NOT EXISTS uq_whatsapp_webhook_event_id ON whatsapp_webhook_event (event_id);",
             "CREATE INDEX IF NOT EXISTS ix_whatsapp_webhook_event_event_type ON whatsapp_webhook_event (event_type);",
-            "CREATE INDEX IF NOT EXISTS ix_whatsapp_webhook_event_status ON whatsapp_webhook_event (status);"
+            "CREATE INDEX IF NOT EXISTS ix_whatsapp_webhook_event_status ON whatsapp_webhook_event (status);",
+            "CREATE INDEX IF NOT EXISTS ix_whatsapp_webhook_queue_retry ON whatsapp_webhook_event (status, next_retry_at);"
         ]
     }
 
@@ -174,6 +183,29 @@ def apply_phase3c_migration(db_engine, dry_run: bool = False):
             else:
                 print(f"[MIGRATION] Table already exists: {tbl}")
 
+        # Upgrade pre-existing whatsapp_webhook_event table with queue columns if needed
+        if "whatsapp_webhook_event" in existing_tables:
+            current_cols = {c['name'] for c in inspector.get_columns('whatsapp_webhook_event')}
+            queue_cols = [
+                ("payload_json", "TEXT"),
+                ("conversation_id", "INTEGER"),
+                ("inbound_message_id", "INTEGER"),
+                ("locked_at", "TIMESTAMP"),
+                ("locked_by", "VARCHAR(64)"),
+                ("max_attempts", "INTEGER DEFAULT 3"),
+                ("next_retry_at", "TIMESTAMP"),
+                ("last_error", "TEXT")
+            ]
+            for col_name, col_def in queue_cols:
+                if col_name not in current_cols:
+                    print(f"[MIGRATION] Adding column '{col_name}' to whatsapp_webhook_event")
+                    if is_pg:
+                        conn.execute(text(f"ALTER TABLE whatsapp_webhook_event ADD COLUMN IF NOT EXISTS {col_name} {col_def};"))
+                    else:
+                        conn.execute(text(f"ALTER TABLE whatsapp_webhook_event ADD COLUMN {col_name} {col_def};"))
+
+        # Create indexes after tables and columns are guaranteed to exist
+        for tbl in ["whatsapp_conversation", "whatsapp_message", "whatsapp_webhook_event"]:
             for idx_sql in canonical_indexes.get(tbl, []):
                 conn.execute(text(idx_sql))
 
@@ -266,6 +298,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Inspect and plan without executing DDL")
     parser.add_argument("--rollback", action="store_true", help="Drop Phase 3C tables and indexes")
     parser.add_argument("--allow-dev-db", action="store_true", help="Explicit confirmation if modifying instance/primecare.db")
+    parser.add_argument("--confirm-production", action="store_true", help="Explicit confirmation if targeting production databases.")
 
     args = parser.parse_args()
 
@@ -282,7 +315,11 @@ def main():
         db_path = os.path.join(BASE_DIR, 'instance', 'test_primecare.db')
         db_uri = f"sqlite:///{db_path}"
 
-    assert_database_safety(db_uri, allow_dev_db=args.allow_dev_db)
+    assert_database_safety(
+        db_uri,
+        allow_dev_db=args.allow_dev_db,
+        allow_production_migration=args.confirm_production
+    )
 
     print(f"[TARGET] Database URI: {db_uri.split('@')[-1] if '@' in db_uri else db_uri}")
     engine = create_engine(db_uri)
