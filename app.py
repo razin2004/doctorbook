@@ -7472,6 +7472,39 @@ def whatsapp_webhook():
         return verify_handshake(request)
     return process_inbound_webhook(request)
 
+# ===================== In-Process WhatsApp Background Worker =====================
+def _start_background_queue_worker():
+    """
+    Starts a resilient daemon background thread to poll and process the WhatsApp
+    database queue (FOR UPDATE SKIP LOCKED) automatically on Render without requiring
+    a separate paid background worker dyno.
+    """
+    import os
+    import threading
+
+    if os.environ.get("PRIMECARE_TEST_MODE", "").strip().lower() in ("true", "1"):
+        return
+    if os.environ.get("FLASK_ENV", "").strip().lower() == "testing":
+        return
+    if os.environ.get("DISABLE_IN_PROCESS_QUEUE_WORKER", "").strip().lower() in ("true", "1"):
+        return
+
+    try:
+        from services.whatsapp_queue_worker import run_worker_loop
+        worker_thread = threading.Thread(
+            target=run_worker_loop,
+            kwargs={"poll_interval": 2.0, "stale_timeout_seconds": 60},
+            daemon=True,
+            name="whatsapp_in_process_queue_worker"
+        )
+        worker_thread.start()
+        app.logger.info("In-process WhatsApp queue worker thread started successfully.")
+    except Exception as e:
+        app.logger.error(f"Failed to start in-process WhatsApp queue worker: {e}")
+
+# Automatically start background queue processor if not in test mode
+_start_background_queue_worker()
+
 # ===================== Error Handlers =====================
 @app.errorhandler(404)
 def page_not_found(e):
