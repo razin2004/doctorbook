@@ -2296,8 +2296,12 @@ def check_phone_conflict(norm_phone, exclude_user_id=None, exclude_doctor_id=Non
     if not norm_phone:
         return False, None
 
-    # 1. Check against Admin WhatsApp Number
+    # 1. Check against Admin and Clinic WhatsApp Numbers
     try:
+        clinic_phone = os.environ.get("PRIMECARE_CLINIC_PHONE") or os.environ.get("CLINIC_WHATSAPP_PHONE") or "+917511135687"
+        if clinic_phone and normalize_phone_number(clinic_phone) == norm_phone:
+            return True, "This phone number is reserved for the clinic's WhatsApp service. Please use your personal mobile number."
+
         admin_setting = AppSettings.query.filter_by(key="admin_whatsapp_phone").first()
         admin_phone = admin_setting.value if admin_setting and admin_setting.value else DEFAULT_SETTINGS.get("admin_whatsapp_phone")
         if admin_phone and normalize_phone_number(admin_phone) == norm_phone:
