@@ -1,0 +1,667 @@
+"""
+services/whatsapp_appointment_mgmt.py
+======================================
+Stateful conversational appointment management for PrimeCare WhatsApp Assistant (Phase 4B).
+
+Handles:
+  1. Appointment Lookup: Retrieves and displays patient appointments.
+  2. Appointment Cancellation: Multi-turn cancellation with ownership checks and explicit confirmation.
+  3. Appointment Rescheduling: Multi-turn rescheduling with atomic transaction safety.
+
+Security & Safety:
+  - Groq AI NEVER modifies database or determines cancellation/reschedule success.
+  - Registered patients can only manage their own bookings.
+  - Guest bookings are isolated by exact normalized phone_number match.
+  - Doctors & Administrators are redirected to staff portals.
+  - Persistent state across application restarts.
+  - Idempotent against duplicate webhook deliveries.
+"""
+
+import os
+import re
+import logging
+from datetime import datetime, date, timedelta
+import pytz
+
+logger = logging.getLogger(__name__)
+
+# Intent patterns for appointment management
+LOOKUP_INTENT_PATTERNS = [
+    re.compile(r'\b(show\s+my\s+appointment|my\s+appointment|check\s+my\s+appointment|view\s+my\s+appointment)s?\b', re.IGNORECASE),
+    re.compile(r'\b(do\s+i\s+have\s+an?\s+(upcoming\s+)?appointment|appointment\s+status|my\s+booking|show\s+my\s+booking)s?\b', re.IGNORECASE),
+    re.compile(r'\b(what\s+is\s+my\s+appointment|check\s+my\s+booking|view\s+my\s+booking|my\s+appointments?)s?\b', re.IGNORECASE),
+    re.compile(r'^(my\s+appointments?|appointments?|bookings?|show\s+bookings?)$', re.IGNORECASE),
+    re.compile(r'\b(upcoming\s+appointment|list\s+my\s+appointment|see\s+my\s+appointment)s?\b', re.IGNORECASE),
+]
+
+CANCEL_INTENT_PATTERNS = [
+    re.compile(r'\b(cancel\s+(my\s+)?(appointment|booking)|cancel\s+an?\s+appointment)s?\b', re.IGNORECASE),
+    re.compile(r'\b(i\s+want\s+to\s+cancel|need\s+to\s+cancel|want\s+to\s+cancel)(\s+my)?\s*(appointment|booking)?\b', re.IGNORECASE),
+    re.compile(r'^(cancel\s+appointment|cancel\s+booking|cancel\s+my\s+appointment)$', re.IGNORECASE),
+]
+
+RESCHEDULE_INTENT_PATTERNS = [
+    re.compile(r'\b(reschedule|re-schedule)\s+(my\s+)?(appointment|booking)\b', re.IGNORECASE),
+    re.compile(r'\b(i\s+want\s+to\s+(reschedule|re-schedule)|need\s+to\s+(reschedule|re-schedule)|change\s+(my\s+)?appointment\s+date)\b', re.IGNORECASE),
+    re.compile(r'^(reschedule|re-schedule|reschedule\s+appointment|reschedule\s+booking)$', re.IGNORECASE),
+    re.compile(r'\b(move\s+my\s+appointment|change\s+my\s+booking\s+date)\b', re.IGNORECASE),
+]
+
+ABORT_WORDS = {'cancel', 'abort', 'stop', 'exit', 'quit', 'back', 'no', 'nevermind', 'never mind'}
+CONFIRM_WORDS = {'confirm', 'yes', 'ok', 'okay', 'proceed', 'yep', 'yeah', 'y', 'sure'}
+
+
+def is_cancel_intent(message_text: str) -> bool:
+    if not message_text:
+        return False
+    text = message_text.strip().lower()
+    return any(p.search(text) for p in CANCEL_INTENT_PATTERNS)
+
+
+def is_reschedule_intent(message_text: str) -> bool:
+    if not message_text:
+        return False
+    text = message_text.strip().lower()
+    return any(p.search(text) for p in RESCHEDULE_INTENT_PATTERNS)
+
+
+def is_lookup_intent(message_text: str) -> bool:
+    if not message_text:
+        return False
+    text = message_text.strip().lower()
+    if is_cancel_intent(text) or is_reschedule_intent(text):
+        return False
+    return any(p.search(text) for p in LOOKUP_INTENT_PATTERNS)
+
+
+def _get_patient_appointments(user_id, sender_phone, sender_role):
+    """
+    Retrieves eligible appointments for a WhatsApp sender.
+    Registered patients: by user_id.
+    Guests: strictly by exact phone_number.
+    """
+    from services.booking_services import get_patient_bookings_service
+
+    if sender_role == 'patient' and user_id:
+        result = get_patient_bookings_service(
+            patient_user_id=user_id,
+            filter_type='upcoming',
+            phone_number=sender_phone,
+            per_page=50
+        )
+    else:
+        # Guest: query strictly by exact phone number
+        if not sender_phone:
+            return {"success": True, "bookings": [], "total_count": 0}
+        result = get_patient_bookings_service(
+            phone_number=sender_phone,
+            filter_type='upcoming',
+            per_page=50
+        )
+
+    return result
+
+
+def _format_appointment_list(bookings: list, header: str = "Your Upcoming Appointments") -> str:
+    """Formats a list of bookings for WhatsApp display."""
+    if not bookings:
+        return (
+            "You don't have any upcoming appointments.\n\n"
+            "To book a new appointment, just say *\"Book an appointment\"*."
+        )
+
+    lines = [f"📋 *{header}*\n"]
+    for idx, b in enumerate(bookings, start=1):
+        status_emoji = "✅" if b["status"] in ("confirmed", "active") else "⏳"
+        lines.append(
+            f"*{idx}.* {status_emoji} *{b['doctor_name']}* ({b['specialization']})\n"
+            f"   📅 {b['date']} | ⏰ {b['time'] or 'Clinic Hours'}\n"
+            f"   🎫 Token #{b['token']} | 📌 Booking #{b['id']} | Status: {b['status'].capitalize()}"
+        )
+    return "\n".join(lines)
+
+
+def _format_appointment_detail(b: dict) -> str:
+    """Formats a single appointment's details."""
+    return (
+        f"📋 *Appointment Details*\n"
+        f"{'─' * 30}\n"
+        f"• *Booking ID:* #{b['id']}\n"
+        f"• *Doctor:* {b['doctor_name']} ({b['specialization']})\n"
+        f"• *Date:* {b['date']}\n"
+        f"• *Time:* {b['time'] or 'Clinic Consultation Hours'}\n"
+        f"• *Token:* #{b['token']}\n"
+        f"• *Patient:* {b['patient_name']}\n"
+        f"• *Status:* {b['status'].capitalize()}\n"
+        f"{'─' * 30}"
+    )
+
+
+def handle_whatsapp_appointment_mgmt(
+    conversation,
+    message_body: str,
+    sender_phone: str | None,
+    sender_role: str,
+    user_id: int | None = None,
+    display_name: str | None = None
+) -> dict:
+    """
+    Main handler for WhatsApp appointment management (lookup, cancel, reschedule).
+    Returns:
+      {
+        "handled": bool,
+        "reply": str | None,
+        "session": WhatsAppBookingSession | None
+      }
+    """
+    from app import db, User, WhatsAppBookingSession, PatientBooking
+    from services.booking_services import (
+        cancel_booking_service, reschedule_booking_service,
+        get_patient_bookings_service, check_availability_service
+    )
+    from services.whatsapp_booking_flow import parse_booking_date, get_clinic_portal_url
+
+    text = (message_body or "").strip()
+    text_lower = text.lower()
+
+    # BSUID-only senders (no verified phone number) cannot access appointment management
+    # Falls through to general AI assistant so no patient/booking data is ever exposed
+    if not sender_phone:
+        return {"handled": False}
+
+    # -------------------------------------------------------------------------
+    # 1. Check for Active In-Progress Management Session
+    # -------------------------------------------------------------------------
+    active_session = WhatsAppBookingSession.query.filter_by(
+        conversation_id=conversation.id,
+        status='in_progress'
+    ).first()
+
+    # Check for session expiration
+    if active_session and active_session.is_expired():
+        active_session.expire()
+        db.session.commit()
+        active_session = None
+
+    # Only handle management sessions (cancel, reschedule) - not booking sessions
+    if active_session and active_session.action == 'book':
+        # This is a booking session, not ours to handle
+        return {"handled": False}
+
+    # -------------------------------------------------------------------------
+    # 2. Role Restriction
+    # -------------------------------------------------------------------------
+    if sender_role in ('doctor', 'admin'):
+        if is_lookup_intent(text) or is_cancel_intent(text) or is_reschedule_intent(text):
+            portal_url = get_clinic_portal_url()
+            portal_ref = f" through the PrimeCare portal at {portal_url}" if portal_url else " through the PrimeCare clinic portal"
+            reply = (
+                "Appointment management via WhatsApp is available for patients. "
+                f"Doctors and clinic staff can manage appointments{portal_ref}."
+            )
+            return {"handled": True, "reply": reply, "session": None}
+        return {"handled": False}
+
+    # -------------------------------------------------------------------------
+    # 3. Handle Active Cancel/Reschedule Session
+    # -------------------------------------------------------------------------
+    if active_session and active_session.action in ('cancel', 'reschedule'):
+        # Handle abort at any step
+        if text_lower in ABORT_WORDS and active_session.step != 'CONFIRMATION':
+            active_session.cancel()
+            db.session.commit()
+            action_name = "cancellation" if active_session.action == 'cancel' else "rescheduling"
+            return {
+                "handled": True,
+                "reply": f"Your appointment {action_name} request has been cancelled. Let us know if you need anything else!",
+                "session": active_session
+            }
+
+        current_step = active_session.step
+
+        # --- CHOOSE_APPOINTMENT step ---
+        if current_step == 'CHOOSE_APPOINTMENT':
+            # Parse numeric selection
+            if text.isdigit():
+                selection = int(text)
+                appointments_res = _get_patient_appointments(user_id, sender_phone, sender_role)
+                bookings = appointments_res.get("bookings", [])
+
+                eligible = [b for b in bookings if b["status"] in ("confirmed", "active")]
+
+                if selection < 1 or selection > len(eligible):
+                    reply = f"Please select a number between 1 and {len(eligible)}, or reply *CANCEL* to abort."
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+                chosen = eligible[selection - 1]
+                active_session.booking_id = chosen["id"]
+                active_session.doctor_name = chosen["doctor_name"]
+                active_session.specialization = chosen["specialization"]
+                active_session.appointment_date = chosen["date"]
+                active_session.time_slot = chosen.get("time")
+                active_session.token_number = chosen["token"]
+                active_session.patient_name = chosen.get("patient_name")
+
+                if active_session.action == 'cancel':
+                    active_session.step = 'CONFIRMATION'
+                    db.session.commit()
+
+                    detail = _format_appointment_detail(chosen)
+                    reply = (
+                        f"{detail}\n\n"
+                        "⚠️ *Are you sure you want to cancel this appointment?*\n"
+                        "• Your token number will be permanently released.\n"
+                        "• Cancellations cannot be undone.\n\n"
+                        "Reply *CONFIRM* to proceed with cancellation, or *CANCEL* to keep your appointment."
+                    )
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+                elif active_session.action == 'reschedule':
+                    active_session.step = 'SELECT_DATE'
+                    db.session.commit()
+
+                    detail = _format_appointment_detail(chosen)
+                    reply = (
+                        f"{detail}\n\n"
+                        "📅 *Select a new date for your appointment.*\n"
+                        "Please enter a date within the next 15 days "
+                        "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                        "_Reply CANCEL to abort rescheduling._"
+                    )
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+            else:
+                reply = "Please enter the appointment number from the list, or reply *CANCEL* to abort."
+                return {"handled": True, "reply": reply, "session": active_session}
+
+        # --- CONFIRMATION step (cancellation) ---
+        if current_step == 'CONFIRMATION' and active_session.action == 'cancel':
+            if text_lower in CONFIRM_WORDS:
+                # Idempotency check
+                if active_session.status == 'confirmed':
+                    reply = (
+                        "This cancellation has already been processed.\n"
+                        f"• *Booking ID:* #{active_session.booking_id}\n\n"
+                        "For any queries, please call +91 85920 31725."
+                    )
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+                # Re-validate ownership before executing
+                booking = PatientBooking.query.get(active_session.booking_id)
+                if not booking or booking.status not in ('confirmed', 'active'):
+                    active_session.cancel()
+                    db.session.commit()
+                    reply = "This appointment is no longer available for cancellation. It may have already been cancelled or completed."
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+                # Execute cancellation via shared service
+                cancel_res = cancel_booking_service(
+                    booking_id=active_session.booking_id,
+                    actor_user_id=user_id,
+                    actor_role='patient',
+                    phone_number=sender_phone,
+                    reason='Cancelled via WhatsApp'
+                )
+
+                if cancel_res.get("success"):
+                    active_session.status = 'confirmed'
+                    active_session.step = 'COMPLETED'
+                    db.session.commit()
+
+                    reply = (
+                        "✅ *Appointment Cancelled Successfully*\n\n"
+                        f"• *Booking ID:* #{active_session.booking_id}\n"
+                        f"• *Doctor:* {active_session.doctor_name} ({active_session.specialization})\n"
+                        f"• *Date:* {active_session.appointment_date}\n"
+                        f"• *Token:* #{active_session.token_number} (released)\n\n"
+                        "To book a new appointment, say *\"Book an appointment\"*.\n"
+                        "For any queries, please call +91 85920 31725."
+                    )
+                    return {"handled": True, "reply": reply, "session": active_session}
+                else:
+                    active_session.cancel()
+                    db.session.commit()
+
+                    error_msg = cancel_res.get("message", "Unknown error")
+                    reply = (
+                        f"❌ *Cancellation Failed*\n\n"
+                        f"Reason: {error_msg}\n\n"
+                        "Please try again or call +91 85920 31725 for assistance."
+                    )
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+            elif text_lower in ABORT_WORDS or text_lower == 'cancel':
+                active_session.cancel()
+                db.session.commit()
+                reply = "Cancellation aborted. Your appointment remains intact. Let us know if you need anything else!"
+                return {"handled": True, "reply": reply, "session": active_session}
+
+            else:
+                reply = "Please reply *CONFIRM* to proceed with cancellation, or *CANCEL* to keep your appointment."
+                return {"handled": True, "reply": reply, "session": active_session}
+
+        # --- SELECT_DATE step (rescheduling) ---
+        if current_step == 'SELECT_DATE' and active_session.action == 'reschedule':
+            parsed_date = parse_booking_date(text)
+            if not parsed_date:
+                reply = (
+                    "Please enter a valid date (e.g., *'tomorrow'*, *'Monday'*, or *'2026-11-10'*).\n\n"
+                    "_Reply CANCEL to abort rescheduling._"
+                )
+                return {"handled": True, "reply": reply, "session": active_session}
+
+            # Validate availability
+            avail = check_availability_service(
+                date_str=parsed_date,
+                doctor_name=active_session.doctor_name,
+                specialization=active_session.specialization
+            )
+            if not avail.get("available"):
+                reason = avail.get("reason", "Doctor is not available on this date")
+                reply = (
+                    f"❌ *{reason}*\n\n"
+                    "Please choose a different date, or reply *CANCEL* to abort rescheduling."
+                )
+                return {"handled": True, "reply": reply, "session": active_session}
+
+            # Check same date
+            if parsed_date == active_session.appointment_date:
+                reply = (
+                    "The selected date is the same as your current appointment date.\n"
+                    "Please choose a different date, or reply *CANCEL* to abort."
+                )
+                return {"handled": True, "reply": reply, "session": active_session}
+
+            # Store new date and move to confirmation
+            active_session.time_slot = avail.get("time") or active_session.time_slot
+            active_session.step = 'CONFIRMATION'
+            # Store the new date temporarily in a way that doesn't overwrite the original
+            # We'll use the doctor_name field is already set, so we store target date
+            # in an attribute we can access
+            active_session._reschedule_target_date = parsed_date
+            # Since we can't add transient attrs, store in appointment_date after confirmation
+            # Use a convention: store "original_date|new_date" temporarily
+            original_date = active_session.appointment_date
+            active_session.appointment_date = f"{original_date}|{parsed_date}"
+            db.session.commit()
+
+            parsed_dt = datetime.strptime(parsed_date, '%Y-%m-%d')
+            weekday = parsed_dt.strftime('%A')
+
+            reply = (
+                "📋 *Rescheduling Summary*\n"
+                f"{'─' * 30}\n"
+                f"• *Doctor:* {active_session.doctor_name} ({active_session.specialization})\n"
+                f"• *Current Date:* {original_date}\n"
+                f"• *New Date:* {parsed_date} ({weekday})\n"
+                f"• *Current Token:* #{active_session.token_number} (will be released)\n"
+                f"{'─' * 30}\n\n"
+                "⚠️ *Your current token will be released and a new token will be assigned.*\n\n"
+                "Reply *CONFIRM* to reschedule, or *CANCEL* to keep the current appointment."
+            )
+            return {"handled": True, "reply": reply, "session": active_session}
+
+        # --- CONFIRMATION step (rescheduling) ---
+        if current_step == 'CONFIRMATION' and active_session.action == 'reschedule':
+            if text_lower in CONFIRM_WORDS:
+                # Idempotency check
+                if active_session.status == 'confirmed':
+                    reply = (
+                        "This rescheduling has already been processed.\n"
+                        f"• *New Booking ID:* #{active_session.booking_id}\n\n"
+                        "For any queries, please call +91 85920 31725."
+                    )
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+                # Parse original and new dates from stored value
+                date_parts = (active_session.appointment_date or "").split("|")
+                if len(date_parts) != 2:
+                    active_session.cancel()
+                    db.session.commit()
+                    reply = "Rescheduling session data is inconsistent. Please start over."
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+                original_date, new_date = date_parts[0], date_parts[1]
+
+                # Re-validate original booking still exists and is cancellable
+                # Find original booking by the stored booking_id
+                original_booking = PatientBooking.query.get(active_session.booking_id)
+                if not original_booking or original_booking.status not in ('confirmed', 'active'):
+                    active_session.cancel()
+                    db.session.commit()
+                    reply = "The original appointment is no longer available for rescheduling."
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+                # Execute rescheduling via shared service
+                reschedule_res = reschedule_booking_service(
+                    original_booking_id=original_booking.id,
+                    new_date_str=new_date,
+                    actor_user_id=user_id,
+                    actor_role='patient',
+                    phone_number=sender_phone,
+                    booking_source='kapso_whatsapp'
+                )
+
+                if reschedule_res.get("success"):
+                    active_session.status = 'confirmed'
+                    active_session.step = 'COMPLETED'
+                    active_session.booking_id = reschedule_res["new_booking_id"]
+                    active_session.token_number = reschedule_res["new_token"]
+                    active_session.appointment_date = new_date
+                    db.session.commit()
+
+                    reply = (
+                        "✅ *Appointment Rescheduled Successfully!*\n\n"
+                        f"• *New Booking ID:* #{reschedule_res['new_booking_id']}\n"
+                        f"• *Doctor:* {reschedule_res['doctor_name']} ({reschedule_res['specialization']})\n"
+                        f"• *New Date:* {new_date}\n"
+                        f"• *New Token:* #{reschedule_res['new_token']}\n"
+                        f"• *Previous Date:* {original_date} (Token #{reschedule_res['original_token']} released)\n\n"
+                        "For any queries, please call +91 85920 31725."
+                    )
+                    return {"handled": True, "reply": reply, "session": active_session}
+                else:
+                    active_session.cancel()
+                    active_session.appointment_date = original_date
+                    db.session.commit()
+
+                    error_msg = reschedule_res.get("message", "Unknown error")
+                    reply = (
+                        f"❌ *Rescheduling Failed*\n\n"
+                        f"Reason: {error_msg}\n\n"
+                        "Your original appointment remains intact.\n"
+                        "Please try again or call +91 85920 31725 for assistance."
+                    )
+                    return {"handled": True, "reply": reply, "session": active_session}
+
+            elif text_lower in ABORT_WORDS or text_lower == 'cancel':
+                # Restore original date if stored as "old|new"
+                date_parts = (active_session.appointment_date or "").split("|")
+                if len(date_parts) == 2:
+                    active_session.appointment_date = date_parts[0]
+                active_session.cancel()
+                db.session.commit()
+                reply = "Rescheduling cancelled. Your original appointment remains intact."
+                return {"handled": True, "reply": reply, "session": active_session}
+
+            else:
+                reply = "Please reply *CONFIRM* to proceed with rescheduling, or *CANCEL* to keep the current appointment."
+                return {"handled": True, "reply": reply, "session": active_session}
+
+        # Fallback for unknown step in active management session
+        return {"handled": False}
+
+    # -------------------------------------------------------------------------
+    # 3B. Repeat Confirmation on Confirmed Cancel/Reschedule Session (Idempotency)
+    # -------------------------------------------------------------------------
+    if not active_session and text_lower in CONFIRM_WORDS:
+        recent_confirmed = WhatsAppBookingSession.query.filter_by(
+            conversation_id=conversation.id,
+            status='confirmed'
+        ).order_by(WhatsAppBookingSession.updated_at.desc()).first()
+
+        if recent_confirmed and recent_confirmed.action == 'cancel':
+            reply = (
+                "This cancellation has already been processed.\n"
+                f"• *Booking ID:* #{recent_confirmed.booking_id}\n\n"
+                "For any queries, please call +91 85920 31725."
+            )
+            return {"handled": True, "reply": reply, "session": recent_confirmed}
+
+        if recent_confirmed and recent_confirmed.action == 'reschedule':
+            reply = (
+                "This rescheduling has already been processed.\n"
+                f"• *New Booking ID:* #{recent_confirmed.booking_id}\n"
+                f"• *Doctor:* {recent_confirmed.doctor_name}\n"
+                f"• *Date:* {recent_confirmed.appointment_date}\n\n"
+                "For any queries, please call +91 85920 31725."
+            )
+            return {"handled": True, "reply": reply, "session": recent_confirmed}
+
+    # -------------------------------------------------------------------------
+    # 4. Intent Detection (No Active Management Session)
+    # -------------------------------------------------------------------------
+
+    # 4A. Cancel Intent (Check specific action intents before generic lookup)
+    if is_cancel_intent(text):
+        # Check for active booking session - don't interfere
+        booking_session = WhatsAppBookingSession.query.filter_by(
+            conversation_id=conversation.id,
+            status='in_progress',
+            action='book'
+        ).first()
+        if booking_session:
+            # Let the booking flow handle its own "cancel" word
+            return {"handled": False}
+
+        appointments_res = _get_patient_appointments(user_id, sender_phone, sender_role)
+        bookings = appointments_res.get("bookings", [])
+        eligible = [b for b in bookings if b["status"] in ("confirmed", "active")]
+
+        if not eligible:
+            reply = "You don't have any upcoming appointments that can be cancelled."
+            return {"handled": True, "reply": reply, "session": None}
+
+        if len(eligible) == 1:
+            # Single appointment - go directly to confirmation
+            chosen = eligible[0]
+            new_session = WhatsAppBookingSession(
+                conversation_id=conversation.id,
+                status='in_progress',
+                action='cancel',
+                step='CONFIRMATION',
+                booking_id=chosen["id"],
+                doctor_name=chosen["doctor_name"],
+                specialization=chosen["specialization"],
+                appointment_date=chosen["date"],
+                time_slot=chosen.get("time"),
+                token_number=chosen["token"],
+                patient_name=chosen.get("patient_name"),
+                patient_user_id=user_id,
+                contact_phone=sender_phone
+            )
+            db.session.add(new_session)
+            db.session.commit()
+
+            detail = _format_appointment_detail(chosen)
+            reply = (
+                f"{detail}\n\n"
+                "⚠️ *Are you sure you want to cancel this appointment?*\n"
+                "• Your token number will be permanently released.\n"
+                "• Cancellations cannot be undone.\n\n"
+                "Reply *CONFIRM* to proceed with cancellation, or *CANCEL* to keep your appointment."
+            )
+            return {"handled": True, "reply": reply, "session": new_session}
+
+        else:
+            # Multiple appointments - ask patient to choose
+            new_session = WhatsAppBookingSession(
+                conversation_id=conversation.id,
+                status='in_progress',
+                action='cancel',
+                step='CHOOSE_APPOINTMENT',
+                patient_user_id=user_id,
+                contact_phone=sender_phone
+            )
+            db.session.add(new_session)
+            db.session.commit()
+
+            listing = _format_appointment_list(eligible, "Which appointment would you like to cancel?")
+            reply = f"{listing}\n\n_Reply with the appointment number, or *CANCEL* to abort._"
+            return {"handled": True, "reply": reply, "session": new_session}
+
+    # 4C. Reschedule Intent
+    if is_reschedule_intent(text):
+        # Check for active booking session - don't interfere
+        booking_session = WhatsAppBookingSession.query.filter_by(
+            conversation_id=conversation.id,
+            status='in_progress',
+            action='book'
+        ).first()
+        if booking_session:
+            return {"handled": False}
+
+        appointments_res = _get_patient_appointments(user_id, sender_phone, sender_role)
+        bookings = appointments_res.get("bookings", [])
+        eligible = [b for b in bookings if b["status"] in ("confirmed", "active")]
+
+        if not eligible:
+            reply = "You don't have any upcoming appointments that can be rescheduled."
+            return {"handled": True, "reply": reply, "session": None}
+
+        if len(eligible) == 1:
+            chosen = eligible[0]
+            new_session = WhatsAppBookingSession(
+                conversation_id=conversation.id,
+                status='in_progress',
+                action='reschedule',
+                step='SELECT_DATE',
+                booking_id=chosen["id"],
+                doctor_name=chosen["doctor_name"],
+                specialization=chosen["specialization"],
+                appointment_date=chosen["date"],
+                time_slot=chosen.get("time"),
+                token_number=chosen["token"],
+                patient_name=chosen.get("patient_name"),
+                patient_user_id=user_id,
+                contact_phone=sender_phone
+            )
+            db.session.add(new_session)
+            db.session.commit()
+
+            detail = _format_appointment_detail(chosen)
+            reply = (
+                f"{detail}\n\n"
+                "📅 *Select a new date for your appointment.*\n"
+                "Please enter a date within the next 15 days "
+                "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                "_Reply CANCEL to abort rescheduling._"
+            )
+            return {"handled": True, "reply": reply, "session": new_session}
+
+        else:
+            new_session = WhatsAppBookingSession(
+                conversation_id=conversation.id,
+                status='in_progress',
+                action='reschedule',
+                step='CHOOSE_APPOINTMENT',
+                patient_user_id=user_id,
+                contact_phone=sender_phone
+            )
+            db.session.add(new_session)
+            db.session.commit()
+
+            listing = _format_appointment_list(eligible, "Which appointment would you like to reschedule?")
+            reply = f"{listing}\n\n_Reply with the appointment number, or *CANCEL* to abort._"
+            return {"handled": True, "reply": reply, "session": new_session}
+
+    # 4C. Lookup Intent (Evaluated after cancel and reschedule intents)
+    if is_lookup_intent(text):
+        appointments_res = _get_patient_appointments(user_id, sender_phone, sender_role)
+        bookings = appointments_res.get("bookings", [])
+        reply = _format_appointment_list(bookings)
+        return {"handled": True, "reply": reply, "session": None}
+
+    # Not a management intent
+    return {"handled": False}
+
