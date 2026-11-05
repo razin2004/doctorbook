@@ -124,7 +124,7 @@ def trigger_push(doctor_name, date_str, current_token, status, app, db, PatientB
             except Exception as e:
                 print(f"[Push Service] Worker Error: {e}")
 
-    thread = threading.Thread(target=run_push)
+    thread = threading.Thread(target=run_push) 
     thread.start()
 
 def send_leave_notification(doctor_name, date_str, reason, app, db, PatientBooking, PushSubscription):
@@ -417,17 +417,24 @@ def send_confirmation_notification(booking, app, db, PushSubscription):
         print("[Push Service] No VAPID keys installed. Aborting push.")
         return
 
+    # Extract scalar fields to prevent cross-thread ORM session conflicts
+    b_user_id = getattr(booking, 'user_id', None)
+    b_doc_name = getattr(booking, 'doctor_name', '')
+    b_date = getattr(booking, 'date', '')
+    b_token = getattr(booking, 'token', '')
+    b_id = getattr(booking, 'id', None)
+
     def run_push():
         with app.app_context():
             try:
                 title = "Appointment Confirmed"
-                doc_disp = booking.doctor_name.strip()
+                doc_disp = (b_doc_name or '').strip()
                 if not doc_disp.lower().startswith("dr."):
                     doc_disp = f"Dr. {doc_disp}"
-                body = f"Your appointment with {doc_disp} on {booking.date} is confirmed. Token #{booking.token}."
-                tag = f"confirm-{booking.id}"
+                body = f"Your appointment with {doc_disp} on {b_date} is confirmed. Token #{b_token}."
+                tag = f"confirm-{b_id}"
                 
-                subs = PushSubscription.query.filter_by(user_id=booking.user_id).all() if booking.user_id else []
+                subs = PushSubscription.query.filter_by(user_id=b_user_id).all() if b_user_id else []
                 for sub in subs:
                     push_info = {
                         "endpoint": sub.endpoint,
@@ -474,17 +481,24 @@ def send_cancellation_notification(booking, app, db, PushSubscription):
         print("[Push Service] No VAPID keys installed. Aborting push.")
         return
 
+    # Extract scalar fields to prevent cross-thread ORM session conflicts
+    b_user_id = getattr(booking, 'user_id', None)
+    b_doc_name = getattr(booking, 'doctor_name', '')
+    b_date = getattr(booking, 'date', '')
+    b_token = getattr(booking, 'token', '')
+    b_id = getattr(booking, 'id', None)
+
     def run_push():
         with app.app_context():
             try:
                 title = "Appointment Cancelled"
-                doc_disp = booking.doctor_name.strip()
+                doc_disp = (b_doc_name or '').strip()
                 if not doc_disp.lower().startswith("dr."):
                     doc_disp = f"Dr. {doc_disp}"
-                body = f"Your appointment with {doc_disp} on {booking.date} (Token #{booking.token}) has been cancelled by the admin."
-                tag = f"cancel-{booking.id}"
+                body = f"Your appointment with {doc_disp} on {b_date} (Token #{b_token}) has been cancelled by the admin."
+                tag = f"cancel-{b_id}"
                 
-                subs = PushSubscription.query.filter_by(user_id=booking.user_id).all() if booking.user_id else []
+                subs = PushSubscription.query.filter_by(user_id=b_user_id).all() if b_user_id else []
                 for sub in subs:
                     push_info = {
                         "endpoint": sub.endpoint,
@@ -531,17 +545,24 @@ def send_referral_notification(referral, app, db, PushSubscription):
         print("[Push Service] No VAPID keys installed. Aborting push.")
         return
 
+    # Extract scalar fields before starting the thread to ensure thread safety
+    # and prevent cross-thread SQLAlchemy ORM detachment
+    ref_id = getattr(referral, 'id', None)
+    ref_user_id = getattr(referral, 'user_id', None)
+    ref_from_doc = getattr(referral, 'from_doctor', '')
+    ref_to_spec = getattr(referral, 'to_specialization', '')
+
     def run_push():
         with app.app_context():
             try:
                 title = "New Medical Referral"
-                doc_disp = referral.from_doctor.strip()
+                doc_disp = (ref_from_doc or '').strip()
                 if not doc_disp.lower().startswith("dr."):
                     doc_disp = f"Dr. {doc_disp}"
-                body = f"You have been referred to {referral.to_specialization} by {doc_disp}."
-                tag = f"referral-{referral.id}"
+                body = f"You have been referred to {ref_to_spec} by {doc_disp}."
+                tag = f"referral-{ref_id}"
                 
-                subs = PushSubscription.query.filter_by(user_id=referral.user_id).all() if referral.user_id else []
+                subs = PushSubscription.query.filter_by(user_id=ref_user_id).all() if ref_user_id else []
                 for sub in subs:
                     push_info = {
                         "endpoint": sub.endpoint,

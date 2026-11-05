@@ -1849,7 +1849,7 @@
             </div>
             <div class="item-actions" style="flex-shrink:0;">
               {% if next_b.is_holiday or next_b.is_doctor_on_leave %}
-              <a href="/booking" id="reschedBtn" class="btn btn-primary" style="border-radius:12px; padding:0.5rem 1rem;"><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Reschedule</a>
+              <a href="javascript:void(0);" onclick="handleRescheduleClick(event)" id="reschedBtn" class="btn btn-primary" style="border-radius:12px; padding:0.5rem 1rem;" title="Rescheduling is temporarily unavailable. Please cancel and rebook."><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Reschedule</a>
               {% endif %}
             </div>
           </div>
@@ -1942,7 +1942,7 @@
                   </div>
                   <div class="item-actions">
                     {% if (b.is_holiday or b.is_doctor_on_leave) and b.status != 'cancelled' %}
-                    <a href="/booking" id="reschedBtn"><i data-lucide="calendar-plus"></i>Reschedule</a>
+                    <a href="javascript:void(0);" onclick="handleRescheduleClick(event)" id="reschedBtn" title="Rescheduling is temporarily unavailable. Please cancel and rebook."><i data-lucide="calendar-plus"></i>Reschedule</a>
                     {% endif %}
                     {% if b.status == 'cancelled' %}
                     <button class="btn-danger-sm" disabled style="opacity:0.5; cursor:not-allowed; background:#e2e8f0; color:#94a3b8; border-color:#cbd5e1;">
@@ -2585,6 +2585,16 @@
         await fetch('/patient_logout', { method: 'POST' });
         window.location.href = '/';
       }, true);
+    }
+
+    // ── Reschedule Notice ──
+    function handleRescheduleClick(e) {
+      if (e) e.preventDefault();
+      if (typeof showToast === 'function') {
+        showToast('Rescheduling is temporarily unavailable. Please cancel your booking and book a new appointment.', 'error');
+      } else {
+        alert('Rescheduling is temporarily unavailable. Please cancel your booking and book a new appointment.');
+      }
     }
 
     // ── Cancel Booking ──

@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
   <style>
@@ -1066,8 +1067,12 @@
             </p>
           </div>
 
-          <form id="doctorActivationForm" onsubmit="handleActivation(event)" novalidate>
+          <form id="doctorActivationForm" onsubmit="handleActivation(event); return false;" novalidate>
             <input type="hidden" id="activation-token" value="{{ token }}">
+            <input type="hidden" name="csrf_token" id="csrf_token_input" value="{{ csrf_token() if csrf_token is defined else '' }}">
+
+            <!-- Live Inline Alert Banner -->
+            <div id="activationAlert" role="alert" style="display:none; margin-bottom: 1.25rem; padding: 0.85rem 1.1rem; border-radius: 12px; font-size: 0.88rem; font-weight: 600; line-height: 1.45; box-shadow: 0 2px 8px rgba(0,0,0,0.04);"></div>
 
             <!-- Create Password -->
             <div class="form-group">
@@ -1134,9 +1139,14 @@
               <div class="match-status-box" id="matchFeedback"></div>
             </div>
 
-            <!-- Submit Button -->
-            <button type="submit" class="submit-btn" id="activateBtn">
-              <i data-lucide="arrow-right-circle" style="width: 19px; height: 19px;" id="btnIcon"></i>
+            <!-- Submit Button (Direct click & submit binding with resilient inline SVGs) -->
+            <button type="button" class="submit-btn" id="activateBtn" onclick="handleActivation(event)">
+              <span id="btnSpinner" style="display:none; align-items:center; justify-content:center;" class="spinning" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+              </span>
+              <span id="btnIconWrapper" style="display:inline-flex; align-items:center; justify-content:center;" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 16 16 12 12 8"></polyline><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+              </span>
               <span id="btnText">Set Password &amp; Activate Account</span>
             </button>
           </form>
@@ -1169,130 +1179,231 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      if (window.lucide) {
-        lucide.createIcons();
+      if (window.lucide && typeof lucide.createIcons === 'function') {
+        try {
+          lucide.createIcons();
+        } catch (e) {
+          console.warn('Lucide icon initialization note:', e);
+        }
+      }
+
+      const form = document.getElementById('doctorActivationForm');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
+          handleActivation(e);
+          return false;
+        });
+      }
+
+      const btn = document.getElementById('activateBtn');
+      if (btn) {
+        btn.addEventListener('click', function(e) {
+          if (e && typeof e.preventDefault === 'function') e.preventDefault();
+          handleActivation(e);
+          return false;
+        });
       }
     });
 
     function togglePasswordVisibility(inputId, iconId) {
-      const input = document.getElementById(inputId);
-      const icon = document.getElementById(iconId);
-      if (!input) return;
+      try {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (!input) return;
 
-      if (input.type === 'password') {
-        input.type = 'text';
-        icon.setAttribute('data-lucide', 'eye-off');
-      } else {
-        input.type = 'password';
-        icon.setAttribute('data-lucide', 'eye');
-      }
-      if (window.lucide) {
-        lucide.createIcons();
+        if (input.type === 'password') {
+          input.type = 'text';
+          if (icon) icon.setAttribute('data-lucide', 'eye-off');
+        } else {
+          input.type = 'password';
+          if (icon) icon.setAttribute('data-lucide', 'eye');
+        }
+        if (window.lucide && typeof lucide.createIcons === 'function') {
+          lucide.createIcons();
+        }
+      } catch (err) {
+        console.error('Password toggle error:', err);
       }
     }
 
     function handlePasswordInput() {
-      const p1 = document.getElementById('new-password')?.value || '';
-      const p2 = document.getElementById('confirm-password')?.value || '';
+      try {
+        const p1 = document.getElementById('new-password')?.value || '';
+        const p2 = document.getElementById('confirm-password')?.value || '';
 
-      const reqLength = document.getElementById('req-length');
-      const reqLengthIcon = document.getElementById('req-length-icon');
-      const reqCombo = document.getElementById('req-combo');
-      const reqComboIcon = document.getElementById('req-combo-icon');
-      const fb = document.getElementById('matchFeedback');
+        const reqLength = document.getElementById('req-length');
+        const reqCombo = document.getElementById('req-combo');
+        const fb = document.getElementById('matchFeedback');
 
-      // Check Length
-      if (p1.length >= 6) {
-        reqLength.classList.add('valid');
-        reqLengthIcon.setAttribute('data-lucide', 'check-circle-2');
-      } else {
-        reqLength.classList.remove('valid');
-        reqLengthIcon.setAttribute('data-lucide', 'circle');
-      }
+        // Check Length
+        if (reqLength) {
+          if (p1.length >= 6) {
+            reqLength.classList.add('valid');
+          } else {
+            reqLength.classList.remove('valid');
+          }
+        }
 
-      // Check Combination
-      const hasLetter = /[a-zA-Z]/.test(p1);
-      const hasNumber = /[0-9]/.test(p1);
-      if (hasLetter && hasNumber) {
-        reqCombo.classList.add('valid');
-        reqComboIcon.setAttribute('data-lucide', 'check-circle-2');
-      } else {
-        reqCombo.classList.remove('valid');
-        reqComboIcon.setAttribute('data-lucide', 'circle');
-      }
+        // Check Combination
+        if (reqCombo) {
+          const hasLetter = /[a-zA-Z]/.test(p1);
+          const hasNumber = /[0-9]/.test(p1);
+          if (hasLetter && hasNumber) {
+            reqCombo.classList.add('valid');
+          } else {
+            reqCombo.classList.remove('valid');
+          }
+        }
 
-      // Check Match
-      if (p2.length === 0) {
-        fb.className = 'match-status-box';
-        fb.textContent = '';
-      } else if (p1 === p2) {
-        fb.className = 'match-status-box match';
-        fb.textContent = '✓ Passwords match';
-      } else {
-        fb.className = 'match-status-box mismatch';
-        fb.textContent = '✕ Passwords do not match';
-      }
-
-      if (window.lucide) {
-        lucide.createIcons();
+        // Check Match
+        if (fb) {
+          if (p2.length === 0) {
+            fb.className = 'match-status-box';
+            fb.textContent = '';
+          } else if (p1 === p2) {
+            fb.className = 'match-status-box match';
+            fb.textContent = '✓ Passwords match';
+          } else {
+            fb.className = 'match-status-box mismatch';
+            fb.textContent = '✕ Passwords do not match';
+          }
+        }
+      } catch (err) {
+        console.error('Password input handler error:', err);
       }
     }
 
-    function showToast(message, isSuccess = true) {
-      const pill = document.getElementById('toastPill');
-      const text = document.getElementById('toastText');
-      const icon = document.getElementById('toastIcon');
+    function setActivationAlert(message, type = 'info') {
+      try {
+        const alertBox = document.getElementById('activationAlert');
+        if (!alertBox) return;
+        if (!message) {
+          alertBox.style.display = 'none';
+          alertBox.innerHTML = '';
+          return;
+        }
 
-      if (!pill || !text) return;
+        alertBox.style.display = 'flex';
+        alertBox.style.alignItems = 'center';
+        alertBox.style.gap = '0.75rem';
 
-      text.textContent = message;
-      pill.className = 'toast-pill ' + (isSuccess ? 'success' : 'error') + ' show';
-      if (icon) {
-        icon.setAttribute('data-lucide', isSuccess ? 'check-circle' : 'alert-triangle');
+        const isSuccess = (type === 'success' || type === true);
+        const isError = (type === 'error' || type === false);
+
+        if (isSuccess) {
+          alertBox.style.background = '#ecfdf5';
+          alertBox.style.color = '#065f46';
+          alertBox.style.border = '1.5px solid #a7f3d0';
+          alertBox.innerHTML = '<svg style="width:20px;height:20px;color:#10b981;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> <span>' + message + '</span>';
+        } else if (isError) {
+          alertBox.style.background = '#fef2f2';
+          alertBox.style.color = '#991b1b';
+          alertBox.style.border = '1.5px solid #fecaca';
+          alertBox.innerHTML = '<svg style="width:20px;height:20px;color:#ef4444;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> <span>' + message + '</span>';
+        } else {
+          alertBox.style.background = '#f0f9ff';
+          alertBox.style.color = '#0369a1';
+          alertBox.style.border = '1.5px solid #bae6fd';
+          alertBox.innerHTML = '<svg style="width:20px;height:20px;color:#0284c7;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> <span>' + message + '</span>';
+        }
+
+        if (typeof alertBox.scrollIntoView === 'function') {
+          alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      } catch (alertErr) {
+        console.error('Alert rendering error:', alertErr);
       }
-      if (window.lucide) {
-        lucide.createIcons();
-      }
+    }
 
-      setTimeout(() => {
-        pill.classList.remove('show');
-      }, 4000);
+    function showToast(message, type = 'info') {
+      try {
+        const normalizedType = (type === true || type === 'success') ? 'success' : (type === false || type === 'error') ? 'error' : type;
+
+        // Dispatch to global toastManager if available
+        if (window.toastManager && typeof window.toastManager.create === 'function') {
+          const title = normalizedType === 'success' ? 'Success' : normalizedType === 'error' ? 'Notice' : 'Information';
+          window.toastManager.create(normalizedType, title, message);
+        }
+
+        // Also support legacy toastPill element
+        const pill = document.getElementById('toastPill');
+        const text = document.getElementById('toastText');
+        if (pill && text) {
+          text.textContent = message;
+          pill.className = 'toast-pill ' + (normalizedType === 'success' ? 'success' : 'error') + ' show';
+          setTimeout(() => {
+            pill.classList.remove('show');
+          }, 4500);
+        }
+      } catch (toastErr) {
+        console.error('Toast notification error:', toastErr);
+      }
     }
 
     async function handleActivation(event) {
-      event.preventDefault();
-      const token = (document.getElementById('activation-token')?.value || '').trim();
-      const password = document.getElementById('new-password')?.value || '';
-      const confirm_password = document.getElementById('confirm-password')?.value || '';
+      if (event) {
+        try {
+          if (typeof event.preventDefault === 'function') event.preventDefault();
+          if (typeof event.stopPropagation === 'function') event.stopPropagation();
+        } catch (e) {}
+      }
+
+      setActivationAlert('', 'info');
+
+      const tokenInput = document.getElementById('activation-token');
+      const token = (tokenInput ? tokenInput.value : '').trim();
+      const p1Input = document.getElementById('new-password');
+      const p2Input = document.getElementById('confirm-password');
+      const password = p1Input ? p1Input.value : '';
+      const confirm_password = p2Input ? p2Input.value : '';
 
       const btn = document.getElementById('activateBtn');
-      const btnIcon = document.getElementById('btnIcon');
+      const btnSpinner = document.getElementById('btnSpinner');
+      const btnIconWrapper = document.getElementById('btnIconWrapper');
       const btnText = document.getElementById('btnText');
 
       if (!token) {
-        showToast('Activation token is missing. Please check your invitation link.', false);
+        const msg = 'Activation token is missing. Please check your invitation link.';
+        setActivationAlert(msg, 'error');
+        showToast(msg, 'error');
+        return;
+      }
+
+      if (!password || !confirm_password) {
+        const msg = 'Please enter and confirm your password.';
+        setActivationAlert(msg, 'error');
+        showToast(msg, 'error');
+        if (!password && p1Input) p1Input.focus();
+        else if (p2Input) p2Input.focus();
         return;
       }
 
       if (password.length < 6) {
-        showToast('Password must be at least 6 characters long.', false);
+        const msg = 'Password must be at least 6 characters long.';
+        setActivationAlert(msg, 'error');
+        showToast(msg, 'error');
+        if (p1Input) p1Input.focus();
         return;
       }
 
       if (password !== confirm_password) {
-        showToast('Passwords do not match. Please verify.', false);
+        const msg = 'Passwords do not match. Please verify both fields.';
+        setActivationAlert(msg, 'error');
+        showToast(msg, 'error');
+        if (p2Input) p2Input.focus();
         return;
       }
 
-      btn.disabled = true;
-      btnText.textContent = 'Activating Account...';
-      btnIcon.setAttribute('data-lucide', 'loader-2');
-      btnIcon.classList.add('spinning');
-      if (window.lucide) {
-        lucide.createIcons();
-      }
+      // Set loading state on button
+      if (btn) btn.disabled = true;
+      if (btnSpinner) btnSpinner.style.display = 'inline-flex';
+      if (btnIconWrapper) btnIconWrapper.style.display = 'none';
+      if (btnText) btnText.textContent = 'Activating Account...';
 
       function getCsrfToken() {
+        const hiddenInput = document.getElementById('csrf_token_input');
+        if (hiddenInput && hiddenInput.value) return hiddenInput.value;
         let value = "; " + document.cookie;
         let parts = value.split("; csrf_token=");
         if (parts.length === 2) return parts.pop().split(";").shift();
@@ -1305,6 +1416,7 @@
         headers['X-CSRFToken'] = csrfToken;
       }
 
+      let data = {};
       try {
         const response = await fetch('/doctor/activate', {
           method: 'POST',
@@ -1312,40 +1424,50 @@
           body: JSON.stringify({ token, password, confirm_password })
         });
 
-        const data = await response.json();
-
-        if (data.success) {
-          showToast(data.msg || 'Doctor account activated successfully!', true);
-          btnText.textContent = 'Account Activated!';
-          btnIcon.setAttribute('data-lucide', 'check-circle-2');
-          btnIcon.classList.remove('spinning');
-          if (window.lucide) {
-            lucide.createIcons();
-          }
-
-          setTimeout(() => {
-            window.location.href = data.redirect_url || '/?auth=doctorLogin';
-          }, 1400);
-        } else {
-          showToast(data.msg || 'Activation failed. Please try again.', false);
-          btn.disabled = false;
-          btnText.textContent = 'Set Password & Activate Account';
-          btnIcon.setAttribute('data-lucide', 'arrow-right-circle');
-          btnIcon.classList.remove('spinning');
-          if (window.lucide) {
-            lucide.createIcons();
-          }
+        const rawText = await response.text();
+        try {
+          data = JSON.parse(rawText);
+        } catch (parseErr) {
+          data = {
+            success: false,
+            msg: 'Server returned response (' + response.status + '). Please verify your invitation link or try again.'
+          };
         }
-      } catch (err) {
-        console.error('Activation network error:', err);
-        showToast('Connection error. Please check your network and try again.', false);
-        btn.disabled = false;
-        btnText.textContent = 'Set Password & Activate Account';
-        btnIcon.setAttribute('data-lucide', 'arrow-right-circle');
-        btnIcon.classList.remove('spinning');
-        if (window.lucide) {
-          lucide.createIcons();
+      } catch (netErr) {
+        console.error('Activation network error:', netErr);
+        data = {
+          success: false,
+          msg: 'Connection error. Please check your network connection and try again.'
+        };
+      }
+
+      if (data.success) {
+        const successMsg = data.msg || 'Doctor account activated successfully! Redirecting...';
+        setActivationAlert(successMsg, 'success');
+        showToast(successMsg, 'success');
+        if (btnSpinner) btnSpinner.style.display = 'none';
+        if (btnIconWrapper) {
+          btnIconWrapper.style.display = 'inline-flex';
+          btnIconWrapper.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
         }
+        if (btnText) btnText.textContent = 'Account Activated!';
+
+        setTimeout(() => {
+          window.location.href = data.redirect_url || '/?auth=doctorLogin';
+        }, 1400);
+      } else {
+        const failMsg = data.msg || 'Activation failed. Please check your link or contact administration.';
+        setActivationAlert(failMsg, 'error');
+        showToast(failMsg, 'error');
+
+        // Restore button state
+        if (btn) btn.disabled = false;
+        if (btnSpinner) btnSpinner.style.display = 'none';
+        if (btnIconWrapper) {
+          btnIconWrapper.style.display = 'inline-flex';
+          btnIconWrapper.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 16 16 12 12 8"></polyline><line x1="8" y1="12" x2="16" y2="12"></line></svg>';
+        }
+        if (btnText) btnText.textContent = 'Set Password & Activate Account';
       }
     }
   </script>

@@ -1099,7 +1099,7 @@
                 <div class="card-icon icon-cancelled"><i data-lucide="ban"></i></div>
               </div>
               <div class="card-value">{{ total_cancelled }}</div>
-              <div class="card-subtext">Cancelled bookings</div>
+              <div class="card-subtext">Rate: <strong>{{ cancellation_rate }}%</strong></div>
             </div>
           </div>
         </div>
@@ -1159,6 +1159,24 @@
           </div>
         </div>
       </div>
+
+      <!-- Department Volume Breakdown -->
+      {% if dept_stats %}
+      <div class="glass-card-premium" style="margin-bottom: 24px;">
+        <div class="section-header">
+          <i data-lucide="stethoscope" style="color:#0077b6;"></i>
+          <span>Appointments by Department</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+          {% for dept, count in dept_stats.items() %}
+            <div style="background: rgba(0, 119, 182, 0.06); border: 1px solid rgba(0, 119, 182, 0.15); border-radius: 12px; padding: 10px 16px; display: flex; align-items: center; gap: 10px;">
+              <span style="font-weight: 600; color: #1e293b; font-size: 0.9rem;">{{ dept }}</span>
+              <span style="background: #0077b6; color: white; border-radius: 20px; padding: 2px 8px; font-size: 0.8rem; font-weight: 700;">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Doctor Statistics Table -->
       <div class="glass-card-premium table-card">
