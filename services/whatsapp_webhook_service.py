@@ -445,11 +445,10 @@ def get_clinic_whatsapp_numbers() -> set:
                 numbers.add(norm)
                 numbers.add(norm.lstrip("+"))
 
-    # Known clinic numbers as baseline
+    # Known clinic numbers as baseline (the clinic's verified WhatsApp business number and ID)
     known = [
         "+917511135687", "917511135687", "7511135687",
-        "1387431517794285",
-        "+918592031725", "918592031725", "8592031725"
+        "1387431517794285"
     ]
     for kn in known:
         numbers.add(kn)
@@ -589,13 +588,21 @@ def parse_webhook_payload(
                 header_event = str(v).strip().lower()
                 break
 
-    payload_event = str(data.get("event") or "").strip().lower()
+    payload_event = str(data.get("event") or data.get("type") or "").strip().lower()
     effective_event = header_event or payload_event
     root_phone_number_id = str(data.get("phone_number_id") or "").strip()
 
     # 1. Kapso Native Mode: data[] buffered or single object payload (v1 & v2)
+    # Supports both buffered (data=[...]) and unbuffered (top-level message/status) formats.
+    raw_items = None
     if "data" in data:
         raw_items = data.get("data")
+    elif "message" in data and isinstance(data.get("message"), dict):
+        raw_items = [data]
+    elif "status" in data and isinstance(data.get("status"), dict):
+        raw_items = [data]
+
+    if raw_items is not None:
         items = raw_items if isinstance(raw_items, list) else [raw_items] if isinstance(raw_items, dict) else []
 
         is_status_event = (
@@ -612,7 +619,7 @@ def parse_webhook_payload(
             status_obj = item.get("status") if isinstance(item.get("status"), dict) else item
 
             # Check if this item represents a status update
-            if is_status_event or ("status" in item and "body" not in item and "text" not in item and "message" not in item) or ("status" in item and isinstance(item["status"], dict)):
+            if is_status_event or ("status" in item and "body" not in item and "text" not in item and "message" not in item) or ("status" in item and isinstance(item["status"], dict) and "message" not in item):
                 statuses.append(status_obj)
             else:
                 # Extract text body: body or text.body or text
@@ -624,18 +631,36 @@ def parse_webhook_payload(
                     elif isinstance(raw_text, str):
                         text_val = raw_text
 
+                conversation_dict = item.get("conversation") if isinstance(item.get("conversation"), dict) else (data.get("conversation") if isinstance(data.get("conversation"), dict) else {})
+
                 # Extract sender phone
-                sender_val = msg_obj.get("from") or msg_obj.get("phone_number") or item.get("from") or item.get("phone_number")
+                sender_val = (
+                    msg_obj.get("from")
+                    or msg_obj.get("phone_number")
+                    or item.get("from")
+                    or item.get("phone_number")
+                    or conversation_dict.get("phone_number")
+                )
 
                 # Extract BSUID and portfolio scope fields
-                bsuid_val = msg_obj.get("business_scoped_user_id") or item.get("business_scoped_user_id")
+                bsuid_val = (
+                    msg_obj.get("business_scoped_user_id")
+                    or item.get("business_scoped_user_id")
+                    or conversation_dict.get("business_scoped_user_id")
+                )
                 parent_bsuid_val = (
                     msg_obj.get("parent_business_scoped_user_id")
                     or msg_obj.get("parent_scoped_id")
                     or item.get("parent_business_scoped_user_id")
                     or item.get("parent_scoped_id")
+                    or conversation_dict.get("parent_business_scoped_user_id")
+                    or conversation_dict.get("parent_scoped_id")
                 )
-                username_val = msg_obj.get("username") or item.get("username")
+                username_val = (
+                    msg_obj.get("username")
+                    or item.get("username")
+                    or conversation_dict.get("username")
+                )
 
                 # Extract contact name
                 contact_name = None
@@ -657,12 +682,16 @@ def parse_webhook_payload(
                     if not username_val:
                         username_val = item["profile"].get("username")
 
+                if not contact_name and conversation_dict.get("contact_name"):
+                    contact_name = conversation_dict.get("contact_name")
+
                 # Extract direction and echo flags
                 direction_val = (
                     msg_obj.get("direction")
                     or item.get("direction")
                     or (item.get("kapso") or {}).get("direction")
                     or (item.get("metadata") or {}).get("direction")
+                    or conversation_dict.get("direction")
                 )
                 if direction_val:
                     direction_val = str(direction_val).strip().lower()
@@ -682,7 +711,7 @@ def parse_webhook_payload(
 
                 item_phone_id = (
                     root_phone_number_id
-                    or str(msg_obj.get("phone_number_id") or item.get("phone_number_id") or "").strip()
+                    or str(msg_obj.get("phone_number_id") or item.get("phone_number_id") or conversation_dict.get("phone_number_id") or "").strip()
                 )
 
                 norm_msg = {

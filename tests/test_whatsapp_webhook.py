@@ -1361,9 +1361,10 @@ class WhatsAppWebhookTestSuite(unittest.TestCase):
     def test_28_kapso_v2_delivery_status_update(self):
         """28. Verifies Kapso v2 status delivery structure."""
         out_wamid = f"wamid.OUT_V2_{uuid.uuid4().hex[:8]}"
+        phone = f"+919847{int(uuid.uuid4().int % 900000 + 100000)}"
         convo = WhatsAppConversation(
             conversation_uuid=str(uuid.uuid4()),
-            sender_phone="+919847055998",
+            sender_phone=phone,
             status="active"
         )
         db.session.add(convo)
@@ -1417,6 +1418,55 @@ class WhatsAppWebhookTestSuite(unittest.TestCase):
         # Verify message status updated
         db.session.refresh(out_msg)
         self.assertEqual(out_msg.status, "delivered")
+
+    def test_29_kapso_v2_unbuffered_message_format(self):
+        """29. Verifies Kapso v2 unbuffered payload (top-level message + conversation object)."""
+        wamid = f"wamid.V2_UNBUF_{uuid.uuid4().hex[:8]}"
+        payload = {
+            "message": {
+                "id": wamid,
+                "from": "918592031725",
+                "text": {"body": "Hello clinic"},
+                "type": "text",
+                "timestamp": "1793907710"
+            },
+            "conversation": {
+                "id": "926123cd-1fee-48c2-b4b9-ee7b0831f74e",
+                "status": "active",
+                "phone_number": "918592031725",
+                "phone_number_id": "1387431517794285",
+                "business_scoped_user_id": "IN.1915807566049638"
+            },
+            "phone_number_id": "1387431517794285",
+            "is_new_conversation": False,
+            "type": "whatsapp.message.received"
+        }
+        raw_body = json.dumps(payload).encode("utf-8")
+        sig = generate_signature(raw_body)
+
+        with patch("services.whatsapp_webhook_service.generate_whatsapp_ai_response") as mock_ai:
+            mock_ai.return_value = "Hello! How can I help you today?"
+
+            res = self.client.post(
+                "/api/whatsapp/webhook",
+                data=raw_body,
+                content_type="application/json",
+                headers={
+                    "X-Webhook-Signature": sig,
+                    "X-Webhook-Event": "whatsapp.message.received",
+                    "X-Webhook-Payload-Version": "v2"
+                }
+            )
+
+            self.assertEqual(res.status_code, 200)
+            data = res.get_json()
+            self.assertEqual(data.get("status"), "ok")
+
+            # Verify persisted message
+            msg = WhatsAppMessage.query.filter_by(wamid=wamid).first()
+            self.assertIsNotNone(msg)
+            self.assertEqual(msg.content, "Hello clinic")
+            self.assertEqual(msg.direction, "inbound")
 
 
 if __name__ == "__main__":
