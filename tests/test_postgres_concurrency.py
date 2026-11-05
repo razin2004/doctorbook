@@ -558,17 +558,25 @@ class PostgresConcurrencyTestSuite(unittest.TestCase):
 
         ensure_outbox_status_triggers(self.engine)
 
+        test_bid = None
         with self.engine.begin() as conn:
+            test_bid = conn.execute(text("""
+                INSERT INTO patient_booking (
+                    patient_name, doctor_name, date, time_slot, token, status, booking_source, created_at, updated_at
+                ) VALUES (
+                    'PG Immut Test', 'Dr. Sarah Jenkins', '2026-11-20', '10:00 AM', 991, 'active', 'web', NOW(), NOW()
+                ) RETURNING id;
+            """)).scalar()
             # Seed a retired outbox event
             ev_id = conn.execute(text("""
                 INSERT INTO booking_sync_outbox (
                     event_type, booking_id, idempotency_key, payload, status,
                     attempts, max_attempts, next_retry_at, created_at, updated_at
                 ) VALUES (
-                    'test_pg_immut', 1, :k, '{}', 'retired',
+                    'test_pg_immut', :bid, :k, '{}', 'retired',
                     0, 5, NOW(), NOW(), NOW()
                 ) RETURNING id;
-            """), {'k': f'pg_immut_{uuid.uuid4().hex[:8]}' }).scalar()
+            """), {'bid': test_bid, 'k': f'pg_immut_{uuid.uuid4().hex[:8]}' }).scalar()
 
         try:
             # 1. Direct SQL update attempting status='pending' must be blocked by database trigger
@@ -622,6 +630,8 @@ class PostgresConcurrencyTestSuite(unittest.TestCase):
             # Clean up test row
             with self.engine.begin() as conn:
                 conn.execute(text("DELETE FROM booking_sync_outbox WHERE id = :id"), {'id': ev_id})
+                if test_bid:
+                    conn.execute(text("DELETE FROM patient_booking WHERE id = :bid"), {'bid': test_bid})
 
         print("  [PASS] 7. PostgreSQL trigger 'trg_prevent_retired_outbox_reactivation' blocked direct SQL and bulk updates (including NULL) against retired outbox events.")
 
@@ -640,7 +650,15 @@ class PostgresConcurrencyTestSuite(unittest.TestCase):
 
         # 1. Seed 20 unretired legacy outbox events across candidate states ('pending', 'processing', 'failed')
         test_keys = []
+        test_bid = None
         with self.engine.begin() as conn:
+            test_bid = conn.execute(text("""
+                INSERT INTO patient_booking (
+                    patient_name, doctor_name, date, time_slot, token, status, booking_source, created_at, updated_at
+                ) VALUES (
+                    'PG Retire Test', 'Dr. Sarah Jenkins', '2026-11-20', '10:00 AM', 992, 'active', 'web', NOW(), NOW()
+                ) RETURNING id;
+            """)).scalar()
             for i in range(20):
                 k = f"pg_retire_race_{i}_{uuid.uuid4().hex[:8]}"
                 test_keys.append(k)
@@ -651,10 +669,10 @@ class PostgresConcurrencyTestSuite(unittest.TestCase):
                         event_type, booking_id, idempotency_key, payload, status,
                         attempts, max_attempts, next_retry_at, last_error, created_at, updated_at
                     ) VALUES (
-                        'test_retire', 1, :k, '{}', :st,
+                        'test_retire', :bid, :k, '{}', :st,
                         1, 5, NOW(), :err, NOW(), NOW()
                     );
-                """), {'k': k, 'st': st, 'err': err})
+                """), {'bid': test_bid, 'k': k, 'st': st, 'err': err})
 
         try:
             import tempfile
@@ -826,6 +844,8 @@ with open(os.environ['PROC_RESULT_FILE'], 'w') as f:
             # Clean up test records
             with self.engine.begin() as conn:
                 conn.execute(text("DELETE FROM booking_sync_outbox WHERE idempotency_key = ANY(:keys)"), {'keys': test_keys})
+                if test_bid:
+                    conn.execute(text("DELETE FROM patient_booking WHERE id = :bid"), {'bid': test_bid})
 
         print("  [PASS] 8. Live PostgreSQL concurrent retirement across multi-sessions & separate OS process verified with zero duplicate audit notes.")
 

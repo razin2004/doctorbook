@@ -1622,19 +1622,23 @@
       <!-- OTP VIEW -->
       <div id="authView-otp" class="view-section">
         <h3 class="auth-title">Enter Verification Code</h3>
-        <p class="auth-subtitle">We sent a 6-digit verification code</p>
+        <p class="auth-subtitle" id="otp-subtitle">We sent a 6-digit verification code</p>
         <form onsubmit="handleAuthSubmit(event, 'otp')">
           <div class="otp-inputs" id="authOtpInputs">
-            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
-            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
-            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
-            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
-            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
-            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" inputmode="numeric" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" inputmode="numeric" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" inputmode="numeric" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" inputmode="numeric" required>
+            <input type="text" maxlength="1" class="otp-input" pattern="[0-9]" inputmode="numeric" required>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem; margin-bottom:1rem; font-size:0.85rem;">
+            <a id="resendOtpBtn" onclick="handleResendOtp()" style="cursor:pointer; color:#023e8a; font-weight:600; text-decoration:none;">Resend Code</a>
+            <span id="resendCountdown" style="color:#64748b; font-size:0.8rem;"></span>
           </div>
           <button type="submit" class="auth-btn" id="otpBtnSubmit">Verify Code</button>
         </form>
-        <div class="auth-switch"><a onclick="switchAuthView('login')">Cancel</a></div>
+        <div class="auth-switch" style="margin-top:1rem;"><a id="otpBackLink" onclick="switchAuthView('login')">Cancel</a></div>
       </div>
 
       <!-- RESET PASSWORD VIEW -->
@@ -1820,11 +1824,41 @@
     function closeAuthModal() {
       document.getElementById('authModal').classList.remove('open');
     }
+    let currentAuthFlow = 'login';
+    let currentPendingPhone = '';
+    let resendTimer = null;
+
     function switchAuthView(viewId) {
       document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
       const target = document.getElementById('authView-' + viewId);
       if (target) {
         target.classList.add('active');
+      }
+
+      if (viewId === 'register') {
+        currentAuthFlow = 'register';
+      } else if (viewId === 'forgot') {
+        currentAuthFlow = 'forgot';
+      } else if (viewId === 'login') {
+        currentAuthFlow = 'login';
+        currentPendingPhone = '';
+      }
+
+      if (viewId !== 'otp' && resendTimer) {
+        clearInterval(resendTimer);
+        resendTimer = null;
+        const countEl = document.getElementById('resendCountdown');
+        if (countEl) countEl.textContent = '';
+        const btn = document.getElementById('resendOtpBtn');
+        if (btn) {
+          btn.style.pointerEvents = 'auto';
+          btn.style.opacity = '1';
+        }
+      }
+
+      if (viewId === 'otp') {
+        const first = document.querySelector('#authOtpInputs .otp-input');
+        if (first) setTimeout(() => first.focus(), 150);
       }
 
       // Update reciprocal portal toggle button in top right
@@ -1849,7 +1883,7 @@
       }
     }
 
-    // OTP Input Auto-Advance
+    // OTP Input Auto-Advance & Paste handler
     document.querySelectorAll('.otp-input').forEach((input, index, inputs) => {
       input.addEventListener('input', (e) => {
         if (e.target.value && index < inputs.length - 1) inputs[index + 1].focus();
@@ -1858,6 +1892,23 @@
         if (e.key === 'Backspace' && !e.target.value && index > 0) inputs[index - 1].focus();
       });
     });
+
+    const patientOtpContainer = document.getElementById('authOtpInputs');
+    if (patientOtpContainer) {
+      patientOtpContainer.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim();
+        const digits = pasteData.replace(/\D/g, '').slice(0, 6);
+        const inputs = patientOtpContainer.querySelectorAll('.otp-input');
+        if (digits) {
+          digits.split('').forEach((digit, i) => {
+            if (inputs[i]) inputs[i].value = digit;
+          });
+          const focusIdx = Math.min(digits.length, inputs.length - 1);
+          if (inputs[focusIdx]) inputs[focusIdx].focus();
+        }
+      });
+    }
 
     function validateMatch(flow) {
       let p1, p2, msg, btn;
@@ -1971,9 +2022,24 @@
             confirm_password: document.getElementById('reg-confirm-password').value
           };
         } else if (flow === 'otp') {
-          endpoint = '/verify_patient_otp';
-          const otpStr = Array.from(document.querySelectorAll('.otp-input')).map(i => i.value).join('');
-          payload = { otp: otpStr };
+          const otpStr = Array.from(document.querySelectorAll('#authOtpInputs .otp-input')).map(i => i.value).join('');
+          if (otpStr.length < 6) {
+            showToast('Please enter all 6 digits of the code', 'error');
+            return;
+          }
+          if (currentAuthFlow === 'register') {
+            endpoint = '/patient_verify_registration_otp';
+            payload = {
+              phone_number: currentPendingPhone || document.getElementById('reg-phone').value.trim(),
+              otp: otpStr
+            };
+          } else {
+            endpoint = '/verify_patient_otp';
+            payload = {
+              email: document.getElementById('forgot-email').value.trim(),
+              otp: otpStr
+            };
+          }
         } else if (flow === 'forgot') {
           endpoint = '/send_forgot_otp';
           payload = { email: document.getElementById('forgot-email').value.trim() };
@@ -1991,7 +2057,41 @@
 
         if (data.success) {
           showToast(data.msg, 'success');
-          if (flow === 'login' || flow === 'doctorLogin' || flow === 'register' || flow === 'reset') {
+
+          if (flow === 'register') {
+            if (data.require_otp) {
+              currentAuthFlow = 'register';
+              currentPendingPhone = data.phone_number || payload.phone_number;
+              const sub = document.getElementById('otp-subtitle');
+              if (sub) {
+                sub.textContent = 'We sent a 6-digit verification code to your WhatsApp (' + (data.masked_phone || currentPendingPhone) + ')';
+              }
+              const backLink = document.getElementById('otpBackLink');
+              if (backLink) {
+                backLink.textContent = 'Back to Registration';
+                backLink.onclick = () => switchAuthView('register');
+              }
+              document.querySelectorAll('#authOtpInputs .otp-input').forEach(i => i.value = '');
+              switchAuthView('otp');
+              startResendCountdown(60);
+              return;
+            }
+            const nextUrl = sessionStorage.getItem('auth_next');
+            if (nextUrl) {
+              sessionStorage.removeItem('auth_next');
+              setTimeout(() => window.location.href = nextUrl, 800);
+            } else {
+              setTimeout(() => window.location.href = data.redirect_url || '/patient_dashboard', 800);
+            }
+          } else if (flow === 'otp' && currentAuthFlow === 'register') {
+            const nextUrl = sessionStorage.getItem('auth_next');
+            if (nextUrl) {
+              sessionStorage.removeItem('auth_next');
+              setTimeout(() => window.location.href = nextUrl, 800);
+            } else {
+              setTimeout(() => window.location.href = data.redirect_url || '/patient_dashboard', 800);
+            }
+          } else if (flow === 'login' || flow === 'doctorLogin' || flow === 'reset') {
             const defaultTarget = flow === 'doctorLogin' ? '/doctor_dashboard' : '/patient_dashboard';
             const nextUrl = sessionStorage.getItem('auth_next');
             if (nextUrl && flow !== 'doctorLogin') {
@@ -2001,7 +2101,17 @@
               setTimeout(() => window.location.href = data.redirect_url || defaultTarget, 800);
             }
           } else if (flow === 'forgot') {
+            currentAuthFlow = 'forgot';
+            const sub = document.getElementById('otp-subtitle');
+            if (sub) sub.textContent = 'We sent a 6-digit verification code to your registered email';
+            const backLink = document.getElementById('otpBackLink');
+            if (backLink) {
+              backLink.textContent = 'Back to Login';
+              backLink.onclick = () => switchAuthView('login');
+            }
+            document.querySelectorAll('#authOtpInputs .otp-input').forEach(i => i.value = '');
             switchAuthView('otp');
+            startResendCountdown(60);
           } else if (flow === 'otp' && data.flow === 'forgot') {
             switchAuthView('reset');
           } else if (flow === 'doctorForgot') {
@@ -2044,37 +2154,92 @@
         }
     }
 
+    function startResendCountdown(seconds) {
+      const btn = document.getElementById('resendOtpBtn');
+      const countEl = document.getElementById('resendCountdown');
+      if (resendTimer) clearInterval(resendTimer);
+      if (!btn || !countEl) return;
+
+      btn.style.pointerEvents = 'none';
+      btn.style.opacity = '0.5';
+      let remaining = seconds;
+      countEl.textContent = `(${remaining}s)`;
+
+      resendTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(resendTimer);
+          resendTimer = null;
+          countEl.textContent = '';
+          btn.style.pointerEvents = 'auto';
+          btn.style.opacity = '1';
+        } else {
+          countEl.textContent = `(${remaining}s)`;
+        }
+      }, 1000);
+    }
+
     async function handleResendOtp() {
       const btn = document.getElementById('resendOtpBtn');
-      if (!btn || btn.style.opacity === '0.5') return;
-      btn.style.opacity = '0.5';
+      if (!btn || btn.style.pointerEvents === 'none') return;
 
-      let isRegister = false;
-      let email = document.getElementById('reg-email').value;
-      if (email) {
-          isRegister = true;
-      } else {
-          email = document.getElementById('forgot-email').value;
-      }
-
-      const endpoint = isRegister ? '/patient_register' : '/send_forgot_otp';
-      const payload = isRegister ? { email: email, password: document.getElementById('reg-password').value } : { email: email };
-
-      try {
-        const res = await fetch(endpoint, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if(data.success) {
-          showToast('OTP Resent!', 'success');
-        } else {
-          showToast(data.msg || 'Error resending OTP', 'error');
+      if (currentAuthFlow === 'register') {
+        const phone = currentPendingPhone || document.getElementById('reg-phone').value.trim();
+        if (!phone) {
+          showToast('Please provide your mobile number', 'error');
+          return;
         }
-      } catch (err) {
-        showToast('Network error', 'error');
-      } finally {
-        if (btn) setTimeout(() => btn.style.opacity = '1', 10000); // 10s cooldown
+        try {
+          btn.style.pointerEvents = 'none';
+          btn.style.opacity = '0.5';
+          const res = await fetch('/patient_resend_registration_otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone_number: phone })
+          });
+          const data = await res.json();
+          if (data.success) {
+            showToast(data.msg || 'A new verification code has been sent to your WhatsApp.', 'success');
+            startResendCountdown(60);
+          } else {
+            showToast(data.msg || 'Error resending verification code', 'error');
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+          }
+        } catch (err) {
+          showToast('Network error, please try again.', 'error');
+          btn.style.pointerEvents = 'auto';
+          btn.style.opacity = '1';
+        }
+      } else {
+        // Forgot password flow
+        const email = document.getElementById('forgot-email').value.trim();
+        if (!email) {
+          showToast('Please provide your registered email', 'error');
+          return;
+        }
+        try {
+          btn.style.pointerEvents = 'none';
+          btn.style.opacity = '0.5';
+          const res = await fetch('/send_forgot_otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+          });
+          const data = await res.json();
+          if (data.success) {
+            showToast('Password reset code resent!', 'success');
+            startResendCountdown(60);
+          } else {
+            showToast(data.msg || 'Error resending OTP', 'error');
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+          }
+        } catch (err) {
+          showToast('Network error, please try again.', 'error');
+          btn.style.pointerEvents = 'auto';
+          btn.style.opacity = '1';
+        }
       }
     }
 

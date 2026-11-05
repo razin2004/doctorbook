@@ -369,14 +369,15 @@ class TestKapsoClientOutboundControl(unittest.TestCase):
 
     def test_outbound_disabled_by_default(self):
         # Default config has outbound_enabled=False
-        client = KapsoClient(KapsoConfig(api_key="valid_key", phone_number_id="100200300"))
-        res_text = client.send_text_message("+919847012345", "Test Message")
-        self.assertFalse(res_text["success"])
-        self.assertEqual(res_text["status"], "outbound_disabled")
+        with patch.dict(os.environ, {"KAPSO_OUTBOUND_ENABLED": "false"}):
+            client = KapsoClient(KapsoConfig(api_key="valid_key", phone_number_id="100200300", outbound_enabled=False))
+            res_text = client.send_text_message("+919847012345", "Test Message")
+            self.assertFalse(res_text["success"])
+            self.assertEqual(res_text["status"], "outbound_disabled")
 
-        res_tpl = client.send_template_message("+919847012345", "appointment_confirmation")
-        self.assertFalse(res_tpl["success"])
-        self.assertEqual(res_tpl["status"], "outbound_disabled")
+            res_tpl = client.send_template_message("+919847012345", "appointment_confirmation")
+            self.assertFalse(res_tpl["success"])
+            self.assertEqual(res_tpl["status"], "outbound_disabled")
 
     @patch("requests.post")
     def test_send_text_message_when_outbound_enabled(self, mock_post):

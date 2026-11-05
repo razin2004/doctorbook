@@ -2452,6 +2452,19 @@ def get_doctor_invite_html(doctor_name, specialization, activation_url, email=No
 </html>"""
 # ===================== Patient & Doctor Auth Routes =====================
 
+def send_whatsapp_message(phone_number, message):
+    """
+    Delivers a message to the recipient's WhatsApp number via KapsoClient.
+    Strictly checks that outbound messaging is enabled.
+    Never logs message content, OTP values, or unmasked phone numbers.
+    """
+    if app.config.get('TESTING'):
+        return {"success": True, "message_id": "test_msg_id", "status": "accepted"}
+    from services.kapso_client import KapsoClient
+    client = KapsoClient()
+    return client.send_text_message(phone_number, message)
+
+
 @app.route('/patient_register', methods=['POST'])
 def patient_register():
     data = request.get_json() or request.form
@@ -2488,7 +2501,7 @@ def patient_register():
         if existing_email_user:
             return jsonify(success=False, msg="This email address is already registered.")
 
-    # Create patient account with phone_verified=False (ready for future WhatsApp OTP)
+    # Create unverified patient account
     new_user = User(
         name=name.title(),
         phone_number=norm_phone,
@@ -2496,21 +2509,196 @@ def patient_register():
         password_hash=generate_password_hash(password),
         role="patient",
         phone_verified=False,
+        phone_verified_at=None,
         email_verified=False
     )
     db.session.add(new_user)
     db.session.commit()
 
-    # Direct login into patient session
-    session['user_id'] = new_user.id
-    session['user_name'] = new_user.name
+    # Generate 6-digit WhatsApp OTP
+    otp_code = generate_secure_otp(6)
+    expiry_time = datetime.utcnow() + timedelta(minutes=5)
+    hashed_otp = hash_otp(otp_code)
+    otp_key = f"patient_reg_{norm_phone}"
+
+    OTP.query.filter_by(email=otp_key).delete()
+    new_otp = OTP(
+        email=otp_key,
+        otp=hashed_otp,
+        expiry=expiry_time,
+        attempt_count=0,
+        max_attempts=5,
+        consumed_at=None
+    )
+    db.session.add(new_otp)
+    db.session.commit()
+
+    # Session pending registration tracking
+    session['pending_reg_phone'] = norm_phone
+    session['pending_reg_user_id'] = new_user.id
+    session['pending_reg_last_sent'] = datetime.utcnow().isoformat()
+
+    # Deliver OTP via WhatsApp
+    message = f"Your PrimeCare Clinic verification code is: {otp_code}. Valid for 5 minutes. Enter this code to verify your phone number and complete registration."
+    res = send_whatsapp_message(norm_phone, message)
+    if not res.get("success"):
+        app.logger.warning(f"WhatsApp OTP delivery warning for {norm_phone}: {res.get('error')}")
+        if not app.config.get('TESTING'):
+            return jsonify(
+                success=False,
+                msg=f"Could not send WhatsApp verification code: {res.get('error') or 'delivery failed'}. Please ensure your mobile number is active on WhatsApp.",
+                error_code=res.get("status") or "DELIVERY_FAILED"
+            ), 400
+
+    masked_phone = norm_phone[:3] + " " + norm_phone[3:6] + " ••• " + norm_phone[-4:] if len(norm_phone) >= 10 else norm_phone
+    app.logger.info(f"AUDIT: WhatsApp OTP dispatched to {norm_phone} for patient registration")
+    return jsonify(
+        success=True,
+        require_otp=True,
+        phone_number=norm_phone,
+        masked_phone=masked_phone,
+        msg=f"Verification code sent to WhatsApp ({masked_phone}). Please enter the 6-digit code.",
+        redirect_url="/patient_dashboard"
+    )
+
+
+@app.route('/patient_verify_registration_otp', methods=['POST'])
+def patient_verify_registration_otp():
+    data = request.get_json() or request.form
+    raw_phone = (data.get('phone_number') or session.get('pending_reg_phone') or '').strip()
+    otp_entered = (data.get('otp') or '').strip()
+
+    if not raw_phone or not otp_entered:
+        return jsonify(success=False, msg="Mobile number and verification code are required.")
+
+    norm_phone = normalize_phone_number(raw_phone) or raw_phone
+    otp_key = f"patient_reg_{norm_phone}"
+
+    otp_record = OTP.query.filter_by(email=otp_key).first()
+    if not otp_record or otp_record.consumed_at is not None:
+        return jsonify(success=False, msg="Invalid or expired verification code. Please request a new code.")
+
+    if otp_record.attempt_count >= otp_record.max_attempts:
+        OTP.query.filter_by(email=otp_key).delete()
+        db.session.commit()
+        return jsonify(success=False, msg="Too many incorrect attempts. Please request a new verification code.")
+
+    if datetime.utcnow() > otp_record.expiry:
+        OTP.query.filter_by(email=otp_key).delete()
+        db.session.commit()
+        return jsonify(success=False, msg="Verification code has expired. Please request a new code.")
+
+    if not verify_otp_hash(otp_entered, otp_record.otp):
+        otp_record.attempt_count += 1
+        db.session.commit()
+        remaining = max(0, otp_record.max_attempts - otp_record.attempt_count)
+        if remaining == 0:
+            OTP.query.filter_by(email=otp_key).delete()
+            db.session.commit()
+            return jsonify(success=False, msg="Too many incorrect attempts. Please request a new verification code.")
+        return jsonify(success=False, msg=f"Invalid verification code. {remaining} attempt(s) remaining.")
+
+    # OTP is valid!
+    otp_record.consumed_at = datetime.utcnow()
+    user = User.query.filter_by(phone_number=norm_phone, role="patient").first()
+    if not user:
+        return jsonify(success=False, msg="Patient record not found. Please register again.")
+
+    user.phone_verified = True
+    user.phone_verified_at = datetime.utcnow()
+    db.session.commit()
+
+    OTP.query.filter_by(email=otp_key).delete()
+    db.session.commit()
+
+    # Clear pending registration session
+    session.pop('pending_reg_phone', None)
+    session.pop('pending_reg_user_id', None)
+    session.pop('pending_reg_last_sent', None)
+
+    # Establish authenticated patient session
+    session['user_id'] = user.id
+    session['user_name'] = user.name
     session['user_role'] = "patient"
-    session['user_phone'] = new_user.phone_number
-    session['user_email'] = new_user.email
+    session['user_phone'] = user.phone_number
+    session['user_email'] = user.email
     session.pop('admin_logged_in', None)
     session.pop('admin_email', None)
 
-    return jsonify(success=True, msg="Account created successfully", redirect_url="/patient_dashboard")
+    # Send welcome WhatsApp message (best-effort)
+    try:
+        send_whatsapp_message(
+            norm_phone,
+            f"Hello {user.name}! Welcome to PrimeCare Clinic. Your account has been verified successfully. You can now book and manage your appointments anytime."
+        )
+    except Exception:
+        pass
+
+    app.logger.info(f"AUDIT: Patient {user.id} ({norm_phone}) verified phone via WhatsApp OTP")
+    return jsonify(
+        success=True,
+        msg="Mobile number verified successfully! Welcome to PrimeCare Clinic.",
+        redirect_url="/patient_dashboard"
+    )
+
+
+@app.route('/patient_resend_registration_otp', methods=['POST'])
+def patient_resend_registration_otp():
+    data = request.get_json() or request.form
+    raw_phone = (data.get('phone_number') or session.get('pending_reg_phone') or '').strip()
+
+    if not raw_phone:
+        return jsonify(success=False, msg="Mobile number is required.")
+
+    norm_phone = normalize_phone_number(raw_phone) or raw_phone
+
+    # 60-second cooldown check
+    last_sent_str = session.get('pending_reg_last_sent')
+    if last_sent_str:
+        try:
+            last_sent = datetime.fromisoformat(last_sent_str)
+            elapsed = (datetime.utcnow() - last_sent).total_seconds()
+            if elapsed < 60:
+                remaining_sec = int(60 - elapsed)
+                return jsonify(success=False, msg=f"Please wait {remaining_sec} seconds before requesting a new code.")
+        except Exception:
+            pass
+
+    otp_code = generate_secure_otp(6)
+    expiry_time = datetime.utcnow() + timedelta(minutes=5)
+    hashed_otp = hash_otp(otp_code)
+    otp_key = f"patient_reg_{norm_phone}"
+
+    OTP.query.filter_by(email=otp_key).delete()
+    new_otp = OTP(
+        email=otp_key,
+        otp=hashed_otp,
+        expiry=expiry_time,
+        attempt_count=0,
+        max_attempts=5,
+        consumed_at=None
+    )
+    db.session.add(new_otp)
+    db.session.commit()
+
+    session['pending_reg_phone'] = norm_phone
+    session['pending_reg_last_sent'] = datetime.utcnow().isoformat()
+
+    message = f"Your new PrimeCare Clinic verification code is: {otp_code}. Valid for 5 minutes. Enter this code to complete registration."
+    res = send_whatsapp_message(norm_phone, message)
+    if not res.get("success") and not app.config.get('TESTING'):
+        return jsonify(
+            success=False,
+            msg=f"Could not send WhatsApp verification code: {res.get('error') or 'delivery failed'}.",
+            error_code="DELIVERY_FAILED"
+        ), 400
+
+    masked_phone = norm_phone[:3] + " " + norm_phone[3:6] + " ••• " + norm_phone[-4:] if len(norm_phone) >= 10 else norm_phone
+    app.logger.info(f"AUDIT: Resent WhatsApp OTP to {norm_phone}")
+    return jsonify(
+        success=True,
+        msg=f"A new verification code has been sent to WhatsApp ({masked_phone})."
+    )
 
 @app.route('/patient_login', methods=['POST'])
 def patient_login():
@@ -2802,16 +2990,6 @@ def doctor_reset_password():
 
     app.logger.info(f"AUDIT: Doctor password reset successfully for {user.email}")
     return jsonify(success=True, msg="Password updated successfully. Please sign in with Doctor Login.", redirect_url="/")
-
-def send_whatsapp_message(phone_number, message):
-    """
-    Delivers a message to the recipient's WhatsApp number via KapsoClient.
-    Strictly checks that outbound messaging is enabled.
-    Never logs message content, OTP values, or unmasked phone numbers.
-    """
-    from services.kapso_client import KapsoClient
-    client = KapsoClient()
-    return client.send_text_message(phone_number, message)
 
 
 @app.route('/doctor_send_change_phone_otp', methods=['POST'])
@@ -3322,6 +3500,9 @@ def send_forgot_otp():
 @app.route('/verify_patient_otp', methods=['POST'])
 def verify_patient_otp():
     data = request.get_json() or request.form
+    # If caller submitted a phone number or has pending registration in session, route to registration verification
+    if (data.get('phone_number') or session.get('pending_reg_phone')) and not data.get('email'):
+        return patient_verify_registration_otp()
     email = (data.get('email') or session.get('temp_forgot_email') or '').strip().lower()
     otp_entered = (data.get('otp') or '').strip()
 
