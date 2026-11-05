@@ -1,0 +1,1545 @@
+{
+  "users": [
+    {
+      "id": 3,
+      "name": "Arshi",
+      "email": "www.razinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "phone_verified": false,
+      "email_verified": false,
+      "password_hash": "scrypt:32768:8:1$ez9R7NlwCcwbW3Nn$9adad31512a798e7afda71be4305b5a836d99a6906d48fba02a9784e977a0c8b25cf6b262faf03210ad0b32900baf87e8afe401b7cd75546f8ef7303f1f3925d",
+      "role": "doctor"
+    },
+    {
+      "id": 2,
+      "name": "Guest Patient",
+      "email": "guest@primecare.com",
+      "phone_number": null,
+      "phone_verified": false,
+      "email_verified": false,
+      "password_hash": "scrypt:32768:8:1$KiQqxYVlhTwte8ww$61e9ddcb307341ad661349b529340c107b2390ec318799089ed4d943cc782ae898c9273eb26f29c75b9fa92cd7d1df854386bcd7a441138c1a2c09f679a10f62",
+      "role": "patient"
+    },
+    {
+      "id": 12,
+      "name": "User A",
+      "email": "usera@example.com",
+      "phone_number": "+919847444001",
+      "phone_verified": true,
+      "email_verified": false,
+      "password_hash": "scrypt:32768:8:1$59ML7jk6Ce7sMSHy$278d93ea6f6a6bea90f1b10913c3deb4d1a51c9430fe960fea9975a6fd57c6e15f10b4ac8fc9e8cadb07a0f29e3a4475c17dab27398ea92107005bc8f647d8f1",
+      "role": "patient"
+    },
+    {
+      "id": 13,
+      "name": "User B",
+      "email": "userb@example.com",
+      "phone_number": "+919847444002",
+      "phone_verified": true,
+      "email_verified": false,
+      "password_hash": "scrypt:32768:8:1$ldNGpS7Gz3EHIfnu$680b2431666cc378b0f4b64985304bf81f362b2d7a89cc8d4f087fb150ec24881bc4da635196e6f3cfb2fed50d3f51e2e4b6f31ef883535ba1b7c7dfcbc70d55",
+      "role": "patient"
+    },
+    {
+      "id": 59,
+      "name": "Dr. Test Specialist",
+      "email": "testdoc@primecare.com",
+      "phone_number": "+919847333003",
+      "phone_verified": true,
+      "email_verified": true,
+      "password_hash": "scrypt:32768:8:1$N10zPiuCsQijJXbu$3f705949d60bc189413354e751d6fb15b5a69618179e80593a52296d48f5e50ab83493e47a791515bcfa453cba51cd2865e397463f4ee95ced94b650b3313f98",
+      "role": "doctor"
+    },
+    {
+      "id": 1,
+      "name": "Hafis",
+      "email": "razinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "phone_verified": false,
+      "email_verified": false,
+      "password_hash": "scrypt:32768:8:1$1xgpg6DH0S91w1oM$b8d485b731e02c25082e9e0b4e269d5dbaf4bcb6fd22827d25b02c9ef78c5c8fe851bd3fa443d7bf2204cc4f87a75f65ecdf703b8ca70c7266759981f4d82f68",
+      "role": "doctor"
+    },
+    {
+      "id": 56,
+      "name": "Dr. Mobile Changer",
+      "email": "doctest_change@primecare.com",
+      "phone_number": "+919847333444",
+      "phone_verified": true,
+      "email_verified": true,
+      "password_hash": "fakehash",
+      "role": "doctor"
+    },
+    {
+      "id": 15,
+      "name": "Dr. Cardio Test",
+      "email": "cardiodoc@primecare.com",
+      "phone_number": "+919847000005",
+      "phone_verified": false,
+      "email_verified": true,
+      "password_hash": "scrypt:32768:8:1$9WyriQ9aUYvuI8CN$f55dc3b15f9c29a8325ad3416e810f9da8e757547a40e96c206f981aab52d7af6b5ebfc0aa54b9508c05c327744e5651af2f060dad6b7675d467c2fc9c003798",
+      "role": "doctor"
+    },
+    {
+      "id": 57,
+      "name": "Test Registration Patient",
+      "email": "testreg@example.com",
+      "phone_number": "+919847111001",
+      "phone_verified": true,
+      "email_verified": false,
+      "password_hash": "scrypt:32768:8:1$cplfKgNpGCFXCJb0$a25973485fdb9246ed56477f0387aa0ef1d47489081da926c47fa1312bddbb7e12d997e31d3d2a3ad6fceb5659bdd16f8706b9494e13ccf0942ce9736e16c47b",
+      "role": "patient"
+    },
+    {
+      "id": 58,
+      "name": "Legacy Patient",
+      "email": "legacypatient@example.com",
+      "phone_number": "+919847222002",
+      "phone_verified": false,
+      "email_verified": false,
+      "password_hash": "scrypt:32768:8:1$o33yb1t37IdvFuvb$c6a1fb7c12f9d5aa626d5cbe7392e7cec4097c41d04a0e811725ad016db55d05818ad3494db6a86acbde082dd78ae43434e27b2a85beda2529f1e0408f2f0f13",
+      "role": "patient"
+    }
+  ],
+  "doctor_sessions": [
+    {
+      "id": 4,
+      "doctor_name": "Dr. Razin",
+      "specialization": "Cardiologist",
+      "email": "www.razinmuhammed199@gmail.com",
+      "phone_number": null,
+      "phone_updated_by": null,
+      "status": "completed",
+      "current_token": 0,
+      "session_date": "2026-09-15",
+      "total_tokens": 0
+    },
+    {
+      "id": 1,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "email": "www.razinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "phone_updated_by": null,
+      "status": "idle",
+      "current_token": 0,
+      "session_date": "2026-11-02",
+      "total_tokens": 0
+    },
+    {
+      "id": 2,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "email": "razinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "phone_updated_by": null,
+      "status": "idle",
+      "current_token": 0,
+      "session_date": "2026-11-02",
+      "total_tokens": 0
+    },
+    {
+      "id": 3,
+      "doctor_name": "Dr. Fathima Nafa",
+      "specialization": "General Physician",
+      "email": "w.razinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "phone_updated_by": null,
+      "status": "idle",
+      "current_token": 0,
+      "session_date": "2026-11-02",
+      "total_tokens": 0
+    },
+    {
+      "id": 5,
+      "doctor_name": "Dr. Aysha Hyfa",
+      "specialization": "General Physician",
+      "email": "wrazinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "phone_updated_by": null,
+      "status": "idle",
+      "current_token": 0,
+      "session_date": "2026-11-02",
+      "total_tokens": 0
+    },
+    {
+      "id": 6,
+      "doctor_name": "Dr. Muhammad",
+      "specialization": "ENT",
+      "email": "www.razinmuhammed19@gmail.com",
+      "phone_number": null,
+      "phone_updated_by": null,
+      "status": "idle",
+      "current_token": 0,
+      "session_date": "2026-11-02",
+      "total_tokens": 0
+    },
+    {
+      "id": 7,
+      "doctor_name": "Dr. Test Specialist",
+      "specialization": "General Medicine",
+      "email": "testdoc@primecare.com",
+      "phone_number": "+919847333003",
+      "phone_updated_by": null,
+      "status": "idle",
+      "current_token": 0,
+      "session_date": "2026-11-02",
+      "total_tokens": 0
+    },
+    {
+      "id": 10,
+      "doctor_name": "Dr. Unactivated",
+      "specialization": "ENT",
+      "email": "unactdoc@primecare.com",
+      "phone_number": "+919847000011",
+      "phone_updated_by": null,
+      "status": "idle",
+      "current_token": 0,
+      "session_date": null,
+      "total_tokens": 0
+    },
+    {
+      "id": 30,
+      "doctor_name": "Dr. Cardio Alpha",
+      "specialization": "Cardiology",
+      "email": null,
+      "phone_number": null,
+      "phone_updated_by": null,
+      "status": "completed",
+      "current_token": 0,
+      "session_date": "2026-11-02",
+      "total_tokens": 0
+    },
+    {
+      "id": 34,
+      "doctor_name": "Dr. NoConfirm Tester",
+      "specialization": "General Medicine",
+      "email": "doc_noconfirm@primecare.com",
+      "phone_number": "+919847999888",
+      "phone_updated_by": "doctorbooksystem@gmail.com",
+      "status": "idle",
+      "current_token": 0,
+      "session_date": null,
+      "total_tokens": 0
+    },
+    {
+      "id": 35,
+      "doctor_name": "Dr. Mobile Changer",
+      "specialization": "Dermatology",
+      "email": "doctest_change@primecare.com",
+      "phone_number": "+919847333444",
+      "phone_updated_by": "doctest_change@primecare.com",
+      "status": "idle",
+      "current_token": 0,
+      "session_date": null,
+      "total_tokens": 0
+    },
+    {
+      "id": 36,
+      "doctor_name": "Dr. Valid New",
+      "specialization": "Neurology",
+      "email": "newdoc@primecare.com",
+      "phone_number": "+919847000099",
+      "phone_updated_by": "doctorbooksystem@gmail.com",
+      "status": "idle",
+      "current_token": 0,
+      "session_date": null,
+      "total_tokens": 0
+    },
+    {
+      "id": 8,
+      "doctor_name": "Dr. Cardio Test",
+      "specialization": "Cardiology",
+      "email": "cardiodoc@primecare.com",
+      "phone_number": "+919847000007",
+      "phone_updated_by": "doctorbooksystem@gmail.com",
+      "status": "idle",
+      "current_token": 0,
+      "session_date": "2026-11-02",
+      "total_tokens": 0
+    }
+  ],
+  "patient_bookings": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-16",
+      "time": "23:04-23:12",
+      "token": 2,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "13",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 3,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-16",
+      "time": "23:04-23:12",
+      "token": 4,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "13",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 7,
+      "user_id": 2,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-16",
+      "time": "23:04-23:12",
+      "token": 8,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin Muhammad",
+      "age": "-",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 2,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-16",
+      "time": "23:04-23:12",
+      "token": 2,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "13",
+      "phone_number": null,
+      "status": "cancelled"
+    },
+    {
+      "id": 4,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-16",
+      "time": "23:04-23:12",
+      "token": 5,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "13",
+      "phone_number": null,
+      "status": "cancelled"
+    },
+    {
+      "id": 6,
+      "user_id": 2,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-16",
+      "time": "23:04-23:12",
+      "token": 7,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "-",
+      "phone_number": null,
+      "status": "cancelled"
+    },
+    {
+      "id": 5,
+      "user_id": 2,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-16",
+      "time": "23:04-23:12",
+      "token": 6,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Rafi",
+      "age": "-",
+      "phone_number": null,
+      "status": "cancelled"
+    },
+    {
+      "id": 11,
+      "user_id": 2,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-08",
+      "time": "11:11-22:22",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "razin",
+      "age": "45",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 12,
+      "user_id": 2,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-08",
+      "time": "11:11-22:22",
+      "token": 2,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "rubi",
+      "age": "-",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 13,
+      "user_id": 2,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-08",
+      "time": "11:11-22:22",
+      "token": 3,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "mufee",
+      "age": "-",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 14,
+      "user_id": 2,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-08",
+      "time": "11:11-22:22",
+      "token": 4,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "muhd",
+      "age": "-",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 15,
+      "user_id": 2,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-08",
+      "time": "11:11-22:22",
+      "token": 5,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "tiii",
+      "age": "-",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 20,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-08",
+      "time": "00:00-23:00",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "17",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 21,
+      "user_id": 1,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-08",
+      "time": "11:11-22:22",
+      "token": 6,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "Fazi",
+      "age": "35",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 22,
+      "user_id": 1,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-08",
+      "time": "11:11-22:22",
+      "token": 7,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "Tam",
+      "age": "67",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 23,
+      "user_id": 1,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-08",
+      "time": "11:11-22:22",
+      "token": 8,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "89",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 24,
+      "user_id": 2,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-08",
+      "time": "11:11-22:22",
+      "token": 9,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "razin",
+      "age": "89",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 8,
+      "user_id": 2,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-09",
+      "time": "23:04-23:12",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "21",
+      "phone_number": null,
+      "status": "cancelled"
+    },
+    {
+      "id": 27,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-09",
+      "time": "01:04-23:12",
+      "token": 3,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Fathima",
+      "age": "19",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 28,
+      "user_id": 1,
+      "doctor_name": "Dr. Fathima Nafa",
+      "specialization": "General Physician",
+      "date": "2026-06-23",
+      "time": "05:59-09:59",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1GxHCRPeJ_tgKFBdWup2pMECrkmFn_WYhJqJynZE1Nj8/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "21",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 26,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-09",
+      "time": "01:04-23:12",
+      "token": 2,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Rof",
+      "age": "20",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 31,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-09",
+      "time": "01:04-23:40",
+      "token": 6,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Fathima",
+      "age": "10",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 25,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-09",
+      "time": "01:04-23:12",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "23",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 29,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-09",
+      "time": "01:04-23:12",
+      "token": 4,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "26",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 30,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-09",
+      "time": "01:04-23:40",
+      "token": 5,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Fathima",
+      "age": "100",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 34,
+      "user_id": 2,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-07-17",
+      "time": "11:01-23:04",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Pappan",
+      "age": "22",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 33,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-10",
+      "time": "00:17-19:00",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Fathima",
+      "age": "19",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 32,
+      "user_id": 1,
+      "doctor_name": "Dr. Arshitha Abdurahman",
+      "specialization": "Gynecologist",
+      "date": "2026-06-10",
+      "time": "12:45-13:59",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1wgGCZc1HgvOpE9PxU5CsTDGgUJgD3u53XGqVV0RjAAs/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "21",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 9,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-12",
+      "time": "11:01-23:04",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Raz",
+      "age": "21",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 10,
+      "user_id": 1,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-12",
+      "time": "11:01-23:04",
+      "token": 2,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Raf",
+      "age": "23",
+      "phone_number": null,
+      "status": "confirmed"
+    },
+    {
+      "id": 35,
+      "user_id": 2,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-09-21",
+      "time": "00:00-23:00",
+      "token": 1,
+      "sheet_url": "https://docs.google.com/spreadsheets/d/1686cdM_FvfXP_OhFzgKCp4Vy3jd0jkUJ6XMizQJ0-eY/edit?usp=sharing",
+      "patient_name": "Razin",
+      "age": "22",
+      "phone_number": null,
+      "status": "confirmed"
+    }
+  ],
+  "app_settings": [
+    {
+      "key": "admin_password_hash",
+      "value": "scrypt:32768:8:1$Kgf5p0Ty7WgAEjE5$d7a7f051971fa3918b8371b93fcd0808ef17b626d03a285249bf8b31ec387af6eeee2e4e4aeeacebeda284d91dcba16f862114429aa45baf41a91a110e8e7784"
+    },
+    {
+      "key": "clinic_phone",
+      "value": "+91 85920 31725"
+    },
+    {
+      "key": "clinic_whatsapp",
+      "value": "918592031725"
+    },
+    {
+      "key": "clinic_address",
+      "value": "Main Road, Koorachundu, Kerala 673627"
+    },
+    {
+      "key": "clinic_map_link",
+      "value": "https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z/data=!3m1!4b1!4m4!3m3!8m2!3d11.5384625!4d75.8455156?entry=ttu"
+    },
+    {
+      "key": "stat_specialists",
+      "value": "20+"
+    },
+    {
+      "key": "stat_patients",
+      "value": "40k+"
+    },
+    {
+      "key": "stat_since",
+      "value": "2012"
+    },
+    {
+      "key": "stat_certified",
+      "value": "ISO"
+    },
+    {
+      "key": "promo_heading",
+      "value": "Trusted Care For <br><span>Healthy Living.</span>"
+    },
+    {
+      "key": "promo_subheading",
+      "value": "Consult with world-class specialists at PrimeCare Clinic. We combine decades of medical heritage with modern diagnostic technology for your wellness."
+    },
+    {
+      "key": "promo_heritage_heading",
+      "value": "Over 15 Years of Medical Excellence"
+    },
+    {
+      "key": "promo_heritage_text",
+      "value": "PrimeCare Clinic was founded with a clear mission: to bring institutional-grade healthcare to our local community. Today, we stand as a beacon of clinical excellence, serving thousands with surgical precision and primary compassion."
+    },
+    {
+      "key": "promo_award_title",
+      "value": "National Safety Award"
+    },
+    {
+      "key": "promo_award_desc",
+      "value": "2025 Clinical Excellence Winner"
+    },
+    {
+      "key": "promo_heritage_image",
+      "value": "/static/image/background11.jpeg"
+    },
+    {
+      "key": "promo_leader_1_name",
+      "value": "Dr. Sooppy K K"
+    },
+    {
+      "key": "promo_leader_1_role",
+      "value": "Founder & Chief Medical Officer"
+    },
+    {
+      "key": "promo_leader_1_bio",
+      "value": "Former Chief of Medicine with over 20 years of clinical and surgical experience."
+    },
+    {
+      "key": "promo_leader_1_image",
+      "value": "/static/doctor_images/Dr_Sooppy_K_K.jpg"
+    },
+    {
+      "key": "promo_leader_2_name",
+      "value": "Dr. Hafis Muhammad"
+    },
+    {
+      "key": "promo_leader_2_role",
+      "value": "Clinic Manager"
+    },
+    {
+      "key": "promo_leader_2_bio",
+      "value": "Leading our patient-first transformation with 5 years in healthcare operations."
+    },
+    {
+      "key": "promo_leader_2_image",
+      "value": "/static/doctor_images/Dr_Hafis_Muhammad.jpg"
+    },
+    {
+      "key": "promo_facility_image",
+      "value": "/static/image/hero_premium.png"
+    },
+    {
+      "key": "ticker_solo_mode",
+      "value": "disabled"
+    },
+    {
+      "key": "admin_whatsapp_phone",
+      "value": "+918592031725"
+    }
+  ],
+  "specializations": [
+    {
+      "id": 1,
+      "name": "Cardiologist",
+      "description": "Cardiologist Department",
+      "is_active": 1,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 2,
+      "name": "ENT",
+      "description": "ENT Department",
+      "is_active": 1,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 3,
+      "name": "Ent",
+      "description": "Ent Department",
+      "is_active": 1,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 4,
+      "name": "General Medicine",
+      "description": "General Medicine Department",
+      "is_active": 1,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 5,
+      "name": "General Physician",
+      "description": "General Physician Department",
+      "is_active": 1,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 6,
+      "name": "Gynecologist",
+      "description": "Gynecologist Department",
+      "is_active": 1,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 7,
+      "name": "Ophthalmologist",
+      "description": "Ophthalmologist Department",
+      "is_active": 1,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 8,
+      "name": "Cardiology",
+      "description": "Cardiology Department",
+      "is_active": 1,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    }
+  ],
+  "doctors": [
+    {
+      "id": 1,
+      "name": "Dr. Arshitha Abdurahman",
+      "specialization_id": 6,
+      "specialization": "Gynecologist",
+      "qualification": "Specialist",
+      "email": "www.razinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "image_url": "https://res.cloudinary.com/dfwk3ps87/image/upload/v1751485326/primecare_doctors/Dr_Arshitha_Abdurahman.png",
+      "is_active": 1,
+      "consultation_fee": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 2,
+      "name": "Dr. Hafis Muhammad",
+      "specialization_id": 7,
+      "specialization": "Ophthalmologist",
+      "qualification": "Specialist",
+      "email": "razinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "image_url": "https://res.cloudinary.com/dfwk3ps87/image/upload/v1751485242/primecare_doctors/Dr_Hafis_Muhammad.png",
+      "is_active": 1,
+      "consultation_fee": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 3,
+      "name": "Dr. Sooppy K K",
+      "specialization_id": 5,
+      "specialization": "General Physician",
+      "qualification": "Specialist",
+      "email": "doctorbooksystem@gmail.com",
+      "phone_number": null,
+      "image_url": "https://res.cloudinary.com/dfwk3ps87/image/upload/v1751486466/primecare_doctors/Dr_Sooppy_K_K.png",
+      "is_active": 1,
+      "consultation_fee": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 4,
+      "name": "Dr. Fathima Nafa",
+      "specialization_id": 5,
+      "specialization": "General Physician",
+      "qualification": "Specialist",
+      "email": "w.razinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "image_url": "https://res.cloudinary.com/dfwk3ps87/image/upload/v1751637851/primecare_doctors/Dr_Fathima_Nafa.png",
+      "is_active": 1,
+      "consultation_fee": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 5,
+      "name": "Dr. Razin",
+      "specialization_id": 1,
+      "specialization": "Cardiologist",
+      "qualification": "Specialist",
+      "email": "www.razinmuhammed199@gmail.com",
+      "phone_number": null,
+      "image_url": "https://res.cloudinary.com/dfwk3ps87/image/upload/v1764971587/primecare_doctors/Dr._Razin.png",
+      "is_active": 1,
+      "consultation_fee": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 6,
+      "name": "Dr. Aysha Hyfa",
+      "specialization_id": 5,
+      "specialization": "General Physician",
+      "qualification": "Specialist",
+      "email": "wrazinmuhammed1999@gmail.com",
+      "phone_number": null,
+      "image_url": "https://res.cloudinary.com/dfwk3ps87/image/upload/v1765007230/primecare_doctors/Dr._Aysha_Hyfa.jpg",
+      "is_active": 1,
+      "consultation_fee": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 7,
+      "name": "Dr. Muhammad",
+      "specialization_id": 2,
+      "specialization": "ENT",
+      "qualification": "Specialist",
+      "email": "www.razinmuhammed19@gmail.com",
+      "phone_number": null,
+      "image_url": "https://res.cloudinary.com/dfwk3ps87/image/upload/v1772876273/primecare_doctors/Dr._Muhammad.jpg",
+      "is_active": 1,
+      "consultation_fee": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    }
+  ],
+  "doctor_schedules": [
+    {
+      "id": 1,
+      "doctor_id": 1,
+      "day_of_week": "Monday",
+      "start_time": "11:11",
+      "end_time": "22:22",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 2,
+      "doctor_id": 1,
+      "day_of_week": "Tuesday",
+      "start_time": "05:45",
+      "end_time": "13:59",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 3,
+      "doctor_id": 1,
+      "day_of_week": "Wednesday",
+      "start_time": "00:13",
+      "end_time": "13:59",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 4,
+      "doctor_id": 1,
+      "day_of_week": "Thursday",
+      "start_time": "02:00",
+      "end_time": "19:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 5,
+      "doctor_id": 1,
+      "day_of_week": "Friday",
+      "start_time": "01:10",
+      "end_time": "02:12",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 6,
+      "doctor_id": 1,
+      "day_of_week": "Saturday",
+      "start_time": "04:45",
+      "end_time": "13:59",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 7,
+      "doctor_id": 2,
+      "day_of_week": "Monday",
+      "start_time": "00:00",
+      "end_time": "23:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 8,
+      "doctor_id": 2,
+      "day_of_week": "Tuesday",
+      "start_time": "01:04",
+      "end_time": "23:50",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 9,
+      "doctor_id": 2,
+      "day_of_week": "Wednesday",
+      "start_time": "00:17",
+      "end_time": "19:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 10,
+      "doctor_id": 2,
+      "day_of_week": "Friday",
+      "start_time": "11:01",
+      "end_time": "23:04",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 11,
+      "doctor_id": 2,
+      "day_of_week": "Saturday",
+      "start_time": "01:00",
+      "end_time": "06:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 12,
+      "doctor_id": 3,
+      "day_of_week": "Wednesday",
+      "start_time": "01:00",
+      "end_time": "08:59",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 13,
+      "doctor_id": 3,
+      "day_of_week": "Friday",
+      "start_time": "13:30",
+      "end_time": "17:15",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 14,
+      "doctor_id": 3,
+      "day_of_week": "Sunday",
+      "start_time": "16:00",
+      "end_time": "22:30",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 15,
+      "doctor_id": 4,
+      "day_of_week": "Monday",
+      "start_time": "01:59",
+      "end_time": "09:59",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 16,
+      "doctor_id": 4,
+      "day_of_week": "Tuesday",
+      "start_time": "05:59",
+      "end_time": "09:59",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 17,
+      "doctor_id": 4,
+      "day_of_week": "Thursday",
+      "start_time": "05:59",
+      "end_time": "21:59",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 18,
+      "doctor_id": 4,
+      "day_of_week": "Friday",
+      "start_time": "05:59",
+      "end_time": "23:59",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 19,
+      "doctor_id": 5,
+      "day_of_week": "Tuesday",
+      "start_time": "08:20",
+      "end_time": "14:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 20,
+      "doctor_id": 5,
+      "day_of_week": "Wednesday",
+      "start_time": "08:20",
+      "end_time": "14:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 21,
+      "doctor_id": 5,
+      "day_of_week": "Friday",
+      "start_time": "08:20",
+      "end_time": "14:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 22,
+      "doctor_id": 6,
+      "day_of_week": "Monday",
+      "start_time": "13:15",
+      "end_time": "17:15",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 23,
+      "doctor_id": 6,
+      "day_of_week": "Friday",
+      "start_time": "13:15",
+      "end_time": "17:15",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 24,
+      "doctor_id": 6,
+      "day_of_week": "Saturday",
+      "start_time": "13:19",
+      "end_time": "22:19",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 25,
+      "doctor_id": 7,
+      "day_of_week": "Monday",
+      "start_time": "16:00",
+      "end_time": "18:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 26,
+      "doctor_id": 7,
+      "day_of_week": "Tuesday",
+      "start_time": "16:00",
+      "end_time": "18:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 27,
+      "doctor_id": 7,
+      "day_of_week": "Wednesday",
+      "start_time": "12:30",
+      "end_time": "16:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 28,
+      "doctor_id": 7,
+      "day_of_week": "Friday",
+      "start_time": "16:00",
+      "end_time": "18:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 29,
+      "doctor_id": 7,
+      "day_of_week": "Saturday",
+      "start_time": "02:00",
+      "end_time": "18:00",
+      "is_available": 1,
+      "is_override": 0,
+      "effective_date": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    }
+  ],
+  "doctor_leaves": [
+    {
+      "id": 1,
+      "doctor_id": null,
+      "doctor_name": "Dr Sooppy K K",
+      "specialization": "General Medicine",
+      "date": "2026-08-05",
+      "end_date": null,
+      "reason": "hi",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 2,
+      "doctor_id": null,
+      "doctor_name": "Dr Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2025-12-26",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 3,
+      "doctor_id": 7,
+      "doctor_name": "Dr. Muhammad",
+      "specialization": "Ent",
+      "date": "2026-03-23",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 4,
+      "doctor_id": null,
+      "doctor_name": "Dr Fathima Nafa",
+      "specialization": "General Medicine",
+      "date": "2026-03-28",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 5,
+      "doctor_id": null,
+      "doctor_name": "Dr. Karthik",
+      "specialization": "General Medicine",
+      "date": "2026-04-13",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 6,
+      "doctor_id": null,
+      "doctor_name": "Dr Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-04-29",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 7,
+      "doctor_id": null,
+      "doctor_name": "Dr Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-04-25",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 8,
+      "doctor_id": null,
+      "doctor_name": "Dr Sooppy K K",
+      "specialization": "General Medicine",
+      "date": "2026-04-24",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 9,
+      "doctor_id": null,
+      "doctor_name": "Dr Fathima Nafa",
+      "specialization": "General Medicine",
+      "date": "2026-04-18",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 10,
+      "doctor_id": 2,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-05-29",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 11,
+      "doctor_id": 3,
+      "doctor_name": "Dr. Sooppy K K",
+      "specialization": "General Physician",
+      "date": "2026-05-26",
+      "end_date": null,
+      "reason": "Personal",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 12,
+      "doctor_id": 2,
+      "doctor_name": "Dr. Hafis Muhammad",
+      "specialization": "Ophthalmologist",
+      "date": "2026-06-22",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 13,
+      "doctor_id": 3,
+      "doctor_name": "Dr. Sooppy K K",
+      "specialization": "General Physician",
+      "date": "2026-07-22",
+      "end_date": null,
+      "reason": "",
+      "status": "active",
+      "approved_by": null,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    }
+  ],
+  "clinic_holidays": [
+    {
+      "id": 1,
+      "date": "2026-04-23",
+      "reason": "Eid",
+      "is_recurring": 0,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 2,
+      "date": "2026-04-24",
+      "reason": "General Holiday",
+      "is_recurring": 0,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 3,
+      "date": "2026-04-25",
+      "reason": "General Holiday",
+      "is_recurring": 0,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 4,
+      "date": "2026-06-02",
+      "reason": "Eid",
+      "is_recurring": 0,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 5,
+      "date": "2026-06-06",
+      "reason": "General Holiday",
+      "is_recurring": 0,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    },
+    {
+      "id": 6,
+      "date": "2026-06-16",
+      "reason": "General Holiday",
+      "is_recurring": 0,
+      "created_at": "2026-11-02 19:07:29",
+      "updated_at": "2026-11-02 19:07:29"
+    }
+  ]
+}

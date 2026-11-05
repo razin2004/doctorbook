@@ -9,6 +9,7 @@ from unittest.mock import patch, MagicMock
 
 # Ensure root directory is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import tests.test_isolation
 
 from app import (
     app, db, User, DoctorSession, DoctorInvitation, PatientBooking, AppSettings, 
@@ -21,6 +22,7 @@ from whatsapp_role_resolver import resolve_whatsapp_sender_role
 class Phase1CTestSuite(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        tests.test_isolation.initialize_test_database(app, db)
         app.config['TESTING'] = True
         app.config['WTF_CSRF_ENABLED'] = False
         cls.client = app.test_client()
@@ -161,15 +163,8 @@ class Phase1CTestSuite(unittest.TestCase):
         self.assertTrue("registered" in data.get('msg', '').lower() or "conflict" in data.get('msg', '').lower())
         print("  [PASS] 3. Adding doctor with conflicting number fails")
 
-    @patch('app.client.create')
-    @patch('app.doctors_ws.append_row')
-    def test_04_add_doctor_with_valid_mobile_succeeds(self, mock_append, mock_create):
+    def test_04_add_doctor_with_valid_mobile_succeeds(self):
         """4. Adding a doctor with valid number must succeed"""
-        mock_sheet = MagicMock()
-        mock_doc = MagicMock()
-        mock_doc.id = "mock_sheet_id_123"
-        mock_doc.sheet1 = mock_sheet
-        mock_create.return_value = mock_doc
 
         valid_phone = "9847000099"
         norm_phone = normalize_phone_number(valid_phone)
@@ -205,14 +200,8 @@ class Phase1CTestSuite(unittest.TestCase):
             self.assertIsNotNone(doc.phone_updated_at)
         print("  [PASS] 4. Adding doctor with valid number succeeds")
 
-    @patch('app.doctors_ws.update')
-    @patch('app.doctors_ws.get_all_values')
-    def test_05_edit_doctor_mobile_succeeds(self, mock_get_all, mock_update):
+    def test_05_edit_doctor_mobile_succeeds(self):
         """5. Editing doctor mobile number must succeed"""
-        mock_get_all.return_value = [
-            ['No', 'Name', 'Specialization', 'Days', 'MondayTime', 'TuesdayTime', 'WednesdayTime', 'ThursdayTime', 'FridayTime', 'SaturdayTime', 'SundayTime', 'SheetName', 'SheetURL', 'Image', 'Email', 'Phone_Number'],
-            ['1', 'Dr. Cardio Test', 'Cardiology', 'Monday, Tuesday', '09:00-11:00', '09:00-11:00', '', '', '', '', '', 'Sheet_1', 'http://sheet', '', 'cardiodoc@primecare.com', '+919847000001']
-        ]
 
         with self.client.session_transaction() as sess:
             sess.clear()
@@ -265,20 +254,17 @@ class Phase1CTestSuite(unittest.TestCase):
         self.assertIn("conflict", data.get('msg', '').lower())
         print("  [PASS] 6. Conflicting number updates fail")
 
-    @patch('app.doctors_ws.get_all_values')
-    def test_07_google_sheets_phone_synchronization(self, mock_get_all):
-        """7. Google Sheets phone synchronization must work"""
+    def test_07_google_sheets_phone_synchronization(self):
+        """7. Doctor phone synchronization must work from database"""
         with app.app_context():
-            existing_docs = DoctorSession.query.all()
-            sheet_rows = [
-                ['No', 'Name', 'Specialization', 'Days', 'MondayTime', 'TuesdayTime', 'WednesdayTime', 'ThursdayTime', 'FridayTime', 'SaturdayTime', 'SundayTime', 'SheetName', 'SheetURL', 'Image', 'Email', 'Phone_Number']
-            ]
-            for idx, d in enumerate(existing_docs):
-                phone = "+919847000007" if d.email == "cardiodoc@primecare.com" else (d.phone_number or "")
-                sheet_rows.append([
-                    str(idx + 1), d.doctor_name, d.specialization, 'Monday', '09:00-11:00', '', '', '', '', '', '', f'Sheet_{idx}', '', '', d.email, phone
-                ])
-            mock_get_all.return_value = sheet_rows
+            from app import Doctor
+            doc = Doctor.query.filter_by(email="cardiodoc@primecare.com").first()
+            if not doc:
+                doc = Doctor(name="Dr. Cardio Test", specialization="Cardiology", email="cardiodoc@primecare.com", phone_number="+919847000007", is_active=True)
+                db.session.add(doc)
+            else:
+                doc.phone_number = "+919847000007"
+            db.session.commit()
 
             sync_success = sync_doctors_from_sheet()
             self.assertTrue(sync_success, "sync_doctors_from_sheet should succeed")
@@ -403,7 +389,7 @@ class Phase1CTestSuite(unittest.TestCase):
         with app.app_context():
             otp_rec = OTP.query.filter_by(email="doctor_reset_cardiodoc@primecare.com").first()
             self.assertIsNotNone(otp_rec)
-            self.assertEqual(len(otp_rec.otp), 6)
+            self.assertEqual(len(otp_rec.otp), 64)
             self.assertGreater(otp_rec.expiry, datetime.utcnow())
         print("  [PASS] 13. Doctor forgot password using email works")
 
@@ -422,10 +408,15 @@ class Phase1CTestSuite(unittest.TestCase):
         data = res.get_json()
         self.assertTrue(data.get('success'))
 
+        import re
+        sent_html = self.mock_send_email.call_args[0][2]
+        match = re.search(r'\b\d{6}\b', sent_html)
+        otp_code = match.group(0) if match else "123456"
+
         with app.app_context():
             otp_rec = OTP.query.filter_by(email="doctor_reset_cardiodoc@primecare.com").first()
             self.assertIsNotNone(otp_rec)
-            otp_code = otp_rec.otp
+            self.assertEqual(len(otp_rec.otp), 64)
 
         # Verify OTP
         res_ver = self.client.post('/doctor_verify_reset_otp', json={
@@ -529,9 +520,15 @@ class Phase1CTestSuite(unittest.TestCase):
             p.phone_verified = False
             db.session.commit()
 
+            # Phase 3E: ordinary WhatsApp interaction does not require phone_verified=True
             unver_pat = resolve_whatsapp_sender_role("+919847111001")
-            self.assertEqual(unver_pat["role"], "guest")
-            self.assertEqual(unver_pat["status"], "guest")
+            self.assertEqual(unver_pat["role"], "patient")
+            self.assertEqual(unver_pat["status"], "success")
+
+            # Strict check when explicitly requested
+            strict_unver = resolve_whatsapp_sender_role("+919847111001", require_phone_verified=True)
+            self.assertEqual(strict_unver["role"], "guest")
+            self.assertEqual(strict_unver["status"], "guest")
 
             # Restore verified status
             p.phone_verified = True
@@ -565,16 +562,22 @@ class Phase1CTestSuite(unittest.TestCase):
         print("  [PASS] 23. Existing booking history remains intact (>= 31 bookings)")
 
     def test_24_existing_gemini_ai_intact(self):
-        """24. Existing Gemini patient AI and Admin AI continue working"""
+        """24. Gemini patient AI and Admin AI routes cleanly removed and not exposed"""
         routes = [rule.rule for rule in app.url_map.iter_rules()]
-        self.assertIn('/ai_triage', routes)
-        self.assertIn('/admin_ai_chat', routes)
+        self.assertNotIn('/ai_triage', routes)
+        self.assertNotIn('/admin_ai_chat', routes)
+
+        with app.test_client() as client:
+            resp_triage = client.post('/ai_triage', json={'message': 'hello'})
+            self.assertEqual(resp_triage.status_code, 404)
+            resp_chat = client.post('/admin_ai_chat', json={'message': 'hello'})
+            self.assertEqual(resp_chat.status_code, 404)
 
         with app.app_context():
             ctx = build_clinic_context()
             self.assertIsInstance(ctx, str)
             self.assertIn("CLINIC DOCTOR DIRECTORY", ctx)
-        print("  [PASS] 24. Existing Gemini AI endpoints and clinic context intact")
+        print("  [PASS] 24. Out-of-scope Gemini endpoints removed and clinic context intact")
 
 if __name__ == '__main__':
     unittest.main()

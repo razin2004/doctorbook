@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 # Ensure root dir is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import tests.test_isolation
 
 from app import (
     app, db, User, DoctorSession, DoctorInvitation, PatientBooking, AppSettings, 
@@ -21,6 +22,7 @@ from whatsapp_role_resolver import resolve_whatsapp_sender_role
 class Phase1SecurityAndFunctionalityTestSuite(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        tests.test_isolation.initialize_test_database(app, db)
         app.config['TESTING'] = True
         app.config['WTF_CSRF_ENABLED'] = False
         cls.client = app.test_client()
@@ -402,16 +404,22 @@ class Phase1SecurityAndFunctionalityTestSuite(unittest.TestCase):
         print("  [PASS] Test 13: Cross-role phone number conflicts properly rejected")
 
     def test_14_unverified_patient_role_rejection(self):
-        """Test 14: Unverified patient phone in WhatsApp resolver strictly resolves to Guest"""
+        """Test 14: Registered patient in WhatsApp resolver resolves to patient (Phase 3E)"""
         with app.app_context():
             u = User.query.filter_by(phone_number="+919847111001").first()
             u.phone_verified = False
             db.session.commit()
 
+            # Phase 3E: ordinary WhatsApp interaction does not require phone_verified=True
             role_info = resolve_whatsapp_sender_role("+919847111001")
-            self.assertEqual(role_info["role"], "guest")
-            self.assertEqual(role_info["status"], "guest")
-        print("  [PASS] Test 14: Unverified patient phone resolves strictly to Guest")
+            self.assertEqual(role_info["role"], "patient")
+            self.assertEqual(role_info["status"], "success")
+
+            # Legacy strict check when explicitly requested
+            strict_info = resolve_whatsapp_sender_role("+919847111001", require_phone_verified=True)
+            self.assertEqual(strict_info["role"], "guest")
+            self.assertEqual(strict_info["status"], "guest")
+        print("  [PASS] Test 14: Registered patient without phone_verified=True resolves accurately to Patient for WhatsApp")
 
     def test_15_unverified_doctor_role_rejection(self):
         """Test 15: Unactivated doctor phone in WhatsApp resolver strictly resolves to Guest (Phase 1C)"""
@@ -595,7 +603,7 @@ class Phase1SecurityAndFunctionalityTestSuite(unittest.TestCase):
         print("  [PASS] Test 19: Guest booking account isolation verified")
 
     def test_20_gemini_and_appointment_preservation(self):
-        """Test 20: Appointment history preserved and Gemini AI context intact"""
+        """Test 20: Appointment history preserved and clinic context intact"""
         with app.app_context():
             # Check appointment preservation (31 original bookings)
             bookings_count = PatientBooking.query.count()
