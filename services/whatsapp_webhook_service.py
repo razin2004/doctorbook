@@ -91,8 +91,9 @@ def should_process_async() -> bool:
     if async_env is not None:
         return async_env.strip().lower() in ("true", "1", "yes")
 
-    from app import is_production_environment
-    return is_production_environment()
+    # For sub-second, lightning-fast response times on WhatsApp, default to immediate synchronous execution
+    # unless WHATSAPP_ASYNC_PROCESSING=true is explicitly configured in environment variables.
+    return False
 
 
 GREETING_PATTERN = re.compile(
