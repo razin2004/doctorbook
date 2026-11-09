@@ -631,7 +631,7 @@ class TestAdminClinicManagement(unittest.TestCase):
                         email="testpatient_sheets@primecare.com",
                         role="patient"
                     )
-                    patient_user.set_password("TestPass123!")
+                    patient_user.password_hash = generate_password_hash("TestPass123!")
                     db.session.add(patient_user)
                     db.session.commit()
                 patient_uid = patient_user.id

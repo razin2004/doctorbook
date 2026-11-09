@@ -108,7 +108,8 @@ def get_legacy_max_token(doctor_identifier: str, doctor_name: str, specializatio
 
     try:
         query = session.query(PatientBooking.token).filter(
-            PatientBooking.date.in_(date_variants)
+            PatientBooking.date.in_(date_variants),
+            PatientBooking.status.in_(['confirmed', 'active'])
         )
         if doctor_name and specialization:
             query = query.filter(
@@ -336,6 +337,11 @@ def allocate_token_for_booking(
         return reconcile_res
 
     active_count = reconcile_res["active_count"]
+    # If the queue has zero active bookings and was only at token 1 (e.g. initial booking was cancelled),
+    # reset to 0 so the new booking starts at Token 1.
+    if active_count == 0 and counter.last_allocated_token <= 1:
+        counter.last_allocated_token = 0
+
     current_count = max(active_count, counter.last_allocated_token)
 
     is_admin = (actor_role == 'admin')

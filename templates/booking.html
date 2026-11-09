@@ -2338,9 +2338,12 @@
                     </div>
                   </li>
                   <li>
-                    <div class="admin-sidebar-nav-item" data-panel="view" onclick="showAdminPanel('view', this)">
-                      <i data-lucide="calendar-check-2"></i>
-                      <span>Manage Appointments</span>
+                    <div class="admin-sidebar-nav-item" data-panel="view" onclick="showAdminPanel('view', this)" style="display:flex; justify-content:space-between; align-items:center;">
+                      <div style="display:flex; align-items:center; gap:0.6rem;">
+                        <i data-lucide="calendar-check-2"></i>
+                        <span>Manage Appointments</span>
+                      </div>
+                      <span class="admin-nav-count-badge" id="navBadgeBookingCount" style="background:#f0fdf4; color:#15803d; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:12px; display:none;">--</span>
                     </div>
                   </li>
                   <li>
@@ -2357,6 +2360,15 @@
               <div class="admin-sidebar-nav-group">
                 <div class="admin-sidebar-nav-title">Staff Roster</div>
                 <ul class="admin-sidebar-nav-list">
+                  <li>
+                    <div class="admin-sidebar-nav-item" data-panel="roster" onclick="showAdminPanel('roster', this)" style="display:flex; justify-content:space-between; align-items:center;">
+                      <div style="display:flex; align-items:center; gap:0.6rem;">
+                        <i data-lucide="users"></i>
+                        <span>Doctor Directory</span>
+                      </div>
+                      <span class="admin-nav-count-badge" id="navBadgeDoctorCount" style="background:#e0f2fe; color:#0369a1; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:12px;">--</span>
+                    </div>
+                  </li>
                   <li>
                     <div class="admin-sidebar-nav-item" data-panel="add" onclick="showAdminPanel('add', this)">
                       <i data-lucide="user-plus"></i>
@@ -2395,9 +2407,12 @@
                     </div>
                   </li>
                   <li>
-                    <div class="admin-sidebar-nav-item" data-panel="holiday" onclick="showAdminPanel('holiday', this)">
-                      <i data-lucide="calendar-off"></i>
-                      <span>Manage Holidays</span>
+                    <div class="admin-sidebar-nav-item" data-panel="holiday" onclick="showAdminPanel('holiday', this)" style="display:flex; justify-content:space-between; align-items:center;">
+                      <div style="display:flex; align-items:center; gap:0.6rem;">
+                        <i data-lucide="calendar-off"></i>
+                        <span>Manage Holidays</span>
+                      </div>
+                      <span class="admin-nav-count-badge" id="navBadgeHolidayCount" style="background:#fef3c7; color:#b45309; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:12px;">--</span>
                     </div>
                   </li>
                   <li>
@@ -2485,9 +2500,42 @@
 
     <!-- DEFAULT WELCOME/DASHBOARD PANEL -->
     <div id="welcomePanel" class="adminPanel" style="display:none;">
-      <div style="margin-bottom: 2rem;">
+      <div style="margin-bottom: 1.5rem;">
         <h3 style="margin: 0 0 0.5rem 0; font-size: 1.35rem; color: #1e293b; font-weight: 800;">Quick Start Dashboard</h3>
         <p style="margin: 0; font-size: 0.88rem; color: #64748b;">Select an action below or use the sidebar navigation to manage clinic services.</p>
+      </div>
+
+      <!-- Live Metrics Overview Bar -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 2rem;">
+        <div class="hover-card" onclick="showAdminPanel('roster')" style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.02); cursor: pointer;">
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Active Doctors</div>
+            <div id="dashDoctorCount" style="font-size: 1.6rem; font-weight: 800; color: #0284c7; margin-top: 4px;">--</div>
+          </div>
+          <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(2, 132, 199, 0.1); color: #0284c7; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="users" style="width: 20px; height: 20px;"></i>
+          </div>
+        </div>
+
+        <div class="hover-card" onclick="showAdminPanel('holiday')" style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.02); cursor: pointer;">
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Clinic Holidays</div>
+            <div id="dashHolidayCount" style="font-size: 1.6rem; font-weight: 800; color: #d97706; margin-top: 4px;">--</div>
+          </div>
+          <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(217, 119, 6, 0.1); color: #d97706; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="calendar-off" style="width: 20px; height: 20px;"></i>
+          </div>
+        </div>
+
+        <div class="hover-card" onclick="showAdminPanel('ticker')" style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.02); cursor: pointer;">
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Live Broadcasts</div>
+            <div id="dashTickerCount" style="font-size: 1.6rem; font-weight: 800; color: #10b981; margin-top: 4px;">--</div>
+          </div>
+          <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(16, 185, 129, 0.1); color: #10b981; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="radio" style="width: 20px; height: 20px;"></i>
+          </div>
+        </div>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 20px; margin-bottom: 2rem;">
@@ -2789,19 +2837,44 @@
         </button>
       </form>
 
-      <!-- DOCTOR DIRECTORY & INVITATION STATUS MANAGEMENT -->
-      <div id="doctorDirectoryCard" style="margin-top: 2rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-          <h4 style="margin: 0; font-size: 1rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
-            <i data-lucide="users" style="width: 18px; height: 18px; color: #0077b6;"></i> Doctor Roster &amp; Contact Directory
-          </h4>
-          <button type="button" class="btn btn-sm btn-outline" onclick="loadDoctorsForEdit()" style="padding:4px 10px; font-size:0.75rem;">
-            <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Refresh
+        <div style="margin-top:1.5rem; padding:0.85rem; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:12px; text-align:center;">
+          <a href="javascript:void(0)" onclick="showAdminPanel('roster')" style="color:#0077b6; font-size:0.88rem; text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:0.4rem;">
+            <i data-lucide="users" style="width:16px;height:16px;"></i> View full Doctor Roster &amp; Contact Directory &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOCTOR ROSTER & CONTACT DIRECTORY PANEL -->
+    <div id="rosterPanel" class="adminPanel" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem;">
+        <div>
+          <h3 style="margin:0; display:flex; align-items:center; gap:0.5rem;">
+            <i data-lucide="users"></i> Doctor Roster &amp; Directory
+            <span id="rosterHeaderCount" style="font-size:0.8rem; font-weight:700; color:#0369a1; background:#e0f2fe; padding:2px 10px; border-radius:12px;">--</span>
+          </h3>
+          <p style="font-size:0.88rem; color:#6b7280; margin:0.35rem 0 0 0;">
+            Comprehensive directory of registered clinic doctors, contact mobile numbers, working schedules, and portal account invitation status.
+          </p>
+        </div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <button type="button" class="btn btn-sm btn-outline" onclick="loadDoctorsForEdit()" style="padding:6px 12px; font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;">
+            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Refresh
+          </button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="showAdminPanel('add')" style="padding:6px 12px; font-size:0.8rem; display:flex; align-items:center; gap:0.35rem;">
+            <i data-lucide="user-plus" style="width:13px;height:13px;"></i> Register Doctor
           </button>
         </div>
-        <div id="adminDoctorRosterList" style="display: flex; flex-direction: column; gap: 0.65rem;">
-          <!-- Rendered dynamically -->
-        </div>
+      </div>
+
+      <div style="margin-bottom:1rem;">
+        <input type="text" id="rosterSearchInput" placeholder="Search doctors by name or specialization..." 
+               style="width:100%; box-sizing:border-box; padding:0.65rem 1rem; border-radius:10px; border:1px solid #cbd5e1; font-size:0.88rem;"
+               oninput="filterDoctorRoster(this.value)">
+      </div>
+
+      <div id="adminDoctorRosterList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <!-- Rendered dynamically -->
       </div>
     </div>
 
@@ -3051,7 +3124,7 @@
 
     <!-- CLINIC HOLIDAY PANEL -->
     <div id="holidayPanel" class="adminPanel" style="display:none;">
-      <h3><i data-lucide="calendar-off"></i> Manage Holidays</h3>
+      <h3><i data-lucide="calendar-off"></i> Manage Holidays <span id="holidayHeaderCount" style="font-size:0.8rem; font-weight:700; color:#b45309; background:#fef3c7; padding:2px 10px; border-radius:12px; margin-left:8px;">--</span></h3>
       <p style="font-size:0.85rem; color:#64748b; margin-bottom:1.5rem;">Mark specific dates as holidays for the entire clinic. This will block all bookings for all doctors.</p>
       
       <div style="background:rgba(0,119,182,0.04); padding:1.2rem; border-radius:16px; margin-bottom:2rem; border:1px solid rgba(0,119,182,0.1);">
@@ -3801,6 +3874,7 @@
       'book': { group: 'Booking Hub', label: 'New Appointment' },
       'view': { group: 'Booking Hub', label: 'Manage Appointments' },
       'cancel': { group: 'Booking Hub', label: 'Cancel Appointments' },
+      'roster': { group: 'Staff Roster', label: 'Doctor Directory' },
       'add': { group: 'Staff Roster', label: 'Register Doctor' },
       'edit': { group: 'Staff Roster', label: 'Edit Schedules' },
       'leaves': { group: 'Staff Roster', label: 'Temporary Leaves' },
@@ -3830,6 +3904,12 @@
         icon: 'calendar-x',
         desc: 'Search for active bookings by doctor and date, and manually cancel patient appointments.',
         mobileDesc: 'Manually cancel patient appointments.'
+      },
+      'roster': {
+        title: 'Doctor Roster & Contact Directory',
+        icon: 'users',
+        desc: 'Browse registered doctors, specialization credentials, mobile contacts, and portal account activation status.',
+        mobileDesc: 'Doctor directory and invitation status.'
       },
       'ticker': {
         title: 'Queue & Announcements',
@@ -3907,6 +3987,10 @@
       if (btn) btn.classList.add('active');
       
       if (type === 'welcome') document.getElementById('welcomePanel').style.display = 'block';
+      else if (type === 'roster') {
+        document.getElementById('rosterPanel').style.display = 'block';
+        loadDoctorsForEdit();
+      }
       else if (type === 'add')    document.getElementById('addDoctorPanel').style.display    = 'block';
       else if (type === 'edit') {
         document.getElementById('editDoctorPanel').style.display   = 'block';
@@ -4513,6 +4597,8 @@
             soloStatus.style.background = data.solo_mode ? "#dcfce7" : "#e2e8f0";
             soloStatus.style.color = data.solo_mode ? "#166534" : "#64748b";
             msgCount.textContent = `${data.messages.length} total`;
+            const dashTicker = document.getElementById('dashTickerCount');
+            if (dashTicker) dashTicker.textContent = data.messages.length;
 
             if (data.messages.length === 0) {
                 list.innerHTML = `
@@ -5294,6 +5380,12 @@
             const res = await fetch('/admin_get_holidays');
             const data = await res.json();
             if (data.success) {
+                const holCount = (data.holidays || []).length;
+                ['navBadgeHolidayCount', 'holidayHeaderCount', 'dashHolidayCount'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = holCount;
+                });
+
                 const today = new Date();
                 today.setHours(0, 0, 0, 0); // Start of today
 
@@ -6673,6 +6765,8 @@
       await loadDoctorPairs();
       await loadDoctorsForEdit();
       await loadDoctorsForAdminBooking();
+      try { await loadGlobalHolidays(); } catch(e){}
+      try { loadTickerMessages(); } catch(e){}
       setupAddDoctorDayTimeUI();
       setupEditDoctorDayTimeUI();
       const specDateInput=document.getElementById('specDate');
@@ -7088,28 +7182,65 @@ function downloadPDF() {
       }
     }
 
+    let allDirectoryDoctors = [];
     function renderDoctorDirectory(doctors) {
+      allDirectoryDoctors = doctors || [];
+      const count = allDirectoryDoctors.length;
+
+      // Update badge counts across admin UI
+      ['navBadgeDoctorCount', 'rosterHeaderCount', 'dashDoctorCount'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = count;
+      });
+
+      renderDoctorDirectoryList(allDirectoryDoctors);
+    }
+
+    function filterDoctorRoster(query) {
+      if (!query || !query.trim()) {
+        renderDoctorDirectoryList(allDirectoryDoctors);
+        return;
+      }
+      const q = query.trim().toLowerCase();
+      const filtered = allDirectoryDoctors.filter(d => 
+        (d.Name && d.Name.toLowerCase().includes(q)) || 
+        (d.Specialization && d.Specialization.toLowerCase().includes(q)) ||
+        (d.Phone_Number && d.Phone_Number.includes(q)) ||
+        (d.Email && d.Email.toLowerCase().includes(q))
+      );
+      renderDoctorDirectoryList(filtered);
+    }
+
+    function renderDoctorDirectoryList(doctors) {
       const container = document.getElementById('adminDoctorRosterList');
       if (!container) return;
       if (!doctors || doctors.length === 0) {
-        container.innerHTML = '<div style="color: #64748b; font-size: 0.85rem;">No doctors registered on the roster.</div>';
+        container.innerHTML = '<div style="color: #64748b; font-size: 0.88rem; padding: 1.5rem; text-align: center; background: #fff; border-radius: 10px; border: 1px dashed #cbd5e1;">No doctors match the search filter.</div>';
         return;
       }
       container.innerHTML = doctors.map(d => {
         const isActivated = d.account_status === 'Activated';
         const badgeHtml = isActivated
-          ? '<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">Activated</span>'
-          : '<span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;">Invitation Pending</span>';
+          ? '<span style="background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700;">Activated</span>'
+          : '<span style="background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700;">Invitation Pending</span>';
         const resendBtnHtml = (!isActivated && d.doctor_id)
-          ? `<button type="button" class="btn btn-sm btn-outline" style="padding: 3px 8px; font-size: 0.75rem;" onclick="resendDoctorInvite('${d.doctor_id}')"><i data-lucide="send" style="width:12px;height:12px;"></i> Resend Invite</button>`
+          ? `<button type="button" class="btn btn-sm btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="resendDoctorInvite('${d.doctor_id}')"><i data-lucide="send" style="width:12px;height:12px;"></i> Resend Invite</button>`
           : '';
+        const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days || '').split(',').map(x => x.trim()).filter(Boolean);
+        const daysDisplay = daysArr.length ? daysArr.join(', ') : 'No schedule set';
         return `
-          <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0.75rem 1rem; border-radius:8px; border:1px solid #e2e8f0; font-size:0.85rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0.9rem 1.15rem; border-radius:12px; border:1px solid #e2e8f0; font-size:0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-wrap:wrap; gap:0.75rem;">
             <div>
-              <div style="font-weight:700; color:#0f172a;">${d.Name} <span style="font-weight:400; color:#64748b;">(${d.Specialization})</span></div>
-              <div style="color:#475569; font-size:0.78rem; margin-top:2px;">
-                <i data-lucide="phone" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> ${d.Phone_Number || '<span style="color:#ef4444;">No mobile</span>'} &bull; 
-                <i data-lucide="mail" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> ${d.Email || 'No email'}
+              <div style="font-weight:750; color:#0f172a; font-size:0.95rem; display:flex; align-items:center; gap:0.5rem;">
+                ${d.Name}
+                <span style="font-weight:600; color:#0284c7; font-size:0.8rem; background:rgba(2, 132, 199, 0.08); padding:2px 8px; border-radius:6px;">${d.Specialization}</span>
+              </div>
+              <div style="color:#475569; font-size:0.78rem; margin-top:4px; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                <span><i data-lucide="phone" style="width:12px;height:12px;display:inline;vertical-align:middle;color:#0077b6;"></i> ${d.Phone_Number || '<span style="color:#ef4444;">No mobile</span>'}</span>
+                <span>&bull;</span>
+                <span><i data-lucide="mail" style="width:12px;height:12px;display:inline;vertical-align:middle;color:#0077b6;"></i> ${d.Email || 'No email'}</span>
+                <span>&bull;</span>
+                <span><i data-lucide="calendar" style="width:12px;height:12px;display:inline;vertical-align:middle;color:#0077b6;"></i> ${daysDisplay}</span>
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:0.6rem;">

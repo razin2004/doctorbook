@@ -999,6 +999,34 @@ def cancel_booking_service(
     booking.cancellation_reason = reason or ('Cancelled by user' if actor_role == 'patient' else 'Cancelled by admin')
     booking.cancelled_at = datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
 
+    # 3b. Token Allocation Reset when Queue has Not Advanced:
+    # If this was Token 1 (or the sole booking) and no active bookings remain for this doctor & date,
+    # reset last_allocated_token to 0 so the next booking will receive Token 1.
+    # However, if other/subsequent bookings exist (e.g. Token 2 is active), do NOT reset or decrement,
+    # ensuring subsequent bookings receive Token 3 (preserving monotonic progression).
+    try:
+        from services.token_allocation import get_canonical_doctor_identifier
+        from app import DailyTokenAllocation
+        doc_id = get_canonical_doctor_identifier(booking.doctor_name, booking.specialization)
+        counter = DailyTokenAllocation.query.filter_by(
+            doctor_identifier=doc_id,
+            appointment_date=b_norm
+        ).with_for_update().first()
+
+        if counter:
+            active_remaining = PatientBooking.query.filter(
+                db.func.lower(db.func.trim(PatientBooking.doctor_name)) == booking.doctor_name.strip().lower(),
+                db.func.lower(db.func.trim(PatientBooking.specialization)) == booking.specialization.strip().lower(),
+                PatientBooking.date == b_norm,
+                PatientBooking.status.in_(['confirmed', 'active']),
+                PatientBooking.id != booking.id
+            ).count()
+
+            if active_remaining == 0 and counter.last_allocated_token <= 1:
+                counter.last_allocated_token = 0
+    except Exception as counter_err:
+        app.logger.warning(f"Token counter reconciliation warning on cancellation: {counter_err}")
+
     try:
         db.session.commit()
     except Exception as db_err:

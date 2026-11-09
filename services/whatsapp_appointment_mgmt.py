@@ -35,9 +35,12 @@ LOOKUP_INTENT_PATTERNS = [
 ]
 
 CANCEL_INTENT_PATTERNS = [
-    re.compile(r'\b(cancel\s+(my\s+)?(appointment|booking)|cancel\s+an?\s+appointment)s?\b', re.IGNORECASE),
-    re.compile(r'\b(i\s+want\s+to\s+cancel|need\s+to\s+cancel|want\s+to\s+cancel)(\s+my)?\s*(appointment|booking)?\b', re.IGNORECASE),
-    re.compile(r'^(cancel\s+appointment|cancel\s+booking|cancel\s+my\s+appointment|menu_cancel|3)$', re.IGNORECASE),
+    re.compile(r'\b(cancel|delete|remove|drop)\s+(my\s+)?(appointment|booking|token)s?\b', re.IGNORECASE),
+    re.compile(r'\b(cancel|delete|remove)\s+(my\s+)?(next\s+)?(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{4}-\d{2}-\d{2})(\'s)?\s*(appointment|booking)?\b', re.IGNORECASE),
+    re.compile(r'\b(i\s+want\s+to|need\s+to|please)\s+(cancel|delete|remove)\b', re.IGNORECASE),
+    re.compile(r'\b(cancel|delete|remove)\s*(booking|appointment|token)?\s*#?\d+\b', re.IGNORECASE),
+    re.compile(r'\b(cancelling|canceling|cancellation|deleting)\s*(#\d+|booking|appointment)?\b', re.IGNORECASE),
+    re.compile(r'^(cancel\s+appointment|cancel\s+booking|delete\s+booking|cancel\s+my\s+appointment|menu_cancel|3)$', re.IGNORECASE),
 ]
 
 RESCHEDULE_INTENT_PATTERNS = [
@@ -493,6 +496,8 @@ def handle_whatsapp_appointment_mgmt(
 
     # -------------------------------------------------------------------------
     # 3B. Repeat Confirmation on Confirmed Cancel/Reschedule Session (Idempotency)
+    # Only enforce if confirmed within the last 120 seconds to prevent hijacking
+    # new cancellation / confirmation requests.
     # -------------------------------------------------------------------------
     if not active_session and text_lower in CONFIRM_WORDS:
         recent_confirmed = WhatsAppBookingSession.query.filter_by(
@@ -500,7 +505,14 @@ def handle_whatsapp_appointment_mgmt(
             status='confirmed'
         ).order_by(WhatsAppBookingSession.updated_at.desc()).first()
 
-        if recent_confirmed and recent_confirmed.action == 'cancel':
+        now_utc = datetime.utcnow()
+        is_recent_confirm = False
+        if recent_confirmed and recent_confirmed.updated_at:
+            delta_sec = (now_utc - recent_confirmed.updated_at).total_seconds()
+            if delta_sec < 120:
+                is_recent_confirm = True
+
+        if is_recent_confirm and recent_confirmed.action == 'cancel':
             reply = (
                 "This cancellation has already been processed.\n"
                 f"• *Booking ID:* #{recent_confirmed.booking_id}\n\n"
@@ -508,7 +520,7 @@ def handle_whatsapp_appointment_mgmt(
             )
             return {"handled": True, "reply": reply, "session": recent_confirmed}
 
-        if recent_confirmed and recent_confirmed.action == 'reschedule':
+        if is_recent_confirm and recent_confirmed.action == 'reschedule':
             reply = (
                 "This rescheduling has already been processed.\n"
                 f"• *New Booking ID:* #{recent_confirmed.booking_id}\n"
@@ -542,9 +554,76 @@ def handle_whatsapp_appointment_mgmt(
             reply = "You don't have any upcoming appointments that can be cancelled."
             return {"handled": True, "reply": reply, "session": None}
 
-        if len(eligible) == 1:
-            # Single appointment - go directly to confirmation
-            chosen = eligible[0]
+        # Check if user explicitly specified a booking ID (e.g., #374 or 374)
+        id_match = re.search(r'#?(\d{2,6})\b', text)
+        matched_by_id = None
+        if id_match:
+            target_id = int(id_match.group(1))
+            matched_by_id = next((b for b in eligible if b["id"] == target_id), None)
+
+        # Check if user mentioned a specific day of week (e.g. monday, tuesday, etc.)
+        matched_by_day = None
+        if not matched_by_id:
+            day_matches = [
+                d for d in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+                if d in text_lower
+            ]
+            if day_matches:
+                from datetime import datetime as dt
+                matching_day_bookings = []
+                for b in eligible:
+                    try:
+                        d_obj = dt.strptime(b["date"], "%Y-%m-%d")
+                        if d_obj.strftime("%A").lower() in day_matches:
+                            matching_day_bookings.append(b)
+                    except Exception:
+                        pass
+                if len(matching_day_bookings) == 1:
+                    matched_by_day = matching_day_bookings[0]
+
+        target_booking = matched_by_id or matched_by_day
+        if target_booking or len(eligible) == 1:
+            chosen = target_booking or eligible[0]
+
+            # If user already included confirmation intent (e.g. "confirm cancellation for #374")
+            already_confirmed = any(w in text_lower for w in ('confirm', 'proceed', 'yes'))
+            if already_confirmed:
+                cancel_res = cancel_booking_service(
+                    booking_id=chosen["id"],
+                    actor_user_id=user_id,
+                    actor_role='patient',
+                    phone_number=sender_phone,
+                    reason='Cancelled via WhatsApp with direct confirmation'
+                )
+                if cancel_res.get("success"):
+                    confirmed_session = WhatsAppBookingSession(
+                        conversation_id=conversation.id,
+                        status='confirmed',
+                        action='cancel',
+                        step='COMPLETED',
+                        booking_id=chosen["id"],
+                        doctor_name=chosen["doctor_name"],
+                        specialization=chosen["specialization"],
+                        appointment_date=chosen["date"],
+                        time_slot=chosen.get("time"),
+                        token_number=chosen["token"],
+                        patient_name=chosen.get("patient_name"),
+                        patient_user_id=user_id,
+                        contact_phone=sender_phone
+                    )
+                    db.session.add(confirmed_session)
+                    db.session.commit()
+                    reply = (
+                        "✅ *Appointment Cancelled Successfully*\n\n"
+                        f"• *Booking ID:* #{chosen['id']}\n"
+                        f"• *Doctor:* {chosen['doctor_name']} ({chosen['specialization']})\n"
+                        f"• *Date:* {chosen['date']}\n"
+                        f"• *Token Number:* #{chosen['token']}\n\n"
+                        "Your appointment has been cancelled and your token released. "
+                        "If you need to book again, simply reply *Book*."
+                    )
+                    return {"handled": True, "reply": reply, "session": confirmed_session}
+
             new_session = WhatsAppBookingSession(
                 conversation_id=conversation.id,
                 status='in_progress',

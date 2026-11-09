@@ -4190,19 +4190,55 @@ def admin_edit_doctor():
     if patient_user:
         return jsonify({"success": False, "msg": "Cannot assign email: Email is already registered to a patient account."})
 
-    # Find current DoctorSession
+    # Find current DoctorSession and Doctor model
     current_doc = DoctorSession.query.filter(
-        db.func.lower(db.func.trim(DoctorSession.doctor_name)) == name,
+        (db.func.lower(db.func.trim(DoctorSession.doctor_name)) == name) |
+        (db.func.lower(db.func.trim(DoctorSession.doctor_name)) == f"dr. {name}") |
+        (db.func.lower(db.func.trim(DoctorSession.doctor_name)) == name.replace("dr. ", "").strip()),
         db.func.lower(db.func.trim(DoctorSession.specialization)) == spec
     ).first()
 
-    # Check phone conflict
-    is_conflict, conflict_err = check_phone_conflict(
-        norm_phone,
-        exclude_doctor_id=current_doc.id if current_doc else None
-    )
-    if is_conflict:
-        return jsonify({"success": False, "msg": f"Phone conflict: {conflict_err}"})
+    doc_model = Doctor.query.filter(
+        (db.func.lower(db.func.trim(Doctor.name)) == name) |
+        (db.func.lower(db.func.trim(Doctor.name)) == f"dr. {name}") |
+        (db.func.lower(db.func.trim(Doctor.name)) == name.replace("dr. ", "").strip()),
+        db.func.lower(db.func.trim(Doctor.specialization)) == spec
+    ).first()
+
+    # Find associated doctor user account
+    doc_user = User.query.filter(
+        db.func.lower(User.email) == email_clean,
+        User.role == "doctor"
+    ).first()
+    if not doc_user and current_doc and current_doc.email:
+        doc_user = User.query.filter(
+            db.func.lower(User.email) == current_doc.email.lower().strip(),
+            User.role == "doctor"
+        ).first()
+    if not doc_user and doc_model and doc_model.email:
+        doc_user = User.query.filter(
+            db.func.lower(User.email) == doc_model.email.lower().strip(),
+            User.role == "doctor"
+        ).first()
+
+    # Check if the submitted phone number is already this doctor's own current phone number
+    is_same_doctor_phone = False
+    if current_doc and current_doc.phone_number and normalize_phone_number(current_doc.phone_number) == norm_phone:
+        is_same_doctor_phone = True
+    elif doc_model and doc_model.phone_number and normalize_phone_number(doc_model.phone_number) == norm_phone:
+        is_same_doctor_phone = True
+    elif doc_user and doc_user.phone_number and normalize_phone_number(doc_user.phone_number) == norm_phone:
+        is_same_doctor_phone = True
+
+    if not is_same_doctor_phone:
+        # Check phone conflict excluding this doctor's own records
+        is_conflict, conflict_err = check_phone_conflict(
+            norm_phone,
+            exclude_doctor_id=current_doc.id if current_doc else None,
+            exclude_user_id=doc_user.id if doc_user else None
+        )
+        if is_conflict:
+            return jsonify({"success": False, "msg": f"Phone conflict: {conflict_err}"})
 
     # Check email conflict
     other_session = DoctorSession.query.filter(
