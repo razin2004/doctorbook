@@ -421,7 +421,8 @@ def dispatch_inbound_message_reply(
             sender_phone=sender_phone,
             sender_role=sender_role,
             user_id=user_id,
-            display_name=display_name
+            display_name=display_name,
+            groq_client=groq_client
         )
 
         if booking_flow_result.get("handled"):

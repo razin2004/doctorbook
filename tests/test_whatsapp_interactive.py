@@ -355,7 +355,7 @@ class WhatsAppInteractiveTestSuite(unittest.TestCase):
 
         # Verify outbound prompt mentions doctor name and asks for appointment date
         sent_payload = mock_post.call_args[1]["json"]
-        body_sent = sent_payload.get("text", {}).get("body", "")
+        body_sent = sent_payload.get("text", {}).get("body", "") or sent_payload.get("interactive", {}).get("body", {}).get("text", "")
         self.assertIn(self.doc.name, body_sent)
         self.assertIn("preferred appointment date", body_sent)
 

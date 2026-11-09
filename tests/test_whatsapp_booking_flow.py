@@ -112,6 +112,8 @@ class WhatsAppBookingFlowTestSuite(unittest.TestCase):
         self.session.query(DailyTokenAllocation).delete()
         self.session.query(DoctorLeave).delete()
         self.session.query(ClinicHoliday).delete()
+        self.session.query(DoctorSchedule).filter(DoctorSchedule.doctor_id != 1).delete()
+        self.session.query(Doctor).filter(Doctor.id != 1).delete()
         self.session.commit()
 
         # Invalidate in-memory doctor cache so tests always see clean DB state
@@ -140,7 +142,11 @@ class WhatsAppBookingFlowTestSuite(unittest.TestCase):
         self.session.query(BookingSyncOutbox).delete()
         self.session.query(PatientBooking).delete()
         self.session.query(DailyTokenAllocation).delete()
+        self.session.query(DoctorSchedule).filter(DoctorSchedule.doctor_id != 1).delete()
+        self.session.query(Doctor).filter(Doctor.id != 1).delete()
         self.session.commit()
+        from app import get_all_doctors
+        get_all_doctors(force_refresh=True)
         self.app_context.pop()
 
     def _create_convo(self, phone="+919847055001", role="guest"):
@@ -725,6 +731,169 @@ class WhatsAppBookingFlowTestSuite(unittest.TestCase):
         self.assertTrue(guest_lookup["success"])
         self.assertEqual(len(guest_lookup["bookings"]), 1)
         self.assertEqual(guest_lookup["bookings"][0]["patient_name"], "Guest Alpha")
+
+    # -------------------------------------------------------------------------
+    # 7. Enhanced Discovery & Specialization Flow
+    # -------------------------------------------------------------------------
+    def test_16_specialization_discovery_and_auto_doctor_selection(self):
+        """16. Selecting specialization row (spec_<name>) or name auto-selects doctor if single doctor exists."""
+        convo = self._create_convo()
+        # Start booking
+        res_init = handle_whatsapp_booking_flow(convo, "Book an appointment", "+919847055001", "guest")
+        self.assertTrue(res_init["handled"])
+        self.assertIn("Department", res_init["reply"])
+
+        # Select department via interactive ID
+        res_spec = handle_whatsapp_booking_flow(convo, "spec_Gynecologist", "+919847055001", "guest")
+        self.assertTrue(res_spec["handled"])
+        self.assertIn("Dr. Arshitha Abdurahman", res_spec["reply"])
+
+        session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id, status='in_progress').first()
+        self.assertEqual(session.step, 'SELECT_DATE')
+        self.assertEqual(session.doctor_id, 1)
+        self.assertEqual(session.specialization, "Gynecologist")
+
+    def test_17_available_dates_interactive_list_and_date_selection(self):
+        """17. Interactive date list contains only valid bookable dates and selecting date_YYYY-MM-DD advances state."""
+        convo = self._create_convo()
+        handle_whatsapp_booking_flow(convo, "Book appointment", "+919847055001", "guest")
+        res_doc = handle_whatsapp_booking_flow(convo, "1", "+919847055001", "guest")
+
+        # Interactive date list returned
+        self.assertIn("interactive", res_doc)
+        if res_doc.get("interactive"):
+            self.assertEqual(res_doc["interactive"]["button_text"], "Select Date")
+            self.assertLessEqual(len(res_doc["interactive"]["sections"][0]["rows"]), 10)
+
+        # Send interactive date row ID
+        target_date = self._find_next_working_day(1)
+        res_date = handle_whatsapp_booking_flow(convo, f"date_{target_date}", "+919847055001", "guest")
+        self.assertTrue(res_date["handled"])
+        self.assertIn("Date Confirmed", res_date["reply"])
+
+        session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id, status='in_progress').first()
+        self.assertEqual(session.step, 'PATIENT_DETAILS')
+        self.assertEqual(session.appointment_date, target_date)
+
+    def test_18_timing_slot_selection_when_multiple_doctors_in_department(self):
+        """18. When multiple doctors work on a date for a department, SELECT_SLOT is presented."""
+        target_date = self._find_next_working_day(1)
+        target_dt = datetime.strptime(target_date, '%Y-%m-%d')
+        weekday = target_dt.strftime('%A')
+
+        doc2 = Doctor(
+            name="Dr. Fatima Zahra",
+            specialization="Gynecologist",
+            is_active=True,
+            max_daily_patients=25
+        )
+        self.session.add(doc2)
+        self.session.flush()
+
+        sched2 = DoctorSchedule(
+            doctor_id=doc2.id,
+            day_of_week=weekday,
+            start_time="14:00",
+            end_time="18:00",
+            is_available=True
+        )
+        self.session.add(sched2)
+        self.session.commit()
+
+        from app import get_all_doctors
+        get_all_doctors(force_refresh=True)
+
+        convo = self._create_convo()
+        # Start booking and choose department with multiple doctors
+        handle_whatsapp_booking_flow(convo, "Book appointment", "+919847055001", "guest")
+        res_spec = handle_whatsapp_booking_flow(convo, "spec_Gynecologist", "+919847055001", "guest")
+        self.assertTrue(res_spec["handled"])
+
+        # Pick date
+        res_date = handle_whatsapp_booking_flow(convo, f"date_{target_date}", "+919847055001", "guest")
+        self.assertTrue(res_date["handled"])
+        self.assertIn("Multiple consultation timings", res_date["reply"])
+
+        session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id, status='in_progress').first()
+        self.assertEqual(session.step, 'SELECT_SLOT')
+
+        # Select second doctor's slot
+        res_slot = handle_whatsapp_booking_flow(convo, f"slot_{doc2.id}_14:00-18:00", "+919847055001", "guest")
+        self.assertTrue(res_slot["handled"])
+        self.assertIn("Dr. Fatima Zahra", res_slot["reply"])
+
+        session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id, status='in_progress').first()
+        self.assertEqual(session.step, 'PATIENT_DETAILS')
+        self.assertEqual(session.doctor_id, doc2.id)
+        self.assertEqual(session.doctor_name, "Dr. Fatima Zahra")
+
+    def test_19_patient_details_same_number_shortcut(self):
+        """19. Patient details with 'SAME' or omitted phone correctly locks to sender WhatsApp number."""
+        convo = self._create_convo(phone="+919847055001")
+        handle_whatsapp_booking_flow(convo, "Book appointment", "+919847055001", "guest")
+        handle_whatsapp_booking_flow(convo, "1", "+919847055001", "guest")
+        target_date = self._find_next_working_day(1)
+        handle_whatsapp_booking_flow(convo, target_date, "+919847055001", "guest")
+
+        # Reply with SAME shortcut
+        res_same = handle_whatsapp_booking_flow(convo, "Kiran Kumar, 35, Male, SAME", "+919847055001", "guest")
+        self.assertTrue(res_same["handled"])
+        self.assertIn("Appointment Summary", res_same["reply"])
+        self.assertIn("+919847055001", res_same["reply"])
+
+        session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id, status='in_progress').first()
+        self.assertEqual(session.step, 'CONFIRMATION')
+        self.assertEqual(session.patient_name, "Kiran Kumar")
+        self.assertEqual(session.contact_phone, "+919847055001")
+
+    def test_20_zero_ai_during_sequential_booking_flow(self):
+        """20. Sequential multi-turn booking strictly never invokes GroqClient (Zero AI latency)."""
+        convo = self._create_convo()
+        with patch("services.groq_client.GroqClient.generate_chat_completion") as mock_groq:
+            # Turn 1: Start
+            handle_whatsapp_booking_flow(convo, "Book appointment", "+919847055001", "guest")
+            # Turn 2: Select doctor
+            handle_whatsapp_booking_flow(convo, "1", "+919847055001", "guest")
+            # Turn 3: Select date
+            target_date = self._find_next_working_day(1)
+            handle_whatsapp_booking_flow(convo, target_date, "+919847055001", "guest")
+            # Turn 4: Patient details
+            handle_whatsapp_booking_flow(convo, "Rahul Sharma, 28, Male, SAME", "+919847055001", "guest")
+            # Turn 5: Confirm
+            handle_whatsapp_booking_flow(convo, "CONFIRM", "+919847055001", "guest")
+
+            # Assert Groq was NEVER called during sequential flow
+            self.assertEqual(mock_groq.call_count, 0)
+
+    def test_21_single_message_ai_fast_path_booking(self):
+        """21. Single comprehensive booking sentence extracts entities via AI and directly presents summary card."""
+        convo = self._create_convo(phone="+919847055001")
+        target_date = self._find_next_working_day(1)
+        target_dt = datetime.strptime(target_date, '%Y-%m-%d')
+        weekday = target_dt.strftime('%A')
+
+        fast_msg = f"Book Dr. Arshitha Abdurahman for {weekday}, patient name Rahul Sharma, age 28, male, number same"
+        res = handle_whatsapp_booking_flow(
+            conversation=convo,
+            message_body=fast_msg,
+            sender_phone="+919847055001",
+            sender_role="guest"
+        )
+        self.assertTrue(res["handled"])
+        self.assertIn("Appointment Summary", res["reply"])
+        self.assertIn("Dr. Arshitha Abdurahman", res["reply"])
+        self.assertIn("Rahul Sharma", res["reply"])
+        self.assertIn("28 yrs, Male", res["reply"])
+        self.assertIn("+919847055001", res["reply"])
+        self.assertIn("Reply *CONFIRM* to book", res["reply"])
+
+        session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id, status='in_progress').first()
+        self.assertIsNotNone(session)
+        self.assertEqual(session.step, 'CONFIRMATION')
+        self.assertEqual(session.doctor_name, "Dr. Arshitha Abdurahman")
+        self.assertEqual(session.appointment_date, target_date)
+        self.assertEqual(session.patient_name, "Rahul Sharma")
+        self.assertEqual(session.contact_phone, "+919847055001")
 
 
 if __name__ == '__main__':
