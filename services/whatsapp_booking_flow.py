@@ -52,7 +52,7 @@ EXCLUSION_PATTERNS = [
     re.compile(r'\b(my\s+booking|show\s+my\s+booking|upcoming\s+appointment|list\s+my\s+appointment)s?\b', re.IGNORECASE),
 ]
 
-CANCEL_WORDS = {'cancel', 'abort', 'stop', 'exit', 'quit', 'cancel booking', 'cancel appointment', 'back'}
+CANCEL_WORDS = {'cancel', 'abort', 'stop', 'exit', 'quit', 'cancel booking', 'cancel appointment', 'back', 'menu', 'reset', '0'}
 CONFIRM_WORDS = {'confirm', 'yes', 'ok', 'okay', 'proceed', 'yep', 'yeah', 'confirm booking', '1'}
 
 

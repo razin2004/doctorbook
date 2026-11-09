@@ -426,7 +426,7 @@ def generate_whatsapp_ai_response(
 
     # 8. Generate completion with bounded retries and sanitized error handling
     try:
-        completion = groq_client.generate_chat_completion(messages=messages)
+        completion = groq_client.generate_chat_completion(messages=messages, fallback_model="qwen/qwen3.8-27b")
         response_text = str(completion).strip()
 
         if not response_text:

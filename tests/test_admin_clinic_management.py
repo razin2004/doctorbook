@@ -56,6 +56,8 @@ class TestAdminClinicManagement(unittest.TestCase):
             Doctor.query.filter(Doctor.email.ilike('%testadmin%')).delete()
             Doctor.query.filter(Doctor.phone_number.in_(['+919847000101', '+919847000102', '+919847000103', '+919847000199', '+919847000999'])).delete()
             PatientBooking.query.filter(PatientBooking.patient_name.ilike('%Zero Sheets%')).delete()
+            PatientBooking.query.filter(PatientBooking.patient_name.ilike('%Admin Booked%')).delete()
+            PatientBooking.query.filter(PatientBooking.patient_name.ilike('%Paginate User%')).delete()
             ClinicHoliday.query.filter(ClinicHoliday.date.in_(['2099-12-25', '2099-12-26', '2099-12-27'])).delete()
             db.session.commit()
 
@@ -78,6 +80,8 @@ class TestAdminClinicManagement(unittest.TestCase):
             Doctor.query.filter(Doctor.email.ilike('%testadmin%')).delete()
             Doctor.query.filter(Doctor.phone_number.in_(['+919847000101', '+919847000102', '+919847000103', '+919847000199', '+919847000999'])).delete()
             PatientBooking.query.filter(PatientBooking.patient_name.ilike('%Zero Sheets%')).delete()
+            PatientBooking.query.filter(PatientBooking.patient_name.ilike('%Admin Booked%')).delete()
+            PatientBooking.query.filter(PatientBooking.patient_name.ilike('%Paginate User%')).delete()
             ClinicHoliday.query.filter(ClinicHoliday.date.in_(['2099-12-25', '2099-12-26', '2099-12-27'])).delete()
             db.session.commit()
 
@@ -366,7 +370,20 @@ class TestAdminClinicManagement(unittest.TestCase):
         """POST /manage_bookings must retrieve bookings directly from PatientBooking."""
         with app.app_context():
             b = PatientBooking.query.filter_by(status='confirmed').first()
-            self.assertIsNotNone(b, "Seed bookings expected")
+            if not b:
+                b = PatientBooking(
+                    user_id=1,
+                    doctor_id=1,
+                    patient_name="Seed Manage Booking",
+                    doctor_name="Dr. Arshitha Abdurahman",
+                    specialization="Gynecologist",
+                    date="2026-11-28",
+                    time="10:00",
+                    token=1,
+                    status="confirmed"
+                )
+                db.session.add(b)
+                db.session.commit()
             doc_name = b.doctor_name
             spec = b.specialization
             b_date = b.date
@@ -386,6 +403,20 @@ class TestAdminClinicManagement(unittest.TestCase):
         """GET /api/admin/appointments must filter by search term, doctor, department, and status."""
         with app.app_context():
             sample = PatientBooking.query.filter_by(status='confirmed').first()
+            if not sample:
+                sample = PatientBooking(
+                    user_id=1,
+                    doctor_id=1,
+                    patient_name="Filter Sample Patient",
+                    doctor_name="Dr. Arshitha Abdurahman",
+                    specialization="Gynecologist",
+                    date="2026-11-28",
+                    time="10:00",
+                    token=50,
+                    status="confirmed"
+                )
+                db.session.add(sample)
+                db.session.commit()
             patient_part = sample.patient_name[:3]
             doc_name = sample.doctor_name
 
@@ -406,6 +437,23 @@ class TestAdminClinicManagement(unittest.TestCase):
 
     def test_14_api_admin_appointments_pagination(self):
         """GET /api/admin/appointments must support pagination parameters (page, per_page)."""
+        with app.app_context():
+            if PatientBooking.query.count() < 6:
+                for i in range(6):
+                    b = PatientBooking(
+                        user_id=1,
+                        doctor_id=1,
+                        patient_name=f"Paginate User {i}",
+                        doctor_name="Dr. Arshitha Abdurahman",
+                        specialization="Gynecologist",
+                        date="2026-11-28",
+                        time="10:00",
+                        token=100 + i,
+                        status="confirmed"
+                    )
+                    db.session.add(b)
+                db.session.commit()
+
         res = self.client.get('/api/admin/appointments?page=1&per_page=5')
         self.assertEqual(res.status_code, 200)
         data = res.get_json()
@@ -577,7 +625,16 @@ class TestAdminClinicManagement(unittest.TestCase):
                 self.assertTrue(avail.get('available'))
 
                 patient_user = User.query.filter_by(role='patient').first()
-                patient_uid = patient_user.id if patient_user else 2
+                if not patient_user:
+                    patient_user = User(
+                        name="Test Patient",
+                        email="testpatient_sheets@primecare.com",
+                        role="patient"
+                    )
+                    patient_user.set_password("TestPass123!")
+                    db.session.add(patient_user)
+                    db.session.commit()
+                patient_uid = patient_user.id
 
                 # 3. Create booking (zero sheets)
                 book_res = create_booking_service(
@@ -656,9 +713,11 @@ class TestAdminClinicManagement(unittest.TestCase):
                 target_date = (today + timedelta(days=1)).strftime("%Y-%m-%d")
 
         # 1. Book using doctor_id
+        ts = int(datetime.now().timestamp())
+        name1 = f"Admin Booked User 1 {ts}"
         res1 = self.client.post("/admin_book_patient", json={
             "doctor_id": doc_id,
-            "name": "Admin Booked User 1",
+            "name": name1,
             "age": "29",
             "gender": "Female",
             "phone_number": "+919847111222",
@@ -668,12 +727,13 @@ class TestAdminClinicManagement(unittest.TestCase):
         data1 = res1.get_json()
         self.assertTrue(data1.get("success"))
         self.assertIn("token", data1)
-        self.assertEqual(data1.get("name"), "Admin Booked User 1")
+        self.assertEqual(data1.get("name"), name1)
 
         # 2. Book using sheet_url parameter (as passed by frontend dropdown with doctor ID string)
+        name2 = f"Admin Booked User 2 {ts}"
         res2 = self.client.post("/admin_book_patient", json={
             "sheet_url": str(doc_id),
-            "name": "Admin Booked User 2",
+            "name": name2,
             "age": "34",
             "gender": "Male",
             "phone_number": "+919847111223",
@@ -683,7 +743,7 @@ class TestAdminClinicManagement(unittest.TestCase):
         data2 = res2.get_json()
         self.assertTrue(data2.get("success"))
         self.assertIn("token", data2)
-        self.assertEqual(data2.get("name"), "Admin Booked User 2")
+        self.assertEqual(data2.get("name"), name2)
 
     def test_admin_book_patient_unauthorized_blocked(self):
         """Verify that unauthenticated requests to /admin_book_patient are blocked with 403."""

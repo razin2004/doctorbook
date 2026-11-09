@@ -260,6 +260,34 @@ class GroqClient:
         delay = 0.5 * (2 ** attempt)
         return min(delay, 8.0)
 
+    def _execute_fallback(self, create_kwargs: Dict[str, Any], fallback_model: str) -> Optional[GroqCompletionResponse]:
+        """Attempts an automatic fallback to another model if the primary model fails or returns empty."""
+        try:
+            fb_kwargs = dict(create_kwargs)
+            fb_kwargs["model"] = fallback_model
+            fb_kwargs.pop("include_reasoning", None)
+            fb_kwargs.pop("reasoning_format", None)
+            fb_resp = self._client.chat.completions.create(**fb_kwargs)
+            if fb_resp and hasattr(fb_resp, "choices") and fb_resp.choices:
+                fb_msg = getattr(fb_resp.choices[0], "message", None)
+                fb_content = getattr(fb_msg, "content", "") or ""
+                if fb_content.strip():
+                    logger.info(f"Groq automatic fallback to {fallback_model} succeeded.")
+                    return GroqCompletionResponse(
+                        content=fb_content,
+                        model=fallback_model,
+                        finish_reason=getattr(fb_resp.choices[0], "finish_reason", None),
+                        usage={
+                            "prompt_tokens": getattr(fb_resp.usage, "prompt_tokens", 0),
+                            "completion_tokens": getattr(fb_resp.usage, "completion_tokens", 0),
+                            "total_tokens": getattr(fb_resp.usage, "total_tokens", 0)
+                        } if hasattr(fb_resp, "usage") and fb_resp.usage else {},
+                        raw_response=fb_resp
+                    )
+        except Exception as fb_err:
+            logger.warning(f"Groq automatic fallback to {fallback_model} failed: {fb_err}")
+        return None
+
     def generate_chat_completion(
         self,
         messages: List[Dict[str, str]],
@@ -268,7 +296,8 @@ class GroqClient:
         temperature: Optional[float] = None,
         include_reasoning: Optional[bool] = None,
         reasoning_format: Optional[str] = None,
-        timeout: Optional[float] = None
+        timeout: Optional[float] = None,
+        fallback_model: Optional[str] = None
     ) -> GroqCompletionResponse:
         """
         Generates a chat completion using the official Groq SDK.
@@ -333,6 +362,12 @@ class GroqClient:
                     # Extract content; strictly ignore internal reasoning
                     content = getattr(message, "content", "") or ""
 
+                if fallback_model and not content.strip() and target_model != fallback_model:
+                    logger.warning(f"Groq model {target_model} returned empty content; attempting fallback to {fallback_model}.")
+                    fb = self._execute_fallback(create_kwargs, fallback_model)
+                    if fb:
+                        return fb
+
                 finish_reason = getattr(choice, "finish_reason", None)
                 usage_dict = {}
                 if hasattr(response, "usage") and response.usage:
@@ -388,6 +423,10 @@ class GroqClient:
                     self._sleep(delay)
                     continue
                 logger.error("Groq rate limit (429) exceeded maximum retry attempts.")
+                if fallback_model and target_model != fallback_model:
+                    fb = self._execute_fallback(create_kwargs, fallback_model)
+                    if fb:
+                        return fb
                 raise GroqRateLimitError(
                     "Groq rate limit exceeded after maximum retries.",
                     status_code=429
@@ -403,6 +442,10 @@ class GroqClient:
                     self._sleep(delay)
                     continue
                 logger.error("Groq API request timed out after maximum retries.")
+                if fallback_model and target_model != fallback_model:
+                    fb = self._execute_fallback(create_kwargs, fallback_model)
+                    if fb:
+                        return fb
                 raise GroqTimeoutError("Groq API request timed out after maximum retries.") from None
 
             except groq.APIConnectionError as e:
@@ -415,6 +458,10 @@ class GroqClient:
                     self._sleep(delay)
                     continue
                 logger.error("Groq API connection failure after maximum retries.")
+                if fallback_model and target_model != fallback_model:
+                    fb = self._execute_fallback(create_kwargs, fallback_model)
+                    if fb:
+                        return fb
                 raise GroqConnectionError("Groq API connection failed after maximum retries.") from None
 
             except (groq.InternalServerError, groq.APIStatusError) as e:
@@ -428,6 +475,10 @@ class GroqClient:
                     self._sleep(delay)
                     continue
                 logger.error(f"Groq server error ({status}) after maximum retries.")
+                if fallback_model and target_model != fallback_model:
+                    fb = self._execute_fallback(create_kwargs, fallback_model)
+                    if fb:
+                        return fb
                 raise GroqAPIError(
                     f"Groq server error ({status}) after maximum retries.",
                     status_code=status

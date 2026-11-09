@@ -6023,7 +6023,7 @@ def ai_triage():
                         if role in ("user", "assistant") and text:
                             messages.append({"role": role, "content": text})
 
-                    res = groq_client.generate_chat_completion(messages=messages, temperature=0.7)
+                    res = groq_client.generate_chat_completion(messages=messages, temperature=0.7, fallback_model="qwen/qwen3.8-27b")
                     if res and res.content:
                         reply_text = res.content.strip()
                 except Exception as e:
@@ -7990,7 +7990,7 @@ def admin_ai_chat():
                     messages.append({"role": role, "content": text})
             messages.append({"role": "user", "content": message})
 
-            res = groq_client.generate_chat_completion(messages=messages, temperature=0.3)
+            res = groq_client.generate_chat_completion(messages=messages, temperature=0.3, fallback_model="qwen/qwen3.8-27b")
             if res and res.content:
                 reply_text = res.content.strip()
         except Exception as e:

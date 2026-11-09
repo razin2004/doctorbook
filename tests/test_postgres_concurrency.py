@@ -105,6 +105,17 @@ class PostgresConcurrencyTestSuite(unittest.TestCase):
             """))
             conn.commit()
 
+    @classmethod
+    def tearDownClass(cls):
+        if getattr(cls, 'pg_available', False) and getattr(cls, 'engine', None):
+            with cls.engine.connect() as conn:
+                conn.execute(text("DELETE FROM doctor_schedule WHERE doctor_id = 9900"))
+                conn.execute(text("DELETE FROM patient_booking WHERE doctor_id = 9900 OR doctor_name = 'Dr. Postgres Concurrency'"))
+                conn.execute(text("DELETE FROM daily_token_allocation WHERE doctor_name = 'Dr. Postgres Concurrency'"))
+                conn.execute(text("DELETE FROM doctor WHERE id = 9900"))
+                conn.execute(text("DELETE FROM \"user\" WHERE id = 9900"))
+                conn.commit()
+
     def setUp(self):
         if not getattr(self, 'pg_available', False):
             self.skipTest(getattr(self, 'skip_reason', 'PostgreSQL not available'))

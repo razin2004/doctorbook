@@ -540,6 +540,14 @@ def dispatch_inbound_message_reply(
         # -------------------------------------------------------------
         # Branch 3A: WhatsApp Appointment Booking Flow (Phase 4A)
         # -------------------------------------------------------------
+        # If user sends a greeting or menu request, cancel any stale/active booking session so they are not trapped
+        if is_greeting_message(inbound_body):
+            from models import WhatsAppBookingSession
+            active_s = WhatsAppBookingSession.get_active_session(conversation.id)
+            if active_s:
+                active_s.cancel()
+                db.session.commit()
+
         from services.whatsapp_booking_flow import handle_whatsapp_booking_flow
         booking_flow_result = handle_whatsapp_booking_flow(
             conversation=conversation,
