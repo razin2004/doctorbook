@@ -48,7 +48,7 @@ from flask import Request, Response, jsonify
 from sqlalchemy.exc import IntegrityError
 
 from phone_utils import normalize_phone_number
-from services.kapso_client import KapsoClient, sanitize_log_message
+from services.kapso_client import KapsoClient, KapsoConfig, sanitize_log_message
 from services.whatsapp_ai_service import generate_whatsapp_ai_response
 from whatsapp_role_resolver import resolve_whatsapp_sender_role
 
@@ -229,7 +229,13 @@ def dispatch_inbound_message_reply(
     (for immediate production webhook acknowledgement).
     """
     db, WhatsAppConversation, WhatsAppMessage, WhatsAppWebhookEvent = get_db_and_models()
-    active_client = client or KapsoClient()
+    inbound_phone_id = str((message or {}).get("phone_number_id") or "").strip()
+    if client:
+        active_client = client
+    elif inbound_phone_id:
+        active_client = KapsoClient(KapsoConfig(phone_number_id=inbound_phone_id))
+    else:
+        active_client = KapsoClient()
 
     conversation = db.session.get(WhatsAppConversation, conversation_id) if hasattr(db.session, 'get') else WhatsAppConversation.query.get(conversation_id)
     inbound_msg = db.session.get(WhatsAppMessage, inbound_msg_id) if hasattr(db.session, 'get') else WhatsAppMessage.query.get(inbound_msg_id)
