@@ -1638,6 +1638,231 @@
         height: 12px !important;
       }
     }
+  
+    /* AI Chat Overlay */
+    .ai-chat-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      z-index: 9000; display: none;
+      animation: modalFade 0.3s ease;
+    }
+    .ai-chat-overlay.open { display: block; }
+
+    /* ── PREMIUM ADMIN AI TRIAGE CHAT ── */
+    #adminAiChatFab {
+      position: fixed; bottom: 32px; right: 28px; z-index: 9000;
+      width: 64px; height: 64px; border-radius: 50%;
+      background: linear-gradient(135deg, #023e8a 0%, #0077b6 100%);
+      border: 2px solid rgba(255,255,255,0.2); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 12px 32px rgba(0,119,182,0.45), 0 4px 12px rgba(0,0,0,0.1);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: fabPulse 4s ease-in-out infinite;
+    }
+    #adminAiChatFab:hover {
+      transform: scale(1.12) translateY(-4px);
+      box-shadow: 0 16px 44px rgba(0,119,182,0.55);
+      background: linear-gradient(135deg, #0077b6 0%, #0096c7 100%);
+    }
+    #adminAiChatFab svg { width: 30px; height: 30px; color: #fff; }
+    #adminAiChatFab .fab-badge {
+      position: absolute; top: -5px; right: -5px;
+      background: #ef4444; color: #fff; font-size: 0.65rem;
+      font-weight: 800; border-radius: 99px;
+      padding: 3px 6px; border: 2px solid #fff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    @keyframes fabPulse {
+      0%, 100% { box-shadow: 0 12px 32px rgba(0,119,182,0.45); }
+      50% { box-shadow: 0 12px 48px rgba(0,119,182,0.65), 0 0 0 12px rgba(0,119,182,0.15); }
+    }
+
+    #adminAiChatPanel {
+      position: fixed; bottom: 110px; right: 28px; z-index: 9001;
+      width: 450px;
+      max-height: calc(100vh - 160px);
+      height: 620px;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-radius: 30px;
+      box-shadow: 0 32px 100px rgba(0, 0, 0, 0.25), 
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(0, 119, 182, 0.1);
+      display: flex; flex-direction: column;
+      transform: translateY(30px) scale(0.92); opacity: 0; pointer-events: none;
+      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      overflow: hidden;
+    }
+    #adminAiChatPanel.open { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+
+    .ai-chat-header {
+      background: linear-gradient(135deg, rgba(2, 62, 138, 0.95), rgba(0, 119, 182, 0.95));
+      padding: 1.25rem 1.4rem;
+      display: flex; align-items: center; gap: 1rem;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .ai-avatar {
+      width: 46px; height: 46px; border-radius: 14px;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; border: 1.5px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 6px;
+    }
+    .ai-avatar img { width: 100%; height: 100%; object-fit: contain; }
+    
+    .ai-header-info { flex: 1; }
+    .ai-header-name { font-size: 1.05rem; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+    .ai-header-status {
+      font-size: 0.78rem; color: rgba(255, 255, 255, 0.85);
+      display: flex; align-items: center; gap: 0.35rem; margin-top: 1px;
+    }
+    .ai-status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+    @keyframes statusPulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+    
+    .ai-chat-close {
+      background: rgba(255, 255, 255, 0.15); border: none; cursor: pointer;
+      width: 32px; height: 32px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; transition: all 0.2s;
+    }
+    .ai-chat-close:hover { background: rgba(255, 255, 255, 0.3); transform: rotate(90deg); }
+    .ai-chat-close svg { width: 18px; height: 18px; }
+
+    .ai-chat-body {
+      flex: 1; overflow-y: auto; padding: 1.5rem 1.25rem;
+      display: flex; flex-direction: column; gap: 1rem;
+      scroll-behavior: smooth;
+      background: linear-gradient(rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.88)), 
+                  url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover;
+      background-position: center;
+      background-attachment: scroll;
+    }
+    .ai-chat-body::-webkit-scrollbar { width: 4px; }
+    .ai-chat-body::-webkit-scrollbar-thumb { background: rgba(0, 119, 182, 0.15); border-radius: 10px; }
+
+    .ai-msg { display: flex; gap: 0.75rem; align-items: flex-start; }
+    .ai-msg.user { flex-direction: row-reverse; }
+    
+    .ai-msg-avatar {
+      width: 32px; height: 32px; border-radius: 10px;
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.03);
+    }
+    .ai-msg.ai .ai-msg-avatar { background: #f0f7ff; color: #0077b6; }
+    .ai-msg.user .ai-msg-avatar { background: #6366f1; color: #fff; }
+    .ai-msg-avatar svg { width: 16px; height: 16px; }
+
+    .ai-bubble {
+      max-width: 85%; padding: 0.85rem 1.1rem;
+      border-radius: 20px; font-size: 0.9rem; line-height: 1.6;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      overflow-wrap: break-word; word-wrap: break-word; word-break: break-word;
+      transition: all 0.2s ease;
+    }
+    .ai-msg.error .ai-bubble {
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #991b1b;
+      font-size: 0.78rem;
+      padding: 0.5rem 0.8rem;
+    }
+    .ai-msg.ai .ai-bubble {
+      background: #fff;
+      border: 1px solid rgba(0, 119, 182, 0.08);
+      color: #1e293b;
+      border-top-left-radius: 4px;
+    }
+    .ai-msg.user .ai-bubble {
+      background: linear-gradient(135deg, #0077b6, #0096c7);
+      color: #fff;
+      border-top-right-radius: 4px;
+    }
+    .ai-bubble a { color: #0077b6; font-weight: 700; text-decoration: none; border-bottom: 2px solid rgba(0,119,182,0.2); transition: all 0.2s; }
+    .ai-bubble a:hover { border-bottom-color: #0077b6; background: rgba(0,119,182,0.05); }
+    .ai-msg.user .ai-bubble a { color: #fff; border-bottom-color: rgba(255,255,255,0.4); }
+
+    .ai-typing .ai-bubble {
+      display: flex; gap: 5px; padding: 0.85rem 1.25rem;
+    }
+    .typing-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #0077b6; opacity: 0.3;
+      animation: typingBounce 1.4s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    .ai-chat-footer {
+      padding: 1.1rem 1.4rem 1.4rem;
+      border-top: 1px solid rgba(0,0,0,0.04);
+      display: flex; gap: 0.75rem; align-items: center;
+      background: #fff; flex-shrink: 0;
+    }
+    #adminAiChatInput {
+      flex: 1; border: 1.5px solid #f1f5f9; border-radius: 18px;
+      padding: 0.75rem 1.1rem; font-size: 0.92rem;
+      background: #f8fafc; resize: none; outline: none;
+      transition: all 0.25s;
+      scrollbar-width: none; -ms-overflow-style: none;
+    }
+    #adminAiChatInput::-webkit-scrollbar { display: none; }
+    #adminAiChatInput:focus { border-color: #0077b6; background: #fff; box-shadow: 0 0 0 4px rgba(0,119,182,0.06); }
+    
+    #adminAiChatSend {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: #0077b6; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 16px rgba(0,119,182,0.25);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    #adminAiChatSend:hover:not(:disabled) { transform: translateY(-2px) scale(1.05); box-shadow: 0 8px 20px rgba(0,119,182,0.35); }
+    #adminAiChatSend svg { width: 22px; height: 22px; color: #fff; }
+    #adminAiChatSend:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+
+    .ai-timestamp {
+      font-size: 0.7rem; color: #94a3b8; text-align: center;
+      margin: 0.5rem 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 520px) {
+      #adminAiChatPanel { 
+        width: 92vw; 
+        height: 82vh;
+        max-height: 82vh;
+        left: 4vw; 
+        top: 3vh;
+        bottom: 15vh;
+        right: 4vw;
+        border-radius: 28px; 
+        z-index: 10001;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+      }
+      #adminAiChatFab { 
+        bottom: 24px; 
+        right: 20px; 
+        width: 54px; 
+        height: 54px; 
+      }
+      #adminAiChatFab svg { width: 26px; height: 26px; }
+      .ai-header-name { font-size: 0.95rem; }
+      .ai-header-status { font-size: 0.72rem; }
+      .ai-bubble { font-size: 0.86rem; padding: 0.75rem 1rem; }
+      
+      .ai-chat-footer { padding-bottom: 1.2rem; }
+    }
+
+
   </style>
 </head>
 
@@ -6929,5 +7154,328 @@ function downloadPDF() {
     </div>
   </footer>
   {% endif %}
+
+  <!-- ══════════════ ADMIN AI TRIAGE CHAT WIDGET ══════════════ -->
+  <!-- Floating Action Button -->
+  <button id="adminAiChatFab" onclick="toggleAdminAiChat(event)" aria-label="Open Admin AI Assistant" title="Admin AI Assistant">
+    <svg viewBox="0 0 100 100" style="width:38px;height:38px;filter:drop-shadow(0 0 12px rgba(0,119,182,0.4));">
+      <defs>
+        <linearGradient id="primeLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fff"/>
+          <stop offset="100%" stop-color="#fff"/>
+        </linearGradient>
+      </defs>
+      <!-- Outer rings -->
+      <circle cx="50" cy="50" r="46" stroke="white" stroke-width="4" fill="none"/>
+      <circle cx="50" cy="50" r="38" stroke="white" stroke-width="2.5" fill="none" opacity="0.7"/>
+      <!-- Medical Cross -->
+      <path d="M42 17L58 17L58 42L83 42L83 58L58 58L58 83L42 83L42 58L17 58L17 42L42 42Z" fill="white"/>
+      <!-- Heartbeat line -->
+      <polyline points="17,50 29,50 33,35 40,65 47,50 57,50 63,35 70,65 75,50 83,50" stroke="#0077b6" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="fab-badge" id="adminAiFabBadge">AI</span>
+  </button>
+
+  <!-- AI Chat Overlay -->
+  <div id="adminAiChatOverlay" class="ai-chat-overlay" onclick="toggleAdminAiChat()"></div>
+
+  <!-- AI Chat Panel -->
+  <div id="adminAiChatPanel" role="dialog" aria-label="Admin AI Assistant" onclick="event.stopPropagation()">
+    <!-- Header -->
+    <div class="ai-chat-header">
+      <div class="ai-avatar">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}" alt="PrimeCare Logo">
+      </div>
+      <div class="ai-header-info">
+        <div class="ai-header-name">Admin Assistant</div>
+        <div class="ai-header-status">
+          <span class="ai-status-dot"></span>
+          System Online
+        </div>
+      </div>
+      <button class="ai-chat-close" onclick="toggleAdminAiChat()" aria-label="Close AI chat">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <!-- Messages Body -->
+    <div class="ai-chat-body" id="adminAiChatMessages"></div>
+
+    <!-- Input Footer -->
+    <div class="ai-chat-footer">
+      <textarea id="adminAiChatInput" rows="1" placeholder="Ask about bookings, settings..."
+        onkeydown="adminAiInputKeydown(event)"></textarea>
+      <button id="adminAiChatSend" onclick="sendAdminAiMessage(event)" aria-label="Send">
+        <i data-lucide="send"></i>
+      </button>
+    </div>
+  </div>
+
+<script>
+    // ===================== Admin AI Assistant Chat Logic =====================
+    let adminAiChatHistory = [];
+    let adminAiChatIsOpen = false;
+    let adminAiChatFirstOpen = true;
+    let adminAiIsTyping = false;
+
+    // Toggle Admin Chat Panel
+    window.toggleAdminAiChat = function(e) {
+      if (e) e.stopPropagation();
+      const panel = document.getElementById('adminAiChatPanel');
+      const overlay = document.getElementById('adminAiChatOverlay');
+      const badge = document.getElementById('adminAiFabBadge');
+      const input = document.getElementById('adminAiChatInput');
+
+      if (!panel) return;
+      
+      adminAiChatIsOpen = !adminAiChatIsOpen;
+      panel.classList.toggle('open', adminAiChatIsOpen);
+      if (overlay) overlay.classList.toggle('open', adminAiChatIsOpen);
+
+      if (window.innerWidth <= 520) {
+        document.body.style.overflow = adminAiChatIsOpen ? 'hidden' : '';
+      }
+
+      if (adminAiChatIsOpen) {
+        if (badge) badge.style.display = 'none';
+        if (adminAiChatFirstOpen) {
+          adminAiChatFirstOpen = false;
+          showAdminWelcome();
+        }
+        setTimeout(() => input?.focus(), 350);
+      }
+    };
+
+    function showAdminWelcome() {
+      const messagesContainer = document.getElementById('adminAiChatMessages');
+      if (!messagesContainer) return;
+      
+      const ts = document.createElement('div');
+      ts.className = 'ai-timestamp';
+      ts.textContent = 'Today';
+      messagesContainer.appendChild(ts);
+
+      const aiBubble = document.createElement('div');
+      aiBubble.className = 'chat-bubble ai-msg ai';
+      aiBubble.style.alignSelf = 'flex-start';
+      aiBubble.style.width = '100%';
+      aiBubble.innerHTML = `
+        <div class="ai-msg-avatar">
+          <svg viewBox="0 0 100 100" style="width:22px;height:22px;"><circle cx="50" cy="50" r="46" stroke="#0077b6" stroke-width="5" fill="none"/><path d="M42 17L58 17L58 42L83 42L83 58L58 58L58 83L42 83L42 58L17 58L17 42L42 42Z" fill="#0077b6"/><polyline points="17,50 29,50 33,35 40,65 47,50 57,50 63,35 70,65 75,50 83,50" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="ai-bubble" style="width: 100%;">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;color:#0077b6;font-weight:700;">
+            Welcome to Admin Assistant
+          </div>
+          Hello! I am your <strong>PrimeCare Admin Assistant</strong>.<br><br>
+          I can help you check <strong>bookings</strong>, view <strong>upcoming holidays</strong>, answer questions about the clinic's setup, and more.<br>
+          How can I assist you today?
+        </div>
+      `;
+      messagesContainer.appendChild(aiBubble);
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    // Auto-resize textarea
+    const adminInput = document.getElementById('adminAiChatInput');
+    if (adminInput) {
+      adminInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+      });
+    }
+
+    window.adminAiInputKeydown = function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAdminAiMessage();
+      }
+    };
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function parseMarkdown(text) {
+      if (!text) return '';
+      
+      // Basic markdown parser
+      let html = escapeHtml(text);
+      
+      // bold: **text** -> <strong>text</strong>
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      
+      // inline code: `text` -> <code style="background: rgba(147,51,234,0.08); color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85em;">$1</code>
+      html = html.replace(/`(.*?)`/g, '<code style="background: rgba(147,51,234,0.08); color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85em;">$1</code>');
+      
+      // bullet points: lines starting with "- " or "* " -> list items
+      const lines = html.split('\n');
+      let inList = false;
+      let resultLines = [];
+      
+      for (let line of lines) {
+        let trimmed = line.trim();
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+          if (!inList) {
+            resultLines.push('<ul style="margin: 0.5rem 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 4px; list-style-type: disc;">');
+            inList = true;
+          }
+          let content = trimmed.substring(2);
+          resultLines.push(`<li>${content}</li>`);
+        } else {
+          if (inList) {
+            resultLines.push('</ul>');
+            inList = false;
+          }
+          resultLines.push(line);
+        }
+      }
+      if (inList) {
+        resultLines.push('</ul>');
+      }
+      
+      html = resultLines.join('\n');
+      
+      // line breaks
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+
+    async function sendAdminAiMessage(event) {
+      if (event) event.preventDefault();
+      
+      const input = document.getElementById('adminAiChatInput');
+      const messagesContainer = document.getElementById('adminAiChatMessages');
+      if (!input || !messagesContainer) return;
+      
+      const text = input.value.trim();
+      if (!text) return;
+      
+      // Clear input
+      input.value = '';
+      
+      // Append user bubble
+      const userBubble = document.createElement('div');
+      userBubble.className = 'chat-bubble ai-msg user';
+      userBubble.style.alignSelf = 'flex-end';
+      userBubble.style.flexDirection = 'row-reverse';
+      userBubble.innerHTML = `
+        <div class="ai-msg-avatar">
+          <i data-lucide="user" style="width:16px; height:16px;"></i>
+        </div>
+        <div class="ai-bubble">
+          ${escapeHtml(text)}
+        </div>
+      `;
+      messagesContainer.appendChild(userBubble);
+      
+      // Add typing indicator
+      const typingIndicator = document.createElement('div');
+      typingIndicator.id = 'aiChatTypingIndicator';
+      typingIndicator.className = 'chat-bubble ai-msg ai ai-typing';
+      typingIndicator.style.alignSelf = 'flex-start';
+      typingIndicator.innerHTML = `
+        <div class="ai-msg-avatar">
+          <svg viewBox="0 0 100 100" style="width:22px;height:22px;"><circle cx="50" cy="50" r="46" stroke="#0077b6" stroke-width="5" fill="none"/><path d="M42 17L58 17L58 42L83 42L83 58L58 58L58 83L42 83L42 58L17 58L17 42L42 42Z" fill="#0077b6"/><polyline points="17,50 29,50 33,35 40,65 47,50 57,50 63,35 70,65 75,50 83,50" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="ai-bubble">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>
+      `;
+      messagesContainer.appendChild(typingIndicator);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      if (window.lucide) lucide.createIcons();
+
+      try {
+        const response = await fetch('/admin_ai_chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: text,
+            history: adminAiChatHistory
+          })
+        });
+        
+        // Remove typing indicator
+        document.getElementById('aiChatTypingIndicator')?.remove();
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          const aiResponse = data.reply || data.response; // Accept 'reply' based on updated backend
+          
+          // Append to history
+          adminAiChatHistory.push({ role: 'user', text: text });
+          adminAiChatHistory.push({ role: 'model', text: aiResponse });
+          
+          // Limit history size to last 20 messages to prevent bloated requests
+          if (adminAiChatHistory.length > 20) {
+            adminAiChatHistory = adminAiChatHistory.slice(adminAiChatHistory.length - 20);
+          }
+          
+          // Append AI bubble
+          const aiBubble = document.createElement('div');
+          aiBubble.className = 'chat-bubble ai-msg ai';
+          aiBubble.style.alignSelf = 'flex-start';
+          aiBubble.style.width = '100%';
+          aiBubble.innerHTML = `
+            <div class="ai-msg-avatar">
+              <svg viewBox="0 0 100 100" style="width:22px;height:22px;"><circle cx="50" cy="50" r="46" stroke="#0077b6" stroke-width="5" fill="none"/><path d="M42 17L58 17L58 42L83 42L83 58L58 58L58 83L42 83L42 58L17 58L17 42L42 42Z" fill="#0077b6"/><polyline points="17,50 29,50 33,35 40,65 47,50 57,50 63,35 70,65 75,50 83,50" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="ai-bubble" style="width: 100%; text-align: left;">
+              ${parseMarkdown(aiResponse)}
+            </div>
+          `;
+          messagesContainer.appendChild(aiBubble);
+        } else {
+          // Friendly Error bubble
+          const errorMsg = data.error || 'Something went wrong. Please try again.';
+          const errorBubble = document.createElement('div');
+          errorBubble.className = 'chat-bubble ai-msg ai error';
+          errorBubble.style.alignSelf = 'flex-start';
+          errorBubble.style.width = '100%';
+          errorBubble.innerHTML = `
+            <div class="ai-msg-avatar">
+              <i data-lucide="alert-triangle" style="width:16px; height:16px; color:#991b1b;"></i>
+            </div>
+            <div class="ai-bubble" style="background:#fef2f2; border:1px solid #fee2e2; color:#991b1b;">
+              ${escapeHtml(errorMsg)}
+            </div>
+          `;
+          messagesContainer.appendChild(errorBubble);
+        }
+      } catch (err) {
+        document.getElementById('aiChatTypingIndicator')?.remove();
+        
+        const netErrorBubble = document.createElement('div');
+        netErrorBubble.className = 'chat-bubble';
+        netErrorBubble.style.alignSelf = 'flex-start';
+        netErrorBubble.innerHTML = `
+          <div style="width:32px; height:32px; border-radius:50%; background:#ef4444; color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(239,68,68,0.25);">
+            <i data-lucide="wifi-off" style="width:16px; height:16px;"></i>
+          </div>
+          <div style="background:#fef2f2; color:#991b1b; border-radius:18px; border-top-left-radius:4px; padding:0.75rem 1rem; font-size:0.9rem; line-height:1.5; font-weight:500; text-align: left;">
+            <strong>Network Error:</strong> Failed to connect to the Admin AI server. Make sure the server is running.
+          </div>
+        `;
+        messagesContainer.appendChild(netErrorBubble);
+      }
+      
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      if (window.lucide) lucide.createIcons();
+    }
+
+</script>
 </body>
 </html>

@@ -5783,7 +5783,28 @@ def build_clinic_context(user_id=None):
     return "\n".join(lines)
 
 
-# Out-of-scope Gemini LLM configuration removed
+GEMINI_SYSTEM_PROMPT = """You are PrimeCare AI Assistant — a friendly, professional medical triage and clinic information assistant for PrimeCare Clinic.
+
+Your core roles:
+1. SYMPTOM TRIAGE: When a patient describes symptoms, analyse them and recommend the most appropriate medical specialization available at PrimeCare Clinic. Always be empathetic, clear, and add a note that the AI recommendation is not a substitute for professional medical advice.
+2. CLINIC INFORMATION: Answer operational questions about doctors, their working days, timings, departments, etc., using ONLY the real clinic data provided below.
+3. PERSONAL BOOKINGS: If a user is logged in, you will see their personal booking data. Use this to answer questions about how many bookings they have, upcoming dates, and their next appointment.
+
+Behaviour rules:
+- Always be concise, warm, and professional.
+- For symptoms, end your response with a recommendation like: "➡️ Recommended: [Specialization]" on its own line.
+- If you cannot identify a specific specialization or the symptoms are vague, ask the user: "Could you tell me more about your symptoms so I can recommend the right doctor?"
+- If the requested specialization (like Dermatology) is NOT in the clinic data, politely say: "I apologize, but we don't have a [Specialization] at PrimeCare today. However, you can consult our General Medicine doctor for an initial evaluation."
+- For clinic queries, give direct, factual answers based on the provided data.
+- If the user asks for the clinic's location, provide the name "Koorachundu" and include the clickable Google Maps link: [Koorachundu](https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z/data=!3m1!4b1!4m4!3m3!8m2!3d11.5384625!4d75.8455156?entry=ttu).
+- If a patient asks when they should reach/arrive for their booking, always tell them to arrive 10 minutes before their scheduled time, and explicitly mention their appointment start time (e.g., "Your appointment is at 10:00 AM, so please reach the clinic by 09:50 AM.").
+- If a user asks about their bookings and you see none in the context, politely inform them they have no upcoming appointments.
+- If a patient asks to book an appointment, tell them to click the "Book Now" button or visit /booking.
+- Never make up doctors or schedule data not present in the context.
+- If a question is completely outside clinic scope, politely say you can only help with health and clinic queries.
+
+{clinic_context}"""
+
 
 from flask import send_from_directory, make_response
 
@@ -5933,7 +5954,95 @@ def delete_saved_patient(patient_id):
     db.session.commit()
     return jsonify({'success': True, 'msg': 'Patient profile deleted successfully'})
 
-# Out-of-scope /ai_triage route removed
+@app.route("/ai_triage", methods=["POST"])
+@csrf.exempt
+def ai_triage():
+    """AI-powered symptom triage + clinic Q&A endpoint with Gemini and Groq fallback."""
+    data = request.get_json() or {}
+    history = data.get("history", [])
+
+    if not history:
+        return jsonify({"success": False, "reply": "Hello! I'm PrimeCare AI Assistant. How can I help you today?"})
+
+    try:
+        user_id = session.get('user_id')
+        clinic_context = build_clinic_context(user_id=user_id)
+        system_prompt = GEMINI_SYSTEM_PROMPT.format(clinic_context=clinic_context)
+
+        reply_text = None
+        google_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+
+        # 1. Attempt Gemini 2.5 Flash if Google key is configured
+        if google_key:
+            try:
+                from google import genai
+                from google.genai import types as genai_types
+                client = genai.Client(api_key=google_key)
+
+                contents = []
+                for msg in history[-10:]:
+                    role = msg.get("role", "user")
+                    text = msg.get("text", "")
+                    if role in ("user", "model") and text:
+                        contents.append(
+                            genai_types.Content(
+                                role=role,
+                                parts=[genai_types.Part.from_text(text=text)]
+                            )
+                        )
+
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=contents,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.7,
+                        max_output_tokens=600,
+                    )
+                )
+                if response and response.text:
+                    reply_text = response.text.strip()
+            except Exception as e:
+                app.logger.warning(f"Gemini triage call failed, falling back to Groq: {e}")
+                reply_text = None
+
+        # 2. Fallback to Groq if Gemini did not produce a reply
+        if not reply_text:
+            groq_key = os.environ.get("GROQ_API_KEY")
+            if groq_key:
+                try:
+                    from services.groq_client import GroqClient
+                    groq_client = GroqClient()
+                    messages = [{"role": "system", "content": system_prompt}]
+                    for msg in history[-10:]:
+                        role = msg.get("role", "user")
+                        text = msg.get("text", "")
+                        if role == "model":
+                            role = "assistant"
+                        if role in ("user", "assistant") and text:
+                            messages.append({"role": role, "content": text})
+
+                    res = groq_client.generate_chat_completion(messages=messages, temperature=0.7)
+                    if res and res.content:
+                        reply_text = res.content.strip()
+                except Exception as e:
+                    app.logger.error(f"Groq triage call failed: {e}")
+
+        if not reply_text:
+            return jsonify({
+                "success": False,
+                "reply": "I'm having trouble connecting to the clinic AI assistant right now. Please try again in a few moments."
+            })
+
+        return jsonify({"success": True, "reply": reply_text})
+
+    except Exception as e:
+        app.logger.error(f"AI Triage outer error: {e}")
+        return jsonify({
+            "success": False,
+            "reply": "Sorry, I'm having trouble connecting to the clinic information system right now."
+        })
+
 
 # ===================== Admin session check =====================
 
@@ -7640,7 +7749,260 @@ def query_leaves_and_holidays() -> str:
     except Exception as e:
         return f"Error querying leaves and holidays: {str(e)}"
 
-# Out-of-scope admin AI chat functionality removed
+def get_admin_ai_system_instruction():
+    ist = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(ist)
+    today_str = now.strftime("%Y-%m-%d")
+    tomorrow_str = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+    current_time = now.strftime("%I:%M %p")
+    day_of_week = now.strftime("%A")
+    
+    settings = get_all_settings()
+    settings_json = json.dumps(settings, indent=2)
+    
+    doctors = get_all_doctors()
+    doctors_context = []
+    for doc in doctors:
+        doctors_context.append({
+            "Name": doc["Name"],
+            "Specialization": doc["Specialization"],
+            "Days": doc["Days"],
+            "Time": doc["Time"],
+            "Email": doc.get("Email", "")
+        })
+    doctors_json = json.dumps(doctors_context, indent=2)
+    
+    login_setting = AppSettings.query.filter_by(key='password_login_enabled').first()
+    password_login_status = "Enabled" if (not login_setting or login_setting.value == '1') else "Disabled"
+
+    instruction = f"""You are the official PrimeCare Clinic Admin AI Assistant — a fully data-aware administrative intelligence system.
+You have access to the administrative system context, settings, operations, and database query tools.
+Your goal is to provide highly accurate, context-rich, analytical, and actionable responses instead of generic AI answers.
+Use Markdown formatting for your responses (e.g., tables, list items, bold text, code-like paths, headers).
+
+### CURRENT CLINIC CONTEXT
+- Today's Date: {today_str} ({day_of_week})
+- Tomorrow's Date: {tomorrow_str}
+- Current Local Time: {current_time}
+- Admin Email: {ADMIN_EMAIL}
+- Email/Password Login Status: {password_login_status}
+
+### APP SETTINGS (CLINIC CONFIGURATION)
+Here is the JSON representation of the current clinic settings:
+{settings_json}
+
+### DOCTORS DIRECTORY & SCHEDULES
+Here is the JSON representation of the registered clinic doctors and their default schedules:
+{doctors_json}
+
+### DATABASE MODELS & SCHEMAS
+The system operates on an SQLite database. Here is the schema outline:
+1. **User**: stores accounts. Roles: `'patient'`, `'doctor'`, or `'admin'`.
+   Fields: `id`, `name`, `email`, `password_hash`, `role`, `created_at`.
+2. **DoctorSession**: tracks queue sessions. Statuses: `'idle'`, `'active'`, `'waiting_bookings'`, `'completed'`.
+   Fields: `id`, `doctor_name`, `specialization`, `email`, `status`, `current_token`, `session_date`, `total_tokens`, `start_time`, `end_time`, `skipped_tokens` (comma-separated string).
+3. **PatientBooking**: cached appointments. Statuses: `'confirmed'`, `'cancelled'`.
+   Fields: `id`, `user_id` (foreign key to User), `doctor_name`, `specialization`, `date` (YYYY-MM-DD), `time` (time range), `token` (integer), `sheet_url`, `patient_name`, `age`, `created_at`, `status`, `cancelled_by`, `cancellation_reason`, `cancelled_at`, `consultation_start_time`, `consultation_end_time`.
+   - *Note*: Unregistered guest bookings map to user `guest@primecare.com` (user ID is verified dynamically) to maintain database constraints.
+4. **Prescription**: logs prescribed medications.
+   Fields: `id`, `user_id` (patient ID), `patient_name`, `consultation_date`, `doctor_name`, `file_path` (PDF/image uploads), `text_content` (prescribed details), `created_at`.
+5. **TickerMessage**: broadcast messages.
+   Fields: `id`, `content`, `is_active`, `created_at`.
+6. **AppSettings**: configurations.
+   Fields: `id`, `key` (e.g. `'password_login_enabled'`, `'ticker_solo_mode'`, `'admin_password_hash'`, contact details), `value`.
+7. **PushSubscription**: web push data for alerts.
+   Fields: `id`, `user_id`, `patient_name`, `doctor_name`, `endpoint`, `p256dh`, `auth`, `created_at`.
+8. **DoctorReferral**: referrals from doctors. Statuses: `'pending'`, `'booked'`, `'dismissed'`.
+   Fields: `id`, `user_id`, `from_doctor`, `to_specialization`, `notes`, `status`, `patient_name`, `booking_id`, `created_at`.
+9. **OTP**: login/reset verification.
+   Fields: `id`, `email`, `otp`, `expiry`.
+
+### OPERATIONAL CAPABILITIES & TOOLS
+You must call the appropriate tool(s) to fetch real-time application data to answer the administrator's questions:
+1. `get_system_statistics()`: Get high-level database counts, booking stats, active session count, prescription volume, referral status, and cancellation rates. Use this for general health checks, performance overviews, or operational metrics.
+2. `query_users(role, search_query)`: Find registered users/patients/doctors. Use this when the admin asks about specific accounts or total users.
+3. `query_appointments(doctor_name, date_str, status, patient_name)`: Search appointment bookings in the local cache. Use this to verify booking details, analyze doctor booking load, compare dates, or find cancelled appointments.
+4. `query_referrals(from_doctor, to_specialization, status)`: Search and count clinical referrals between doctors and specialties.
+5. `query_prescriptions(doctor_name, patient_name, date_str)`: Fetch prescription history.
+6. `query_doctor_sessions_today()`: Retrieve live patient queue data for today (current token, total tokens, queue status, skipped tokens). Use this to answer questions about wait times, who is currently consulting, or queue backlogs.
+7. `query_leaves_and_holidays()`: Retrieves all scheduled doctor leaves and clinic holidays.
+8. `check_doctor_bookings_and_schedule(doctor_name_query, date_str)`: Fetch real-time schedule and patient lists for a specific doctor on a specific date (reads from the live Google Sheet).
+9. `get_upcoming_holidays()`: Retrieve clinic holidays.
+
+### BEHAVIOR AND ANALYSIS GUIDELINES
+- **Analyze and Calculate**: Do not just repeat raw JSON output. Perform calculations (e.g., sum up total appointments, calculate percentage of cancelled appointments, count how many bookings a specific doctor has, find busy days).
+- **Compare and Contrast**: When asked, compare booking rates, cancellation patterns, or doctor workloads.
+- **Relate Data**: Connect information. For example, if asked about a patient's booking, look at their referrals, prescriptions, or active queue position.
+- **Answer Business Questions**: Provide decision support. E.g., "Which doctor is busiest?", "What is our cancellation rate?", "How many referrals are pending for Cardiology?".
+- **Ground in Real-Time Data**: Make sure every statistic and name you mention is returned by a tool or present in the current context. If a tool returns no data, explicitly state that no records were found matching those criteria.
+- **Conflict Checking**: Before confirming doctor schedules or leaves, verify if there are any conflicting patient bookings.
+
+### QUEUE & SESSION LIFECYCLE GUIDE
+Doctors manage queues via their dashboards. The lifecycle is:
+1. **Start Session**: Status shifts from `'idle'` to `'active'`, starting the first patient's consultation timer (`consultation_start_time = datetime.utcnow()`).
+2. **Call Next Patient**: The current token's consultation ends (`consultation_end_time = datetime.utcnow()`), the token increments, and the next patient's consultation timer starts.
+3. **Skip Token**: The current token is added to the session's `skipped_tokens` list, the token increments, and the next patient's timer starts. Web push notifications notify patients of the skipping.
+4. **Consult/Recall Skipped**: Removes a token from the skipped list, retrospectively setting consultation start/end timers for that booking.
+5. **Complete Session**: Sets status to `'completed'` and records the session end time.
+
+### CLINIC SECURITY & OTP POLICIES
+- **Email/Password Login Toggle**: If `'password_login_enabled'` is `'0'` (Disabled), admins can only log in using email OTP.
+- **OTP Verification Policies**:
+  - Expiry: OTP codes are valid for a maximum of 5 minutes.
+  - Expiry and attempt tracking: Verification routes limit invalid attempts to protect against brute-force attacks.
+  - Password Reset: Forgot password flow uses a 6-digit OTP code sent via email.
+
+### ADMIN PANEL NAVIGATION GUIDE (HOW-TO GUIDES)
+Map admin requests directly to these panels and paths:
+1. **Booking Hub**:
+   - **New Appointment (Tab `'book'`)**: Card **Patient Booking**. Book new appointments by inputting Name, Age, Gender, Phone, Doctor, Date, Time, and Reason.
+   - **Manage Appointments (Tab `'view'`)**: Card **Manage Appointments**. View, search, and sort bookings, and inspect patient details, consultation status, and referrals.
+   - **Cancel Appointments (Tab `'cancel'`)**: Card **Cancel Appointments**. Lists bookings with a **Cancel Booking** button that triggers a cancellation modal requiring a reason. Updates status to `'cancelled'` in DB and sheet.
+2. **Staff Roster**:
+   - **Register Doctor (Tab `'add'`)**: Card **Register Doctor**. Enter name, specialization, email, profile image URL, and weekly working slots (days and hours).
+   - **Edit Schedules (Tab `'edit'`)**: Card **Edit Schedules**. Edit weekly working days, times, and slots for registered doctors.
+   - **Temporary Leaves (Tab `'leaves'`)**: Card **Temporary Leaves**. Select a doctor, view leave history, and add or delete temporary leaves (date and reason) that sync with the Google Sheet.
+   - **Remove Doctor (Tab `'delete'`)**: Card **Remove Doctor**. Select a doctor and delete their registry and credentials.
+3. **Clinic Operations**:
+   - **Queue & Announcements (Tab `'ticker'`)**: Card **Live Ticker**. Add announcements to the scrolling ticker, delete broadcasts, or toggle **Solo Broadcast Mode** (forces the ticker to only display custom announcements and suppress automated doctor queue schedules).
+   - **Manage Holidays (Tab `'holiday'`)**: Card **Clinic Holidays**. Schedule a single holiday or a date range (specifying start and end dates and a reason), view upcoming holidays, and delete holidays.
+   - **System Settings (Tab `'settings'`)**: Card **Clinic Settings**. Edit contact info (Phone, WhatsApp, Address, Map link), Trust statistics (Specialists count, Patients count, Established year, Certification), and HomePage Promotional contents (main headings, subheadings, bios, images, and leaders).
+   - **Security & Access (Tab `'security'`)**: Card **Admin Security**. Toggle the "Allow Email & Password Login" switch, change the admin password, or request/verify OTP for resetting the admin password.
+   - **Analytics (External URL `/admin/analytics`)**: Link **Analytics**. View metrics for clinic performance, doctor loads, cancellation trends, and patient wait times.
+
+### COMMUNICATION RULES
+- Be direct and precise.
+- When referring to tabs or sections, mention the card name and tab, for example: "Go to Clinic Settings panel (tab `'settings'`)".
+- Bold the names of buttons, inputs, and sections.
+- When summarizing bookings or data, present the information in a clean, user-friendly markdown list or formatted table.
+"""
+    return instruction
+
+
+
+@app.route('/admin_ai_chat', methods=['POST'])
+@csrf.exempt
+def admin_ai_chat():
+    """Admin AI chat assistant endpoint with Gemini function calling and Groq fallback."""
+    if not is_admin_authenticated():
+        return jsonify({"success": False, "error": "Unauthorized access"}), 403
+
+    data = request.get_json() or {}
+    message = data.get("message", "").strip()
+    history = data.get("history", [])
+
+    if not message:
+        return jsonify({"success": False, "error": "Message is required"}), 400
+
+    google_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+    groq_key = os.environ.get("GROQ_API_KEY")
+
+    if not google_key and not groq_key:
+        return jsonify({
+            "success": False,
+            "error": "The AI service is currently unavailable. No API key configured."
+        }), 500
+
+    system_instruction = get_admin_ai_system_instruction()
+    reply_text = None
+
+    # 1. Try Gemini with tool-calling capabilities if Google API key is configured
+    if google_key:
+        try:
+            from google import genai
+            from google.genai import types as genai_types
+
+            client_genai = genai.Client(api_key=google_key)
+            contents = []
+            for h in history:
+                role = h.get("role")
+                text = h.get("text")
+                if role in ["user", "model"] and text:
+                    contents.append(
+                        genai_types.Content(
+                            role=role,
+                            parts=[genai_types.Part.from_text(text=text)]
+                        )
+                    )
+
+            chat = client_genai.chats.create(
+                model='gemini-2.5-flash',
+                history=contents,
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    tools=[
+                        check_doctor_bookings_and_schedule,
+                        get_upcoming_holidays,
+                        get_system_statistics,
+                        query_users,
+                        query_appointments,
+                        query_referrals,
+                        query_prescriptions,
+                        query_doctor_sessions_today,
+                        query_leaves_and_holidays
+                    ],
+                    temperature=0.2
+                )
+            )
+
+            response = chat.send_message(message)
+            if response and response.text:
+                reply_text = response.text.strip()
+        except Exception as e:
+            app.logger.warning(f"Gemini admin chat failed, falling back to Groq: {e}")
+            reply_text = None
+
+    # 2. Try Groq fallback with real-time operational context injected
+    if not reply_text and groq_key:
+        try:
+            from services.groq_client import GroqClient
+            groq_client = GroqClient()
+
+            try:
+                stats = get_system_statistics()
+            except Exception:
+                stats = "Unavailable"
+            try:
+                today_sessions = query_doctor_sessions_today()
+            except Exception:
+                today_sessions = "Unavailable"
+            try:
+                leaves_holidays = query_leaves_and_holidays()
+            except Exception:
+                leaves_holidays = "Unavailable"
+
+            augmented_instruction = (
+                f"{system_instruction}\n\n"
+                f"### REAL-TIME OPERATIONAL SNAPSHOT\n"
+                f"System Statistics:\n{stats}\n\n"
+                f"Today's Doctor Sessions:\n{today_sessions}\n\n"
+                f"Leaves & Holidays:\n{leaves_holidays}\n"
+            )
+
+            messages = [{"role": "system", "content": augmented_instruction}]
+            for h in history[-10:]:
+                role = h.get("role")
+                text = h.get("text")
+                if role == "model":
+                    role = "assistant"
+                if role in ["user", "assistant"] and text:
+                    messages.append({"role": role, "content": text})
+            messages.append({"role": "user", "content": message})
+
+            res = groq_client.generate_chat_completion(messages=messages, temperature=0.3)
+            if res and res.content:
+                reply_text = res.content.strip()
+        except Exception as e:
+            app.logger.error(f"Groq admin chat fallback failed: {e}")
+
+    if not reply_text:
+        return jsonify({
+            "success": False,
+            "error": "The AI service is temporarily unavailable. Please try again in a few moments."
+        }), 503
+
+    return jsonify({"success": True, "reply": reply_text})
+
 
 # ===================== WHATSAPP BUSINESS API WEBHOOK (PHASE 3F) =====================
 
