@@ -849,17 +849,12 @@ def get_clinic_whatsapp_numbers() -> set:
                 numbers.add(norm)
                 numbers.add(norm.lstrip("+"))
 
-    # Known clinic numbers as baseline (the clinic's verified WhatsApp business number and ID)
+    # Known clinic phone number IDs as baseline (IDs only, never hardcoded personal mobile numbers)
     known = [
-        "+917511135687", "917511135687", "7511135687",
-        "1387431517794285"
+        "1387431517794285", "597907523413541"
     ]
     for kn in known:
         numbers.add(kn)
-        norm = normalize_phone_number(kn)
-        if norm:
-            numbers.add(norm)
-            numbers.add(norm.lstrip("+"))
 
     return numbers
 
@@ -1109,6 +1104,12 @@ def parse_webhook_payload(
                     or (item.get("metadata") or {}).get("direction")
                     or conversation_dict.get("direction")
                 )
+                if not direction_val:
+                    if effective_event and "received" in effective_event:
+                        direction_val = "inbound"
+                    elif effective_event and "sent" in effective_event:
+                        direction_val = "outbound"
+
                 if direction_val:
                     direction_val = str(direction_val).strip().lower()
 
@@ -1172,8 +1173,8 @@ def parse_webhook_payload(
                         for m in val.get("messages", []):
                             if isinstance(m, dict):
                                 m["_contacts"] = val.get("contacts", [])
-                                if "direction" not in m and meta_direction:
-                                    m["direction"] = meta_direction
+                                if "direction" not in m:
+                                    m["direction"] = meta_direction or "inbound"
                                 if "is_echo" not in m and meta_echo is not None:
                                     m["is_echo"] = meta_echo
                                 messages.append(m)
