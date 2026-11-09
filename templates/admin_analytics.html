@@ -1288,7 +1288,7 @@
     });
   
     function goToPanel(panel) {
-      window.location.href = '/booking?view=admin&panel=' + panel.replace(/['"]/g, '');
+      window.location.href = '/admin?panel=' + panel.replace(/['"]/g, '');
     }
     function goToCurrentDashboard() {
       {% if session.get('user_id') %}
@@ -1312,7 +1312,7 @@
       {% endif %}
     }
     function goToAdminDashboard() {
-      window.location.href = '/booking?view=admin';
+      window.location.href = '/admin';
     }
     function goHome() {
       window.location.href = '/';

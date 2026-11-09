@@ -1449,29 +1449,112 @@
         margin: 0 !important;
       }
     }
-    @media (max-width: 600px) {
+    /* Admin Portal Tab Styles */
+    .admin-tab-btn {
+      background: transparent;
+      color: #64748b;
+    }
+    .admin-tab-btn.active {
+      background: #ffffff !important;
+      color: #0077b6 !important;
+      box-shadow: 0 4px 12px rgba(0, 119, 182, 0.12) !important;
+    }
+    .channel-choice-label {
+      transition: all 0.2s ease;
+    }
+    .channel-choice-label:hover {
+      border-color: #0077b6 !important;
+    }
+
+    @media (max-width: 680px) {
       .panel-nav {
-        grid-template-columns: 1fr !important;
-        gap: 0.6rem !important;
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        gap: 0.35rem !important;
+        padding: 5px !important;
+        background: rgba(255, 255, 255, 0.8) !important;
+        border-radius: 16px !important;
+        border: 1.5px solid rgba(0, 119, 182, 0.15) !important;
+        margin: 1rem auto 0.75rem auto !important;
+        box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04) !important;
       }
       .panel-card {
-        padding: 0.9rem 1.1rem !important;
-        flex-direction: row !important;
+        flex: 1 1 0 !important;
+        min-width: 80px !important;
+        padding: 0.55rem 0.4rem !important;
+        border-radius: 12px !important;
+        flex-direction: column !important;
         align-items: center !important;
-        gap: 0.75rem !important;
+        text-align: center !important;
+        gap: 0.2rem !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+      .panel-card:hover {
+        transform: none !important;
+        box-shadow: none !important;
+      }
+      .panel-card.active {
+        background: linear-gradient(135deg, #0077b6 0%, #0096c7 100%) !important;
+        box-shadow: 0 4px 12px rgba(0, 119, 182, 0.25) !important;
+        color: #ffffff !important;
       }
       .panel-card-icon {
-        width: 38px !important;
-        height: 38px !important;
-        border-radius: 10px !important;
+        width: 30px !important;
+        height: 30px !important;
+        border-radius: 8px !important;
       }
       .panel-card-icon svg {
-        width: 18px !important;
-        height: 18px !important;
+        width: 16px !important;
+        height: 16px !important;
+      }
+      .panel-card-label {
+        font-size: 0.74rem !important;
+        white-space: nowrap !important;
+        font-weight: 700 !important;
+      }
+      .panel-card-sub {
+        display: none !important;
+      }
+      .helper-text {
+        font-size: 0.78rem !important;
+        margin-bottom: 0.8rem !important;
       }
       .booking-section:not(#admin) .myclass {
-        padding: 1.25rem 1.1rem !important;
+        padding: 1.25rem 1rem !important;
         border-radius: 20px !important;
+        box-shadow: 0 8px 25px rgba(15, 23, 42, 0.06) !important;
+      }
+      .booking-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.4rem !important;
+      }
+      .booking-grid-col-right {
+        border-left: none !important;
+        padding-left: 0 !important;
+        border-top: 1px dashed rgba(0, 119, 182, 0.15) !important;
+        padding-top: 1.4rem !important;
+      }
+      .booking-section h2 {
+        font-size: 1.25rem !important;
+        margin-bottom: 0.9rem !important;
+      }
+      input, select, textarea {
+        font-size: 16px !important;
+        min-height: 46px !important;
+        border-radius: 12px !important;
+      }
+      .btn {
+        min-height: 48px !important;
+        border-radius: 14px !important;
+        font-size: 0.95rem !important;
+      }
+      .ticket-card {
+        padding: 0.9rem !important;
+        border-radius: 16px !important;
       }
       #securityTabs {
         display: flex !important;
@@ -1936,9 +2019,7 @@
     <i data-lucide="mouse-pointer-2" style="width:14px;height:14px;"></i>
     <span>Select a panel above to book an appointment or manage bookings</span>
   </div>
-{% endif %}
 
-  <!-- ==================== MY BOOKINGS (Patient Only) ==================== -->
   <!-- ==================== MY BOOKINGS (Patient Only) ==================== -->
   <section id="mybookings" class="booking-section container" style="display:none;">
     {% if not user_id %}
@@ -2082,8 +2163,20 @@
 
   <!-- ==================== BOOK BY DOCTOR ==================== -->
   <section id="bookDoctor" class="booking-section container" style="display:none;">
-    <h2><i data-lucide="user-round-search"></i> Book by Doctor</h2>
     <div class="myclass">
+      <div class="portal-card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid rgba(0,119,182,0.12); padding-bottom:0.85rem;">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <div style="width:36px; height:36px; border-radius:10px; background:rgba(0,119,182,0.1); color:#0077b6; display:flex; align-items:center; justify-content:center;">
+            <i data-lucide="user-round-search" style="width:18px;height:18px;"></i>
+          </div>
+          <div>
+            <div style="font-size:1.15rem; font-weight:800; color:#0f172a; letter-spacing:-0.01em;">Book by Doctor</div>
+            <div style="font-size:0.78rem; color:#64748b;">Choose your preferred physician and consulting date</div>
+          </div>
+        </div>
+        <span style="background:rgba(0,119,182,0.08); color:#0077b6; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap;">Doctor Portal</span>
+      </div>
+
       <div class="booking-grid">
         <!-- Left Column: Selection & Doctor Info -->
         <div class="booking-grid-col">
@@ -2132,27 +2225,33 @@
               <div class="saved-patients-dropdown" id="docPatientsDropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin-top: 4px; max-height: 200px; overflow-y: auto;"></div>
             </div>
 
-            <div class="form-group">
-              <label for="docAge"><i data-lucide="cake"></i> Age</label>
-              <input id="docAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+              <div class="form-group">
+                <label for="docAge"><i data-lucide="cake"></i> Age</label>
+                <input id="docAge" type="number" min="1" max="110" required placeholder="Age" />
+              </div>
+
+              <div class="form-group">
+                <label for="docGender"><i data-lucide="venus"></i> Gender</label>
+                <select id="docGender" required>
+                  <option value="">Select gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
             </div>
 
             <div class="form-group">
-              <label for="docGender"><i data-lucide="venus"></i> Gender</label>
-              <select id="docGender" required>
-                <option value="">Select gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="docNumber"><i data-lucide="phone"></i> Phone Number</label>
-              <input id="docNumber" name="phone" type="tel"
-                     pattern="[0-9]{10}" maxlength="10"
-                     inputmode="numeric" required
-                     placeholder="Enter 10-digit phone number" />
+              <label for="docNumber"><i data-lucide="phone"></i> Mobile Number</label>
+              <div style="display:flex; align-items:center; border:1.5px solid #cbd5e1; border-radius:12px; background:#ffffff; overflow:hidden;">
+                <span style="background:#f1f5f9; color:#475569; padding:0 0.85rem; font-weight:700; font-size:0.88rem; border-right:1px solid #cbd5e1; height:46px; display:flex; align-items:center;">+91</span>
+                <input id="docNumber" name="phone" type="tel"
+                       pattern="[0-9]{10}" maxlength="10"
+                       inputmode="numeric" required
+                       placeholder="10-digit mobile number"
+                       style="border:none !important; box-shadow:none !important; height:46px; border-radius:0 !important; flex:1; padding:0 0.85rem;" />
+              </div>
             </div>
 
             <button type="submit" class="btn btn-primary" style="width:100%; margin-top:0.6rem;">
@@ -2168,8 +2267,20 @@
 
   <!-- ==================== BOOK BY DEPT ==================== -->
   <section id="bookDept" class="booking-section container" style="display:none;">
-    <h2><i data-lucide="layers"></i> Book by Specialization</h2>
     <div class="myclass">
+      <div class="portal-card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border-bottom:1px solid rgba(0,119,182,0.12); padding-bottom:0.85rem;">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <div style="width:36px; height:36px; border-radius:10px; background:rgba(0,119,182,0.1); color:#0077b6; display:flex; align-items:center; justify-content:center;">
+            <i data-lucide="layers" style="width:18px;height:18px;"></i>
+          </div>
+          <div>
+            <div style="font-size:1.15rem; font-weight:800; color:#0f172a; letter-spacing:-0.01em;">Book by Specialization</div>
+            <div style="font-size:0.78rem; color:#64748b;">Find available specialists by medical department</div>
+          </div>
+        </div>
+        <span style="background:rgba(0,119,182,0.08); color:#0077b6; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap;">Specialization View</span>
+      </div>
+
       <div class="booking-grid">
         <!-- Left Column: Selection & Specialties Preview -->
         <div class="booking-grid-col">
@@ -2213,27 +2324,33 @@
               <div class="saved-patients-dropdown" id="depPatientsDropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); margin-top: 4px; max-height: 200px; overflow-y: auto;"></div>
             </div>
 
-            <div class="form-group">
-              <label for="depAge"><i data-lucide="cake"></i> Age</label>
-              <input id="depAge" type="number" min="1" max="110" required placeholder="Enter your age" />
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+              <div class="form-group">
+                <label for="depAge"><i data-lucide="cake"></i> Age</label>
+                <input id="depAge" type="number" min="1" max="110" required placeholder="Age" />
+              </div>
+
+              <div class="form-group">
+                <label for="depGender"><i data-lucide="venus"></i> Gender</label>
+                <select id="depGender" required>
+                  <option value="">Select gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
             </div>
 
             <div class="form-group">
-              <label for="depGender"><i data-lucide="venus"></i> Gender</label>
-              <select id="depGender" required>
-                <option value="">Select gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="depNumber"><i data-lucide="phone"></i> Phone Number</label>
-              <input id="depNumber" name="phone" type="tel"
-                     pattern="[0-9]{10}" maxlength="10"
-                     inputmode="numeric" required
-                     placeholder="Enter 10-digit phone number" />
+              <label for="depNumber"><i data-lucide="phone"></i> Mobile Number</label>
+              <div style="display:flex; align-items:center; border:1.5px solid #cbd5e1; border-radius:12px; background:#ffffff; overflow:hidden;">
+                <span style="background:#f1f5f9; color:#475569; padding:0 0.85rem; font-weight:700; font-size:0.88rem; border-right:1px solid #cbd5e1; height:46px; display:flex; align-items:center;">+91</span>
+                <input id="depNumber" name="phone" type="tel"
+                       pattern="[0-9]{10}" maxlength="10"
+                       inputmode="numeric" required
+                       placeholder="10-digit mobile number"
+                       style="border:none !important; box-shadow:none !important; height:46px; border-radius:0 !important; flex:1; padding:0 0.85rem;" />
+              </div>
             </div>
 
             <div id="depTimeWrapper" style="display:none;">
@@ -2255,15 +2372,16 @@
       </div>
     </div>
   </section>
+  {% endif %}
 
   {% if is_admin_view %}
   <!-- ==================== ADMIN ==================== -->
-  <section id="admin" class="admin-section container" style="display:none;">
+  <section id="admin" class="admin-section container" style="{% if is_admin_view %}display:block;{% else %}display:none;{% endif %}">
 
     <!-- Login Form – glass panel matching other booking panels -->
     <div id="adminLoginDiv" style="{% if admin_email %}display:none;{% else %}display:block;{% endif %}">
       <!-- Simplified Session Re-entry (Hidden by default) -->
-      <div id="adminActiveSessionDiv" class="myclass" style="display:none; max-width:460px; margin:0 auto; text-align:center; padding:2.5rem 2rem;">
+      <div id="adminActiveSessionDiv" class="myclass" style="display:none; max-width:480px; margin:0 auto; text-align:center; padding:2.5rem 2rem;">
         <div style="background: rgba(16, 185, 129, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: #10b981;">
           <i data-lucide="shield-check" style="width: 32px; height: 32px;"></i>
         </div>
@@ -2274,42 +2392,123 @@
         </button>
       </div>
 
-      <!-- Standard Login Form -->
-       
-      <div id="adminLoginFormDiv" class="myclass" style="{% if not admin_email %}display:block;{% else %}display:none;{% endif %} max-width:460px; margin:0 auto;">
-        <h2 style="margin-top:0;"><i data-lucide="shield-check"></i> Admin Login</h2>
-        <p style="font-size:0.85rem; color:#6b7280; margin:-0.4rem 0 1rem; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.35rem;">
-          <span style="display:flex; align-items:center; gap:0.4rem;">
-            <i data-lucide="lock" style="width:14px;height:14px;"></i>
-            Only authorized admin accounts
-          </span>
-          <span>can access this section securely.</span>
-        </p>
-        <form id="adminLoginForm">
-          <label for="adminEmail"><i data-lucide="mail"></i> Admin Email</label>
-          <input id="adminEmail" type="email" required placeholder="Enter admin email" />
-
-          <!-- Error shown ABOVE the send button -->
-          <div id="adminPreOtpMsg"
-               style="display:none; font-size:0.86rem; margin-bottom:0.5rem; border-radius:9px; padding:0.45rem 0.75rem; font-weight:500;"
-          ></div>
-
-          <button type="button" id="sendOtpBtn" class="btn btn-primary" style="width:100%; margin-top:1rem;">
-            <i data-lucide="send-horizontal"></i> Send OTP
-          </button>
-
-          <div id="otpSection" style="display:none; margin-top:0.8rem;">
-            <label for="adminOtp"><i data-lucide="key-round"></i> Enter OTP</label>
-            <input id="adminOtp" type="text" required placeholder="6-digit code from your email" maxlength="6" inputmode="numeric" />
-            <!-- Error shown ABOVE the login button -->
-            <div id="adminLoginResult"
-                 style="display:none; font-size:0.86rem; margin:0.45rem 0; border-radius:9px; padding:0.45rem 0.75rem; font-weight:500;"
-            ></div>
-            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1rem;">
-              <i data-lucide="log-in"></i> Login
-            </button>
+      <!-- Modern Multi-Mode Admin Login Card -->
+      <div id="adminLoginFormDiv" class="myclass admin-login-card-wrap" style="{% if not admin_email %}display:block;{% else %}display:none;{% endif %} max-width:480px; margin:0 auto; padding:2rem 2.2rem; border-radius:24px; box-shadow:0 20px 50px rgba(15,23,42,0.08);">
+        
+        <div style="text-align:center; margin-bottom:1.4rem;">
+          <div style="width:56px; height:56px; border-radius:18px; background:linear-gradient(135deg, rgba(0,119,182,0.12), rgba(2,62,138,0.18)); color:#0077b6; display:inline-flex; align-items:center; justify-content:center; margin-bottom:0.75rem; box-shadow:0 8px 20px rgba(0,119,182,0.12);">
+            <i data-lucide="shield-check" style="width:30px; height:30px;"></i>
           </div>
-        </form>
+          <h2 style="margin:0 0 0.35rem; font-size:1.45rem; font-weight:800; color:#0f172a; letter-spacing:-0.02em; border:none; padding:0; justify-content:center; display:flex;">Admin Portal</h2>
+          <p style="font-size:0.86rem; color:#64748b; margin:0; line-height:1.4;">Sign in via password or verification code</p>
+        </div>
+
+        <!-- Mode Tabs: Password Login vs OTP Login -->
+        <div class="admin-auth-tabs" style="display:flex; background:rgba(241,245,249,0.9); border-radius:14px; padding:4px; margin-bottom:1.35rem; gap:4px; border:1px solid #e2e8f0;">
+          <button type="button" id="tabBtnPassword" class="admin-tab-btn {% if password_login_enabled %}active{% endif %}" onclick="switchAdminAuthMode('password')" style="flex:1; padding:0.65rem 0.5rem; border-radius:10px; border:none; font-size:0.84rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
+            <i data-lucide="key" style="width:14px; height:14px;"></i> Password
+          </button>
+          <button type="button" id="tabBtnOtp" class="admin-tab-btn {% if not password_login_enabled %}active{% endif %}" onclick="switchAdminAuthMode('otp')" style="flex:1; padding:0.65rem 0.5rem; border-radius:10px; border:none; font-size:0.84rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; transition:all 0.2s;">
+            <i data-lucide="message-square-code" style="width:14px; height:14px;"></i> OTP Code
+          </button>
+        </div>
+
+        <!-- Section 1: Password Login -->
+        <div id="adminPasswordFormSection" style="{% if password_login_enabled %}display:block;{% else %}display:none;{% endif %}">
+          {% if not password_login_enabled %}
+          <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); color:#b45309; padding:0.65rem 0.85rem; border-radius:10px; font-size:0.82rem; margin-bottom:1rem; display:flex; align-items:flex-start; gap:0.5rem;">
+            <i data-lucide="alert-triangle" style="width:16px; height:16px; flex-shrink:0; margin-top:2px;"></i>
+            <span>Password login is currently disabled by security policy. Please switch to <strong>OTP Code</strong>.</span>
+          </div>
+          {% endif %}
+          <form id="adminPasswordLoginForm">
+            <div class="form-group" style="margin-bottom:1rem;">
+              <label for="adminPassIdent" style="font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+                <i data-lucide="user-check" style="width:15px; height:15px; color:#0077b6;"></i> Admin Email or WhatsApp Number
+              </label>
+              <input id="adminPassIdent" type="text" required placeholder="admin@primecare.com or +91 85920 31725" autocomplete="username" style="width:100%; height:46px; border-radius:12px; border:1.5px solid #cbd5e1; padding:0 0.9rem; font-size:0.92rem;" />
+            </div>
+
+            <div class="form-group" style="margin-bottom:1rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                <label for="adminPasswordInput" style="font-size:0.85rem; font-weight:600; color:#334155; margin:0; display:flex; align-items:center; gap:0.4rem;">
+                  <i data-lucide="lock" style="width:15px; height:15px; color:#0077b6;"></i> Password
+                </label>
+                <a href="javascript:void(0)" onclick="switchAdminAuthMode('otp')" style="font-size:0.78rem; color:#0077b6; text-decoration:none; font-weight:600;">Use OTP instead</a>
+              </div>
+              <div style="position:relative;">
+                <input id="adminPasswordInput" type="password" required placeholder="••••••••••••" autocomplete="current-password" style="width:100%; height:46px; border-radius:12px; border:1.5px solid #cbd5e1; padding:0 2.5rem 0 0.9rem; font-size:0.92rem;" />
+                <button type="button" onclick="togglePasswordVisibility('adminPasswordInput', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#64748b; cursor:pointer; padding:4px;" aria-label="Toggle password visibility">
+                  <i data-lucide="eye" style="width:16px; height:16px;"></i>
+                </button>
+              </div>
+            </div>
+
+            <div id="adminPassResultMsg" style="display:none; font-size:0.85rem; margin-bottom:0.8rem; border-radius:10px; padding:0.6rem 0.85rem; font-weight:500;"></div>
+
+            <button type="submit" id="adminPassSubmitBtn" class="btn btn-primary" style="width:100%; height:48px; border-radius:14px; font-weight:700; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:0.5rem;" {% if not password_login_enabled %}disabled style="opacity:0.6; cursor:not-allowed;"{% endif %}>
+              <i data-lucide="log-in" style="width:18px; height:18px;"></i> Sign In with Password
+            </button>
+          </form>
+        </div>
+
+        <!-- Section 2: OTP Login -->
+        <div id="adminOtpFormSection" style="{% if not password_login_enabled %}display:block;{% else %}display:none;{% endif %}">
+          <form id="adminOtpLoginForm">
+            <div class="form-group" style="margin-bottom:1rem;">
+              <label for="adminOtpIdent" style="font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+                <i data-lucide="user-check" style="width:15px; height:15px; color:#0077b6;"></i> Admin Email or WhatsApp Number
+              </label>
+              <input id="adminOtpIdent" type="text" required placeholder="admin@primecare.com or +91 85920 31725" style="width:100%; height:46px; border-radius:12px; border:1.5px solid #cbd5e1; padding:0 0.9rem; font-size:0.92rem;" oninput="autoDetectAdminChannel(this.value)" />
+            </div>
+
+            <!-- Delivery Channel Selector -->
+            <div class="form-group" style="margin-bottom:1rem;">
+              <label style="font-size:0.82rem; font-weight:600; color:#334155; margin-bottom:0.45rem; display:flex; align-items:center; gap:0.4rem;">
+                <i data-lucide="send" style="width:14px; height:14px; color:#0077b6;"></i> Receive Login Code Via:
+              </label>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                <label id="channelLabelEmail" class="channel-choice-label active" onclick="setAdminChannel('email')" style="border:1.5px solid #0077b6; background:rgba(0,119,182,0.06); color:#0077b6; padding:0.55rem; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; font-size:0.82rem; font-weight:700;">
+                  <input type="radio" name="adminOtpChannel" value="email" checked style="display:none;" />
+                  <i data-lucide="mail" style="width:15px; height:15px;"></i> Email
+                </label>
+                <label id="channelLabelWhatsApp" class="channel-choice-label" onclick="setAdminChannel('whatsapp')" style="border:1.5px solid #cbd5e1; background:#ffffff; color:#475569; padding:0.55rem; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; font-size:0.82rem; font-weight:600;">
+                  <input type="radio" name="adminOtpChannel" value="whatsapp" style="display:none;" />
+                  <i data-lucide="message-square" style="width:15px; height:15px;"></i> WhatsApp
+                </label>
+              </div>
+            </div>
+
+            <div id="adminPreOtpMsg" style="display:none; font-size:0.85rem; margin-bottom:0.8rem; border-radius:10px; padding:0.6rem 0.85rem; font-weight:500;"></div>
+
+            <button type="button" id="sendAdminOtpBtn" class="btn btn-primary" onclick="requestAdminOtp()" style="width:100%; height:48px; border-radius:14px; font-weight:700; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+              <i data-lucide="send-horizontal" style="width:18px; height:18px;"></i> Send Verification Code
+            </button>
+
+            <!-- OTP Input Section (Hidden initially) -->
+            <div id="adminOtpInputGroup" style="display:none; margin-top:1.25rem; border-top:1px dashed #e2e8f0; padding-top:1.25rem;">
+              <div class="form-group" style="margin-bottom:1rem;">
+                <label for="adminOtpCode" style="font-size:0.85rem; font-weight:600; color:#334155; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+                  <i data-lucide="key-round" style="width:15px; height:15px; color:#0077b6;"></i> Enter 6-Digit Code
+                </label>
+                <input id="adminOtpCode" type="text" maxlength="6" inputmode="numeric" placeholder="••••••" style="width:100%; height:48px; border-radius:12px; border:2px solid #0077b6; padding:0 1rem; font-size:1.3rem; letter-spacing:0.35em; text-align:center; font-weight:800; color:#0f172a;" />
+              </div>
+
+              <div id="adminLoginResult" style="display:none; font-size:0.85rem; margin-bottom:0.8rem; border-radius:10px; padding:0.6rem 0.85rem; font-weight:500;"></div>
+
+              <button type="submit" id="verifyAdminOtpSubmitBtn" class="btn btn-primary" style="width:100%; height:48px; border-radius:14px; font-weight:700; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+                <i data-lucide="shield-check" style="width:18px; height:18px;"></i> Verify & Enter Portal
+              </button>
+
+              <div style="text-align:center; margin-top:0.75rem;">
+                <button type="button" id="adminResendOtpBtn" onclick="requestAdminOtp()" style="background:none; border:none; color:#0077b6; font-size:0.8rem; font-weight:600; cursor:pointer; text-decoration:underline;">
+                  Resend verification code
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
       </div>
     </div>
 
@@ -3638,6 +3837,9 @@
     // ─── Lucide icons ───────────────────────────────────────────
     lucide.createIcons();
 
+    // Preloaded Doctors Data from Server
+    window.__PRELOADED_DOCTORS__ = {{ preloaded_doctors_json | safe if preloaded_doctors_json else '[]' }};
+
     // ─── Utility ────────────────────────────────────────────────
     const dayMap = {
       Sunday:0, Monday:1, Tuesday:2, Wednesday:3,
@@ -3646,6 +3848,121 @@
     let doctorsBySpecialization = {};
     let workingDays = [];
     let lastActiveAdminPanel = null; // Track last active admin sub-panel
+
+    function populateDoctorDropdowns(doctors) {
+      if (!doctors || !Array.isArray(doctors) || doctors.length === 0) return;
+      const doctorSelect = document.getElementById('doctorSelect');
+      const specSelect   = document.getElementById('specSelect');
+      const adminBookDoc = document.getElementById('adminBookDoc');
+
+      if (doctorSelect) {
+        const prevVal = doctorSelect.value;
+        doctorSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
+        doctorsBySpecialization = {};
+        const specializations = new Set();
+
+        doctors.forEach(d => {
+          if (!d.Name || !d.Specialization) return;
+          const opt = document.createElement('option');
+          opt.value = d.id || '';
+          opt.textContent = `${d.Name} (${d.Specialization})`;
+          const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
+          opt.dataset.days = daysArr.join(',');
+          opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
+          doctorSelect.appendChild(opt);
+
+          const spec = d.Specialization.trim();
+          specializations.add(spec);
+          if (!doctorsBySpecialization[spec]) doctorsBySpecialization[spec] = [];
+          doctorsBySpecialization[spec].push({ ...d, Days: daysArr, DayTimes: d.DayTimes || {} });
+        });
+
+        if (specSelect) {
+          const prevSpec = specSelect.value;
+          specSelect.innerHTML = "<option value=''>-- Select Specialization --</option>";
+          [...specializations].sort().forEach(spec => {
+            const opt = document.createElement('option');
+            opt.value = spec; opt.textContent = spec;
+            specSelect.appendChild(opt);
+          });
+          if (prevSpec && Array.from(specSelect.options).some(o => o.value === prevSpec)) {
+            specSelect.value = prevSpec;
+          }
+        }
+
+        if (adminBookDoc) {
+          const prevAdminDoc = adminBookDoc.value;
+          adminBookDoc.innerHTML = "<option value=''>-- Select Doctor --</option>";
+          Array.from(doctorSelect.options).forEach(opt => {
+            if (opt.value) adminBookDoc.appendChild(opt.cloneNode(true));
+          });
+          if (prevAdminDoc && Array.from(adminBookDoc.options).some(o => o.value === prevAdminDoc)) {
+            adminBookDoc.value = prevAdminDoc;
+          }
+        }
+
+        if (prevVal && Array.from(doctorSelect.options).some(o => o.value === prevVal)) {
+          doctorSelect.value = prevVal;
+        }
+      }
+    }
+
+    function populateAdminDoctorDropdowns(doctors) {
+      if (!doctors || !Array.isArray(doctors) || doctors.length === 0) return;
+      const select = document.getElementById('editDoctorSelect');
+      const viewSelect = document.getElementById('viewBookingDoctorSelect');
+      const leavesSelect = document.getElementById('leaveDoctorSelect');
+      const cancelSelect = document.getElementById('cancelBookingDoctorSelect');
+      const deleteSelect = document.getElementById('deleteDoctorSelect');
+
+      if (!select && !viewSelect && !leavesSelect && !cancelSelect && !deleteSelect) return;
+
+      const prevSelectVal = select ? select.value : '';
+      const prevViewVal = viewSelect ? viewSelect.value : '';
+      const prevLeavesVal = leavesSelect ? leavesSelect.value : '';
+      const prevCancelVal = cancelSelect ? cancelSelect.value : '';
+
+      if (select) select.innerHTML = "<option value=''>-- Select Doctor --</option>";
+      if (viewSelect) viewSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
+      if (leavesSelect) leavesSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
+      if (cancelSelect) cancelSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
+      if (deleteSelect) deleteSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
+
+      doctors.forEach(d => {
+        const value = `${d.Name} - ${d.Specialization}`;
+        const opt = document.createElement('option');
+        opt.value = value; opt.textContent = value;
+        const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
+        opt.dataset.days = daysArr.join(',');
+        opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
+        opt.dataset.email = d.Email || '';
+        opt.dataset.phone = d.Phone_Number || '';
+        opt.dataset.status = d.account_status || 'Invitation Pending';
+        opt.dataset.docId = d.doctor_id || '';
+
+        if (select) select.appendChild(opt.cloneNode(true));
+        if (viewSelect) viewSelect.appendChild(opt.cloneNode(true));
+        if (leavesSelect) leavesSelect.appendChild(opt.cloneNode(true));
+        if (cancelSelect) cancelSelect.appendChild(opt.cloneNode(true));
+        if (deleteSelect) deleteSelect.appendChild(opt);
+      });
+
+      if (typeof renderDoctorDirectory === 'function') {
+        renderDoctorDirectory(doctors);
+      }
+
+      if (select) {
+        if (prevSelectVal && Array.from(select.options).some(o => o.value === prevSelectVal)) {
+          select.value = prevSelectVal;
+        } else if (select.options.length > 1) {
+          select.selectedIndex = 1;
+        }
+        select.dispatchEvent(new Event('change'));
+      }
+      if (viewSelect && prevViewVal) { viewSelect.value = prevViewVal; viewSelect.dispatchEvent(new Event('change')); }
+      if (leavesSelect && prevLeavesVal) { leavesSelect.value = prevLeavesVal; leavesSelect.dispatchEvent(new Event('change')); }
+      if (cancelSelect && prevCancelVal) { cancelSelect.value = prevCancelVal; cancelSelect.dispatchEvent(new Event('change')); }
+    }
 
     function goHome() { window.location.href = '/'; }
 
@@ -4983,59 +5300,8 @@
         const res = await fetch('/get_doctors');
         if (!res.ok) throw new Error('API request failed');
         const doctors = await res.json();
-        const doctorSelect = document.getElementById('doctorSelect');
-        const specSelect   = document.getElementById('specSelect');
-
-        if (!doctorSelect || !specSelect) return;
-
-        doctorSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
-        specSelect.innerHTML   = "<option value=''>-- Select Specialization --</option>";
-        doctorsBySpecialization = {};
-
-        if (!doctors || doctors.length === 0) {
-          console.warn("API returned empty doctor list");
-          const opt = document.createElement('option');
-          opt.value = ''; opt.textContent = 'No doctors available';
-          if (doctorSelect) doctorSelect.appendChild(opt);
-          if (specSelect) specSelect.appendChild(opt.cloneNode(true));
-          return;
-        }
-
-        console.log(`Populating ${doctors.length} doctors into dropdowns.`);
-        const specializations = new Set();
-        doctors.forEach(d => {
-          try {
-            if (!d.Name || !d.Specialization) {
-              console.warn("Skipping doctor record with missing Name or Specialization:", d);
-              return;
-            }
-            const opt = document.createElement('option');
-            opt.value = d.id || '';
-            opt.textContent = `${d.Name} (${d.Specialization})`;
-            
-            // Normalize Days
-            const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
-            opt.dataset.days = daysArr.join(',');
-            opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
-            
-            doctorSelect.appendChild(opt);
-            
-            const spec = d.Specialization.trim();
-            specializations.add(spec);
-            if (!doctorsBySpecialization[spec]) doctorsBySpecialization[spec] = [];
-            doctorsBySpecialization[spec].push({ ...d, Days: daysArr, DayTimes: d.DayTimes || {} });
-          } catch (e) {
-             console.error("Error processing doctor record:", d, e);
-          }
-        });
-
-        [...specializations].sort().forEach(spec => {
-          const opt = document.createElement('option');
-          opt.value = spec; opt.textContent = spec;
-          specSelect.appendChild(opt);
-        });
-        console.log("Dropdowns populated successfully.");
-        lucide.createIcons();
+        populateDoctorDropdowns(doctors);
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
       } catch (err) {
         console.error("Error in loadDoctors:", err);
       }
@@ -5064,71 +5330,17 @@
       const viewSelect = document.getElementById('viewBookingDoctorSelect');
       const leavesSelect = document.getElementById('leaveDoctorSelect');
       const cancelSelect = document.getElementById('cancelBookingDoctorSelect');
-      if (!select && !viewSelect && !leavesSelect && !cancelSelect) return;
-
-      const prevSelectVal = select ? select.value : '';
-      const prevViewVal = viewSelect ? viewSelect.value : '';
-      const prevLeavesVal = leavesSelect ? leavesSelect.value : '';
-      const prevCancelVal = cancelSelect ? cancelSelect.value : '';
-
-      const elements = [];
-      if (select) elements.push(select);
-      if (viewSelect) elements.push(viewSelect);
-      if (leavesSelect) elements.push(leavesSelect);
-      if (cancelSelect) elements.push(cancelSelect);
-
-      console.log("Loading doctors for admin select...");
-      elements.forEach(el => el.innerHTML = "<option value=''>-- Loading doctors... --</option>");
+      const deleteSelect = document.getElementById('deleteDoctorSelect');
+      if (!select && !viewSelect && !leavesSelect && !cancelSelect && !deleteSelect) return;
 
       try {
         const res = await fetch('/get_doctors');
-        if (!res.ok) { 
-          elements.forEach(el => el.innerHTML="<option value=''>-- Could not load doctors --</option>"); 
-          return; 
-        }
+        if (!res.ok) return;
         const doctors = await res.json();
-        elements.forEach(el => el.innerHTML = "<option value=''>-- Select Doctor --</option>");
-
-        if (!doctors || doctors.length === 0) {
-          elements.forEach(el => {
-            const opt=document.createElement('option'); opt.value=''; opt.textContent='No doctors available';
-            el.appendChild(opt);
-          });
-          return;
-        }
-        doctors.forEach(d => {
-          const value = `${d.Name} - ${d.Specialization}`;
-          const opt = document.createElement('option');
-          opt.value = value; opt.textContent = value;
-          const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
-          opt.dataset.days = daysArr.join(',');
-          opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
-          opt.dataset.email = d.Email || '';
-          opt.dataset.phone = d.Phone_Number || '';
-          opt.dataset.status = d.account_status || 'Invitation Pending';
-          opt.dataset.docId = d.doctor_id || '';
-          
-          if (select) select.appendChild(opt.cloneNode(true));
-          if (viewSelect) viewSelect.appendChild(opt.cloneNode(true));
-          if (leavesSelect) leavesSelect.appendChild(opt.cloneNode(true));
-          if (cancelSelect) cancelSelect.appendChild(opt);
-        });
-        renderDoctorDirectory(doctors);
-
-        // Restore values
-        if (select) {
-          if (prevSelectVal && Array.from(select.options).some(o => o.value === prevSelectVal)) {
-            select.value = prevSelectVal;
-          } else if (select.options.length > 1) {
-            select.selectedIndex = 1;
-          }
-          select.dispatchEvent(new Event('change'));
-        }
-        if (viewSelect && prevViewVal) { viewSelect.value = prevViewVal; viewSelect.dispatchEvent(new Event('change')); }
-        if (leavesSelect && prevLeavesVal) { leavesSelect.value = prevLeavesVal; leavesSelect.dispatchEvent(new Event('change')); }
-        if (cancelSelect && prevCancelVal) { cancelSelect.value = prevCancelVal; cancelSelect.dispatchEvent(new Event('change')); }
+        populateAdminDoctorDropdowns(doctors);
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
       } catch(err) {
-        elements.forEach(el => el.innerHTML="<option value=''>-- Error loading doctors --</option>");
+        console.error("Error in loadDoctorsForEdit:", err);
       }
     }
 
@@ -5921,60 +6133,231 @@
       submitAdminBooking(payload);
     });
 
-    // ─── Admin login ───────────────────────────────────────────
+    // ─── Admin Multi-Mode Authentication ───────────────────────
+    window.switchAdminAuthMode = function(mode) {
+      const tabPassword = document.getElementById('tabBtnPassword');
+      const tabOtp = document.getElementById('tabBtnOtp');
+      const secPassword = document.getElementById('adminPasswordFormSection');
+      const secOtp = document.getElementById('adminOtpFormSection');
 
-    document.getElementById('sendOtpBtn')?.addEventListener('click', async () => {
-      const email = document.getElementById('adminEmail')?.value?.trim();
-      if (!email) { showToast('Please enter your admin email address.', 'error'); return; }
+      if (mode === 'password') {
+        if (tabPassword) tabPassword.classList.add('active');
+        if (tabOtp) tabOtp.classList.remove('active');
+        if (secPassword) secPassword.style.display = 'block';
+        if (secOtp) secOtp.style.display = 'none';
+      } else {
+        if (tabOtp) tabOtp.classList.add('active');
+        if (tabPassword) tabPassword.classList.remove('active');
+        if (secOtp) secOtp.style.display = 'block';
+        if (secPassword) secPassword.style.display = 'none';
+      }
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    };
+
+    window.setAdminChannel = function(channel) {
+      const lblEmail = document.getElementById('channelLabelEmail');
+      const lblWa = document.getElementById('channelLabelWhatsApp');
+      const radEmail = document.querySelector('input[name="adminOtpChannel"][value="email"]');
+      const radWa = document.querySelector('input[name="adminOtpChannel"][value="whatsapp"]');
+
+      if (channel === 'whatsapp') {
+        if (lblWa) { lblWa.style.borderColor = '#0077b6'; lblWa.style.background = 'rgba(0,119,182,0.06)'; lblWa.style.color = '#0077b6'; lblWa.style.fontWeight = '700'; }
+        if (lblEmail) { lblEmail.style.borderColor = '#cbd5e1'; lblEmail.style.background = '#ffffff'; lblEmail.style.color = '#475569'; lblEmail.style.fontWeight = '600'; }
+        if (radWa) radWa.checked = true;
+      } else {
+        if (lblEmail) { lblEmail.style.borderColor = '#0077b6'; lblEmail.style.background = 'rgba(0,119,182,0.06)'; lblEmail.style.color = '#0077b6'; lblEmail.style.fontWeight = '700'; }
+        if (lblWa) { lblWa.style.borderColor = '#cbd5e1'; lblWa.style.background = '#ffffff'; lblWa.style.color = '#475569'; lblWa.style.fontWeight = '600'; }
+        if (radEmail) radEmail.checked = true;
+      }
+    };
+
+    window.autoDetectAdminChannel = function(val) {
+      val = (val || '').trim();
+      if (val.includes('@')) {
+        setAdminChannel('email');
+      } else if (val.replace(/[^0-9]/g, '').length >= 7) {
+        setAdminChannel('whatsapp');
+      }
+    };
+
+    window.togglePasswordVisibility = function(inputId, btn) {
+      const inp = document.getElementById(inputId);
+      if (!inp) return;
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        btn.innerHTML = '<i data-lucide="eye-off" style="width:16px; height:16px;"></i>';
+      } else {
+        inp.type = 'password';
+        btn.innerHTML = '<i data-lucide="eye" style="width:16px; height:16px;"></i>';
+      }
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+    };
+
+    document.getElementById('adminPasswordLoginForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const ident = document.getElementById('adminPassIdent')?.value.trim();
+      const password = document.getElementById('adminPasswordInput')?.value;
+      const resultDiv = document.getElementById('adminPassResultMsg');
+      const submitBtn = document.getElementById('adminPassSubmitBtn');
+
+      if (!ident || !password) {
+        showToast('Please provide both identifier and password.', 'error');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:18px;height:18px;"></i> Signing In...';
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+      }
+
       try {
-        const res  = await fetch('/send_admin_otp',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`admin_email=${encodeURIComponent(email)}` });
+        const res = await fetch('/admin_password_login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: ident, password: password })
+        });
         const data = await res.json();
         if (data.success) {
-          showToast('OTP sent successfully', 'success');
-          document.getElementById('otpSection').style.display = 'block';
-          const btn  = document.getElementById('sendOtpBtn');
-          if (btn) btn.style.display = 'none';
+          showToast('Admin authenticated successfully.', 'success');
+          window.location.href = data.redirect_url || '/admin';
         } else {
-          showToast(data.msg || 'Could not send OTP. Please try again.', 'error');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i data-lucide="log-in" style="width:18px; height:18px;"></i> Sign In with Password';
+            if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+          }
+          if (resultDiv) {
+            resultDiv.textContent = data.msg || 'Authentication failed.';
+            resultDiv.style.background = '#fee2e2';
+            resultDiv.style.color = '#991b1b';
+            resultDiv.style.border = '1px solid #f87171';
+            resultDiv.style.display = 'block';
+          }
+          showToast(data.msg || 'Authentication failed.', 'error');
         }
-      } catch(err) {
-        showToast('Communication error. Please check your connection.', 'error');
+      } catch (err) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i data-lucide="log-in" style="width:18px; height:18px;"></i> Sign In with Password';
+          if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+        }
+        showToast('Network error during login. Please try again.', 'error');
       }
     });
 
-    document.getElementById('adminLoginForm')?.addEventListener('submit', async(e) => {
-      e.preventDefault();
-      const otp = document.getElementById('adminOtp').value.trim();
-      if (!otp || otp.length < 4) { showToast('Please enter the OTP sent to your email.', 'error'); return; }
+    window.requestAdminOtp = async function() {
+      const ident = document.getElementById('adminOtpIdent')?.value.trim();
+      const channelRadio = document.querySelector('input[name="adminOtpChannel"]:checked');
+      const channel = channelRadio ? channelRadio.value : 'email';
+      const preMsg = document.getElementById('adminPreOtpMsg');
+      const sendBtn = document.getElementById('sendAdminOtpBtn');
+      const inputGroup = document.getElementById('adminOtpInputGroup');
+
+      if (!ident) {
+        showToast('Please enter your admin email or WhatsApp number.', 'error');
+        return;
+      }
+
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:18px;height:18px;"></i> Sending Code...';
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+      }
+
       try {
-        const res  = await fetch('/verify_admin_otp',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`otp=${encodeURIComponent(otp)}` });
+        const res = await fetch('/send_admin_otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: ident, channel: channel })
+        });
         const data = await res.json();
         if (data.success) {
-          showToast('OTP verified successfully', 'success');
-          setTimeout(() => {
-            document.getElementById('adminLoginDiv').style.display = 'none';
-            document.getElementById('adminOptions').style.display = 'block';
-            
-            // Immediate visibility of Logout in header
-            const headerLogoutBtn = document.getElementById('headerLogoutBtn');
-            if (headerLogoutBtn) headerLogoutBtn.style.display = 'inline-flex';
-
-            // Reset to welcome panel with nothing selected on fresh login
-            localStorage.removeItem('activeAdminPanel');
-            lastActiveAdminPanel = null;
-            showAdminPanel('welcome', null);
-
-            loadDoctorPairs();
-            loadDoctors();      // Refresh main dropdowns
-            loadDoctorsForEdit(); // Refresh edit dropdown
-            loadDoctorsForAdminBooking(); // Refresh admin booking dropdown
-            lucide.createIcons();
-          }, 600);
+          showToast(data.msg || 'OTP sent successfully!', 'success');
+          if (preMsg) {
+            preMsg.textContent = data.msg || 'Verification code sent successfully.';
+            preMsg.style.background = '#f0fdf4';
+            preMsg.style.color = '#166534';
+            preMsg.style.border = '1px solid #86efac';
+            preMsg.style.display = 'block';
+          }
+          if (inputGroup) inputGroup.style.display = 'block';
+          if (sendBtn) sendBtn.style.display = 'none';
+          document.getElementById('adminOtpCode')?.focus();
         } else {
-          showToast(data.msg || 'Authentication failed. Please verify the code.', 'error');
+          if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i data-lucide="send-horizontal" style="width:18px; height:18px;"></i> Send Verification Code';
+            if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+          }
+          if (preMsg) {
+            preMsg.textContent = data.msg || 'Failed to send OTP.';
+            preMsg.style.background = '#fee2e2';
+            preMsg.style.color = '#991b1b';
+            preMsg.style.border = '1px solid #f87171';
+            preMsg.style.display = 'block';
+          }
+          showToast(data.msg || 'Could not send verification code.', 'error');
         }
-      } catch(err) {
-        showToast('System error during login. Please retry.', 'error');
+      } catch (err) {
+        if (sendBtn) {
+          sendBtn.disabled = false;
+          sendBtn.innerHTML = '<i data-lucide="send-horizontal" style="width:18px; height:18px;"></i> Send Verification Code';
+          if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+        }
+        showToast('Network error while requesting code.', 'error');
+      }
+    };
+
+    document.getElementById('adminOtpLoginForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = document.getElementById('adminOtpCode')?.value.trim();
+      const resultDiv = document.getElementById('adminLoginResult');
+      const verifyBtn = document.getElementById('verifyAdminOtpSubmitBtn');
+
+      if (!code || code.length < 4) {
+        showToast('Please enter the 6-digit code.', 'error');
+        return;
+      }
+
+      if (verifyBtn) {
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:18px;height:18px;"></i> Verifying...';
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+      }
+
+      try {
+        const res = await fetch('/verify_admin_otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ otp: code })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Admin verified successfully!', 'success');
+          window.location.href = data.redirect_url || '/admin';
+        } else {
+          if (verifyBtn) {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = '<i data-lucide="shield-check" style="width:18px; height:18px;"></i> Verify & Enter Portal';
+            if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+          }
+          if (resultDiv) {
+            resultDiv.textContent = data.msg || 'Invalid verification code.';
+            resultDiv.style.background = '#fee2e2';
+            resultDiv.style.color = '#991b1b';
+            resultDiv.style.border = '1px solid #f87171';
+            resultDiv.style.display = 'block';
+          }
+          showToast(data.msg || 'Verification failed.', 'error');
+        }
+      } catch (err) {
+        if (verifyBtn) {
+          verifyBtn.disabled = false;
+          verifyBtn.innerHTML = '<i data-lucide="shield-check" style="width:18px; height:18px;"></i> Verify & Enter Portal';
+          if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+        }
+        showToast('Network error while verifying OTP.', 'error');
       }
     });
 
@@ -6036,7 +6419,7 @@
           localStorage.removeItem('activeDoctor');
 
            showToast('Logged out successfully', 'success');
-           window.location.href = '/';
+           window.location.href = window.location.pathname.startsWith('/admin') ? '/admin' : '/';
           lucide.createIcons();
         } else {
           showToast('Logout notification failed.', 'error');
@@ -6763,8 +7146,10 @@
     async function initPage() {
       await loadDoctors();
       await loadDoctorPairs();
+      {% if is_admin_view %}
       await loadDoctorsForEdit();
       await loadDoctorsForAdminBooking();
+      {% endif %}
       try { await loadGlobalHolidays(); } catch(e){}
       try { loadTickerMessages(); } catch(e){}
       setupAddDoctorDayTimeUI();
@@ -6785,31 +7170,57 @@
           updateDeptPreviewCard();
         });
       }
-      // Check current section and trigger session check if needed
-      const currentActiveSection = Array.from(document.querySelectorAll('section')).find(s => s.style.display !== 'none');
-      if (currentActiveSection && currentActiveSection.id === 'admin') {
-        checkAdminSession();
-      }
+      {% if is_admin_view and not admin_email %}
+      checkAdminSession();
+      {% endif %}
       lucide.createIcons();
     }
 
     document.addEventListener('DOMContentLoaded', async ()=> {
-      // 1. Determine the appropriate initial section
-      const urlParams = new URLSearchParams(window.location.search);
-      const isParamAdmin = urlParams.get('view') === 'admin';
-
-      let savedSection = localStorage.getItem('activeSection') || 'bookDoctor';
-      
-      // Override saved state if Admin Access is explicitly requested
-      if (isParamAdmin) {
-        savedSection = 'admin';
-        localStorage.setItem('activeSection', 'admin');
+      // Synchronously populate dropdowns immediately from preloaded data
+      try {
+        if (window.__PRELOADED_DOCTORS__ && Array.isArray(window.__PRELOADED_DOCTORS__) && window.__PRELOADED_DOCTORS__.length > 0) {
+          populateDoctorDropdowns(window.__PRELOADED_DOCTORS__);
+          {% if is_admin_view %}
+          populateAdminDoctorDropdowns(window.__PRELOADED_DOCTORS__);
+          {% endif %}
+        }
+      } catch (e) {
+        console.warn("Preload dropdown population error:", e);
       }
 
+      {% if is_admin_view %}
+      // Strictly enforce Admin view exclusively
+      const adminSec = document.getElementById('admin');
+      if (adminSec) adminSec.style.display = 'block';
+
+      {% if admin_email %}
+      showAdminOptions();
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlPanel = urlParams.get('panel') || '{{ active_admin_panel or "welcome" }}';
+      const panelBtn = document.querySelector(`.admin-sidebar-nav-item[data-panel="${urlPanel}"]`);
+      showAdminPanel(urlPanel, panelBtn);
+      const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+      if (headerLogoutBtn) headerLogoutBtn.style.display = 'inline-flex';
+      {% else %}
+      const loginDiv = document.getElementById('adminLoginDiv');
+      if (loginDiv) loginDiv.style.display = 'block';
+      const optDiv = document.getElementById('adminOptions');
+      if (optDiv) optDiv.style.display = 'none';
+      {% endif %}
+
+      {% else %}
+      // Patient view exclusively
+      const urlParams = new URLSearchParams(window.location.search);
+      let savedSection = localStorage.getItem('activeSection') || 'bookDoctor';
+      if (savedSection === 'admin') savedSection = 'bookDoctor';
+      if (urlParams.get('specialization')) {
+        savedSection = 'bookDept';
+      }
       showSection(savedSection, null);
-      
       const panelId = sectionPanelMap[savedSection];
       if (panelId) document.getElementById(panelId)?.classList.add('active');
+      {% endif %}
       
       // 2. Bind header logout button
       const headerLogoutBtn = document.getElementById('headerLogoutBtn');

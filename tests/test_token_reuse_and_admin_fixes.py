@@ -2,9 +2,7 @@ import unittest
 import os
 from datetime import datetime, timedelta
 
-os.environ["PRIMECARE_TEST_MODE"] = "true"
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-
+import tests.test_isolation
 from app import app, db, Doctor, DoctorSession, DoctorSchedule, PatientBooking, DailyTokenAllocation, User, AppSettings, ADMIN_EMAIL
 from services.booking_services import create_booking_service, cancel_booking_service
 from services.token_allocation import allocate_token_for_booking, get_canonical_doctor_identifier
@@ -13,17 +11,14 @@ from services.token_allocation import allocate_token_for_booking, get_canonical_
 class TestTokenReuseAndDoctorUpdates(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        tests.test_isolation.initialize_test_database(app, db)
         app.config['TESTING'] = True
         app.config['WTF_CSRF_ENABLED'] = False
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        with app.app_context():
-            db.create_all()
 
     @classmethod
     def tearDownClass(cls):
         with app.app_context():
             db.session.remove()
-            db.drop_all()
 
     def setUp(self):
         self.ctx = app.app_context()

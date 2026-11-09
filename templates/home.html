@@ -1438,7 +1438,7 @@
               
               <div class="dropdown-section-title">Navigation</div>
               
-              <a href="/booking?view=admin" class="dropdown-item">
+              <a href="/admin" class="dropdown-item">
                 <i data-lucide="sliders"></i>
                 <span>Admin Control Panel</span>
               </a>
@@ -1729,9 +1729,9 @@
         <p class="auth-subtitle">Login to your patient account</p>
         <form onsubmit="handleAuthSubmit(event, 'login')">
           <div class="form-group">
-            <label>Mobile Number</label>
-            <input type="text" id="login-phone" class="form-control" placeholder="e.g. 9876543210 or +91..." required>
-            <small style="color: #64748b; font-size: 0.76rem; display: block; margin-top: 0.25rem;">Existing account? You may also sign in with your email.</small>
+            <label>Mobile Number or Email</label>
+            <input type="text" id="login-phone" class="form-control" placeholder="e.g. 9876543210 or yourname@example.com" required>
+            <small style="color: #64748b; font-size: 0.76rem; display: block; margin-top: 0.25rem;">Sign in using your registered mobile number or email address.</small>
           </div>
           <div class="form-group">
             <div style="display:flex; justify-content:space-between;">
@@ -2024,9 +2024,9 @@
             <li><a href="#" onclick="openAuthModal('login')">Login</a></li>
           {% endif %}
           {% if session.get('admin_logged_in') %}
-          <li><a href="/booking?view=admin" id="adminLoginDiv" style="color: #6366f1; font-weight: bold;">Admin Panel</a></li>
+          <li><a href="/admin" id="adminLoginDiv" style="color: #6366f1; font-weight: bold;">Admin Panel</a></li>
           {% else %}
-          <li><a href="/booking?view=admin" id="adminLoginDiv">Admin Login</a></li>
+          <li><a href="/admin" id="adminLoginDiv">Admin Login</a></li>
           {% endif %}
           <li><a href="#doctors-anchor">Doctors</a></li>
           <li><a href="#contact-section">Contact</a></li>          

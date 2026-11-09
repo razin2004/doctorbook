@@ -1650,7 +1650,7 @@ def admin_required(f):
         if not is_admin_authenticated():
             if request.is_json or request.path.startswith('/api/') or request.path.startswith('/admin_') or request.path in ['/manage_bookings', '/admin_book_patient', '/admin_delete_booking'] or request.method in ['POST', 'PUT', 'DELETE']:
                 return jsonify({"success": False, "msg": "Unauthorized. Admin access required."}), 403
-            return redirect(url_for('booking', view='admin'))
+            return redirect(url_for('admin_portal'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -1972,12 +1972,64 @@ def atomic_issue_admin_otp_challenge(admin_email: str, purpose: str, client_ip: 
 
 
 
+def get_admin_phone():
+    try:
+        admin_setting = AppSettings.query.filter_by(key="admin_whatsapp_phone").first()
+        phone = admin_setting.value if admin_setting and admin_setting.value else DEFAULT_SETTINGS.get("admin_whatsapp_phone")
+        return normalize_phone_number(phone) if phone else None
+    except Exception:
+        phone = DEFAULT_SETTINGS.get("admin_whatsapp_phone")
+        return normalize_phone_number(phone) if phone else None
+
+def is_valid_admin_identifier(ident: str):
+    """
+    Checks if ident matches ADMIN_EMAIL or configured admin WhatsApp phone.
+    Returns (is_valid, identifier_type) where identifier_type is 'email', 'phone', or None.
+    """
+    if not ident:
+        return False, None
+    ident_clean = str(ident).strip()
+    if "@" in ident_clean:
+        if ident_clean.lower() == ADMIN_EMAIL.strip().lower():
+            return True, "email"
+        return False, None
+    
+    norm_ident = normalize_phone_number(ident_clean)
+    admin_phone = get_admin_phone()
+    if norm_ident and admin_phone and norm_ident == admin_phone:
+        return True, "phone"
+    return False, None
+
+def is_password_login_enabled() -> bool:
+    """
+    Checks whether password-based login is enabled for the clinic.
+    Defaults to True unless explicitly set to '0' (disabled) in AppSettings.
+    """
+    try:
+        setting = AppSettings.query.filter_by(key='password_login_enabled').first()
+        return not (setting and setting.value == '0')
+    except Exception:
+        return True
+
+
 @app.route('/send_admin_otp', methods=['POST'])
 def send_admin_otp():
     data = request.get_json(silent=True) or request.form or {}
-    admin_email = (data.get('admin_email') or data.get('email') or "").strip().lower()
-    if admin_email != ADMIN_EMAIL.lower():
-        return jsonify(success=False, msg="Unauthorized email.")
+    ident = (data.get('admin_email') or data.get('identifier') or data.get('email') or data.get('phone') or data.get('phone_number') or "").strip()
+    channel = (data.get('channel') or "").strip().lower()
+
+    is_valid, id_type = is_valid_admin_identifier(ident)
+    if not is_valid:
+        if "@" in ident:
+            return jsonify(success=False, msg="Unauthorized email.")
+        return jsonify(success=False, msg="Unauthorized identifier. Please enter the authorized admin email or admin WhatsApp phone number.")
+
+    if not channel:
+        channel = 'whatsapp' if id_type == 'phone' else 'email'
+
+    admin_phone = get_admin_phone()
+    if channel == 'whatsapp' and not admin_phone:
+        return jsonify(success=False, msg="Admin WhatsApp phone number is not configured in settings."), 400
 
     client_ip = get_client_ip()
 
@@ -1988,7 +2040,7 @@ def send_admin_otp():
 
     # Atomic rate limit verification and challenge creation
     success, err_msg, status_code, challenge_token, otp = atomic_issue_admin_otp_challenge(
-        admin_email=admin_email,
+        admin_email=ADMIN_EMAIL.lower(),
         purpose='login',
         client_ip=client_ip
     )
@@ -1998,19 +2050,83 @@ def send_admin_otp():
     # Client-side session stores ONLY the opaque challenge token
     session['admin_login_challenge_token'] = challenge_token
 
-    html_content = get_otp_html(otp)
-    email_sent = send_email(admin_email, "Your PrimeCare Admin Login Code", html_content)
-
-    if email_sent:
-        return jsonify(success=True, msg="OTP sent to email")
+    if channel == 'whatsapp':
+        wa_msg = f"Your PrimeCare Admin login code is: {otp}. Valid for 5 minutes. Do not share this code."
+        res = send_whatsapp_message(admin_phone, wa_msg)
+        if res.get("success"):
+            masked_phone = admin_phone[-4:] if len(admin_phone) >= 4 else admin_phone
+            return jsonify(success=True, msg=f"OTP sent to WhatsApp (ending in {masked_phone})")
+        else:
+            with app.app_context():
+                token_hash = hashlib.sha256(challenge_token.encode('utf-8')).hexdigest()
+                AdminOTPChallenge.query.filter_by(challenge_id_hash=token_hash).update({'consumed_at': datetime.utcnow()})
+                db.session.commit()
+            session.pop('admin_login_challenge_token', None)
+            return jsonify(success=False, msg="Error sending WhatsApp OTP")
     else:
-        # Invalidate challenge if email delivery fails
-        with app.app_context():
-            token_hash = hashlib.sha256(challenge_token.encode('utf-8')).hexdigest()
-            AdminOTPChallenge.query.filter_by(challenge_id_hash=token_hash).update({'consumed_at': datetime.utcnow()})
-            db.session.commit()
-        session.pop('admin_login_challenge_token', None)
-        return jsonify(success=False, msg="Error sending OTP")
+        html_content = get_otp_html(otp)
+        email_sent = send_email(ADMIN_EMAIL.lower(), "Your PrimeCare Admin Login Code", html_content)
+
+        if email_sent:
+            return jsonify(success=True, msg="OTP sent to email")
+        else:
+            # Invalidate challenge if email delivery fails
+            with app.app_context():
+                token_hash = hashlib.sha256(challenge_token.encode('utf-8')).hexdigest()
+                AdminOTPChallenge.query.filter_by(challenge_id_hash=token_hash).update({'consumed_at': datetime.utcnow()})
+                db.session.commit()
+            session.pop('admin_login_challenge_token', None)
+            return jsonify(success=False, msg="Error sending OTP")
+
+
+@app.route('/admin_password_login', methods=['POST'])
+def admin_password_login():
+    data = request.get_json(silent=True) or request.form or {}
+    ident = (data.get('identifier') or data.get('admin_email') or data.get('email') or data.get('phone') or data.get('phone_number') or "").strip()
+    password = str(data.get('password') or '').strip()
+
+    if not ident or not password:
+        return jsonify(success=False, msg="Admin identifier and password are required."), 400
+
+    if not is_password_login_enabled():
+        return jsonify(success=False, msg="Password login is currently disabled by administrator. Please log in using OTP."), 403
+
+    is_valid, _ = is_valid_admin_identifier(ident)
+    if not is_valid:
+        return jsonify(success=False, msg="Invalid administrator identifier."), 401
+
+    setting = AppSettings.query.filter_by(key='admin_password_hash').first()
+    env_admin_pass = os.environ.get('ADMIN_PASSWORD')
+    is_valid_pwd = False
+    if setting and setting.value:
+        is_valid_pwd = check_password_hash(setting.value, password)
+    elif env_admin_pass:
+        is_valid_pwd = (password == env_admin_pass) or check_password_hash(env_admin_pass, password)
+    else:
+        return jsonify(success=False, msg="No administrator password has been configured yet. Please log in using OTP and set a password in Settings."), 400
+
+    if not is_valid_pwd:
+        return jsonify(success=False, msg="Incorrect administrator password."), 401
+
+    # Establish authenticated admin session
+    session['admin_email'] = ADMIN_EMAIL
+    session['admin_logged_in'] = True
+
+    # Clear stale patient and doctor identity fields from session
+    stale_identity_keys = [
+        'user_id', 'user_role', 'user_name', 'user_phone', 'user_email',
+        'patient_logged_in',
+        'doctor_id', 'doctor_name', 'doctor_logged_in', 'doc_email', 'doc_phone'
+    ]
+    for key in stale_identity_keys:
+        session.pop(key, None)
+
+    try:
+        sync_doctors_from_sheet()
+    except Exception:
+        pass
+
+    return jsonify(success=True, msg="Admin logged in successfully", redirect_url="/admin")
 
 
 @app.route('/verify_admin_otp', methods=['POST'])
@@ -2081,8 +2197,11 @@ def verify_admin_otp():
             session.pop(key, None)
 
         # Trigger doctor sync
-        sync_doctors_from_sheet()
-        return jsonify(success=True, msg="Admin logged in successfully and doctor data synchronized")
+        try:
+            sync_doctors_from_sheet()
+        except Exception:
+            pass
+        return jsonify(success=True, msg="Admin logged in successfully and doctor data synchronized", redirect_url="/admin")
     else:
         now_utc = datetime.utcnow()
         # Atomic conditional update requiring challenge is not consumed, not expired, and attempt_count < max_attempts
@@ -2154,9 +2273,38 @@ def home():
     return render_template("home.html", doctors=doctors, has_upcoming=has_upcoming)
 
 
+@app.route("/admin", strict_slashes=False)
+def admin_portal():
+    is_admin = is_admin_authenticated()
+    active_panel = request.args.get('panel', 'welcome')
+    doctors = get_all_doctors()
+    doctors_json = json.dumps(doctors)
+    pwd_enabled = is_password_login_enabled()
+    admin_phone = get_admin_phone()
+
+    return render_template(
+        "booking.html",
+        is_admin_view=True,
+        admin_email=session.get("admin_email") if is_admin else None,
+        active_admin_panel=active_panel,
+        preloaded_doctors_json=doctors_json,
+        password_login_enabled=pwd_enabled,
+        admin_whatsapp_phone=admin_phone or "",
+        user_id=None,
+        upcoming_bookings=[],
+        past_bookings=[],
+        active_upcoming_count=0
+    )
+
+
 @app.route("/booking")
 def booking():
-    is_admin_view = (request.args.get('view') == 'admin')
+    if request.args.get('view') == 'admin':
+        panel = request.args.get('panel')
+        if panel:
+            return redirect(url_for('admin_portal', panel=panel))
+        return redirect(url_for('admin_portal'))
+
     user_id = session.get('user_id')
     
     upcoming_bookings = []
@@ -2257,10 +2405,15 @@ def booking():
             print(f"[ERROR] Failed to fetch user bookings: {e}")
 
     active_upcoming_count = sum(1 for b in upcoming_bookings if b.status != 'cancelled')
+    all_doctors = get_all_doctors()
+    doctors_json = json.dumps(all_doctors)
+    pwd_enabled = is_password_login_enabled()
 
     return render_template("booking.html", 
                            admin_email=session.get("admin_email") if is_admin_authenticated() else None,
-                           is_admin_view=is_admin_view,
+                           is_admin_view=False,
+                           preloaded_doctors_json=doctors_json,
+                           password_login_enabled=pwd_enabled,
                            user_id=user_id,
                            upcoming_bookings=upcoming_bookings,
                            past_bookings=past_bookings,
@@ -2702,12 +2855,15 @@ def patient_resend_registration_otp():
 
 @app.route('/patient_login', methods=['POST'])
 def patient_login():
-    data = request.get_json() or request.form
+    data = request.get_json(silent=True) or request.form or {}
     ident = (data.get('phone_number') or data.get('identifier') or data.get('email') or data.get('mobile') or data.get('phone') or '').strip()
     password = data.get('password', '')
 
     if not ident or not password:
-        return jsonify(success=False, msg="Mobile number and password are required")
+        return jsonify(success=False, msg="Mobile number or email and password are required")
+
+    if not is_password_login_enabled():
+        return jsonify(success=False, msg="Password login is currently disabled by administrator. Please sign in via OTP.")
 
     # Check role separation and find user
     if "@" in ident:
@@ -2733,7 +2889,7 @@ def patient_login():
             user = None
 
     if not user or not check_password_hash(user.password_hash, password):
-        return jsonify(success=False, msg="Invalid mobile number or password")
+        return jsonify(success=False, msg="Invalid mobile number, email, or password")
 
     if user.email and user.email.strip().lower() == 'guest@primecare.com':
         return jsonify(success=False, msg="Guest placeholder account cannot be logged into.")
