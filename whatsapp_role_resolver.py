@@ -85,22 +85,26 @@ def resolve_whatsapp_sender_role(
     # Security Rule: Do NOT fall back to DEFAULT_SETTINGS or hardcoded defaults to prevent
     # unintended elevation of default clinic numbers to administrator role.
     admin_setting = AppSettings.query.filter_by(key="admin_whatsapp_phone").first()
-    admin_phone = (
+    admin_phone_raw = (
         admin_setting.value.strip()
         if admin_setting and admin_setting.value and admin_setting.value.strip()
         else (os.environ.get("ADMIN_WHATSAPP_PHONE") or "").strip()
     )
-    if admin_phone:
-        norm_admin = normalize_phone_number(admin_phone)
-        if norm_admin and norm_admin == normalized_phone:
-            matching_roles.append("admin")
-            user_records["admin"] = {
-                "name": "Clinic Administrator",
-                "user_id": None,  # Admin has no database User record; do not use user_id=0
-                "admin_principal": "admin",
-                "doctor_session_id": None,
-                "role": "admin"
-            }
+    if admin_phone_raw:
+        import re
+        admin_candidates = [p.strip() for p in re.split(r'[,;|\s]+', admin_phone_raw) if p.strip()]
+        for ap in admin_candidates:
+            norm_admin = normalize_phone_number(ap)
+            if norm_admin and norm_admin == normalized_phone:
+                matching_roles.append("admin")
+                user_records["admin"] = {
+                    "name": "Clinic Administrator",
+                    "user_id": None,  # Admin has no database User record; do not use user_id=0
+                    "admin_principal": "admin",
+                    "doctor_session_id": None,
+                    "role": "admin"
+                }
+                break
 
     # 2. Check Doctor accounts:
     # Match against admin-maintained DoctorSession.phone_number or Doctor.phone_number

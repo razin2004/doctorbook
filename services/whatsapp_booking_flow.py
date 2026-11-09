@@ -146,6 +146,37 @@ def get_active_specializations(doctors) -> List[Dict[str, Any]]:
     return result
 
 
+def format_doctor_schedule_summary(schedules) -> str:
+    """
+    Formats doctor's weekly consultation schedule.
+    If all working days have identical consultation hours, displays:
+      📅 Working Days: Monday, Wednesday, Friday
+      ⏰ Consultation Hours: 09:00 - 14:00
+    If different days have different consultation hours, displays each day's timing:
+      📅 Consultation Schedule & Timings:
+        • Monday: 09:00 - 14:00
+        • Wednesday: 09:00 - 13:00
+        • Friday: 10:00 - 14:00
+    """
+    if not schedules:
+        return "📅 *Consultation Hours:* Mon - Sat (09:00 AM - 05:00 PM)"
+
+    active_scheds = [s for s in schedules if getattr(s, 'is_available', True)]
+    if not active_scheds:
+        active_scheds = schedules
+
+    times = set((s.start_time, s.end_time) for s in active_scheds)
+    if len(times) == 1:
+        st, et = next(iter(times))
+        days = [s.day_of_week for s in active_scheds]
+        return f"📅 *Doctor's Working Days:* {', '.join(days)}\n⏰ *Consultation Hours:* {st} - {et}"
+
+    lines = ["📅 *Doctor's Working Days & Consultation Timings:*"]
+    for s in active_scheds:
+        lines.append(f"• *{s.day_of_week}:* {s.start_time} - {s.end_time}")
+    return "\n".join(lines)
+
+
 def format_doctors_menu(doctors) -> str:
     """Formats the list of active doctors and departments for WhatsApp plain text display."""
     specs = get_active_specializations(doctors)
@@ -1042,17 +1073,16 @@ def handle_whatsapp_booking_flow(
             db.session.commit()
 
             schedules = DoctorSchedule.query.filter_by(doctor_id=resolved_doc.id, is_available=True).all()
-            working_days = [s.day_of_week for s in schedules]
-            days_str = ", ".join(working_days) if working_days else "All days"
+            sched_summary = format_doctor_schedule_summary(schedules)
 
             available_dates = get_available_dates_for_doctor(resolved_doc, days_ahead=14)
             interactive_dates = build_dates_interactive_list(available_dates, doctor_name=resolved_doc.name, specialization=resolved_doc.specialization)
 
             reply = (
                 f"You have selected *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
-                f"📅 *Doctor's Working Days:* {days_str}\n\n"
-                "Please enter your preferred appointment date within the next 15 days "
-                "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                f"{sched_summary}\n\n"
+                "Please select your preferred appointment date from the available slots below, "
+                "or reply with a date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
                 "_Reply CANCEL to exit._"
             )
             return {"handled": True, "reply": reply, "session": new_session, "interactive": interactive_dates}
@@ -1092,17 +1122,16 @@ def handle_whatsapp_booking_flow(
                 db.session.commit()
 
                 schedules = DoctorSchedule.query.filter_by(doctor_id=resolved_doc.id, is_available=True).all()
-                working_days = [s.day_of_week for s in schedules]
-                days_str = ", ".join(working_days) if working_days else "All days"
+                sched_summary = format_doctor_schedule_summary(schedules)
 
                 available_dates = get_available_dates_for_doctor(resolved_doc, days_ahead=14)
                 interactive_dates = build_dates_interactive_list(available_dates, doctor_name=resolved_doc.name, specialization=resolved_doc.specialization)
 
                 reply = (
                     f"You selected *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
-                    f"📅 *Doctor's Working Days:* {days_str}\n\n"
-                    "Please enter your preferred appointment date within the next 15 days "
-                    "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                    f"{sched_summary}\n\n"
+                    "Please select your preferred appointment date from the available slots below, "
+                    "or reply with a date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
                     "_Reply CANCEL to exit._"
                 )
                 return {"handled": True, "reply": reply, "session": active_session, "interactive": interactive_dates}
@@ -1149,17 +1178,16 @@ def handle_whatsapp_booking_flow(
         db.session.commit()
 
         schedules = DoctorSchedule.query.filter_by(doctor_id=resolved_doc.id, is_available=True).all()
-        working_days = [s.day_of_week for s in schedules]
-        days_str = ", ".join(working_days) if working_days else "All days"
+        sched_summary = format_doctor_schedule_summary(schedules)
 
         available_dates = get_available_dates_for_doctor(resolved_doc, days_ahead=14)
         interactive_dates = build_dates_interactive_list(available_dates, doctor_name=resolved_doc.name, specialization=resolved_doc.specialization)
 
         reply = (
             f"You selected *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
-            f"📅 *Doctor's Working Days:* {days_str}\n\n"
-            "Please enter your preferred appointment date within the next 15 days "
-            "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+            f"{sched_summary}\n\n"
+            "Please select your preferred appointment date from the available slots below, "
+            "or reply with a date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
             "_Reply CANCEL to exit._"
         )
         return {"handled": True, "reply": reply, "session": active_session, "interactive": interactive_dates}

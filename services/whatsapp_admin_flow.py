@@ -209,31 +209,51 @@ def handle_whatsapp_admin_flow(
         return {"handled": True, "reply": reply}
 
     # -------------------------------------------------------------
-    # 5. Today's Appointments (admin_today_bookings, bookings, 3)
+    # 5. Appointments Inspection (Today, Specific Date, Natural Language)
     # -------------------------------------------------------------
-    if text_lower in ('admin_today_bookings', 'today bookings', 'bookings', '3'):
-        bookings = PatientBooking.query.filter_by(
-            date=today_str
-        ).order_by(PatientBooking.token.asc()).all()
+    booking_intent_match = re.search(r'\b(bookings?|appointments?|tokens?)\b', text_lower)
+    is_today_booking = text_lower in ('admin_today_bookings', 'today bookings', 'bookings', '3')
+    if (booking_intent_match and not text_lower.startswith('/cancel')) or is_today_booking:
+        from services.whatsapp_booking_flow import parse_booking_date, get_active_doctors_list
+        target_date = parse_booking_date(message_body)
+        if not target_date and ('today' in text_lower or is_today_booking):
+            target_date = today_str
 
-        if not bookings:
-            reply = f"📋 *No appointments scheduled for today ({today_str}).*"
-            return {"handled": True, "reply": reply}
+        if target_date:
+            doctors = get_active_doctors_list()
+            doc_id_filter = None
+            doc_name_filter = None
+            for d in doctors:
+                clean_d = re.sub(r'^dr\.?\s*', '', d.name.lower())
+                if clean_d and clean_d in text_lower:
+                    doc_id_filter = d.id
+                    doc_name_filter = d.name
+                    break
 
-        lines = [f"📋 *Today's Appointments ({today_str}):*\n"]
-        for b in bookings:
-            doc = Doctor.query.get(b.doctor_id)
-            doc_name = doc.name if doc else f"Doctor #{b.doctor_id}"
-            status_icon = "⏳" if b.status == "confirmed" else ("✅" if b.status == "completed" else "❌")
-            lines.append(f"{status_icon} *Token #{b.token}* | {b.patient_name} ({b.age or '?'})")
-            lines.append(f"  • Doctor: {doc_name} | Status: *{b.status.upper()}*")
-            lines.append(f"  • Contact: `{b.phone_number}` | Booking ID: `{b.id}`\n")
+            q = PatientBooking.query.filter_by(date=target_date)
+            if doc_id_filter:
+                q = q.filter_by(doctor_id=doc_id_filter)
+            bookings = q.order_by(PatientBooking.token.asc()).all()
 
-        lines.append("_To cancel an appointment:_\nReply `/cancel <booking_id> <reason>`")
-        return {"handled": True, "reply": "\n".join(lines).strip()}
+            doc_suffix = f" for *{doc_name_filter}*" if doc_name_filter else ""
+            if not bookings:
+                reply = f"📋 No appointments scheduled for *{target_date}*{doc_suffix}."
+                return {"handled": True, "reply": reply}
+
+            lines = [f"📋 *Appointments for {target_date}{doc_suffix} ({len(bookings)} total):*\n"]
+            for b in bookings:
+                doc = Doctor.query.get(b.doctor_id)
+                doc_name = doc.name if doc else f"Doctor #{b.doctor_id}"
+                status_icon = "⏳" if b.status == "confirmed" else ("✅" if b.status == "completed" else "❌")
+                lines.append(f"{status_icon} *Token #{b.token}:* {b.patient_name} ({b.age or '?'}, {b.gender or '?'})")
+                lines.append(f"  • Specialist: {doc_name} | Status: *{b.status.upper()}*")
+                lines.append(f"  • Contact: `{b.phone_number}` | Booking ID: `#{b.id}`\n")
+
+            lines.append("_To cancel an appointment:_\nReply `/cancel <booking_id> <reason>`")
+            return {"handled": True, "reply": "\n".join(lines).strip()}
 
     # -------------------------------------------------------------
-    # 6. Bookings for specific date (/bookings YYYY-MM-DD)
+    # 6. Legacy date lookup fallback (/bookings YYYY-MM-DD)
     # -------------------------------------------------------------
     date_lookup_match = re.match(r'^/?bookings?\s+(\d{4}-\d{2}-\d{2})$', text_lower)
     if date_lookup_match:
@@ -249,7 +269,7 @@ def handle_whatsapp_admin_flow(
         for b in bookings:
             doc = Doctor.query.get(b.doctor_id)
             doc_name = doc.name if doc else f"Doctor #{b.doctor_id}"
-            lines.append(f"• *Token #{b.token}:* {b.patient_name} | {doc_name} | Status: *{b.status}* | ID: `{b.id}`")
+            lines.append(f"• *Token #{b.token}:* {b.patient_name} | {doc_name} | Status: *{b.status}* | ID: `#{b.id}`")
         return {"handled": True, "reply": "\n".join(lines).strip()}
 
     # -------------------------------------------------------------
@@ -275,8 +295,9 @@ def handle_whatsapp_admin_flow(
     # 8. Declare Clinic Holiday (/holiday YYYY-MM-DD <reason>)
     # -------------------------------------------------------------
     holiday_match = re.match(r'^/?holiday\s+(\d{4}-\d{2}-\d{2})(?:\s+(.+))?$', text_lower)
-    if holiday_match or text_lower == 'admin_emergency_help':
-        if text_lower == 'admin_emergency_help' or not holiday_match:
+    is_holiday_prompt = any(k in text_lower for k in ('emergency closure', 'close clinic', 'emergency clinic closure', 'declare emergency', 'declare holiday', 'holiday')) or text_lower == 'admin_emergency_help'
+    if holiday_match or is_holiday_prompt:
+        if not holiday_match:
             reply = (
                 "🚨 *Clinic Emergency & Holiday Controls:*\n\n"
                 "To declare a clinic holiday and block all patient bookings on a date, reply:\n"
@@ -333,9 +354,10 @@ def handle_whatsapp_admin_flow(
     # -------------------------------------------------------------
     # 10. Broadcast Alert to Today's Patients (/broadcast <msg>)
     # -------------------------------------------------------------
-    broadcast_match = re.match(r'^/?broadcast(?:\s+(.+))?$', text, re.IGNORECASE)
-    if broadcast_match or text_lower == 'admin_broadcast_help':
-        if text_lower == 'admin_broadcast_help' or not broadcast_match or not broadcast_match.group(1):
+    broadcast_match = re.match(r'^(?:/?broadcast|message\s+all\s+booked\s+patients)(?:\s+(.+))?$', text, re.IGNORECASE)
+    is_broadcast_prompt = text_lower == 'admin_broadcast_help' or bool(re.search(r'\b(message\s+all\s+booked\s+patients|broadcast\s+to\s+patients)\b', text_lower))
+    if broadcast_match or is_broadcast_prompt:
+        if is_broadcast_prompt or not broadcast_match or not broadcast_match.group(1):
             reply = (
                 "📢 *Clinic-Wide Broadcast Command:*\n\n"
                 "To broadcast an important update to all patients booked today, reply:\n"

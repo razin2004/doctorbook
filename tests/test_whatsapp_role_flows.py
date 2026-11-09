@@ -76,8 +76,9 @@ class WhatsAppRoleFlowsTestCase(unittest.TestCase):
         self.session.add(self.user)
         self.session.commit()
 
-        # Seed admin setting
+        # Seed admin setting (preserve original value for clean tearDown)
         admin_setting = AppSettings.query.filter_by(key="admin_whatsapp_phone").first()
+        self._original_admin_phone = admin_setting.value if admin_setting else None
         if not admin_setting:
             admin_setting = AppSettings(key="admin_whatsapp_phone", value="+919847055099")
             self.session.add(admin_setting)
@@ -87,6 +88,14 @@ class WhatsAppRoleFlowsTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.session.rollback()
+        # Restore original admin phone
+        admin_setting = AppSettings.query.filter_by(key="admin_whatsapp_phone").first()
+        if admin_setting:
+            if self._original_admin_phone:
+                admin_setting.value = self._original_admin_phone
+            else:
+                self.session.delete(admin_setting)
+            self.session.commit()
         self.session.query(WhatsAppMessage).delete()
         self.session.query(WhatsAppConversation).delete()
         self.session.query(PatientBooking).delete()

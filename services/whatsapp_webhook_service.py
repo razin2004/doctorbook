@@ -181,7 +181,7 @@ def format_main_menu_text() -> str:
 
 def handle_menu_doctors() -> str:
     """Returns formatted roster of all active doctors and duty hours."""
-    from services.whatsapp_booking_flow import get_active_doctors_list
+    from services.whatsapp_booking_flow import get_active_doctors_list, format_doctor_schedule_summary
     from app import DoctorSchedule
     doctors = get_active_doctors_list()
     if not doctors:
@@ -189,12 +189,11 @@ def handle_menu_doctors() -> str:
     lines = ["👨‍⚕️ *PrimeCare Clinic — Doctors & Timings*\n"]
     for d in doctors:
         schedules = DoctorSchedule.query.filter_by(doctor_id=d.id, is_available=True).all()
-        days = [s.day_of_week for s in schedules]
-        days_str = ", ".join(days) if days else "Monday to Saturday"
-        time_slot = f"{schedules[0].start_time} - {schedules[0].end_time}" if schedules else "09:00 AM - 05:00 PM"
+        sched_text = format_doctor_schedule_summary(schedules)
         lines.append(f"• *{d.name}* — _{d.specialization}_")
-        lines.append(f"  📅 Working Days: {days_str}")
-        lines.append(f"  ⏰ Consultation Hours: {time_slot}\n")
+        for sl in sched_text.split("\n"):
+            lines.append(f"  {sl}")
+        lines.append("")
     lines.append("To book an appointment, reply *Book* or select *Book Appointment* from the menu.")
     return "\n".join(lines).strip()
 
@@ -727,6 +726,55 @@ def dispatch_inbound_message_reply(
                 "menu_handled": True,
                 "scoped_user_id": scoped_user_id
             }
+
+        # -------------------------------------------------------------
+        # Branch 3-Privacy: Confidentiality Protection for Bookings & Patient Info
+        # -------------------------------------------------------------
+        if sender_role in ('guest', 'patient'):
+            privacy_patterns = [
+                re.compile(r'\b(how\s+many\s+bookings?|who\s+is\s+booked|patient\s+list|all\s+bookings?)\b', re.IGNORECASE),
+                re.compile(r'\b(list\s+(all\s+)?bookings?|other\s+patients?|anyone\s+booked|how\s+many\s+patients?)\b', re.IGNORECASE),
+                re.compile(r'\bbookings?\s+(for|on)\s+(dr|doctor|\d{4}-\d{2}-\d{2}|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b', re.IGNORECASE),
+                re.compile(r'\b(admin\s+settings?|system\s+settings?|database\s+records?)\b', re.IGNORECASE),
+            ]
+            if any(p.search(inbound_body) for p in privacy_patterns):
+                privacy_reply = (
+                    "🔒 *Patient Privacy & Confidentiality Notice*\n\n"
+                    "For patient confidentiality and privacy regulations, individual booking schedules, "
+                    "patient counts, and consult lists cannot be disclosed.\n\n"
+                    "• To view your own personal bookings: reply *My Appointments*\n"
+                    "• To book an appointment: reply *Book*"
+                )
+                dispatch_res = active_client.send_text_message(
+                    recipient_phone=sender_phone,
+                    bsuid=scoped_user_id,
+                    text_body=privacy_reply
+                )
+                out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+                out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+                outbound_msg = WhatsAppMessage(
+                    conversation_id=conversation.id,
+                    wamid=out_wamid,
+                    direction="outbound",
+                    message_type="text",
+                    content=privacy_reply,
+                    status=out_status
+                )
+                db.session.add(outbound_msg)
+
+                if webhook_event:
+                    webhook_event.status = "processed"
+                    webhook_event.processed_at = datetime.utcnow()
+                db.session.commit()
+
+                return {
+                    "conversation_uuid": conversation.conversation_uuid,
+                    "sender_role": sender_role,
+                    "reply": privacy_reply,
+                    "privacy_blocked": True,
+                    "scoped_user_id": scoped_user_id
+                }
 
         # -------------------------------------------------------------
         # Branch 3B: General Conversational Groq AI Response

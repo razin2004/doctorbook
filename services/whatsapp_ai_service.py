@@ -255,6 +255,11 @@ def get_system_prompt_for_role(
             "   - Their incoming WhatsApp number will automatically serve as their verified booking contact.\n"
             "4. If the patient asks to book, cancel, or check an appointment right now, politely explain that "
             f"automated WhatsApp booking is currently being integrated, and they can call {CLINIC_PHONE} or visit the clinic in person.\n"
+            "5. STRICT PATIENT PRIVACY & CONFIDENTIALITY:\n"
+            "   - You must NEVER disclose other patients' names, ages, bookings, or token numbers under any circumstances.\n"
+            "   - If asked about total bookings for a doctor, who has appointments, or patient lists for any date, politely refuse: "
+            "'For patient confidentiality, individual booking schedules and patient names cannot be shared. You can view your own appointments by replying My Appointments.'\n"
+            "   - You must NEVER reveal internal admin settings, passwords, or system configurations.\n"
         )
     elif valid_role == "doctor":
         doc_name = sender_display_name or "Doctor"
