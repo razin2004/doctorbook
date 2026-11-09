@@ -560,6 +560,360 @@ class KapsoClient:
                 "status_code": None
             }
 
+    def send_interactive_list_message(
+        self,
+        recipient_phone: Optional[str] = None,
+        body_text: str = "",
+        button_text: str = "Select Option",
+        sections: Optional[list] = None,
+        header_text: Optional[str] = None,
+        footer_text: Optional[str] = None,
+        bsuid: Optional[str] = None,
+        scoped_user_id: Optional[str] = None,
+        fallback_text: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Sends a WhatsApp Interactive List message (popup menu) to a recipient.
+        Complies with Meta WhatsApp Cloud API specifications:
+          - button_text: max 20 chars
+          - header_text: max 60 chars (optional)
+          - footer_text: max 60 chars (optional)
+          - body_text: max 1024 chars (required)
+          - sections: max 10 sections, max 10 rows total across all sections
+          - row.id: max 200 chars
+          - row.title: max 24 chars (required)
+          - row.description: max 72 chars (optional)
+        If the interactive send fails (e.g. unsupported client or validation),
+        automatically falls back to sending a standard text message.
+        """
+        # Strict Feature Flag Check
+        if not self.config.outbound_enabled:
+            return {
+                "success": False,
+                "message_id": None,
+                "status": "outbound_disabled",
+                "error": "Outbound WhatsApp messaging is disabled by system configuration.",
+                "status_code": None
+            }
+
+        if not self.is_configured:
+            return {
+                "success": False,
+                "message_id": None,
+                "status": "unconfigured",
+                "error": "Kapso credentials not configured.",
+                "status_code": None
+            }
+
+        scoped_target = (bsuid or scoped_user_id or "").strip()
+        phone_target = (recipient_phone or "").strip()
+
+        if phone_target:
+            norm_phone = normalize_phone_number(phone_target)
+            if not norm_phone:
+                if not scoped_target:
+                    return {
+                        "success": False,
+                        "message_id": None,
+                        "status": "invalid_phone",
+                        "error": "Invalid recipient phone number format.",
+                        "status_code": 400
+                    }
+                clean_recipient = scoped_target
+            else:
+                clean_recipient = norm_phone.lstrip("+")
+        elif scoped_target:
+            clean_recipient = scoped_target
+        else:
+            return {
+                "success": False,
+                "message_id": None,
+                "status": "invalid_phone",
+                "error": "No recipient phone number or BSUID specified.",
+                "status_code": 400
+            }
+
+        # Format and validate sections and rows to comply with Meta limits
+        formatted_sections = []
+        total_rows = 0
+        for s in (sections or []):
+            if not isinstance(s, dict):
+                continue
+            s_title = str(s.get("title", "Options")).strip()[:24]
+            s_rows = []
+            for r in s.get("rows", []):
+                if total_rows >= 10:
+                    break
+                if not isinstance(r, dict):
+                    continue
+                r_id = str(r.get("id", f"row_{total_rows}")).strip()[:200]
+                r_title = str(r.get("title", "")).strip()[:24]
+                if not r_title:
+                    continue
+                row_dict = {"id": r_id, "title": r_title}
+                if r.get("description"):
+                    row_dict["description"] = str(r.get("description")).strip()[:72]
+                s_rows.append(row_dict)
+                total_rows += 1
+            if s_rows:
+                formatted_sections.append({"title": s_title, "rows": s_rows})
+            if total_rows >= 10:
+                break
+
+        if not formatted_sections:
+            return self.send_text_message(
+                recipient_phone=recipient_phone,
+                text_body=fallback_text or body_text,
+                bsuid=bsuid,
+                scoped_user_id=scoped_user_id
+            )
+
+        interactive_payload: Dict[str, Any] = {
+            "type": "list",
+            "body": {"text": (body_text or "Please choose an option:")[:1024]},
+            "action": {
+                "button": (button_text or "Select Option")[:20],
+                "sections": formatted_sections
+            }
+        }
+        if header_text:
+            interactive_payload["header"] = {
+                "type": "text",
+                "text": str(header_text)[:60]
+            }
+        if footer_text:
+            interactive_payload["footer"] = {
+                "text": str(footer_text)[:60]
+            }
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": clean_recipient,
+            "type": "interactive",
+            "interactive": interactive_payload
+        }
+
+        endpoint = f"{self.config.base_url}/meta/whatsapp/{self.config.api_version}/{self.config.phone_number_id}/messages"
+        try:
+            response = requests.post(
+                endpoint,
+                headers=self._get_headers(),
+                json=payload,
+                timeout=self.config.timeout
+            )
+            if response.status_code in (200, 201, 202):
+                try:
+                    data = response.json() if response.text else {}
+                except Exception:
+                    data = {}
+                messages = data.get("messages", [])
+                msg_id = messages[0].get("id") if messages else None
+                return {
+                    "success": True,
+                    "message_id": msg_id,
+                    "status": "accepted",
+                    "error": None,
+                    "status_code": response.status_code
+                }
+            else:
+                logger.warning(
+                    sanitize_log_message(
+                        f"Interactive list message rejected (HTTP {response.status_code}): {response.text}. "
+                        "Attempting plain text fallback."
+                    )
+                )
+                if fallback_text:
+                    return self.send_text_message(
+                        recipient_phone=recipient_phone,
+                        text_body=fallback_text,
+                        bsuid=bsuid,
+                        scoped_user_id=scoped_user_id
+                    )
+                return {
+                    "success": False,
+                    "message_id": None,
+                    "status": "rejected" if response.status_code == 400 else "failed",
+                    "error": f"Interactive message rejected (HTTP {response.status_code}).",
+                    "status_code": response.status_code
+                }
+        except requests.exceptions.Timeout:
+            if fallback_text:
+                return self.send_text_message(recipient_phone=recipient_phone, text_body=fallback_text, bsuid=bsuid, scoped_user_id=scoped_user_id)
+            return {
+                "success": False,
+                "message_id": None,
+                "status": "timeout",
+                "error": f"Request timed out after {self.config.timeout}s.",
+                "status_code": None
+            }
+        except requests.exceptions.RequestException as e:
+            if fallback_text:
+                return self.send_text_message(recipient_phone=recipient_phone, text_body=fallback_text, bsuid=bsuid, scoped_user_id=scoped_user_id)
+            return {
+                "success": False,
+                "message_id": None,
+                "status": "network_error",
+                "error": f"Network exception: {type(e).__name__}",
+                "status_code": None
+            }
+
+    def send_interactive_button_message(
+        self,
+        recipient_phone: Optional[str] = None,
+        body_text: str = "",
+        buttons: Optional[list] = None,
+        header_text: Optional[str] = None,
+        footer_text: Optional[str] = None,
+        bsuid: Optional[str] = None,
+        scoped_user_id: Optional[str] = None,
+        fallback_text: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Sends a WhatsApp Interactive Button message (up to 3 quick action buttons).
+        Meta constraints:
+          - buttons: max 3 buttons
+          - button title: max 20 chars
+          - body_text: max 1024 chars
+        """
+        if not self.config.outbound_enabled:
+            return {
+                "success": False,
+                "message_id": None,
+                "status": "outbound_disabled",
+                "error": "Outbound WhatsApp messaging is disabled by system configuration.",
+                "status_code": None
+            }
+
+        if not self.is_configured:
+            return {
+                "success": False,
+                "message_id": None,
+                "status": "unconfigured",
+                "error": "Kapso credentials not configured.",
+                "status_code": None
+            }
+
+        scoped_target = (bsuid or scoped_user_id or "").strip()
+        phone_target = (recipient_phone or "").strip()
+
+        if phone_target:
+            norm_phone = normalize_phone_number(phone_target)
+            if not norm_phone:
+                if not scoped_target:
+                    return {
+                        "success": False,
+                        "message_id": None,
+                        "status": "invalid_phone",
+                        "error": "Invalid recipient phone number format.",
+                        "status_code": 400
+                    }
+                clean_recipient = scoped_target
+            else:
+                clean_recipient = norm_phone.lstrip("+")
+        elif scoped_target:
+            clean_recipient = scoped_target
+        else:
+            return {
+                "success": False,
+                "message_id": None,
+                "status": "invalid_phone",
+                "error": "No recipient phone number or BSUID specified.",
+                "status_code": 400
+            }
+
+        formatted_buttons = []
+        for idx, btn in enumerate(buttons or []):
+            if idx >= 3:
+                break
+            if not isinstance(btn, dict):
+                continue
+            b_id = str(btn.get("id", f"btn_{idx}")).strip()[:256]
+            b_title = str(btn.get("title", f"Option {idx+1}")).strip()[:20]
+            formatted_buttons.append({
+                "type": "reply",
+                "reply": {
+                    "id": b_id,
+                    "title": b_title
+                }
+            })
+
+        if not formatted_buttons:
+            return self.send_text_message(
+                recipient_phone=recipient_phone,
+                text_body=fallback_text or body_text,
+                bsuid=bsuid,
+                scoped_user_id=scoped_user_id
+            )
+
+        interactive_payload: Dict[str, Any] = {
+            "type": "button",
+            "body": {"text": (body_text or "Please choose an option:")[:1024]},
+            "action": {
+                "buttons": formatted_buttons
+            }
+        }
+        if header_text:
+            interactive_payload["header"] = {
+                "type": "text",
+                "text": str(header_text)[:60]
+            }
+        if footer_text:
+            interactive_payload["footer"] = {
+                "text": str(footer_text)[:60]
+            }
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": clean_recipient,
+            "type": "interactive",
+            "interactive": interactive_payload
+        }
+
+        endpoint = f"{self.config.base_url}/meta/whatsapp/{self.config.api_version}/{self.config.phone_number_id}/messages"
+        try:
+            response = requests.post(
+                endpoint,
+                headers=self._get_headers(),
+                json=payload,
+                timeout=self.config.timeout
+            )
+            if response.status_code in (200, 201, 202):
+                try:
+                    data = response.json() if response.text else {}
+                except Exception:
+                    data = {}
+                messages = data.get("messages", [])
+                msg_id = messages[0].get("id") if messages else None
+                return {
+                    "success": True,
+                    "message_id": msg_id,
+                    "status": "accepted",
+                    "error": None,
+                    "status_code": response.status_code
+                }
+            else:
+                if fallback_text:
+                    return self.send_text_message(recipient_phone=recipient_phone, text_body=fallback_text, bsuid=bsuid, scoped_user_id=scoped_user_id)
+                return {
+                    "success": False,
+                    "message_id": None,
+                    "status": "rejected" if response.status_code == 400 else "failed",
+                    "error": f"Interactive button rejected (HTTP {response.status_code}).",
+                    "status_code": response.status_code
+                }
+        except requests.exceptions.RequestException as e:
+            if fallback_text:
+                return self.send_text_message(recipient_phone=recipient_phone, text_body=fallback_text, bsuid=bsuid, scoped_user_id=scoped_user_id)
+            return {
+                "success": False,
+                "message_id": None,
+                "status": "network_error",
+                "error": f"Network exception: {type(e).__name__}",
+                "status_code": None
+            }
+
     def verify_webhook_signature(self, raw_body: bytes, signature: str, secret: Optional[str] = None) -> bool:
         """
         Validates Kapso HMAC-SHA256 signature for incoming POST webhooks.

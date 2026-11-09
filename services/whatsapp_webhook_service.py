@@ -35,6 +35,7 @@ Phase 3F Implementation (Hardened for Native Kapso and Meta modes):
 """
 
 import os
+import re
 import uuid
 import json
 import hashlib
@@ -94,6 +95,122 @@ def should_process_async() -> bool:
     return is_production_environment()
 
 
+GREETING_PATTERN = re.compile(
+    r'^\s*(hi+|hello+|hey+|hai+|start|menu|options|help|namaste|vanakkam|good\s*(morning|afternoon|evening))'
+    r'(\s+(primecare|clinic|team|there|all|doc|doctor|assistant|bot))?\s*[!.,?]?\s*$',
+    re.IGNORECASE
+)
+
+
+def is_greeting_message(text: str) -> bool:
+    """
+    Checks if an inbound message is a pure greeting or menu request.
+    Returns False if the message contains substantive questions or medical keywords.
+    """
+    if not text:
+        return False
+    clean = text.strip()
+    return bool(GREETING_PATTERN.match(clean))
+
+
+def build_main_menu_interactive_payload() -> Dict[str, Any]:
+    """
+    Returns the interactive list payload for PrimeCare Clinic Main Menu popup.
+    """
+    return {
+        "header_text": "PrimeCare Clinic",
+        "body_text": "Hello! Welcome to PrimeCare Clinic WhatsApp Portal. How can we help you today? Please choose an option below:",
+        "button_text": "Main Menu",
+        "footer_text": "PrimeCare Clinic • Koorachundu",
+        "sections": [
+            {
+                "title": "Appointments",
+                "rows": [
+                    {
+                        "id": "menu_book",
+                        "title": "📅 Book Appointment",
+                        "description": "Consult with a specialist doctor"
+                    },
+                    {
+                        "id": "menu_my_bookings",
+                        "title": "📋 My Appointments",
+                        "description": "View your active tokens & status"
+                    },
+                    {
+                        "id": "menu_cancel",
+                        "title": "❌ Cancel Booking",
+                        "description": "Cancel an existing appointment"
+                    }
+                ]
+            },
+            {
+                "title": "Clinic Info",
+                "rows": [
+                    {
+                        "id": "menu_doctors",
+                        "title": "👨‍⚕️ Doctors & Timings",
+                        "description": "View doctor schedules & roster"
+                    },
+                    {
+                        "id": "menu_location",
+                        "title": "📍 Location & Contact",
+                        "description": "Address, directions & phone"
+                    }
+                ]
+            }
+        ]
+    }
+
+
+def format_main_menu_text() -> str:
+    """
+    Plain text fallback for Main Menu when interactive messages are not supported.
+    """
+    return (
+        "🏥 *Welcome to PrimeCare Clinic*\n\n"
+        "How can we help you today? Please reply with an option number or keyword:\n\n"
+        "*1.* 📅 *Book Appointment* (reply *1* or *Book*)\n"
+        "*2.* 📋 *My Appointments* (reply *2* or *My Appointments*)\n"
+        "*3.* ❌ *Cancel Booking* (reply *3* or *Cancel*)\n"
+        "*4.* 👨‍⚕️ *Doctors & Timings* (reply *4* or *Doctors*)\n"
+        "*5.* 📍 *Location & Contact* (reply *5* or *Location*)\n\n"
+        "_You can also ask any question directly, such as 'Which doctor is available today?'_"
+    )
+
+
+def handle_menu_doctors() -> str:
+    """Returns formatted roster of all active doctors and duty hours."""
+    from services.whatsapp_booking_flow import get_active_doctors_list
+    from app import DoctorSchedule
+    doctors = get_active_doctors_list()
+    if not doctors:
+        return "PrimeCare Clinic doctors directory is currently being updated. Please call +91 85920 31725."
+    lines = ["👨‍⚕️ *PrimeCare Clinic — Doctors & Timings*\n"]
+    for d in doctors:
+        schedules = DoctorSchedule.query.filter_by(doctor_id=d.id, is_available=True).all()
+        days = [s.day_of_week for s in schedules]
+        days_str = ", ".join(days) if days else "Monday to Saturday"
+        time_slot = f"{schedules[0].start_time} - {schedules[0].end_time}" if schedules else "09:00 AM - 05:00 PM"
+        lines.append(f"• *{d.name}* — _{d.specialization}_")
+        lines.append(f"  📅 Working Days: {days_str}")
+        lines.append(f"  ⏰ Consultation Hours: {time_slot}\n")
+    lines.append("To book an appointment, reply *Book* or select *Book Appointment* from the menu.")
+    return "\n".join(lines).strip()
+
+
+def handle_menu_location() -> str:
+    """Returns clinic location, Google maps URL, phone, and hours."""
+    return (
+        "📍 *PrimeCare Clinic — Location & Contact*\n\n"
+        "🏥 *Address:* Koorachundu, Kozhikode, Kerala\n"
+        "🗺️ *Google Maps:* https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z\n"
+        "📞 *Phone / WhatsApp:* +91 85920 31725\n"
+        "⏰ *OP Hours:* Monday to Saturday (09:00 AM – 05:00 PM)\n"
+        "🚨 *Emergency:* 108 / 112\n\n"
+        "To book an appointment, reply *Book*."
+    )
+
+
 def dispatch_inbound_message_reply(
     conversation_id: int,
     inbound_msg_id: int,
@@ -150,9 +267,9 @@ def dispatch_inbound_message_reply(
 
     try:
         # -------------------------------------------------------------
-        # Branch 1: Non-Text Message Handling
+        # Branch 1: Non-Text Message Handling (Only reject binary media)
         # -------------------------------------------------------------
-        if msg_type != "text":
+        if msg_type not in ("text", "interactive", "button"):
             reply_text = (
                 "PrimeCare Clinic WhatsApp Assistant: We currently support text messages only. "
                 "Please send your inquiry as a text message, or call the clinic directly at +91 85920 31725."
@@ -302,11 +419,27 @@ def dispatch_inbound_message_reply(
 
         if booking_flow_result.get("handled"):
             reply_text = booking_flow_result.get("reply")
-            dispatch_res = active_client.send_text_message(
-                recipient_phone=sender_phone,
-                bsuid=scoped_user_id,
-                text_body=reply_text
-            )
+            interactive_data = booking_flow_result.get("interactive")
+            if interactive_data:
+                dispatch_res = active_client.send_interactive_list_message(
+                    recipient_phone=sender_phone,
+                    body_text=interactive_data.get("body_text", reply_text),
+                    button_text=interactive_data.get("button_text", "Choose Doctor"),
+                    sections=interactive_data.get("sections"),
+                    header_text=interactive_data.get("header_text"),
+                    footer_text=interactive_data.get("footer_text"),
+                    bsuid=scoped_user_id,
+                    fallback_text=reply_text
+                )
+                out_msg_type = "interactive" if (dispatch_res.get("success") and dispatch_res.get("status") == "accepted") else "text"
+            else:
+                dispatch_res = active_client.send_text_message(
+                    recipient_phone=sender_phone,
+                    bsuid=scoped_user_id,
+                    text_body=reply_text
+                )
+                out_msg_type = "text"
+
             out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
             out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
 
@@ -314,7 +447,7 @@ def dispatch_inbound_message_reply(
                 conversation_id=conversation.id,
                 wamid=out_wamid,
                 direction="outbound",
-                message_type="text",
+                message_type=out_msg_type,
                 content=reply_text,
                 status=out_status
             )
@@ -334,6 +467,120 @@ def dispatch_inbound_message_reply(
             }
 
         # -------------------------------------------------------------
+        # Branch 3A-ter: Menu Actions & Greetings Popup Trigger
+        # -------------------------------------------------------------
+        clean_inbound_lower = (inbound_body or "").strip().lower()
+
+        # Menu Action: Doctors & Timings
+        if clean_inbound_lower in ("menu_doctors", "4", "doctors", "doctor list", "doctor timings", "timings"):
+            doc_reply = handle_menu_doctors()
+            dispatch_res = active_client.send_text_message(
+                recipient_phone=sender_phone,
+                bsuid=scoped_user_id,
+                text_body=doc_reply
+            )
+            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+            outbound_msg = WhatsAppMessage(
+                conversation_id=conversation.id,
+                wamid=out_wamid,
+                direction="outbound",
+                message_type="text",
+                content=doc_reply,
+                status=out_status
+            )
+            db.session.add(outbound_msg)
+
+            if webhook_event:
+                webhook_event.status = "processed"
+                webhook_event.processed_at = datetime.utcnow()
+            db.session.commit()
+
+            return {
+                "conversation_uuid": conversation.conversation_uuid,
+                "sender_role": sender_role,
+                "reply": doc_reply,
+                "menu_handled": True,
+                "scoped_user_id": scoped_user_id
+            }
+
+        # Menu Action: Location & Contact
+        if clean_inbound_lower in ("menu_location", "5", "location", "address", "directions", "map", "clinic location"):
+            loc_reply = handle_menu_location()
+            dispatch_res = active_client.send_text_message(
+                recipient_phone=sender_phone,
+                bsuid=scoped_user_id,
+                text_body=loc_reply
+            )
+            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+            outbound_msg = WhatsAppMessage(
+                conversation_id=conversation.id,
+                wamid=out_wamid,
+                direction="outbound",
+                message_type="text",
+                content=loc_reply,
+                status=out_status
+            )
+            db.session.add(outbound_msg)
+
+            if webhook_event:
+                webhook_event.status = "processed"
+                webhook_event.processed_at = datetime.utcnow()
+            db.session.commit()
+
+            return {
+                "conversation_uuid": conversation.conversation_uuid,
+                "sender_role": sender_role,
+                "reply": loc_reply,
+                "menu_handled": True,
+                "scoped_user_id": scoped_user_id
+            }
+
+        # Main Menu & Greetings Popup Trigger (hi, hello, hey, start, menu, options, help)
+        if is_greeting_message(inbound_body):
+            interactive_menu = build_main_menu_interactive_payload()
+            fallback_text = format_main_menu_text()
+            dispatch_res = active_client.send_interactive_list_message(
+                recipient_phone=sender_phone,
+                body_text=interactive_menu.get("body_text", fallback_text),
+                button_text=interactive_menu.get("button_text", "Main Menu"),
+                sections=interactive_menu.get("sections"),
+                header_text=interactive_menu.get("header_text"),
+                footer_text=interactive_menu.get("footer_text"),
+                bsuid=scoped_user_id,
+                fallback_text=fallback_text
+            )
+            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+            out_msg_type = "interactive" if (dispatch_res.get("success") and dispatch_res.get("status") == "accepted") else "text"
+
+            outbound_msg = WhatsAppMessage(
+                conversation_id=conversation.id,
+                wamid=out_wamid,
+                direction="outbound",
+                message_type=out_msg_type,
+                content=fallback_text,
+                status=out_status
+            )
+            db.session.add(outbound_msg)
+
+            if webhook_event:
+                webhook_event.status = "processed"
+                webhook_event.processed_at = datetime.utcnow()
+            db.session.commit()
+
+            return {
+                "conversation_uuid": conversation.conversation_uuid,
+                "sender_role": sender_role,
+                "reply": fallback_text,
+                "menu_handled": True,
+                "scoped_user_id": scoped_user_id
+            }
+
+        # -------------------------------------------------------------
         # Branch 3B: General Conversational Groq AI Response
         # -------------------------------------------------------------
         # Query isolated conversation history strictly for this conversation ID
@@ -349,9 +596,18 @@ def dispatch_inbound_message_reply(
                 "content": m.content
             })
 
+        # Inject real-time clinic context with IST time, doctor schedules, and availability
+        live_clinic_context = None
+        try:
+            from app import build_clinic_context
+            live_clinic_context = build_clinic_context(user_id=user_id)
+        except Exception as ctx_err:
+            logger.warning(f"Failed to build live clinic context: {ctx_err}")
+
         ai_reply = generate_whatsapp_ai_response(
             sender_role=sender_role,
             user_message=inbound_body,
+            clinic_context=live_clinic_context,
             conversation_history=conversation_history,
             sender_display_name=display_name,
             client=groq_client
@@ -631,6 +887,18 @@ def parse_webhook_payload(
                     elif isinstance(raw_text, str):
                         text_val = raw_text
 
+                # Extract interactive details if present
+                interactive_data = msg_obj.get("interactive") or item.get("interactive")
+                msg_type_val = msg_obj.get("type") or item.get("type") or ("interactive" if interactive_data else "text")
+                if interactive_data and isinstance(interactive_data, dict):
+                    itype = interactive_data.get("type")
+                    if itype == "list_reply":
+                        lr = interactive_data.get("list_reply", {})
+                        text_val = lr.get("id") or lr.get("title") or text_val
+                    elif itype == "button_reply":
+                        br = interactive_data.get("button_reply", {})
+                        text_val = br.get("id") or br.get("title") or text_val
+
                 conversation_dict = item.get("conversation") if isinstance(item.get("conversation"), dict) else (data.get("conversation") if isinstance(data.get("conversation"), dict) else {})
 
                 # Extract sender phone
@@ -724,8 +992,9 @@ def parse_webhook_payload(
                     "parent_business_scoped_user_id": parent_bsuid_val,
                     "parent_bsuid": parent_bsuid_val,
                     "username": username_val,
-                    "type": msg_obj.get("type", "text"),
+                    "type": msg_type_val,
                     "text": {"body": text_val or ""},
+                    "interactive": interactive_data,
                     "timestamp": str(msg_obj.get("timestamp") or item.get("timestamp") or ""),
                     "direction": direction_val,
                     "is_echo": is_echo_val,
@@ -1091,6 +1360,19 @@ def process_inbound_webhook(
             # Extract message content
             if msg_type == "text":
                 inbound_body = message.get("text", {}).get("body", "").strip()
+            elif msg_type == "interactive":
+                interactive_data = message.get("interactive", {})
+                itype = interactive_data.get("type")
+                if itype == "list_reply":
+                    lr = interactive_data.get("list_reply", {})
+                    inbound_body = (lr.get("id") or lr.get("title") or "").strip()
+                elif itype == "button_reply":
+                    br = interactive_data.get("button_reply", {})
+                    inbound_body = (br.get("id") or br.get("title") or "").strip()
+                else:
+                    inbound_body = (interactive_data.get("id") or message.get("text", {}).get("body", "")).strip()
+            elif msg_type == "button":
+                inbound_body = (message.get("button", {}).get("payload") or message.get("button", {}).get("text") or "").strip()
             else:
                 inbound_body = f"[{msg_type.upper()} RECEIVED]"
 

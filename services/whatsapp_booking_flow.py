@@ -32,7 +32,7 @@ BOOKING_INTENT_PATTERNS = [
     re.compile(r'\b(i\s+want\s+to\s+book|need\s+(an\s+)?appointment|want\s+(an\s+)?appointment|make\s+(an\s+)?appointment)\b', re.IGNORECASE),
     re.compile(r'\b(schedule\s+(an\s+)?appointment|take\s+(an\s+)?appointment|doctor\s+appointment|appointment\s+booking)\b', re.IGNORECASE),
     re.compile(r'\b(book\s+(with\s+)?(dr|doctor))\b', re.IGNORECASE),
-    re.compile(r'^(book|book appointment|new booking|new appointment|book doctor)$', re.IGNORECASE),
+    re.compile(r'^(book|book appointment|new booking|new appointment|book doctor|menu_book|1)$', re.IGNORECASE),
 ]
 
 EXCLUSION_PATTERNS = [
@@ -285,13 +285,62 @@ def format_doctors_menu(doctors) -> str:
     return "\n".join(lines)
 
 
+def build_doctors_interactive_list(doctors) -> dict:
+    """
+    Builds the Meta WhatsApp interactive list structure for doctor/department selection.
+    Respects Meta constraints:
+      - title: max 24 chars
+      - description: max 72 chars
+      - total rows: max 10
+    """
+    from app import DoctorSchedule
+    rows = []
+    for doc in doctors[:10]:
+        schedules = DoctorSchedule.query.filter_by(doctor_id=doc.id, is_available=True).all()
+        if schedules:
+            days = [s.day_of_week[:3] for s in schedules]
+            duty_info = f"{schedules[0].start_time}-{schedules[0].end_time}"
+            desc = f"{doc.specialization} • {','.join(days[:4])} {duty_info}"
+        else:
+            desc = f"{doc.specialization} • Mon-Sat"
+
+        rows.append({
+            "id": f"doc_{doc.id}",
+            "title": str(doc.name)[:24],
+            "description": str(desc)[:72]
+        })
+
+    return {
+        "header_text": "PrimeCare Clinic",
+        "body_text": (
+            "🏥 *PrimeCare Clinic — Appointment Booking*\n"
+            "Please select a doctor or department from the list below to begin your booking:"
+        ),
+        "button_text": "Choose Doctor",
+        "footer_text": "Tap button below to select doctor",
+        "sections": [
+            {
+                "title": "Available Specialists",
+                "rows": rows
+            }
+        ]
+    }
+
+
 def resolve_doctor_from_input(user_input: str, doctors):
     """
-    Resolves a doctor from user input: number, name, or specialization.
+    Resolves a doctor from user input: interactive list row ID, number, name, or specialization.
     Returns:
       (resolved_doctor, matching_list, error_message)
     """
     text = user_input.strip()
+
+    # 0. Check interactive list row ID (e.g. "doc_1", "doc_2")
+    if text.lower().startswith("doc_") and text[4:].isdigit():
+        target_id = int(text[4:])
+        for d in doctors:
+            if d.id == target_id:
+                return d, [], None
 
     # 1. Check numeric selection (e.g. "1", "2")
     if text.isdigit():
@@ -347,8 +396,6 @@ def resolve_doctor_from_input(user_input: str, doctors):
         return spec_matches[0], [], None
     if len(spec_matches) > 1:
         return None, spec_matches, None
-
-    return None, [], f"Could not find a doctor or department matching '{text}'. Please choose from the list."
 
     return None, [], f"Could not find a doctor or department matching '{text}'. Please choose from the list."
 
@@ -479,7 +526,8 @@ def handle_whatsapp_booking_flow(
 
         # Otherwise display full doctor list
         reply = format_doctors_menu(doctors)
-        return {"handled": True, "reply": reply, "session": new_session}
+        interactive_data = build_doctors_interactive_list(doctors)
+        return {"handled": True, "reply": reply, "session": new_session, "interactive": interactive_data}
 
     # -------------------------------------------------------------------------
     # 4. Handle Cancellation at Any Active Step
@@ -501,7 +549,12 @@ def handle_whatsapp_booking_flow(
         resolved_doc, matching_list, err_msg = resolve_doctor_from_input(text, doctors)
 
         if err_msg:
-            return {"handled": True, "reply": f"{err_msg}\n\n{format_doctors_menu(doctors)}", "session": active_session}
+            return {
+                "handled": True,
+                "reply": f"{err_msg}\n\n{format_doctors_menu(doctors)}",
+                "session": active_session,
+                "interactive": build_doctors_interactive_list(doctors)
+            }
 
         if matching_list:
             lines = [

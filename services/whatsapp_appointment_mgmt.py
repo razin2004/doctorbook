@@ -30,14 +30,14 @@ LOOKUP_INTENT_PATTERNS = [
     re.compile(r'\b(show\s+my\s+appointment|my\s+appointment|check\s+my\s+appointment|view\s+my\s+appointment)s?\b', re.IGNORECASE),
     re.compile(r'\b(do\s+i\s+have\s+an?\s+(upcoming\s+)?appointment|appointment\s+status|my\s+booking|show\s+my\s+booking)s?\b', re.IGNORECASE),
     re.compile(r'\b(what\s+is\s+my\s+appointment|check\s+my\s+booking|view\s+my\s+booking|my\s+appointments?)s?\b', re.IGNORECASE),
-    re.compile(r'^(my\s+appointments?|appointments?|bookings?|show\s+bookings?)$', re.IGNORECASE),
+    re.compile(r'^(my\s+appointments?|appointments?|bookings?|show\s+bookings?|menu_my_bookings|2)$', re.IGNORECASE),
     re.compile(r'\b(upcoming\s+appointment|list\s+my\s+appointment|see\s+my\s+appointment)s?\b', re.IGNORECASE),
 ]
 
 CANCEL_INTENT_PATTERNS = [
     re.compile(r'\b(cancel\s+(my\s+)?(appointment|booking)|cancel\s+an?\s+appointment)s?\b', re.IGNORECASE),
     re.compile(r'\b(i\s+want\s+to\s+cancel|need\s+to\s+cancel|want\s+to\s+cancel)(\s+my)?\s*(appointment|booking)?\b', re.IGNORECASE),
-    re.compile(r'^(cancel\s+appointment|cancel\s+booking|cancel\s+my\s+appointment)$', re.IGNORECASE),
+    re.compile(r'^(cancel\s+appointment|cancel\s+booking|cancel\s+my\s+appointment|menu_cancel|3)$', re.IGNORECASE),
 ]
 
 RESCHEDULE_INTENT_PATTERNS = [

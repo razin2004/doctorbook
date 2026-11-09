@@ -659,7 +659,7 @@ class WhatsAppWebhookTestSuite(unittest.TestCase):
         """11. Groq API failure handled with fail-closed polite error message without credential leakage."""
         payload = build_text_payload(
             sender_phone="919847055088",
-            text_body="Hello"
+            text_body="What are the clinic consultation fees?"
         )
         raw_body = json.dumps(payload).encode("utf-8")
         sig = generate_signature(raw_body)
