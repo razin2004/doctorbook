@@ -635,6 +635,73 @@ class TestAdminClinicManagement(unittest.TestCase):
             app_module.main_sheet = orig_main_sheet
             app_module.doctors_ws = orig_doctors_ws
 
+    def test_admin_book_patient_success_and_csrf_exempt(self):
+        """Verify that /admin_book_patient successfully books a patient when admin is logged in."""
+        with app.app_context():
+            doc = Doctor.query.filter_by(is_active=True).first()
+            self.assertIsNotNone(doc, "Expected at least one active doctor in database")
+            doc_id = doc.id
+            schedules = DoctorSchedule.query.filter_by(doctor_id=doc.id).all()
+            working_days = [s.day_of_week for s in schedules] or ["Monday"]
+
+            # Find next valid working day for doctor
+            today = datetime.now()
+            target_date = None
+            for i in range(1, 15):
+                cand = today + timedelta(days=i)
+                if cand.strftime("%A") in working_days:
+                    target_date = cand.strftime("%Y-%m-%d")
+                    break
+            if not target_date:
+                target_date = (today + timedelta(days=1)).strftime("%Y-%m-%d")
+
+        # 1. Book using doctor_id
+        res1 = self.client.post("/admin_book_patient", json={
+            "doctor_id": doc_id,
+            "name": "Admin Booked User 1",
+            "age": "29",
+            "gender": "Female",
+            "phone_number": "+919847111222",
+            "date": target_date
+        })
+        self.assertEqual(res1.status_code, 200, f"Expected 200 OK, got: {res1.get_data(as_text=True)}")
+        data1 = res1.get_json()
+        self.assertTrue(data1.get("success"))
+        self.assertIn("token", data1)
+        self.assertEqual(data1.get("name"), "Admin Booked User 1")
+
+        # 2. Book using sheet_url parameter (as passed by frontend dropdown with doctor ID string)
+        res2 = self.client.post("/admin_book_patient", json={
+            "sheet_url": str(doc_id),
+            "name": "Admin Booked User 2",
+            "age": "34",
+            "gender": "Male",
+            "phone_number": "+919847111223",
+            "date": target_date
+        })
+        self.assertEqual(res2.status_code, 200, f"Expected 200 OK, got: {res2.get_data(as_text=True)}")
+        data2 = res2.get_json()
+        self.assertTrue(data2.get("success"))
+        self.assertIn("token", data2)
+        self.assertEqual(data2.get("name"), "Admin Booked User 2")
+
+    def test_admin_book_patient_unauthorized_blocked(self):
+        """Verify that unauthenticated requests to /admin_book_patient are blocked with 403."""
+        with self.client.session_transaction() as sess:
+            sess.clear()
+
+        res = self.client.post("/admin_book_patient", json={
+            "doctor_id": 1,
+            "name": "Intruder Booking",
+            "age": "40",
+            "gender": "Male",
+            "phone_number": "+919847999888",
+            "date": "2026-11-20"
+        })
+        self.assertEqual(res.status_code, 403)
+        data = res.get_json()
+        self.assertFalse(data.get("success"))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -5259,6 +5259,7 @@ def book_doctor():
     })
 
 @app.route("/admin_book_patient", methods=["POST"])
+@csrf.exempt
 @admin_required
 def admin_book_patient():
     data = request.get_json(silent=True) or request.form or {}
@@ -5307,7 +5308,7 @@ def admin_book_patient():
         gender=gender,
         phone_number=phone_number,
         appointment_date=date,
-        doctor_sheet_url=sheet_url,
+        doctor_sheet_url=raw_sheet,
         doctor_id=doctor_id,
         patient_user_id=target_patient_user_id,
         actor_role='admin',
