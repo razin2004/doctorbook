@@ -103,7 +103,7 @@ def resolve_whatsapp_sender_role(
             }
 
     # 2. Check Doctor accounts:
-    # Match against admin-maintained DoctorSession.phone_number
+    # Match against admin-maintained DoctorSession.phone_number or Doctor.phone_number
     # Confirm associated User exists, role=='doctor', and account activation completed (email_verified==True)
     # Does NOT require phone_verified==True.
     matching_doc_sessions = DoctorSession.query.filter(
@@ -120,6 +120,7 @@ def resolve_whatsapp_sender_role(
                 user_records["doctor"] = {
                     "name": doc_sess.doctor_name,
                     "user_id": doc_user.id,  # Consistently represents actual User.id
+                    "doctor_id": None,
                     "doctor_session_id": doc_sess.id,  # Distinct doctor session ID
                     "admin_principal": None,
                     "specialization": doc_sess.specialization,
@@ -127,6 +128,30 @@ def resolve_whatsapp_sender_role(
                     "role": "doctor"
                 }
                 break
+
+    # Also match directly against active Doctor registry (Doctor.phone_number)
+    try:
+        from app import Doctor
+        matching_doctors = Doctor.query.filter(
+            Doctor.phone_number == normalized_phone,
+            Doctor.is_active == True
+        ).all()
+        for doc in matching_doctors:
+            if "doctor" not in matching_roles:
+                matching_roles.append("doctor")
+                user_records["doctor"] = {
+                    "name": doc.name,
+                    "user_id": None,
+                    "doctor_id": doc.id,
+                    "doctor_session_id": None,
+                    "admin_principal": None,
+                    "specialization": doc.specialization,
+                    "email": doc.email,
+                    "role": "doctor"
+                }
+                break
+    except Exception:
+        pass
 
     # 3. Check Patient accounts in User table
     # Matches User.phone_number against normalized_phone for role='patient'
@@ -176,6 +201,7 @@ def resolve_whatsapp_sender_role(
             "phone_number": normalized_phone,
             "role": assigned_role,
             "user_id": meta.get("user_id"),
+            "doctor_id": meta.get("doctor_id"),
             "doctor_session_id": meta.get("doctor_session_id"),
             "admin_principal": meta.get("admin_principal"),
             "name": meta.get("name"),
@@ -191,6 +217,7 @@ def resolve_whatsapp_sender_role(
         "phone_number": normalized_phone,
         "role": "guest",
         "user_id": None,
+        "doctor_id": None,
         "doctor_session_id": None,
         "admin_principal": None,
         "name": "Guest Patient",

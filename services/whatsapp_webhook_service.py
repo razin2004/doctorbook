@@ -357,11 +357,138 @@ def dispatch_inbound_message_reply(
             sender_role = role_info.get("role") or "guest"
             display_name = role_info.get("name") or contact_name
             user_id = role_info.get("user_id")
+            doctor_id = role_info.get("doctor_id")
         else:
             # BSUID-only sender: strictly guest role; never infer patient/doctor/admin
             sender_role = "guest"
             display_name = contact_name or message.get("username") or "Guest"
             user_id = None
+            doctor_id = None
+
+        # -------------------------------------------------------------
+        # Branch 3A-Admin: Administrator Operations & Controls
+        # -------------------------------------------------------------
+        if sender_role == 'admin':
+            from services.whatsapp_admin_flow import handle_whatsapp_admin_flow
+            admin_res = handle_whatsapp_admin_flow(
+                conversation=conversation,
+                message_body=inbound_body,
+                sender_phone=sender_phone,
+                sender_role=sender_role,
+                user_id=user_id,
+                display_name=display_name
+            )
+            if admin_res.get("handled"):
+                reply_text = admin_res.get("reply")
+                interactive_data = admin_res.get("interactive")
+                if interactive_data:
+                    dispatch_res = active_client.send_interactive_list_message(
+                        recipient_phone=sender_phone,
+                        body_text=interactive_data.get("body_text", reply_text),
+                        button_text=interactive_data.get("button_text", "Admin Controls"),
+                        sections=interactive_data.get("sections"),
+                        header_text=interactive_data.get("header_text"),
+                        footer_text=interactive_data.get("footer_text"),
+                        bsuid=scoped_user_id,
+                        fallback_text=reply_text
+                    )
+                    out_msg_type = "interactive" if (dispatch_res.get("success") and dispatch_res.get("status") == "accepted") else "text"
+                else:
+                    dispatch_res = active_client.send_text_message(
+                        recipient_phone=sender_phone,
+                        bsuid=scoped_user_id,
+                        text_body=reply_text
+                    )
+                    out_msg_type = "text"
+
+                out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+                out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+                outbound_msg = WhatsAppMessage(
+                    conversation_id=conversation.id,
+                    wamid=out_wamid,
+                    direction="outbound",
+                    message_type=out_msg_type,
+                    content=reply_text,
+                    status=out_status
+                )
+                db.session.add(outbound_msg)
+
+                if webhook_event:
+                    webhook_event.status = "processed"
+                    webhook_event.processed_at = datetime.utcnow()
+                db.session.commit()
+
+                return {
+                    "conversation_uuid": conversation.conversation_uuid,
+                    "sender_role": sender_role,
+                    "reply": reply_text,
+                    "admin_handled": True,
+                    "scoped_user_id": scoped_user_id
+                }
+
+        # -------------------------------------------------------------
+        # Branch 3A-Doctor: Doctor Duty & Consultation Flow
+        # -------------------------------------------------------------
+        if sender_role == 'doctor':
+            from services.whatsapp_doctor_flow import handle_whatsapp_doctor_flow
+            doc_res = handle_whatsapp_doctor_flow(
+                conversation=conversation,
+                message_body=inbound_body,
+                sender_phone=sender_phone,
+                sender_role=sender_role,
+                user_id=user_id,
+                doctor_id=doctor_id,
+                display_name=display_name
+            )
+            if doc_res.get("handled"):
+                reply_text = doc_res.get("reply")
+                interactive_data = doc_res.get("interactive")
+                if interactive_data:
+                    dispatch_res = active_client.send_interactive_list_message(
+                        recipient_phone=sender_phone,
+                        body_text=interactive_data.get("body_text", reply_text),
+                        button_text=interactive_data.get("button_text", "Doctor Menu"),
+                        sections=interactive_data.get("sections"),
+                        header_text=interactive_data.get("header_text"),
+                        footer_text=interactive_data.get("footer_text"),
+                        bsuid=scoped_user_id,
+                        fallback_text=reply_text
+                    )
+                    out_msg_type = "interactive" if (dispatch_res.get("success") and dispatch_res.get("status") == "accepted") else "text"
+                else:
+                    dispatch_res = active_client.send_text_message(
+                        recipient_phone=sender_phone,
+                        bsuid=scoped_user_id,
+                        text_body=reply_text
+                    )
+                    out_msg_type = "text"
+
+                out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+                out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+                outbound_msg = WhatsAppMessage(
+                    conversation_id=conversation.id,
+                    wamid=out_wamid,
+                    direction="outbound",
+                    message_type=out_msg_type,
+                    content=reply_text,
+                    status=out_status
+                )
+                db.session.add(outbound_msg)
+
+                if webhook_event:
+                    webhook_event.status = "processed"
+                    webhook_event.processed_at = datetime.utcnow()
+                db.session.commit()
+
+                return {
+                    "conversation_uuid": conversation.conversation_uuid,
+                    "sender_role": sender_role,
+                    "reply": reply_text,
+                    "doctor_handled": True,
+                    "scoped_user_id": scoped_user_id
+                }
 
         # -------------------------------------------------------------
         # Branch 3A-bis: WhatsApp Appointment Management (Phase 4B)
@@ -549,12 +676,25 @@ def dispatch_inbound_message_reply(
 
         # Main Menu & Greetings Popup Trigger (hi, hello, hey, start, menu, options, help)
         if is_greeting_message(inbound_body):
-            interactive_menu = build_main_menu_interactive_payload()
-            fallback_text = format_main_menu_text()
+            if sender_role == 'admin':
+                from services.whatsapp_admin_flow import build_admin_menu_interactive_payload, format_admin_menu_text
+                interactive_menu = build_admin_menu_interactive_payload()
+                fallback_text = format_admin_menu_text()
+                btn_label = "Admin Controls"
+            elif sender_role == 'doctor':
+                from services.whatsapp_doctor_flow import build_doctor_menu_interactive_payload, format_doctor_menu_text
+                interactive_menu = build_doctor_menu_interactive_payload(display_name)
+                fallback_text = format_doctor_menu_text(display_name)
+                btn_label = "Doctor Menu"
+            else:
+                interactive_menu = build_main_menu_interactive_payload()
+                fallback_text = format_main_menu_text()
+                btn_label = "Main Menu"
+
             dispatch_res = active_client.send_interactive_list_message(
                 recipient_phone=sender_phone,
                 body_text=interactive_menu.get("body_text", fallback_text),
-                button_text=interactive_menu.get("button_text", "Main Menu"),
+                button_text=interactive_menu.get("button_text", btn_label),
                 sections=interactive_menu.get("sections"),
                 header_text=interactive_menu.get("header_text"),
                 footer_text=interactive_menu.get("footer_text"),

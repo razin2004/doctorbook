@@ -133,6 +133,19 @@ class WhatsAppBookingFlowTestSuite(unittest.TestCase):
             self.session.add(self.doc1)
             self.session.commit()
 
+        # Ensure active schedules exist for doc1
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        for day in days:
+            if not DoctorSchedule.query.filter_by(doctor_id=1, day_of_week=day).first():
+                self.session.add(DoctorSchedule(
+                    doctor_id=1,
+                    day_of_week=day,
+                    start_time="09:00",
+                    end_time="17:00",
+                    is_available=True
+                ))
+        self.session.commit()
+
     def tearDown(self):
         self.session.rollback()
         self.session.query(WhatsAppMessage).delete()
