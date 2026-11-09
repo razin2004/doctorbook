@@ -292,11 +292,28 @@ def handle_whatsapp_admin_flow(
         return {"handled": True, "reply": "\n".join(lines).strip()}
 
     # -------------------------------------------------------------
-    # 8. Declare Clinic Holiday (/holiday YYYY-MM-DD <reason>)
+    # 8. Clinic Holidays (View or Declare)
     # -------------------------------------------------------------
+    is_query_holidays = bool(re.search(r'^(?:/?holidays?|upcoming\s+holidays?|view\s+holidays?|list\s+holidays?|show\s+holidays?|clinic\s+holidays?)$', text_lower))
+    if is_query_holidays:
+        holidays = ClinicHoliday.query.filter(ClinicHoliday.date >= today_str).order_by(ClinicHoliday.date.asc()).all()
+        if not holidays:
+            reply = (
+                f"📅 *Clinic Holidays ({today_str}):*\n"
+                "No upcoming clinic holidays scheduled. All operations are running normally.\n\n"
+                "_To declare a holiday:_\nReply `/holiday YYYY-MM-DD <Reason>`"
+            )
+            return {"handled": True, "reply": reply}
+
+        lines = [f"📅 *Upcoming Clinic Holidays & Closures:*\n"]
+        for h in holidays:
+            lines.append(f"• *{h.date}:* {h.reason or 'Clinic Closed'}")
+        lines.append("\n_To declare another holiday:_\nReply `/holiday YYYY-MM-DD <Reason>`")
+        return {"handled": True, "reply": "\n".join(lines).strip()}
+
     holiday_match = re.match(r'^/?holiday\s+(\d{4}-\d{2}-\d{2})(?:\s+(.+))?$', text_lower)
-    is_holiday_prompt = any(k in text_lower for k in ('emergency closure', 'close clinic', 'emergency clinic closure', 'declare emergency', 'declare holiday', 'holiday')) or text_lower == 'admin_emergency_help'
-    if holiday_match or is_holiday_prompt:
+    is_declare_holiday_prompt = any(k in text_lower for k in ('emergency closure', 'close clinic', 'emergency clinic closure', 'declare emergency', 'declare holiday')) or text_lower == 'admin_emergency_help'
+    if holiday_match or is_declare_holiday_prompt:
         if not holiday_match:
             reply = (
                 "🚨 *Clinic Emergency & Holiday Controls:*\n\n"
@@ -399,11 +416,17 @@ def handle_whatsapp_admin_flow(
         )
         return {"handled": True, "reply": reply}
 
-    # Fallback to Admin Menu
-    payload = build_admin_menu_interactive_payload()
-    fallback = format_admin_menu_text()
-    return {
-        "handled": True,
-        "reply": fallback,
-        "interactive": payload
-    }
+    # -------------------------------------------------------------
+    # 11. Explicit Admin Menu Request (menu, help, admin, options)
+    # -------------------------------------------------------------
+    if text_lower in ('admin', 'menu', 'help', 'options', 'controls', 'start'):
+        payload = build_admin_menu_interactive_payload()
+        fallback = format_admin_menu_text()
+        return {
+            "handled": True,
+            "reply": fallback,
+            "interactive": payload
+        }
+
+    # Not an administrative command -> pass through to Groq AI for conversational assistance
+    return {"handled": False}

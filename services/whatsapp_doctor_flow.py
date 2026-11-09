@@ -402,11 +402,17 @@ def handle_whatsapp_doctor_flow(
         )
         return {"handled": True, "reply": reply}
 
-    # Fallback to Doctor Menu
-    payload = build_doctor_menu_interactive_payload(doctor_name)
-    fallback = format_doctor_menu_text(doctor_name)
-    return {
-        "handled": True,
-        "reply": fallback,
-        "interactive": payload
-    }
+    # -------------------------------------------------------------
+    # 8. Explicit Doctor Menu Request (menu, help, doctor, options)
+    # -------------------------------------------------------------
+    if text_lower in ('doctor', 'menu', 'help', 'options', 'controls', 'start'):
+        payload = build_doctor_menu_interactive_payload(doctor_name)
+        fallback = format_doctor_menu_text(doctor_name)
+        return {
+            "handled": True,
+            "reply": fallback,
+            "interactive": payload
+        }
+
+    # Not an explicit doctor command -> pass through to Groq AI
+    return {"handled": False}
