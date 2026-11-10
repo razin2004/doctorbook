@@ -8,18 +8,16 @@ from pywebpush import webpush, WebPushException
 VAPID_CLAIMS = {
     "sub": "mailto:admin@primecare.com"
 }
-VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '')
+VAPID_PRIVATE_KEY = ""
 
-if not VAPID_PRIVATE_KEY:
-    try:
-        APP_DIR = os.path.dirname(os.path.abspath(__file__))
-        VAPID_KEYS_PATH = os.path.join(APP_DIR, 'vapid_keys.json')
-        if os.path.exists(VAPID_KEYS_PATH):
-            with open(VAPID_KEYS_PATH, 'r') as f:
-                keys = json.load(f)
-                VAPID_PRIVATE_KEY = keys.get('private_key', '')
-    except Exception as e:
-        print(f"[Push Service] Warning: Could not load VAPID keys: {e}")
+try:
+    APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    VAPID_KEYS_PATH = os.path.join(APP_DIR, 'vapid_keys.json')
+    with open(VAPID_KEYS_PATH, 'r') as f:
+        keys = json.load(f)
+        VAPID_PRIVATE_KEY = keys.get('private_key', '')
+except Exception as e:
+    print(f"[Push Service] Warning: Could not load VAPID keys: {e}")
 
 def trigger_push(doctor_name, date_str, current_token, status, app, db, PatientBooking, PushSubscription):
     """
