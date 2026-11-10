@@ -13,6 +13,7 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.2" />
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
   <link rel="manifest" href="/static/manifest.json">
@@ -872,14 +873,12 @@
       padding: 0 1rem !important;
     }
     .panel-card {
-      background: rgba(255, 255, 255, 0.45) !important;
-      border: 1.5px solid rgba(255, 255, 255, 0.7) !important;
-      border-radius: 20px !important;
-      padding: 1.25rem !important;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255,255,255,0.6) !important;
-      backdrop-filter: blur(16px) !important;
-      -webkit-backdrop-filter: blur(16px) !important;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+      background: #ffffff !important;
+      border: 1.5px solid #dbe9f2 !important;
+      border-radius: 18px !important;
+      padding: 1.25rem 1.4rem !important;
+      box-shadow: 0 8px 24px -10px rgba(3, 4, 94, 0.08) !important;
+      transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
       cursor: pointer !important;
       display: flex !important;
       flex-direction: column !important;
@@ -888,24 +887,23 @@
       text-align: left !important;
       height: auto !important;
       min-width: auto !important;
-      color: #0b3a60 !important;
+      color: #0f172a !important;
     }
     .panel-card:hover {
-      transform: translateY(-4px) !important;
-      box-shadow: 0 16px 36px rgba(0, 119, 182, 0.12), inset 0 1px 0 rgba(255,255,255,0.8) !important;
-      background: rgba(255, 255, 255, 0.75) !important;
-      border-color: rgba(0, 119, 182, 0.2) !important;
+      transform: translateY(-3px) !important;
+      box-shadow: 0 16px 36px -10px rgba(0, 119, 182, 0.16) !important;
+      border-color: #0077b6 !important;
     }
     .panel-card.active {
       background: linear-gradient(135deg, #0077b6 0%, #0096c7 100%) !important;
       border-color: #0077b6 !important;
       color: #ffffff !important;
-      box-shadow: 0 12px 30px rgba(0, 119, 182, 0.25) !important;
+      box-shadow: 0 12px 28px -6px rgba(0, 119, 182, 0.35) !important;
       transform: translateY(-2px) !important;
     }
     .panel-card-icon {
-      width: 46px !important;
-      height: 46px !important;
+      width: 44px !important;
+      height: 44px !important;
       border-radius: 12px !important;
       background: rgba(0, 119, 182, 0.08) !important;
       display: flex !important;
@@ -921,7 +919,7 @@
       stroke-width: 2.2px !important;
     }
     .panel-card.active .panel-card-icon {
-      background: rgba(255, 255, 255, 0.18) !important;
+      background: rgba(255, 255, 255, 0.2) !important;
     }
     .panel-card.active .panel-card-icon svg {
       color: #ffffff !important;
@@ -932,14 +930,21 @@
       gap: 0.2rem !important;
     }
     .panel-card-label {
-      font-size: 0.95rem !important;
+      font-size: 1rem !important;
       font-weight: 800 !important;
       letter-spacing: -0.01em !important;
+      color: #0f172a !important;
+    }
+    .panel-card.active .panel-card-label {
+      color: #ffffff !important;
     }
     .panel-card-sub {
-      font-size: 0.78rem !important;
-      opacity: 0.75 !important;
+      font-size: 0.8rem !important;
+      color: #64748b !important;
       line-height: 1.35 !important;
+    }
+    .panel-card.active .panel-card-sub {
+      color: rgba(255, 255, 255, 0.85) !important;
     }
     
     /* Helper instruction text */
@@ -962,13 +967,11 @@
     /* ── Split Grid Booking Panels ── */
     .booking-section:not(#admin) .myclass {
       max-width: 1000px !important;
-      background: rgba(255, 255, 255, 0.65) !important;
-      border-radius: 28px !important;
+      background: #ffffff !important;
+      border-radius: 24px !important;
       padding: 2.2rem !important;
-      box-shadow: 0 25px 65px rgba(15, 23, 42, 0.1), 0 4px 12px rgba(0, 0, 0, 0.01) !important;
-      border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
-      backdrop-filter: blur(24px) !important;
-      -webkit-backdrop-filter: blur(24px) !important;
+      box-shadow: 0 14px 36px -12px rgba(3, 4, 94, 0.10) !important;
+      border: 1.5px solid #dbe9f2 !important;
       margin: 0 auto !important;
     }
     
@@ -1468,30 +1471,31 @@
 
     @media (max-width: 680px) {
       .panel-nav {
-        display: flex !important;
-        flex-direction: row !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        gap: 0.35rem !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
         padding: 5px !important;
-        background: rgba(255, 255, 255, 0.8) !important;
-        border-radius: 16px !important;
-        border: 1.5px solid rgba(0, 119, 182, 0.15) !important;
-        margin: 1rem auto 0.75rem auto !important;
-        box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04) !important;
+        background: #ffffff !important;
+        border-radius: 14px !important;
+        border: 1.5px solid #dbe9f2 !important;
+        margin: 0.85rem auto 0.75rem auto !important;
+        box-shadow: 0 4px 16px -6px rgba(3, 4, 94, 0.06) !important;
+        max-width: calc(100% - 1.5rem) !important;
+        width: 100% !important;
       }
       .panel-card {
-        flex: 1 1 0 !important;
-        min-width: 80px !important;
-        padding: 0.55rem 0.4rem !important;
-        border-radius: 12px !important;
+        padding: 0.65rem 0.25rem !important;
+        border-radius: 10px !important;
         flex-direction: column !important;
         align-items: center !important;
+        justify-content: center !important;
         text-align: center !important;
-        gap: 0.2rem !important;
+        gap: 0.25rem !important;
         border: none !important;
         background: transparent !important;
         box-shadow: none !important;
+        min-height: 52px !important;
+        min-width: 0 !important;
       }
       .panel-card:hover {
         transform: none !important;
@@ -1503,8 +1507,8 @@
         color: #ffffff !important;
       }
       .panel-card-icon {
-        width: 30px !important;
-        height: 30px !important;
+        width: 28px !important;
+        height: 28px !important;
         border-radius: 8px !important;
       }
       .panel-card-icon svg {
@@ -1513,8 +1517,10 @@
       }
       .panel-card-label {
         font-size: 0.74rem !important;
-        white-space: nowrap !important;
         font-weight: 700 !important;
+        line-height: 1.15 !important;
+        text-align: center !important;
+        white-space: normal !important;
       }
       .panel-card-sub {
         display: none !important;
@@ -1525,8 +1531,10 @@
       }
       .booking-section:not(#admin) .myclass {
         padding: 1.25rem 1rem !important;
-        border-radius: 20px !important;
+        border-radius: 18px !important;
         box-shadow: 0 8px 25px rgba(15, 23, 42, 0.06) !important;
+        background: #ffffff !important;
+        border: 1.5px solid #dbe9f2 !important;
       }
       .booking-grid {
         grid-template-columns: 1fr !important;
@@ -1949,9 +1957,11 @@
   </style>
 </head>
 
-<body class="bg-image">
+<body>
 
+  <div class="bg-image"></div>
   <div class="bg-blur"></div>
+  <div class="bg-overlay"></div>
 
   <!-- HEADER -->
   <header class="top-bar">
@@ -1970,7 +1980,7 @@
                alt="PrimeCare Logo" />
           <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
             <div class="brand-title">PrimeCare Clinic</div>
-            <div class="brand-sub">Quality care · Trusted doctors</div>
+            <div class="brand-sub">Care you can trust, close to home</div>
           </div>
         </div>
       </div>
@@ -3974,6 +3984,11 @@
       if (typeof renderDoctorDirectory === 'function') {
         renderDoctorDirectory(doctors);
       }
+      const dCount = doctors.length;
+      ['navBadgeDoctorCount', 'rosterHeaderCount', 'dashDoctorCount'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = dCount;
+      });
 
       if (select) {
         if (prevSelectVal && Array.from(select.options).some(o => o.value === prevSelectVal)) {
@@ -4043,7 +4058,8 @@
 
     function showSection(id, clickedEl) {
       document.querySelectorAll('section').forEach(s => s.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
+      const targetSec = document.getElementById(id);
+      if (targetSec) targetSec.style.display = 'block';
 
       // deactivate all panel cards
       document.querySelectorAll('.panel-card').forEach(c => c.classList.remove('active'));
@@ -5325,7 +5341,13 @@
         const res = await fetch('/get_doctors');
         if (!res.ok) throw new Error('API request failed');
         const doctors = await res.json();
-        populateDoctorDropdowns(doctors);
+        if (Array.isArray(doctors) && doctors.length > 0) {
+          window.__PRELOADED_DOCTORS__ = doctors;
+          populateDoctorDropdowns(doctors);
+          {% if is_admin_view %}
+          populateAdminDoctorDropdowns(doctors);
+          {% endif %}
+        }
         if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
       } catch (err) {
         console.error("Error in loadDoctors:", err);
@@ -7175,16 +7197,16 @@
 
     // ─── Init ──────────────────────────────────────────────────
     async function initPage() {
-      await loadDoctors();
-      await loadDoctorPairs();
+      try { await loadDoctors(); } catch(e){ console.error("Error in loadDoctors:", e); }
+      try { await loadDoctorPairs(); } catch(e){ console.error("Error in loadDoctorPairs:", e); }
       {% if is_admin_view %}
-      await loadDoctorsForEdit();
-      await loadDoctorsForAdminBooking();
+      try { await loadDoctorsForEdit(); } catch(e){ console.error("Error in loadDoctorsForEdit:", e); }
+      try { await loadDoctorsForAdminBooking(); } catch(e){ console.error("Error in loadDoctorsForAdminBooking:", e); }
       {% endif %}
       try { await loadGlobalHolidays(); } catch(e){}
       try { loadTickerMessages(); } catch(e){}
-      setupAddDoctorDayTimeUI();
-      setupEditDoctorDayTimeUI();
+      try { setupAddDoctorDayTimeUI(); } catch(e){}
+      try { setupEditDoctorDayTimeUI(); } catch(e){}
       const specDateInput=document.getElementById('specDate');
       if(specDateInput){
         const today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kolkata'});
@@ -7202,9 +7224,9 @@
         });
       }
       {% if is_admin_view and not admin_email %}
-      checkAdminSession();
+      try { checkAdminSession(); } catch(e){}
       {% endif %}
-      lucide.createIcons();
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
     }
 
     document.addEventListener('DOMContentLoaded', async ()=> {
@@ -7214,6 +7236,11 @@
           populateDoctorDropdowns(window.__PRELOADED_DOCTORS__);
           {% if is_admin_view %}
           populateAdminDoctorDropdowns(window.__PRELOADED_DOCTORS__);
+          {% endif %}
+        } else {
+          await loadDoctors();
+          {% if is_admin_view %}
+          await loadDoctorsForAdminBooking();
           {% endif %}
         }
       } catch (e) {
@@ -7244,7 +7271,7 @@
       // Patient view exclusively
       savedSection = localStorage.getItem('activeSection') || 'bookDoctor';
       if (savedSection === 'admin') savedSection = 'bookDoctor';
-      if (urlParams.get('specialization')) {
+      if (urlParams.get('specialization') || urlParams.get('spec')) {
         savedSection = 'bookDept';
       }
       showSection(savedSection, null);
@@ -7261,19 +7288,27 @@
         headerLogoutBtn.addEventListener('click', openLogoutModal);
       }
 
-      lucide.createIcons();
+      if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
 
       await initPage();
 
       // 4. Handle specialization URL query parameter if present
       {% if not is_admin_view %}
-      const specParam = urlParams.get('specialization');
+      const specParam = urlParams.get('specialization') || urlParams.get('spec');
       if (specParam) {
         showSection('bookDept', document.getElementById('panelDept'));
         const specSelect = document.getElementById('specSelect');
         if (specSelect) {
-          specSelect.value = specParam;
-          specSelect.dispatchEvent(new Event('change'));
+          const specDecoded = decodeURIComponent(specParam).trim().toLowerCase();
+          for (let i = 0; i < specSelect.options.length; i++) {
+            const val = (specSelect.options[i].value || '').toLowerCase();
+            const txt = (specSelect.options[i].textContent || '').toLowerCase();
+            if (val === specDecoded || txt === specDecoded || val.includes(specDecoded) || specDecoded.includes(val)) {
+              specSelect.selectedIndex = i;
+              specSelect.dispatchEvent(new Event('change'));
+              break;
+            }
+          }
         }
 
         // Auto-fill patient name and age from referral sessionStorage if set
@@ -7306,7 +7341,7 @@
           for (let i = 0; i < doctorSelect.options.length; i++) {
             const optVal = String(doctorSelect.options[i].value || '').toLowerCase();
             const optTxt = String(doctorSelect.options[i].textContent || '').toLowerCase();
-            if (optVal === docTarget || (docTarget && (optTxt.includes(docTarget) || docTarget.includes(optVal)))) {
+            if (optVal === docTarget || optTxt === docTarget || (docTarget && (optTxt.includes(docTarget) || docTarget.includes(optVal)))) {
               doctorSelect.selectedIndex = i;
               doctorSelect.dispatchEvent(new Event('change'));
               break;

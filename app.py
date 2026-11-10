@@ -2477,7 +2477,7 @@ def admin_logout():
     return jsonify({"success": True, "msg": "Logged out"})
 
 
-def check_phone_conflict(norm_phone, exclude_user_id=None, exclude_doctor_id=None):
+def check_phone_conflict(norm_phone, exclude_user_id=None, exclude_doctor_id=None, exclude_doctor_name=None):
     """
     Checks if a normalized E.164 phone number conflicts with:
     1. Admin WhatsApp setting (AppSettings or DEFAULT_SETTINGS)
@@ -2509,7 +2509,13 @@ def check_phone_conflict(norm_phone, exclude_user_id=None, exclude_doctor_id=Non
             doc_q = doc_q.filter(DoctorSession.id != exclude_doctor_id)
         conflict_doc = doc_q.first()
         if conflict_doc:
-            return True, f"This phone number is already registered to doctor {conflict_doc.doctor_name}."
+            if exclude_doctor_name:
+                cd_norm = clean_doctor_display_name(conflict_doc.doctor_name).lower().strip()
+                ex_norm = clean_doctor_display_name(exclude_doctor_name).lower().strip()
+                if cd_norm == ex_norm:
+                    conflict_doc = None
+            if conflict_doc:
+                return True, f"This phone number is already registered to doctor {conflict_doc.doctor_name}."
     except Exception:
         pass
 
@@ -2520,6 +2526,12 @@ def check_phone_conflict(norm_phone, exclude_user_id=None, exclude_doctor_id=Non
             user_q = user_q.filter(User.id != exclude_user_id)
         conflict_user = user_q.first()
         if conflict_user:
+            # If the user is a doctor and matches the excluded doctor name, it is a self-match, not a conflict
+            if conflict_user.role == "doctor" and exclude_doctor_name:
+                u_norm = clean_doctor_display_name(conflict_user.name).lower().strip()
+                ex_norm = clean_doctor_display_name(exclude_doctor_name).lower().strip()
+                if u_norm == ex_norm:
+                    return False, None
             return True, f"This phone number is already registered to a {conflict_user.role} account ({conflict_user.name})."
     except Exception:
         pass
@@ -4486,6 +4498,18 @@ def admin_edit_doctor():
             db.func.lower(User.email) == doc_model.email.lower().strip(),
             User.role == "doctor"
         ).first()
+    if not doc_user:
+        doc_user = User.query.filter(
+            (db.func.lower(db.func.trim(User.name)) == name) |
+            (db.func.lower(db.func.trim(User.name)) == f"dr. {name}") |
+            (db.func.lower(db.func.trim(User.name)) == name.replace("dr. ", "").strip()),
+            User.role == "doctor"
+        ).first()
+    if not doc_user and norm_phone:
+        doc_user = User.query.filter(
+            User.phone_number == norm_phone,
+            User.role == "doctor"
+        ).first()
 
     # Check if the submitted phone number is already this doctor's own current phone number
     is_same_doctor_phone = False
@@ -4500,8 +4524,9 @@ def admin_edit_doctor():
         # Check phone conflict excluding this doctor's own records
         is_conflict, conflict_err = check_phone_conflict(
             norm_phone,
-            exclude_doctor_id=current_doc.id if current_doc else None,
-            exclude_user_id=doc_user.id if doc_user else None
+            exclude_doctor_id=current_doc.id if current_doc else (doc_model.id if doc_model else None),
+            exclude_user_id=doc_user.id if doc_user else None,
+            exclude_doctor_name=name
         )
         if is_conflict:
             return jsonify({"success": False, "msg": f"Phone conflict: {conflict_err}"})

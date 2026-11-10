@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.2" />
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
   
@@ -787,8 +788,10 @@
     }
   </style>
 </head>
-<body class="bg-image">
+<body>
+  <div class="bg-image"></div>
   <div class="bg-blur"></div>
+  <div class="bg-overlay"></div>
 
   <!-- HEADER -->
   <header class="top-bar">
@@ -800,7 +803,7 @@
                alt="PrimeCare Logo" />
           <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
             <div class="brand-title">PrimeCare Clinic</div>
-            <div class="brand-sub">Quality care · Trusted doctors</div>
+            <div class="brand-sub">Care you can trust, close to home</div>
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.2">
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}">
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
 
@@ -59,19 +60,14 @@
     .confirmation-box {
       width: 100%;
       max-width: 900px; /* Widened for desktop side-by-side layout */
-      background: rgba(255, 255, 255, 0.22); /* Transparent glass */
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
-      border-radius: 28px;
+      background: #ffffff !important;
+      border-radius: 24px;
       padding: 2.5rem;
-      box-shadow: 
-        0 30px 70px rgba(15, 23, 42, 0.12),
-        inset 0 0 0 1.5px rgba(255, 255, 255, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow: 0 20px 50px -15px rgba(3, 4, 94, 0.12), 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+      border: 1.5px solid #dbe9f2 !important;
       text-align: center;
       color: #374151;
       position: relative;
-      /* overflow: hidden removed — was clipping inner cards and token glow on mobile */
       transition: max-width 0.3s ease;
     }
 
@@ -658,8 +654,10 @@
   </style>
 </head>
 
-<body class="bg-image">
+<body>
+  <div class="bg-image"></div>
   <div class="bg-blur"></div>
+  <div class="bg-overlay"></div>
 
   <!-- SHARED HEADER -->
   <header class="top-bar">
@@ -671,7 +669,7 @@
                alt="PrimeCare Logo" />
           <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
             <div class="brand-title">PrimeCare Clinic</div>
-            <div class="brand-sub">Quality care · Trusted doctors</div>
+            <div class="brand-sub">Care you can trust, close to home</div>
           </div>
         </div>
       </div>
