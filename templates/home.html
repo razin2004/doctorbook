@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <title>PrimeCare Clinic – Trusted Healthcare</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Book appointments at PrimeCare Clinic. Experienced specialists, online token booking, instant confirmation." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
@@ -42,79 +42,200 @@
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
       height: 100%; margin: 0; padding: 0; overflow-x: hidden;
-      font-family: 'Inter', system-ui, sans-serif; color: #222;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #12303A;
       -webkit-font-smoothing: antialiased;
     }
-    body { background: #f0f4f8; }
+    body { background: #FAFCFC; }
 
-    /* Background */
-    .bg-image {
-      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
-      background-size: cover; background-repeat: no-repeat;
-      background-position: center; background-attachment: fixed;
-      position: fixed; inset: 0; z-index: -3;
-    }
-    .bg-blur {
-      position: fixed; inset: 0;
-      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
-      background-size: cover; background-repeat: no-repeat;
-      background-position: center; background-attachment: fixed;
-      filter: blur(8px); z-index: -2;
-    }
-    .bg-overlay {
-      position: fixed; inset: 0;
-      background: rgba(255,255,255,0.68); z-index: -1;
+    /* Background (calm clean canvas) */
+    .bg-image, .bg-blur, .bg-overlay {
+      display: none !important;
     }
 
-    /* ── TOP BAR ── */
+    /* ── CLINICAL PREMIUM DESIGN TOKENS ── */
+    :root {
+      --pc-teal-deep: #0B5D66;
+      --pc-teal-hover: #08484F;
+      --pc-teal-soft: #E6F4F3;
+      --pc-teal-subtle: #F0F9F8;
+      --pc-amber-accent: #F5B83D;
+      --pc-amber-hover: #DE9E22;
+      --pc-ink: #12303A;
+      --pc-muted: #5B6F78;
+      --pc-border: #DCE8E8;
+      --pc-page-bg: #FAFCFC;
+      --pc-card-bg: #FFFFFF;
+      --pc-success: #1F9D63;
+      --pc-warning: #E6A100;
+      --pc-error: #D64545;
+
+      --pc-shadow-soft: 0 8px 30px rgba(11, 93, 102, 0.08);
+      --pc-shadow-card: 0 10px 32px rgba(11, 93, 102, 0.07);
+      --pc-shadow-hover: 0 16px 40px rgba(11, 93, 102, 0.12);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-full: 999px;
+
+      /* Backward compatible aliases */
+      --primary: var(--pc-teal-deep);
+      --primary-dark: var(--pc-teal-hover);
+      --primary-soft: var(--pc-teal-soft);
+      --accent: var(--pc-amber-accent);
+      --text-main: var(--pc-ink);
+      --text-muted: var(--pc-muted);
+      --surface: var(--pc-card-bg);
+      --glass: rgba(255, 255, 255, 0.94);
+      --border-light: var(--pc-border);
+      --shadow-premium: var(--pc-shadow-soft);
+    }
+
+    h1, h2, h3, h4, .brand-title, .hero-content h1 {
+      font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── SLIM STICKY TOP BAR ── */
     .top-bar {
       position: sticky; top: 0; z-index: 1000;
-      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-      background: rgba(255,255,255,0.96);
-      border-bottom: 1px solid rgba(0,119,182,0.1);
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom: 1px solid var(--pc-border);
+      box-shadow: 0 2px 14px rgba(11, 93, 102, 0.05);
+      transition: all 0.25s ease;
+    }
+    .top-bar.scrolled {
+      box-shadow: 0 4px 20px rgba(11, 93, 102, 0.09);
     }
     .top-bar-inner {
       max-width: 1200px; margin: 0 auto;
-      padding: 0.6rem 1.5rem;
+      padding: 0.65rem 1.5rem;
       display: flex; align-items: center;
-      justify-content: space-between; gap: 0.75rem;
+      justify-content: space-between; gap: 1rem;
+      min-height: 64px;
     }
-    .brand { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex-shrink: 1; }
+    .brand {
+      display: flex; flex-direction: row; align-items: center; gap: 0.65rem;
+      flex-shrink: 1; min-width: 0; text-decoration: none;
+    }
     .brand-title {
-      font-size: 1.35rem; font-weight: 800; color: #0077b6;
-      letter-spacing: 0.02em; white-space: nowrap;
+      font-size: 1.35rem; font-weight: 800; color: var(--pc-teal-deep);
+      letter-spacing: -0.02em; white-space: nowrap;
       overflow: hidden; text-overflow: ellipsis;
     }
     .brand-sub {
-      font-size: 0.74rem; color: #6b7280; white-space: nowrap;
-      overflow: hidden; text-overflow: ellipsis;
+      font-size: 0.76rem; color: var(--pc-muted); font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .desktop-header-nav {
+      display: flex; align-items: center; gap: 1.4rem;
+    }
+    .header-nav-link {
+      color: var(--pc-ink); text-decoration: none; font-size: 0.92rem;
+      font-weight: 600; padding: 0.35rem 0.2rem; position: relative;
+      transition: color 0.2s ease;
+    }
+    .header-nav-link:hover {
+      color: var(--pc-teal-deep);
+    }
+    .header-nav-link::after {
+      content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px;
+      background: var(--pc-teal-deep); transition: width 0.2s ease; border-radius: 2px;
+    }
+    .header-nav-link:hover::after {
+      width: 100%;
     }
     .top-actions {
-      display: flex; gap: 0.45rem; align-items: center;
+      display: flex; gap: 0.55rem; align-items: center;
       flex-shrink: 0; flex-wrap: nowrap;
     }
+    .mobile-nav-toggle-btn {
+      display: none; background: none; border: 1.5px solid var(--pc-border);
+      border-radius: 12px; width: 44px; height: 44px;
+      align-items: center; justify-content: center;
+      color: var(--pc-ink); cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .mobile-nav-toggle-btn:hover {
+      background: var(--pc-teal-soft); color: var(--pc-teal-deep);
+    }
+    .mobile-nav-drawer {
+      display: none; background: #ffffff;
+      border-bottom: 1px solid var(--pc-border);
+      box-shadow: 0 16px 32px rgba(11, 93, 102, 0.08);
+      animation: drawerSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes drawerSlideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .mobile-nav-inner {
+      padding: 1rem 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .mobile-drawer-link {
+      display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0.9rem;
+      color: var(--pc-ink); text-decoration: none; font-weight: 600;
+      font-size: 0.95rem; border-radius: 10px; transition: background 0.15s ease;
+    }
+    .mobile-drawer-link:hover, .mobile-drawer-link:active {
+      background: var(--pc-teal-soft); color: var(--pc-teal-deep);
+    }
+    .mobile-drawer-link svg {
+      width: 18px; height: 18px; color: var(--pc-teal-deep);
+    }
+    .mobile-drawer-divider {
+      height: 1px; background: var(--pc-border); margin: 0.4rem 0;
+    }
+    .admin-drawer-link {
+      color: var(--pc-teal-deep); font-weight: 700;
+    }
+
+    /* ── BUTTONS ── */
     .btn {
-      border: none; cursor: pointer; border-radius: 999px;
-      padding: 0.42rem 1.1rem; font-size: 0.86rem; font-weight: 600;
+      border: none; cursor: pointer; border-radius: 12px;
+      padding: 0.55rem 1.25rem; font-size: 0.92rem; font-weight: 600;
       font-family: inherit;
       display: inline-flex; align-items: center; justify-content: center;
-      gap: 0.35rem;
-      transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
+      gap: 0.45rem;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       white-space: nowrap; text-decoration: none;
-      min-width: 105px; /* Standardize size for header buttons */
+      min-height: 48px;
     }
-    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .btn svg { width: 17px; height: 17px; flex-shrink: 0; }
     .btn-primary {
-      background: linear-gradient(135deg,#0077b6,#0096c7);
-      color: #fff; box-shadow: 0 4px 12px rgba(0,119,182,0.28);
+      background: var(--pc-teal-deep);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(11, 93, 102, 0.22);
     }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,119,182,0.42); }
+    .btn-primary:hover {
+      background: var(--pc-teal-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(11, 93, 102, 0.32);
+    }
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
     .btn-outline {
-      background: #fff; color: #0077b6;
-      border: 1.5px solid rgba(0,119,182,0.28);
+      background: #fff;
+      color: var(--pc-teal-deep);
+      border: 1.5px solid var(--pc-teal-deep);
     }
-    .btn-outline:hover { background: #e6f4ff; transform: translateY(-1px); }
+    .btn-outline:hover {
+      background: var(--pc-teal-soft);
+      transform: translateY(-2px);
+    }
+    .btn-amber {
+      background: var(--pc-amber-accent);
+      color: var(--pc-ink);
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(245, 184, 61, 0.35);
+    }
+    .btn-amber:hover {
+      background: var(--pc-amber-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(245, 184, 61, 0.45);
+    }
 
     @keyframes pulse {
       0% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
@@ -189,92 +310,154 @@
     .stat-live { color: #10b981; }
     .stat-mine { color: #0077b6; }
 
-    /* ── MOBILE-PRO PREMIUM SYSTEM ── */
-    :root {
-      --primary: #0077b6;
-      --primary-dark: #03045e;
-      --primary-soft: #caf0f8;
-      --accent: #f59e0b;
-      --text-main: #1e293b;
-      --text-muted: #64748b;
-      --surface: #ffffff;
-      --glass: rgba(255, 255, 255, 0.85);
-      --border-light: rgba(0, 119, 182, 0.1);
-      --shadow-premium: 0 15px 35px -12px rgba(3, 4, 94, 0.1);
-      --radius-lg: 20px;
-    }
-
-    .home-section { 
-      padding: 5rem 1.5rem; 
-      max-width: 1200px; 
-      margin: 0 auto;
-      position: relative;
-    }
-    .section-tag {
-      display: inline-block;
-      color: var(--primary);
-      background: var(--primary-soft);
-      padding: 0.35rem 0.85rem;
-      border-radius: 99px;
-      font-size: 0.75rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 1rem;
-    }
-
     /* ── HERO PRO ── */
     .hero-premium {
-      min-height: 80vh;
+      min-height: 72vh;
       position: relative;
       overflow: hidden;
       display: flex;
-      align-items: flex-start; /* Move content upward */
-      padding-top: clamp(60px, 12vh, 120px);
-      background: #023e8a;
-      border-bottom: 5px solid var(--accent);
+      align-items: center;
+      padding: clamp(3.5rem, 8vh, 6.5rem) 0 clamp(4.5rem, 10vh, 7.5rem);
+      background: linear-gradient(135deg, #09474E 0%, #0B5D66 50%, #0E747F 100%);
+      color: #fff;
     }
     .hero-bg {
       position: absolute; inset: 0;
-      background: url('/static/image/hero_premium.png') center/cover no-repeat;
-      opacity: 0.7;
-      filter: brightness(0.9);
+      background: radial-gradient(circle at 80% 20%, rgba(245, 184, 61, 0.12) 0%, transparent 45%),
+                  radial-gradient(circle at 15% 85%, rgba(230, 244, 243, 0.08) 0%, transparent 50%);
+      opacity: 0.9;
     }
     .hero-overlay {
       position: absolute; inset: 0;
-      background: linear-gradient(110deg, rgba(3, 4, 94, 0.95) 0%, rgba(3, 4, 94, 0.6) 100%);
+      background: rgba(11, 93, 102, 0.25);
     }
     .hero-content {
       position: relative; z-index: 10;
-      width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 2rem;
-      color: #fff;
-      text-align: left; /* Strict left alignment */
+      width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;
     }
-    .hero-content h1 {
-      font-size: clamp(2rem, 5vw, 4.5rem);
-      font-weight: 900; line-height: 1.1; margin-bottom: 1.2rem;
-      max-width: 800px;
+    .hero-grid-inner {
+      display: grid; grid-template-columns: 1.25fr 0.75fr;
+      gap: 3.5rem; align-items: center;
     }
-    .hero-content h1 span { color: var(--accent); }
-    .hero-content p {
-      font-size: clamp(1rem, 1.8vw, 1.25rem);
-      max-width: 600px; opacity: 0.9; margin-bottom: 2.5rem; line-height: 1.6;
+    .hero-badge-pill {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 0.45rem 1.1rem; border-radius: var(--radius-full);
+      font-size: 0.82rem; font-weight: 700; display: inline-flex;
+      align-items: center; gap: 0.45rem; margin-bottom: 1.5rem;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      letter-spacing: 0.01em; color: #FFFFFF;
     }
+    .hero-badge-pill svg { width: 15px; height: 15px; color: var(--pc-amber-accent); }
+    .hero-main-title {
+      font-size: clamp(2.2rem, 4.8vw, 3.8rem);
+      font-weight: 850; line-height: 1.15; margin: 0 0 1.2rem;
+      color: #FFFFFF; max-width: 750px;
+    }
+    .hero-highlight {
+      color: var(--pc-amber-accent);
+      position: relative;
+    }
+    .hero-subtext {
+      font-size: clamp(1rem, 1.4vw, 1.18rem);
+      max-width: 620px; color: rgba(255, 255, 255, 0.92);
+      margin: 0 0 2.2rem; line-height: 1.65;
+      font-weight: 400;
+    }
+    .hero-btns {
+      display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+    }
+    .hero-btn-main {
+      background: var(--pc-amber-accent) !important;
+      color: var(--pc-ink) !important;
+      font-weight: 700 !important;
+      font-size: 1rem !important;
+      padding: 0.75rem 1.8rem !important;
+      min-height: 52px !important;
+      border-radius: var(--radius-md) !important;
+      box-shadow: 0 8px 24px rgba(245, 184, 61, 0.35) !important;
+    }
+    .hero-btn-main:hover {
+      background: var(--pc-amber-hover) !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 12px 28px rgba(245, 184, 61, 0.45) !important;
+    }
+    .hero-btn-sub {
+      background: rgba(255, 255, 255, 0.12) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.4) !important;
+      color: #FFFFFF !important;
+      font-weight: 600 !important;
+      font-size: 0.98rem !important;
+      padding: 0.75rem 1.6rem !important;
+      min-height: 52px !important;
+      border-radius: var(--radius-md) !important;
+      backdrop-filter: blur(8px);
+    }
+    .hero-btn-sub:hover {
+      background: rgba(255, 255, 255, 0.22) !important;
+      border-color: #FFFFFF !important;
+      transform: translateY(-2px) !important;
+    }
+    .hero-floating-hours-card {
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: var(--radius-lg);
+      padding: 2.2rem;
+      color: var(--pc-ink);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+      border: 1.5px solid rgba(255, 255, 255, 0.8);
+      position: relative;
+    }
+    .hours-card-header {
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;
+    }
+    .hours-status-pulse {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--pc-success);
+      box-shadow: 0 0 0 3px rgba(31, 157, 99, 0.25);
+    }
+    .hours-status-text {
+      font-size: 0.8rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--pc-success);
+    }
+    .hours-time {
+      font-size: 1.65rem; font-weight: 850; color: var(--pc-teal-deep);
+      margin-bottom: 0.6rem; font-family: 'Manrope', sans-serif;
+    }
+    .hours-desc {
+      font-size: 0.88rem; color: var(--pc-muted); line-height: 1.5; margin: 0 0 1.25rem;
+    }
+    .hours-feature-pills {
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .hours-pill {
+      display: flex; align-items: center; gap: 0.45rem;
+      font-size: 0.84rem; font-weight: 600; color: var(--pc-ink);
+    }
+    .hours-pill svg { width: 15px; height: 15px; color: var(--pc-teal-deep); }
 
     /* ── TRUST STRIP ── */
     .trust-strip {
-      max-width: 1050px; margin: -50px auto 3rem;
-      background: var(--glass);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1.5px solid rgba(255,255,255,0.6);
-      padding: 1.8rem; border-radius: var(--radius-lg);
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
-      box-shadow: var(--shadow-premium); position: relative; z-index: 20;
+      max-width: 1080px; margin: -42px auto 3rem;
+      background: #ffffff;
+      border: 1px solid var(--pc-border);
+      padding: 1.6rem 2rem; border-radius: var(--radius-lg);
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
+      box-shadow: var(--pc-shadow-soft); position: relative; z-index: 20;
     }
-    .trust-item { text-align: center; border-right: 1px solid rgba(0,0,0,0.05); }
+    .trust-item {
+      text-align: center; border-right: 1px solid var(--pc-border);
+      padding: 0 0.8rem;
+    }
     .trust-item:last-child { border-right: none; }
-    .trust-val { display: block; font-size: 1.8rem; font-weight: 900; color: var(--primary-dark); }
-    .trust-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+    .trust-val {
+      display: block; font-size: 1.85rem; font-weight: 850;
+      color: var(--pc-teal-deep); font-family: 'Manrope', sans-serif;
+      line-height: 1.1; margin-bottom: 0.3rem;
+    }
+    .trust-label {
+      font-size: 0.78rem; color: var(--pc-muted);
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    }
 
     /* ── HERITAGE ── */
     .heritage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
@@ -329,31 +512,64 @@
     .pill-whatsapp { background: #25d366; color: #fff; border-color: rgba(0,0,0,0.05); }
     .pill-whatsapp:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(37,211,102,0.3); background: #22c35e; }
 
-    /* ── FOOTER PRO (ULTIMATE EDGE-TO-EDGE) ── */
+    /* ── FOOTER PRO (CLINICAL PREMIUM) ── */
     .site-footer-pro {
-      background: #020617; color: #fff; padding: 5rem 0 0; margin-top: 5rem;
+      background: #082025; color: #fff; padding: 4.5rem 0 0; margin-top: 5rem;
       width: 100vw; position: relative; left: 50%; right: 50%;
       margin-left: -50vw; margin-right: -50vw;
       margin-bottom: 0 !important;
+      border-top: 3px solid var(--pc-teal-deep);
     }
-    .f-content { margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr; gap: 4rem; width: 100%; max-width: 1200px; padding: 0 2rem 4rem; }
-    .f-col h4 { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--accent); margin-bottom: 1.5rem; }
+    .f-content {
+      margin: 0 auto; display: grid; grid-template-columns: 1.6fr 1.1fr 1.3fr;
+      gap: 3.5rem; width: 100%; max-width: 1200px; padding: 0 1.5rem 3.5rem;
+    }
+    .f-col h4 {
+      font-size: 0.88rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--pc-amber-accent); margin-bottom: 1.4rem;
+      font-family: 'Manrope', sans-serif;
+    }
     .f-links { list-style: none; padding: 0; margin: 0; }
-    .f-links li { margin-bottom: 0.8rem; }
-    .f-links a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
-    .f-links a:hover { color: #fff; }
+    .f-links li { margin-bottom: 0.75rem; }
+    .f-links a {
+      color: #94a3b8; text-decoration: none; font-size: 0.92rem;
+      transition: all 0.2s ease; display: inline-block;
+    }
+    .f-links a:hover {
+      color: #ffffff; transform: translateX(3px);
+    }
 
     /* ── MOBILE OVERRIDES (Correct Scaling) ── */
-    @media (max-width: 968px) {
-      .f-content { grid-template-columns: 1fr 1fr; gap: 3rem; }
+    @media (max-width: 992px) {
+      .desktop-header-nav { display: none; }
+      .mobile-nav-toggle-btn { display: flex; }
+      .hero-grid-inner { grid-template-columns: 1fr; gap: 2.5rem; }
+      .hero-card-col { display: none; }
+      .f-content { grid-template-columns: 1fr 1fr; gap: 2.5rem; }
     }
     @media (max-width: 768px) {
       .heritage-grid, .leadership-grid, .visit-card { grid-template-columns: 1fr; gap: 2.5rem; }
-      .trust-strip { grid-template-columns: 1fr 1fr; padding: 1.2rem; margin-top: -95px; }
+      .top-bar-inner { padding: 0.5rem 1rem; min-height: 56px; }
+      .brand-sub { display: none; }
+      .trust-strip {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem; padding: 1.25rem 1rem; margin-top: -30px;
+      }
+      .trust-item { border-right: none; }
+      .trust-item:nth-child(1), .trust-item:nth-child(2) {
+        border-bottom: 1px solid var(--pc-border); padding-bottom: 0.8rem;
+      }
+      .trust-item:nth-child(1) {
+        border-right: 1px solid var(--pc-border);
+      }
+      .trust-item:nth-child(3) {
+        border-right: 1px solid var(--pc-border);
+      }
       .visit-card { padding: 2.2rem 1.2rem; }
       .hero-content { padding: 0 1.2rem; text-align: left; }
-      .hero-content h1 { font-size: 2.1rem; }
+      .hero-content h1 { font-size: 2.2rem; }
       .hero-content p { margin: 0 0 2rem; }
+      .f-content { grid-template-columns: 1fr; gap: 2.5rem; }
     }
     @media (max-width: 600px) {
       .dept-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
@@ -364,36 +580,26 @@
     }
     @media (max-width: 500px) {
       .home-section { padding: 3.5rem 1.25rem; }
-      .trust-item { border-right: none; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-      .trust-item:nth-child(even) { border-left: 1px solid rgba(0,0,0,0.05); border-bottom: 1px solid rgba(0,0,0,0.05); }
       .leader-card { flex-direction: column; text-align: center; padding: 1.5rem; }
       .leader-img { width: 90px; height: 90px; }
-      .f-content { 
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 2.5rem 1.5rem; 
-        width: 100%; 
-        text-align: left; 
-      }
-      .f-col.f-brand { grid-column: span 2; }
       .site-footer-pro { 
-        padding: 4rem 0 0; 
+        padding: 3.5rem 0 0; 
         width: 100vw; margin-left: -50vw;
       }
 
-      /* Force side-by-side buttons/pills on small mobile */
+      /* Force clean button alignment on small mobile */
       .hero-content .hero-btns, .visit-info .action-pill-container {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
         gap: 0.6rem !important;
       }
       .hero-content .btn, .visit-info .action-pill {
         flex: 1;
+        min-width: 140px;
         padding: 0 0.8rem !important;
-        font-size: 0.75rem !important;
+        font-size: 0.84rem !important;
         height: 48px !important;
-        min-width: 0 !important;
         white-space: nowrap;
       }
       .action-pill i, .action-pill svg { width: 14px !important; height: 14px !important; }
@@ -1400,15 +1606,24 @@
   <header class="top-bar">
     <div class="top-bar-inner">
       <!-- Logo + text column: logo on left, clinic name + tagline stacked on right -->
-      <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0;">
+      <a href="/" class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.6rem;flex-shrink:1;min-width:0;text-decoration:none;">
         <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
-             style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
+             style="width:36px;height:36px;object-fit:contain;flex-shrink:0;"
              alt="PrimeCare Logo" />
         <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
           <div class="brand-title">PrimeCare Clinic</div>
-          <div class="brand-sub">Quality care · Trusted doctors</div>
+          <div class="brand-sub">Care you can trust, close to home</div>
         </div>
-      </div>
+      </a>
+
+      <!-- Desktop Navigation Links -->
+      <nav class="desktop-header-nav" aria-label="Main Navigation">
+        <a href="#doctors-anchor" class="header-nav-link">Doctors</a>
+        <a href="#services-grid" class="header-nav-link">Departments</a>
+        <a href="#heritage-section" class="header-nav-link">About</a>
+        <a href="#visit-section" class="header-nav-link">Contact</a>
+      </nav>
+
       <div class="top-actions">
         {% if session.get('admin_logged_in') %}
           <!-- Admin Profile Icon and Dropdown Wrapper -->
@@ -1499,11 +1714,54 @@
             <span>Login</span>
           </button>
           {% endif %}
-          <button class="btn btn-primary" onclick="window.location.href='/booking'">
+          <button id="bookNowBtn" class="btn btn-primary" onclick="window.location.href='/booking'">
             <i data-lucide="calendar-plus"></i>
             <span>Book Now</span>
           </button>
         {% endif %}
+
+        <!-- Mobile Navigation Toggle Button -->
+        <button id="mobileNavToggle" class="mobile-nav-toggle-btn" aria-label="Toggle navigation menu" onclick="toggleMobileNavDrawer()">
+          <i data-lucide="menu" id="mobileNavIcon"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobileNavDrawer" class="mobile-nav-drawer" style="display:none;">
+      <div class="mobile-nav-inner">
+        <a href="#doctors-anchor" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
+          <i data-lucide="stethoscope"></i>
+          <span>Doctors</span>
+        </a>
+        <a href="#services-grid" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
+          <i data-lucide="layout-grid"></i>
+          <span>Departments</span>
+        </a>
+        <a href="#heritage-section" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
+          <i data-lucide="building-2"></i>
+          <span>About Us</span>
+        </a>
+        <a href="#visit-section" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
+          <i data-lucide="map-pin"></i>
+          <span>Find & Contact Us</span>
+        </a>
+        <div class="mobile-drawer-divider"></div>
+        {% if session.get('user_id') %}
+        <a href="{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
+          <i data-lucide="user-check"></i>
+          <span>My Profile ({{ 'Doctor' if session.get('user_role') == 'doctor' else 'Patient' }})</span>
+        </a>
+        {% else %}
+        <a href="javascript:void(0)" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false); openAuthModal('login');">
+          <i data-lucide="log-in"></i>
+          <span>Patient / Doctor Login</span>
+        </a>
+        {% endif %}
+        <a href="/admin" class="mobile-drawer-link admin-drawer-link" onclick="toggleMobileNavDrawer(false)">
+          <i data-lucide="shield-check"></i>
+          <span>Admin Portal</span>
+        </a>
       </div>
     </div>
   </header>
@@ -1515,43 +1773,66 @@
     </div>
   </div>
 
-  <!-- MOBILE-PRO PREMIUM CONTENT -->
+  <!-- HERO SECTION -->
   <section class="hero-premium">
     <div class="hero-bg"></div>
     <div class="hero-overlay"></div>
-    <div class="hero-content" style="margin-top: -30px;" >
-      <span style="background:rgba(255,255,255,0.15); padding: 0.4rem 1rem; border-radius: 99px; font-size: 0.8rem; font-weight: 700; display: inline-block; margin-bottom: 1.5rem;">
-        <i data-lucide="shield-check" style="width:14px; height:14px; vertical-align: middle; margin-right: 4px;"></i> Quality Patient Care Since {{ settings.stat_since }}
-      </span>
-      <h1>{{ settings.promo_heading | safe }}</h1>
-      <p>{{ settings.promo_subheading }}</p>
-      <div class="hero-btns" style="display:flex; gap:1rem; flex-wrap: wrap; justify-content: inherit;">
-        <button class="btn btn-primary" style="height: 52px; padding: 0 2rem; min-width: auto;" onclick="window.location.href='/booking'">
-          Book Appointment
-        </button> 
-        <button class="btn btn-outline" style="height: 52px; padding: 0 2rem; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: #fff; min-width: auto;" onclick="document.getElementById('services-grid').scrollIntoView({behavior:'smooth'})">
-          Our Services
-        </button>
+    <div class="hero-content">
+      <div class="hero-grid-inner">
+        <div class="hero-text-col">
+          <div class="hero-badge-pill">
+            <i data-lucide="shield-check"></i>
+            <span>Caring for Koorachundu since {{ settings.stat_since }}</span>
+          </div>
+          <h1 class="hero-main-title">Trusted care for <br><span class="hero-highlight">healthier living.</span></h1>
+          <p class="hero-subtext">See experienced doctors at PrimeCare Clinic. Choose your doctor, pick a time and get your digital token instantly, backed by modern diagnostics.</p>
+          <div class="hero-btns">
+            <button class="btn hero-btn-main" onclick="window.location.href='/booking'">
+              <i data-lucide="calendar-plus"></i>
+              <span>Book Appointment</span>
+            </button> 
+            <button class="btn hero-btn-sub" onclick="document.getElementById('services-grid').scrollIntoView({behavior:'smooth'})">
+              <span>Explore Departments</span>
+              <i data-lucide="arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="hero-card-col">
+          <div class="hero-floating-hours-card">
+            <div class="hours-card-header">
+              <span class="hours-status-pulse"></span>
+              <span class="hours-status-text">Open Today</span>
+            </div>
+            <div class="hours-time">08:00 AM – 09:00 PM</div>
+            <p class="hours-desc">Token queues operate on standard clinic hours. Emergency & priority cases supported.</p>
+            <div class="hours-feature-pills">
+              <span class="hours-pill"><i data-lucide="check-circle-2"></i> Instant Online Tokens</span>
+              <span class="hours-pill"><i data-lucide="map-pin"></i> Central Koorachundu</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
+  <!-- TRUST STRIP -->
   <div class="trust-strip">
     <div class="trust-item">
-      <span class="trust-val">{{ settings.stat_specialists }}</span>
+      <span class="trust-val">25+</span>
       <span class="trust-label">Specialists</span>
     </div>
     <div class="trust-item">
-      <span class="trust-val">{{ settings.stat_patients }}</span>
-      <span class="trust-label">Patients</span>
+      <span class="trust-val">50,000+</span>
+      <span class="trust-label">Patients Served</span>
     </div>
     <div class="trust-item">
-      <span class="trust-val">{{ settings.stat_since }}</span>
-      <span class="trust-label">Since</span>
+      <span class="trust-val">Since {{ settings.stat_since }}</span>
+      <span class="trust-label">Local Care</span>
     </div>
     <div class="trust-item">
-      <span class="trust-val">{{ settings.stat_certified }}</span>
-      <span class="trust-label">Certified</span>
+      <span class="trust-val">Verified</span>
+      <span class="trust-label">Facility</span>
     </div>
   </div>
 
@@ -2006,12 +2287,15 @@
   <footer class="site-footer-pro">
     <div class="f-content">
       <div class="f-col f-brand">
-        <h2 style="color: #fff; margin-bottom: 1rem;">PrimeCare Clinic</h2>
-        <p style="color: #94a3b8; line-height: 1.6; font-size: 0.95rem;">Providing institutional-grade healthcare since 2012. Your trust is our foundation, and your health is our mission.</p>
-        <div style="display:flex; gap:1rem; margin-top:2rem; color: rgba(255,255,255,0.4);">
-          <i data-lucide="instagram"></i>
-          <i data-lucide="facebook"></i>
-          <i data-lucide="twitter"></i>
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
+          <img src="{{ url_for('static', filename='primecare-logo.svg') }}" style="width:34px;height:34px;object-fit:contain;filter:brightness(0) invert(1);" alt="PrimeCare Logo" />
+          <h2 style="color: #fff; margin: 0; font-size:1.45rem;">PrimeCare Clinic</h2>
+        </div>
+        <p style="color: #94a3b8; line-height: 1.6; font-size: 0.95rem;">Trusted healthcare for Koorachundu since 2012. Your health is our mission.</p>
+        <div style="display:flex; gap:1.1rem; margin-top:1.8rem; color: rgba(255,255,255,0.6);">
+          <a href="#" aria-label="Instagram" style="color:inherit;"><i data-lucide="instagram"></i></a>
+          <a href="#" aria-label="Facebook" style="color:inherit;"><i data-lucide="facebook"></i></a>
+          <a href="#" aria-label="Twitter" style="color:inherit;"><i data-lucide="twitter"></i></a>
         </div>
       </div>
       <div class="f-col">
@@ -2023,34 +2307,69 @@
           {% else %}
             <li><a href="#" onclick="openAuthModal('login')">Login</a></li>
           {% endif %}
+          <li><a href="#doctors-anchor">Doctors</a></li>
+          <li><a href="#services-grid">Departments</a></li>
+          <li><a href="#heritage-section">About Us</a></li>
+          <li><a href="#visit-section">Contact & Location</a></li>          
           {% if session.get('admin_logged_in') %}
-          <li><a href="/admin" id="adminLoginDiv" style="color: #6366f1; font-weight: bold;">Admin Panel</a></li>
+          <li><a href="/admin" id="adminLoginDiv" style="color: var(--pc-amber-accent); font-weight: bold;">Admin Panel</a></li>
           {% else %}
           <li><a href="/admin" id="adminLoginDiv">Admin Login</a></li>
           {% endif %}
-          <li><a href="#doctors-anchor">Doctors</a></li>
-          <li><a href="#contact-section">Contact</a></li>          
-          <li><a href="#heritage-section">About Us</a></li>
         </ul>
       </div>
  
       <div class="f-col">
-        <h4>Contact Us</h4>
-        <div style="color: #94a3b8; font-size: 0.9rem; line-height: 1.7;">
-          PrimeCare Clinic<br>
+        <h4>Contact & Hours</h4>
+        <div style="color: #94a3b8; font-size: 0.92rem; line-height: 1.7;">
+          <strong style="color:#fff;display:block;margin-bottom:0.25rem;">PrimeCare Clinic</strong>
           {{ settings.clinic_address }}<br><br>
-          Phone: {{ settings.clinic_phone }}
+          <span>Phone: {{ settings.clinic_phone }}</span><br>
+          <span>WhatsApp: +91 8592031725</span><br>
+          <span style="color:#e2e8f0;display:block;margin-top:0.4rem;">Daily Hours: 08:00 AM – 09:00 PM</span>
         </div>
       </div>
     </div>
-    <div style="width: 100%; padding: 2rem 1.5rem 2.5rem; border-top: 1px solid rgba(255,255,255,0.05); text-align: center; color: #475569; font-size: 0.85rem; margin-top: 0;">
-      <p style="margin-bottom: 0;">© 2026 PrimeCare Clinic. Delivering Excellence for 25+ Years.</p>
+    <div style="width: 100%; padding: 1.6rem 1.5rem 2rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: center; color: #64748b; font-size: 0.86rem; margin-top: 0;">
+      <p style="margin-bottom: 0;">© 2026 PrimeCare Clinic. All rights reserved.</p>
     </div>
   </footer>
 
   <script>
     // Init Lucide icons
     lucide.createIcons();
+
+    // Mobile Navigation Drawer Toggle
+    function toggleMobileNavDrawer(forceState) {
+      const drawer = document.getElementById('mobileNavDrawer');
+      const icon = document.getElementById('mobileNavIcon');
+      if (!drawer) return;
+      const isCurrentlyOpen = drawer.classList.contains('open') || drawer.style.display === 'block';
+      const shouldOpen = (typeof forceState === 'boolean') ? forceState : !isCurrentlyOpen;
+      
+      if (shouldOpen) {
+        drawer.style.display = 'block';
+        drawer.classList.add('open');
+        if (icon) icon.setAttribute('data-lucide', 'x');
+      } else {
+        drawer.classList.remove('open');
+        drawer.style.display = 'none';
+        if (icon) icon.setAttribute('data-lucide', 'menu');
+      }
+      if (window.lucide && lucide.createIcons) lucide.createIcons();
+    }
+
+    // Sticky Top Bar Scroll Shadow
+    window.addEventListener('scroll', () => {
+      const topBar = document.querySelector('.top-bar');
+      if (topBar) {
+        if (window.scrollY > 20) {
+          topBar.classList.add('scrolled');
+        } else {
+          topBar.classList.remove('scrolled');
+        }
+      }
+    }, { passive: true });
 
     // --- NAVIGATION LOGIC ---
     function scrollToSpec(specName) {
