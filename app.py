@@ -1160,6 +1160,42 @@ def safely_invalidate_legacy_otps(target_app=None, target_db=None, force: bool =
             active_app.logger.warning(f"Could not complete legacy OTP invalidation: {e}")
         return 0
 
+
+def purge_demo_and_test_doctors(target_app=None, target_db=None):
+    """
+    Purges demo / test doctor accounts that may linger from tests
+    (such as 'Dr. Postgres Concurrency' or 'pgdoc@primecare.com').
+    """
+    active_app = target_app or app
+    active_db = target_db or db
+    try:
+        with active_app.app_context():
+            from services.token_allocation import get_canonical_doctor_identifier
+            demo_docs = Doctor.query.filter(
+                (Doctor.email == 'pgdoc@primecare.com') |
+                (db.func.lower(Doctor.name).like('%postgres concurrency%')) |
+                (db.func.lower(Doctor.name).like('%demo doctor%'))
+            ).all()
+            for doc in demo_docs:
+                doc_id = doc.id
+                doc_name = doc.name
+                DoctorSchedule.query.filter_by(doctor_id=doc_id).delete()
+                DoctorLeave.query.filter_by(doctor_id=doc_id).delete()
+                DoctorSession.query.filter(
+                    (DoctorSession.doctor_name == doc_name) |
+                    (DoctorSession.email == doc.email)
+                ).delete()
+                DailyTokenAllocation.query.filter(
+                    (DailyTokenAllocation.doctor_name == doc_name) |
+                    (DailyTokenAllocation.doctor_identifier.like(f"%{get_canonical_doctor_identifier(doc_name)}%"))
+                ).delete()
+                active_db.session.delete(doc)
+            active_db.session.commit()
+    except Exception as e:
+        active_db.session.rollback()
+        if hasattr(active_app, 'logger'):
+            active_app.logger.warning(f"Could not purge demo doctors on startup: {e}")
+
 # Invoke startup schema compatibility check and legacy OTP invalidation at startup
 try:
     schema_ok = check_startup_schema_compatibility(app, db)
@@ -1168,6 +1204,7 @@ try:
             raise RuntimeError("CRITICAL ERROR: Startup schema compatibility verification failed in production.")
     else:
         safely_invalidate_legacy_otps(app, db)
+        purge_demo_and_test_doctors(app, db)
 except Exception as _startup_e:
     if is_production_environment():
         raise
@@ -1541,6 +1578,9 @@ def get_all_doctors(force_refresh=False):
         day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         res = []
         for doc in docs:
+            # Exclude demo / test doctors
+            if (doc.email and doc.email.strip().lower() == 'pgdoc@primecare.com') or ('postgres concurrency' in (doc.name or '').lower()) or ('demo doctor' in (doc.name or '').lower()):
+                continue
             schedules = doc.schedules.filter_by(is_available=True).all()
             day_times = {}
             days_list = []
@@ -3600,6 +3640,76 @@ def patient_update_phone():
 
     session['user_phone'] = norm_phone
     return jsonify(success=True, msg="Mobile number updated successfully.", phone_number=norm_phone)
+
+@app.route('/api/user/delete_account', methods=['POST'])
+def delete_user_account():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify(success=False, msg="Unauthorized. Please log in to manage your account."), 401
+
+    user = User.query.get(user_id)
+    if not user or (user.email or "").strip().lower() == 'guest@primecare.com':
+        session.clear()
+        return jsonify(success=False, msg="Invalid or placeholder account cannot be deleted."), 400
+
+    # Ensure admin accounts cannot be deleted here
+    if user.email and user.email.strip().lower() == ADMIN_EMAIL.strip().lower():
+        return jsonify(success=False, msg="Administrator account cannot be deleted via user portal."), 403
+
+    try:
+        from services.booking_services import cancel_booking_service
+
+        # 1. Cancel active bookings for this user so token allocation counters are properly reconciled
+        user_phone = user.phone_number
+        booking_filter = (PatientBooking.user_id == user.id)
+        if user_phone:
+            booking_filter = booking_filter | (PatientBooking.phone_number == user_phone)
+
+        active_bookings = PatientBooking.query.filter(
+            booking_filter,
+            PatientBooking.status.in_(['confirmed', 'active'])
+        ).all()
+        for b in active_bookings:
+            try:
+                cancel_booking_service(
+                    booking_id=b.id,
+                    actor_role='admin',
+                    reason='Account deleted by patient',
+                    phone_number=b.phone_number
+                )
+            except Exception as b_err:
+                app.logger.warning(f"Error cancelling booking #{b.id} during account deletion: {b_err}")
+                b.status = 'cancelled'
+                b.cancelled_by = 'patient'
+                b.cancellation_reason = 'Account deleted by patient'
+
+        # 2. Delete user's prescriptions / medical vault records
+        Prescription.query.filter_by(user_id=user.id).delete()
+
+        # 3. Delete user's saved patients
+        SavedPatient.query.filter_by(user_id=user.id).delete()
+
+        # 4. Delete user's push subscriptions
+        PushSubscription.query.filter_by(user_id=user.id).delete()
+
+        # 5. Delete DoctorSession if doctor
+        if user.role == 'doctor':
+            DoctorSession.query.filter_by(email=user.email).delete()
+
+        # 6. Delete User record
+        db.session.delete(user)
+        db.session.commit()
+
+        # 7. Clear user session
+        stale_keys = ['user_id', 'user_email', 'user_name', 'user_role', 'user_phone', 'patient_logged_in', 'doctor_logged_in']
+        for k in stale_keys:
+            session.pop(k, None)
+
+        return jsonify(success=True, msg="Your account has been permanently deleted.", redirect_url="/")
+    except Exception as e:
+        db.session.rollback()
+        app.logger.exception(f"Error deleting user account {user_id}: {e}")
+        return jsonify(success=False, msg="Failed to delete account. Please try again or contact support."), 500
 
 @app.route('/patient_logout', methods=['POST', 'GET'])
 def patient_logout():

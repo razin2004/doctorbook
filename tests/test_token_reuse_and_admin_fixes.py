@@ -203,6 +203,127 @@ class TestTokenReuseAndDoctorUpdates(unittest.TestCase):
             data = res.get_json()
             self.assertTrue(data.get("success"), f"Expected success but got: {data}")
 
+    def test_scenario_c_all_cancelled_resets_to_token_1(self):
+        """
+        Test that if Patient 1 and Patient 2 both book and both cancel,
+        leaving 0 active bookings, the next patient receives Token 1.
+        """
+        b1 = create_booking_service(
+            patient_name="Patient One",
+            age=30,
+            gender="Male",
+            phone_number="+919000000001",
+            appointment_date=self.target_date,
+            doctor_name="Dr. Test Specialist",
+            specialization="Cardiology"
+        )
+        b2 = create_booking_service(
+            patient_name="Patient Two",
+            age=28,
+            gender="Female",
+            phone_number="+919000000002",
+            appointment_date=self.target_date,
+            doctor_name="Dr. Test Specialist",
+            specialization="Cardiology"
+        )
+        self.assertEqual(b1["token"], 1)
+        self.assertEqual(b2["token"], 2)
+
+        # Cancel both
+        c1 = cancel_booking_service(booking_id=b1["booking_id"], phone_number="+919000000001", actor_role="patient")
+        c2 = cancel_booking_service(booking_id=b2["booking_id"], phone_number="+919000000002", actor_role="patient")
+        self.assertTrue(c1["success"])
+        self.assertTrue(c2["success"])
+
+        # Patient 3 books -> should receive Token 1 because no active bookings remain
+        b3 = create_booking_service(
+            patient_name="Patient Three",
+            age=40,
+            gender="Male",
+            phone_number="+919000000003",
+            appointment_date=self.target_date,
+            doctor_name="Dr. Test Specialist",
+            specialization="Cardiology"
+        )
+        self.assertTrue(b3["success"], f"Booking 3 failed: {b3}")
+        self.assertEqual(b3["token"], 1, "Should reset to Token 1 when all previous bookings are cancelled")
+
+    def test_user_delete_account_lifecycle(self):
+        """
+        Test user account deletion via /api/user/delete_account:
+        Cancels active bookings, removes user from database, and terminates session.
+        """
+        from werkzeug.security import generate_password_hash
+        u = User(
+            name="Deletable User",
+            email="delete.me@primecare.com",
+            phone_number="+919876543299",
+            password_hash=generate_password_hash("Secret123!"),
+            role="patient"
+        )
+        db.session.add(u)
+        db.session.commit()
+        user_id = u.id
+
+        # Make active booking for this user
+        b = create_booking_service(
+            patient_name="Deletable User",
+            age=35,
+            gender="Male",
+            phone_number="+919876543299",
+            appointment_date=self.target_date,
+            doctor_name="Dr. Test Specialist",
+            specialization="Cardiology",
+            actor_role="patient"
+        )
+        self.assertTrue(b["success"])
+        b_id = b["booking_id"]
+
+        with app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess['user_id'] = user_id
+                sess['user_role'] = 'patient'
+                sess['user_email'] = 'delete.me@primecare.com'
+                sess['user_phone'] = '+919876543299'
+
+            del_res = client.post('/api/user/delete_account', json={'confirm': True})
+            self.assertEqual(del_res.status_code, 200)
+            data = del_res.get_json()
+            self.assertTrue(data.get('success'))
+
+            # Verify user is deleted
+            self.assertIsNone(User.query.get(user_id))
+
+            # Verify booking was cancelled
+            cancelled_b = PatientBooking.query.get(b_id)
+            self.assertEqual(cancelled_b.status, 'cancelled')
+
+    def test_demo_doctor_excluded_from_get_all_doctors(self):
+        """
+        Verify that demo doctors ('pgdoc@primecare.com' or 'Dr. Postgres Concurrency')
+        are excluded from get_all_doctors() and purged on startup.
+        """
+        from app import get_all_doctors, purge_demo_and_test_doctors
+        demo_doc = Doctor(
+            name="Dr. Postgres Concurrency",
+            specialization="Cardiology",
+            email="pgdoc@primecare.com",
+            phone_number="+919888877777",
+            is_active=True
+        )
+        db.session.add(demo_doc)
+        db.session.commit()
+
+        # Check get_all_doctors excludes it
+        docs = get_all_doctors(force_refresh=True)
+        names = [d.get("Name") for d in docs]
+        self.assertNotIn("Dr. Postgres Concurrency", names)
+
+        # Check purge_demo_and_test_doctors removes it from db
+        purge_demo_and_test_doctors(app, db)
+        found = Doctor.query.filter_by(email="pgdoc@primecare.com").first()
+        self.assertIsNone(found)
+
 
 if __name__ == "__main__":
     unittest.main()

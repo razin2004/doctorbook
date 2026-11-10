@@ -1108,16 +1108,6 @@
               <p>{{ session.get('user_email') }}</p>
             </div>
           </div>
-          <div class="sidebar-user-phone-box" style="display:flex; align-items:center; justify-content:space-between; background:white; padding:6px 10px; border-radius:12px; border:1px solid #e2e8f0; font-size:0.75rem;">
-            <div style="display:flex; align-items:center; gap:6px; color:#475569; overflow:hidden;">
-              <i data-lucide="phone" style="width:13px; height:13px; color:#0077b6; flex-shrink:0;"></i>
-              <span id="docCurrentPhoneSpan" style="font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">{{ doc.phone_number or 'No mobile set' }}</span>
-            </div>
-            <button type="button" onclick="openDoctorPhoneModal()" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; border-radius:8px; padding:3px 8px; font-size:0.72rem; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px; flex-shrink:0;">
-              <i data-lucide="edit-3" style="width:11px; height:11px;"></i>
-              <span>Change</span>
-            </button>
-          </div>
         </div>
         
         <!-- Sidebar Navigation -->
@@ -1371,6 +1361,23 @@
                     <span class="user-badge" style="background: #f1f5f9; color: #475569; padding: 0.4rem 0.8rem; font-size: 0.85rem; border: 1px solid #e2e8f0; border-radius:999px;">#{{ token }}</span>
                 {% endfor %}
             </div>
+        </div>
+
+        <!-- Practitioner Profile & Contact Card -->
+        <div style="margin-top: 2rem; background: white; border: 1px solid #e2e8f0; border-radius: 18px; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+          <div style="display: flex; align-items: center; gap: 0.9rem;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(0,119,182,0.1); color: #0077b6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i data-lucide="phone-call" style="width: 22px; height: 22px;"></i>
+            </div>
+            <div>
+              <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Registered Mobile Number</div>
+              <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-top: 1px;" id="docCurrentPhoneSpan">{{ doc.phone_number or 'No mobile number set' }}</div>
+            </div>
+          </div>
+          <button type="button" onclick="openDoctorPhoneModal()" class="btn btn-outline" style="padding: 0.6rem 1.2rem; border-radius: 12px; font-size: 0.88rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; margin: 0;">
+            <i data-lucide="edit-3" style="width: 15px; height: 15px;"></i>
+            <span>Change Mobile Number</span>
+          </button>
         </div>
       </div>
 

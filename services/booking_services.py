@@ -1008,21 +1008,31 @@ def cancel_booking_service(
         from services.token_allocation import get_canonical_doctor_identifier
         from app import DailyTokenAllocation
         doc_id = get_canonical_doctor_identifier(booking.doctor_name, booking.specialization)
-        counter = DailyTokenAllocation.query.filter_by(
-            doctor_identifier=doc_id,
-            appointment_date=b_norm
+        date_variants = [b_norm]
+        if booking.date and booking.date not in date_variants:
+            date_variants.append(booking.date)
+
+        counter = DailyTokenAllocation.query.filter(
+            (DailyTokenAllocation.doctor_identifier == doc_id) |
+            (db.func.lower(db.func.trim(DailyTokenAllocation.doctor_name)) == booking.doctor_name.strip().lower())
+        ).filter(
+            DailyTokenAllocation.appointment_date == b_norm
         ).with_for_update().first()
 
         if counter:
-            active_remaining = PatientBooking.query.filter(
+            active_remaining_query = PatientBooking.query.filter(
                 db.func.lower(db.func.trim(PatientBooking.doctor_name)) == booking.doctor_name.strip().lower(),
-                db.func.lower(db.func.trim(PatientBooking.specialization)) == booking.specialization.strip().lower(),
-                PatientBooking.date == b_norm,
+                PatientBooking.date.in_(date_variants),
                 PatientBooking.status.in_(['confirmed', 'active']),
                 PatientBooking.id != booking.id
-            ).count()
+            )
+            if booking.specialization:
+                active_remaining_query = active_remaining_query.filter(
+                    db.func.lower(db.func.trim(PatientBooking.specialization)) == booking.specialization.strip().lower()
+                )
+            active_remaining = active_remaining_query.count()
 
-            if active_remaining == 0 and counter.last_allocated_token <= 1:
+            if active_remaining == 0:
                 counter.last_allocated_token = 0
     except Exception as counter_err:
         app.logger.warning(f"Token counter reconciliation warning on cancellation: {counter_err}")

@@ -19,6 +19,7 @@ class TestAdminRouteAndMultiAuth(unittest.TestCase):
     def tearDownClass(cls):
         with app.app_context():
             db.session.remove()
+            db.drop_all()
 
     def setUp(self):
         self.ctx = app.app_context()

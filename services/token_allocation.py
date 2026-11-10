@@ -337,9 +337,9 @@ def allocate_token_for_booking(
         return reconcile_res
 
     active_count = reconcile_res["active_count"]
-    # If the queue has zero active bookings and was only at token 1 (e.g. initial booking was cancelled),
-    # reset to 0 so the new booking starts at Token 1.
-    if active_count == 0 and counter.last_allocated_token <= 1:
+    # If the queue has zero active bookings (e.g. initial booking was cancelled, or all bookings cancelled),
+    # reset to 0 so the next booking starts at Token 1.
+    if active_count == 0:
         counter.last_allocated_token = 0
 
     current_count = max(active_count, counter.last_allocated_token)

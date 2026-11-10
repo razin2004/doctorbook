@@ -1855,6 +1855,17 @@
           </div>
         </div>
         {% endif %}
+
+        <!-- Discreet Account Management & Deletion -->
+        <div style="margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="font-size: 0.78rem; color: #94a3b8; display: flex; align-items: center; gap: 0.4rem;">
+            <i data-lucide="shield" style="width: 13px; height: 13px;"></i>
+            <span>Account ID: #{{ session.get('user_id', '') }} &middot; {{ session.get('user_email', '') }}</span>
+          </div>
+          <button type="button" onclick="confirmDeleteAccount()" style="background: none; border: none; color: #94a3b8; font-size: 0.78rem; cursor: pointer; text-decoration: underline; padding: 4px 6px; border-radius: 6px; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">
+            Delete Account
+          </button>
+        </div>
       </div>
 
       <!-- PANEL 2: APPOINTMENTS (Single Large Glass Container Panel) -->
@@ -2585,6 +2596,35 @@
         await fetch('/patient_logout', { method: 'POST' });
         window.location.href = '/';
       }, true);
+    }
+
+    function confirmDeleteAccount() {
+      openUniversalModal(
+        'Delete Account',
+        'Are you sure you want to permanently delete your PrimeCare account? All your medical vault records, profile data, and upcoming appointments will be deleted. This action cannot be undone.',
+        'Delete My Account',
+        async () => {
+          try {
+            const res = await fetch('/api/user/delete_account', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ confirm: true })
+            });
+            const data = await res.json();
+            if (data.success) {
+              if (typeof showToast === 'function') showToast(data.msg || 'Account deleted successfully.', 'success');
+              setTimeout(() => { window.location.href = data.redirect_url || '/'; }, 1000);
+            } else {
+              if (typeof showToast === 'function') showToast(data.msg || 'Failed to delete account.', 'error');
+              else alert(data.msg || 'Failed to delete account.');
+            }
+          } catch (e) {
+            if (typeof showToast === 'function') showToast('Network error while deleting account.', 'error');
+            else alert('Network error while deleting account.');
+          }
+        },
+        true
+      );
     }
 
     // ── Reschedule Notice ──

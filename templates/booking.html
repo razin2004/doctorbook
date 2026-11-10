@@ -2376,7 +2376,7 @@
 
   {% if is_admin_view %}
   <!-- ==================== ADMIN ==================== -->
-  <section id="admin" class="admin-section container" style="{% if is_admin_view %}display:block;{% else %}display:none;{% endif %}">
+  <section id="admin" class="admin-section container {% if admin_email %}logged-in{% endif %}" style="{% if is_admin_view %}display:block;{% else %}display:none;{% endif %}">
 
     <!-- Login Form – glass panel matching other booking panels -->
     <div id="adminLoginDiv" style="{% if admin_email %}display:none;{% else %}display:block;{% endif %}">
@@ -2513,7 +2513,7 @@
     </div>
 
     <!-- Admin Options (after login) -->
-    <div id="adminOptions" style="display:none;">
+    <div id="adminOptions" style="{% if admin_email %}display:block;{% else %}display:none;{% endif %}">
       <div class="admin-workspace">
         <!-- Sidebar Navigation -->
         <aside class="admin-sidebar" id="adminSidebar">
@@ -3964,6 +3964,7 @@
       if (cancelSelect && prevCancelVal) { cancelSelect.value = prevCancelVal; cancelSelect.dispatchEvent(new Event('change')); }
     }
 
+    window.goHome = function() { window.location.href = '/'; };
     function goHome() { window.location.href = '/'; }
 
     function timeToMinutes(t) {
@@ -4290,7 +4291,7 @@
       
       // Update URL query parameter to keep address bar in sync
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('view') === 'admin') {
+      if (window.location.pathname === '/admin' || urlParams.get('view') === 'admin') {
         urlParams.set('panel', type);
         window.history.replaceState(null, '', window.location.pathname + '?' + urlParams.toString());
       }
@@ -7189,6 +7190,9 @@
         console.warn("Preload dropdown population error:", e);
       }
 
+      const urlParams = new URLSearchParams(window.location.search);
+      let savedSection = '';
+
       {% if is_admin_view %}
       // Strictly enforce Admin view exclusively
       const adminSec = document.getElementById('admin');
@@ -7196,12 +7200,9 @@
 
       {% if admin_email %}
       showAdminOptions();
-      const urlParams = new URLSearchParams(window.location.search);
       const urlPanel = urlParams.get('panel') || '{{ active_admin_panel or "welcome" }}';
       const panelBtn = document.querySelector(`.admin-sidebar-nav-item[data-panel="${urlPanel}"]`);
       showAdminPanel(urlPanel, panelBtn);
-      const headerLogoutBtn = document.getElementById('headerLogoutBtn');
-      if (headerLogoutBtn) headerLogoutBtn.style.display = 'inline-flex';
       {% else %}
       const loginDiv = document.getElementById('adminLoginDiv');
       if (loginDiv) loginDiv.style.display = 'block';
@@ -7211,8 +7212,7 @@
 
       {% else %}
       // Patient view exclusively
-      const urlParams = new URLSearchParams(window.location.search);
-      let savedSection = localStorage.getItem('activeSection') || 'bookDoctor';
+      savedSection = localStorage.getItem('activeSection') || 'bookDoctor';
       if (savedSection === 'admin') savedSection = 'bookDoctor';
       if (urlParams.get('specialization')) {
         savedSection = 'bookDept';
@@ -7225,6 +7225,9 @@
       // 2. Bind header logout button
       const headerLogoutBtn = document.getElementById('headerLogoutBtn');
       if (headerLogoutBtn) {
+        {% if admin_email %}
+        headerLogoutBtn.style.display = 'inline-flex';
+        {% endif %}
         headerLogoutBtn.addEventListener('click', openLogoutModal);
       }
 
@@ -7233,6 +7236,7 @@
       await initPage();
 
       // 4. Handle specialization URL query parameter if present
+      {% if not is_admin_view %}
       const specParam = urlParams.get('specialization');
       if (specParam) {
         showSection('bookDept', document.getElementById('panelDept'));
@@ -7262,10 +7266,10 @@
           }, 400);
         }
       }
+      {% endif %}
 
       // 5. Restore last active admin panel if we are in admin section
       if (savedSection === 'admin') {
-        const urlParams = new URLSearchParams(window.location.search);
         const urlPanel = urlParams.get('panel') || '';
         if (urlPanel) {
           localStorage.setItem('activeAdminPanel', urlPanel);
