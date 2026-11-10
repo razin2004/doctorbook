@@ -1411,10 +1411,10 @@
         </div>
       </div>
       <nav class="pc-nav" aria-label="Main">
-        <a href="/" class="pc-nav-link active">Home</a>
-        <a href="#doctors-anchor" class="pc-nav-link">Doctors</a>
-        <a href="#heritage-section" class="pc-nav-link">About</a>
-        <a href="#contact-section" class="pc-nav-link">Contact</a>
+        <a href="#hero-section" class="pc-nav-link active" data-nav="home">Home</a>
+        <a href="#doctors-anchor" class="pc-nav-link" data-nav="doctors">Doctors</a>
+        <a href="#heritage-section" class="pc-nav-link" data-nav="about">About</a>
+        <a href="#contact-section" class="pc-nav-link" data-nav="contact">Contact</a>
       </nav>
       <div class="top-actions">
         {% if session.get('admin_logged_in') %}
@@ -1523,7 +1523,7 @@
   </div>
 
   <!-- MOBILE-PRO PREMIUM CONTENT -->
-  <section class="hero-premium">
+  <section class="hero-premium" id="hero-section">
     <div class="hero-bg"></div>
     <div class="hero-overlay"></div>
     <div class="hero-content">
@@ -1547,7 +1547,7 @@
             <span class="pc-point-ic"><i data-lucide="clock"></i></span>
             <span class="pc-point-label">Open 8 AM - 9 PM</span>
           </li>
-          <li class="pc-point-item">
+          <li class="pc-point-item pc-hide-mobile">
             <span class="pc-point-ic"><i data-lucide="ticket"></i></span>
             <span class="pc-point-label">Instant digital token</span>
           </li>
@@ -1578,7 +1578,7 @@
       <span class="trust-ic"><i data-lucide="heart-pulse"></i></span>
       <div class="trust-text">
         <span class="trust-val">{{ settings.stat_patients }}</span>
-        <span class="trust-label">Patients served</span>
+        <span class="trust-label"><span class="pc-label-desktop">Patients served</span><span class="pc-label-mobile">Patients</span></span>
       </div>
     </div>
     <div class="trust-item">
@@ -1700,17 +1700,20 @@
                     <i data-lucide="stethoscope"></i>
                     {{ doc.Specialization }}
                   </p>
-                  <div class="pc-days">
+                  <div class="pc-days" aria-label="Available days">
                     {% for day in day_order %}
-                    <span class="pc-day {{ 'on' if day in doc.Days else 'off' }}">{{ day[:3] }}</span>
+                    <span class="pc-day {{ 'on' if day in doc.Days else 'off' }}" title="{{ day }}: {{ 'Available' if day in doc.Days else 'Not available' }}">
+                      <span class="day-code-desktop">{{ day[:2] }}</span>
+                      <span class="day-code-mobile">{{ day[0] }}</span>
+                    </span>
                     {% endfor %}
                   </div>
                   <div class="doctor-actions">
                     <button type="button" class="btn-timing" data-target="{{ card_id }}">
                       <i data-lucide="clock"></i>
-                      View timings
+                      Timing
                     </button>
-                    <a class="btn btn-primary pc-card-book" href="/booking?doctor={{ (doc.id or doc.Name) | urlencode }}">Book Appointment</a>
+                    <a class="btn btn-primary pc-card-book" href="/booking?doctor={{ (doc.id or doc.Name) | urlencode }}">Book</a>
                   </div>
                 </div>
               </article>
@@ -3413,7 +3416,8 @@
             }
 
             if (tickerItems.length > 0) {
-              tickerWrapper.style.display = 'flex';
+              tickerWrapper.classList.add('has-messages');
+              tickerWrapper.style.setProperty('display', 'flex', 'important');
               
               const html = tickerItems.join('');
               // Triple the content to ensure smooth seamless looping
@@ -3423,14 +3427,20 @@
               const duration = tickerItems.length * 12; // ~12s per item
               tickerContent.style.animationDuration = `${Math.max(duration, 30)}s`;
             } else {
-              tickerWrapper.style.display = 'none';
+              tickerWrapper.classList.remove('has-messages');
+              tickerWrapper.style.setProperty('display', 'none', 'important');
+              tickerContent.innerHTML = '';
             }
           } else {
-            tickerWrapper.style.display = 'none';
+            tickerWrapper.classList.remove('has-messages');
+            tickerWrapper.style.setProperty('display', 'none', 'important');
+            tickerContent.innerHTML = '';
           }
         } catch (err) {
           console.error("Ticker update failed:", err);
-          tickerWrapper.style.display = 'none';
+          tickerWrapper.classList.remove('has-messages');
+          tickerWrapper.style.setProperty('display', 'none', 'important');
+          tickerContent.innerHTML = '';
         }
       }
 
@@ -3823,6 +3833,79 @@
         panel.classList.remove('open');
       }
     });
+  })();
+  </script>
+
+  
+  <!-- Header Navigation Scroll Spy & Smooth Scroll -->
+  <script>
+  (function initNavScrollSpy() {
+    const navLinks = document.querySelectorAll('.pc-nav .pc-nav-link');
+    if (!navLinks.length) return;
+
+    const navTargets = [
+      { nav: 'home', el: document.getElementById('hero-section') || document.querySelector('.hero-premium') },
+      { nav: 'doctors', el: document.getElementById('doctors-anchor') || document.getElementById('doctors-full-section') },
+      { nav: 'about', el: document.getElementById('heritage-section') },
+      { nav: 'contact', el: document.getElementById('contact-section') || document.getElementById('visit-section') }
+    ];
+
+    function setActiveNav(navKey) {
+      navLinks.forEach(link => {
+        if (link.getAttribute('data-nav') === navKey) {
+          link.classList.add('active');
+        } else {
+          link.classList.remove('active');
+        }
+      });
+    }
+
+    navLinks.forEach(link => {
+      link.addEventListener('click', function (e) {
+        const navKey = this.getAttribute('data-nav');
+        const href = this.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          e.preventDefault();
+          const targetEl = document.querySelector(href);
+          if (targetEl) {
+            setActiveNav(navKey);
+            targetEl.scrollIntoView({ behavior: 'smooth' });
+            history.pushState(null, null, href);
+          }
+        }
+      });
+    });
+
+    let spyTick = false;
+    function updateNavOnScroll() {
+      if (spyTick) return;
+      spyTick = true;
+      requestAnimationFrame(() => {
+        const scrollPos = window.scrollY + 140;
+        let currentNav = 'home';
+        
+        navTargets.forEach(t => {
+          if (t.el) {
+            const top = t.el.getBoundingClientRect().top + window.scrollY;
+            if (scrollPos >= top) {
+              currentNav = t.nav;
+            }
+          }
+        });
+
+        if ((window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 60)) {
+          currentNav = 'contact';
+        } else if (window.scrollY < 180) {
+          currentNav = 'home';
+        }
+
+        setActiveNav(currentNav);
+        spyTick = false;
+      });
+    }
+
+    window.addEventListener('scroll', updateNavOnScroll, { passive: true });
+    updateNavOnScroll();
   })();
   </script>
 
