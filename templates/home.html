@@ -1597,115 +1597,6 @@
     </div>
   </div>
 
-  <section class="home-section" id="heritage-section">
-    <div class="heritage-grid">
-      <div class="heritage-text pc-reveal">
-        <span class="section-tag">About us</span>
-        <h2>{{ settings.promo_heritage_heading | safe }}</h2>
-        <p>{{ settings.promo_heritage_text }}</p>
-        <div class="pc-stats">
-          <div class="pc-stat">
-            <div class="pc-stat-val">{{ settings.departments_count }}+</div>
-            <div class="pc-stat-lbl">Departments</div>
-          </div>
-          <div class="pc-stat">
-            <div class="pc-stat-val">24/7</div>
-            <div class="pc-stat-lbl">Support</div>
-          </div>
-        </div>
-      </div>
-      <div class="heritage-visual pc-reveal" style="background-image: url('{{ settings.promo_heritage_image }}');">
-        <div class="pc-award">
-          <div class="pc-award-ic"><i data-lucide="award"></i></div>
-          <div class="pc-award-text">
-            <h4>{{ settings.promo_award_title }}</h4>
-            <p>{{ settings.promo_award_desc }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="leadership-bg">
-    <div class="home-section">
-      <div class="pc-head pc-head--center pc-reveal" style="margin-bottom: 2rem;">
-        <span class="section-tag">Leadership</span>
-        <h2 class="pc-title">Meet the people behind PrimeCare</h2>
-      </div>
-      <div class="leadership-grid">
-        <div class="leader-card pc-reveal">
-          <div class="leader-img"><img src="{{ settings.promo_leader_1_image }}" alt="{{ settings.promo_leader_1_name }}" loading="lazy" decoding="async"></div>
-          <div class="leader-info">
-            <h3>{{ settings.promo_leader_1_name }}</h3>
-            <span class="leader-role">{{ settings.promo_leader_1_role }}</span>
-            <p class="leader-bio">{{ settings.promo_leader_1_bio }}</p>
-          </div>
-        </div>
-        <div class="leader-card pc-reveal">
-          <div class="leader-img"><img src="{{ settings.promo_leader_2_image }}" alt="{{ settings.promo_leader_2_name }}" loading="lazy" decoding="async"></div>
-          <div class="leader-info">
-            <h3>{{ settings.promo_leader_2_name }}</h3>
-            <span class="leader-role">{{ settings.promo_leader_2_role }}</span>
-            <p class="leader-bio">{{ settings.promo_leader_2_bio }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="home-section" id="visit-section">
-    <div id="contact-section" style="position: absolute; top: -100px;"></div>
-    <div class="visit-card pc-reveal">
-      <div class="visit-info">
-        <span class="section-tag pc-tag-light">Visit us</span>
-        <h2>Find us in Koorachundu</h2>
-        
-        <div class="c-row">
-          <div class="c-icon"><i data-lucide="map-pin"></i></div>
-          <div class="c-text">
-            <h4>Location</h4>
-            <p>{{ settings.clinic_address }}</p>
-          </div>
-        </div>
-        
-        <div class="c-row">
-          <div class="c-icon"><i data-lucide="clock"></i></div>
-          <div class="c-text">
-            <h4>Working Hours</h4>
-            <p>08:00 AM - 09:00 PM</p>
-          </div>
-        </div>
-
-        <div class="c-row">
-          <div class="c-icon"><i data-lucide="phone-call"></i></div>
-          <div class="c-text">
-            <h4>Phone Number</h4>
-            <p><a href="tel:{{ settings.clinic_phone | replace(' ','') }}" style="color:#fff; text-decoration:none;">{{ settings.clinic_phone }}</a></p>
-          </div>
-        </div>
-
-        <div class="action-pill-container">
-          <a href="{{ settings.clinic_map_link }}" target="_blank" rel="noopener" class="action-pill pill-directions">
-            <i data-lucide="navigation"></i> Get Directions
-          </a>
-          <a href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" rel="noopener" class="action-pill pill-whatsapp">
-            <svg style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp Enquiry
-          </a>
-        </div>
-      </div>
-      <div class="visit-visual pc-reveal">
-        <div style="width:100%; height:100%; background: url('{{ settings.promo_facility_image }}') center/cover; opacity: 0.6; filter: grayscale(20%);"></div>
-        <div style="position: absolute; inset: 0; background: linear-gradient(to right, var(--pc-navy) 0%, transparent 100%);"></div>
-        <div style="position: absolute; bottom: 20px; left: 20px; color:#fff;">
-          <div style="display:flex; align-items:center; gap:0.5rem; opacity:0.8; font-size: 0.8rem; margin-bottom: 0.2rem;">
-            <i data-lucide="shield-check" style="width:14px;"></i> Verified Facility
-          </div>
-          <div style="font-weight:900; font-size: 1.4rem;">PrimeCare Clinic</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <section class="home-section" id="services-grid">
     <div id="services-section" style="position: absolute; top: -100px;"></div>
     <div class="pc-head pc-reveal" style="margin-bottom: 1.5rem;">
@@ -1725,7 +1616,114 @@
     </div>
   </section>
 
-  <!-- HOW BOOKING WORKS -->
+  
+<!-- DOCTORS SECTION (Bounded Sticky Scope) -->
+  <div id="doctors-full-section">
+    <div class="pc-head pc-reveal" style="max-width: 1200px; margin: 0 auto 1.5rem; padding: 0 20px;">
+      <span class="section-tag">Doctors</span>
+      <h2 class="pc-title">Find your doctor</h2>
+      <p class="pc-lead">Choose a doctor, check their timings and book a token.</p>
+    </div>
+    <div id="doctors-anchor"></div>
+    <h2 class="doctors-heading" id="doctors-section">
+      <i data-lucide="stethoscope"></i>
+      Our Doctors
+    </h2>
+
+  <main class="content-inner">
+    {% if not doctors %}
+      <div class="no-doctors">
+        <i data-lucide="circle-alert" style="width:32px;height:32px;color:#bbb;display:block;margin:0 auto 0.5rem;"></i>
+        Doctor list is currently unavailable. Please contact the clinic or try again later.
+      </div>
+    {% else %}
+      {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+
+      {% for group in doctors | groupby('Specialization') %}
+        {% set spec_index = loop.index %}
+        <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}">
+          <h2 class="spec-heading">
+            <i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i>
+            {{ group.grouper }}
+          </h2>
+          <div class="doctor-grid">
+            {% for doc in group.list %}
+              {% set card_id = 'timing-' ~ spec_index ~ '-' ~ loop.index0 %}
+              <article class="doctor-card pc-reveal">
+
+                <!-- Timing popup -->
+                <div class="card-timing-popup" id="{{ card_id }}">
+                  <div class="card-timing-header">
+                    <div class="card-timing-title">
+                      <i data-lucide="clock-3"></i>
+                      {{ doc.Name }}
+                    </div>
+                    <button type="button" class="close-timing" aria-label="Close timings">
+                      <i data-lucide="x"></i>
+                    </button>
+                  </div>
+                  <ul class="timing-list">
+                    {% for day in day_order %}
+                      {% set t = doc.DayTimes.get(day) if doc.DayTimes else None %}
+                      <li>
+                        <span class="timing-day">
+                          <i data-lucide="calendar-days"></i>
+                          <span class="full-day">{{ day }}</span>
+                          <span class="short-day">{{ day[:3] }}</span>
+                        </span>
+                        {% if day not in doc.Days %}
+                          <span class="timing-na">Not working</span>
+                        {% elif t %}
+                          <span class="timing-time">{{ t }}</span>
+                        {% else %}
+                          <span class="timing-na">Time not set</span>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+
+                <!-- Doctor image -->
+                <div class="doctor-img">
+                  {% if doc.Image %}
+                    <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" decoding="async" />
+                  {% else %}
+                    <img src="{{ url_for('static', filename='doctor_images/default.png') }}"
+                         alt="No image" loading="lazy" decoding="async" />
+                  {% endif %}
+                </div>
+
+                <!-- Doctor info -->
+                <div class="doctor-info">
+                  <h4>{{ doc.Name }}</h4>
+                  <p class="doctor-meta">
+                    <i data-lucide="stethoscope"></i>
+                    {{ doc.Specialization }}
+                  </p>
+                  <div class="pc-days">
+                    {% for day in day_order %}
+                    <span class="pc-day {{ 'on' if day in doc.Days else 'off' }}">{{ day[:3] }}</span>
+                    {% endfor %}
+                  </div>
+                  <div class="doctor-actions">
+                    <button type="button" class="btn-timing" data-target="{{ card_id }}">
+                      <i data-lucide="clock"></i>
+                      View timings
+                    </button>
+                    <a class="btn btn-primary pc-card-book" href="/booking?doctor={{ (doc.id or doc.Name) | urlencode }}">Book Appointment</a>
+                  </div>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% endfor %}
+    {% endif %}
+  </main>
+  </div>
+
+  
+<!-- HOW BOOKING WORKS -->
   <section class="pc-how" id="how-section">
     <div class="pc-inner">
       <div class="pc-head pc-head--center pc-reveal" style="margin-bottom: 2rem;">
@@ -1786,7 +1784,195 @@
     </div>
   </section>
 
-  <!-- HOW IT WORKS MODAL -->
+  
+<section class="home-section" id="heritage-section">
+    <div class="heritage-grid">
+      <div class="heritage-text pc-reveal">
+        <span class="section-tag">About us</span>
+        <h2>{{ settings.promo_heritage_heading | safe }}</h2>
+        <p>{{ settings.promo_heritage_text }}</p>
+        <div class="pc-stats">
+          <div class="pc-stat">
+            <div class="pc-stat-val">{{ settings.departments_count }}+</div>
+            <div class="pc-stat-lbl">Departments</div>
+          </div>
+          <div class="pc-stat">
+            <div class="pc-stat-val">24/7</div>
+            <div class="pc-stat-lbl">Support</div>
+          </div>
+        </div>
+      </div>
+      <div class="heritage-visual pc-reveal" style="background-image: url('{{ settings.promo_heritage_image }}');">
+        <div class="pc-award">
+          <div class="pc-award-ic"><i data-lucide="award"></i></div>
+          <div class="pc-award-text">
+            <h4>{{ settings.promo_award_title }}</h4>
+            <p>{{ settings.promo_award_desc }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  
+<section class="leadership-bg">
+    <div class="home-section">
+      <div class="pc-head pc-head--center pc-reveal" style="margin-bottom: 2rem;">
+        <span class="section-tag">Leadership</span>
+        <h2 class="pc-title">Meet the people behind PrimeCare</h2>
+      </div>
+      <div class="leadership-grid">
+        <div class="leader-card pc-reveal">
+          <div class="leader-img"><img src="{{ settings.promo_leader_1_image }}" alt="{{ settings.promo_leader_1_name }}" loading="lazy" decoding="async"></div>
+          <div class="leader-info">
+            <h3>{{ settings.promo_leader_1_name }}</h3>
+            <span class="leader-role">{{ settings.promo_leader_1_role }}</span>
+            <p class="leader-bio">{{ settings.promo_leader_1_bio }}</p>
+          </div>
+        </div>
+        <div class="leader-card pc-reveal">
+          <div class="leader-img"><img src="{{ settings.promo_leader_2_image }}" alt="{{ settings.promo_leader_2_name }}" loading="lazy" decoding="async"></div>
+          <div class="leader-info">
+            <h3>{{ settings.promo_leader_2_name }}</h3>
+            <span class="leader-role">{{ settings.promo_leader_2_role }}</span>
+            <p class="leader-bio">{{ settings.promo_leader_2_bio }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  
+<section class="home-section" id="visit-section">
+    <div id="contact-section" style="position: absolute; top: -100px;"></div>
+    <div class="visit-card pc-reveal">
+      <div class="visit-info">
+        <span class="section-tag pc-tag-light">Visit us</span>
+        <h2>Find us in Koorachundu</h2>
+        
+        <div class="c-row">
+          <div class="c-icon"><i data-lucide="map-pin"></i></div>
+          <div class="c-text">
+            <h4>Location</h4>
+            <p>{{ settings.clinic_address }}</p>
+          </div>
+        </div>
+        
+        <div class="c-row">
+          <div class="c-icon"><i data-lucide="clock"></i></div>
+          <div class="c-text">
+            <h4>Working Hours</h4>
+            <p>08:00 AM - 09:00 PM</p>
+          </div>
+        </div>
+
+        <div class="c-row">
+          <div class="c-icon"><i data-lucide="phone-call"></i></div>
+          <div class="c-text">
+            <h4>Phone Number</h4>
+            <p><a href="tel:{{ settings.clinic_phone | replace(' ','') }}" style="color:#fff; text-decoration:none;">{{ settings.clinic_phone }}</a></p>
+          </div>
+        </div>
+
+        <div class="action-pill-container">
+          <a href="{{ settings.clinic_map_link }}" target="_blank" rel="noopener" class="action-pill pill-directions">
+            <i data-lucide="navigation"></i> Get Directions
+          </a>
+          <a href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" rel="noopener" class="action-pill pill-whatsapp">
+            <svg style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp Enquiry
+          </a>
+        </div>
+      </div>
+      <div class="visit-visual pc-reveal">
+        <div style="background-image: url('{{ settings.promo_facility_image }}');"></div>
+        <div style="position: absolute; inset: 0; background: linear-gradient(to right, var(--pc-navy) 0%, transparent 100%);"></div>
+        <div style="position: absolute; bottom: 20px; left: 20px; color:#fff;">
+          <div style="display:flex; align-items:center; gap:0.5rem; opacity:0.8; font-size: 0.8rem; margin-bottom: 0.2rem;">
+            <i data-lucide="shield-check" style="width:14px;"></i> Verified Facility
+          </div>
+          <div style="font-weight:900; font-size: 1.4rem;">PrimeCare Clinic</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  
+<!-- CLOSING BANNER -->
+  <section class="pc-cta pc-reveal">
+    <div class="pc-cta-box">
+      <div class="pc-cta-text">
+        <h2>Ready to see a doctor?</h2>
+        <p>Choose your doctor, pick a time and get your digital token instantly.</p>
+      </div>
+      <a class="btn pc-btn-amber" href="/booking">Book Appointment</a>
+    </div>
+  </section>
+
+  
+<footer class="site-footer-pro">
+    <div class="f-content">
+      <div class="f-col f-brand pc-reveal">
+        <h2>PrimeCare Clinic</h2>
+        <p class="f-blurb">Trusted healthcare for Koorachundu since 2012. Your health is our mission.</p>
+        <div class="f-socials">
+          <i data-lucide="instagram"></i>
+          <i data-lucide="facebook"></i>
+          <i data-lucide="twitter"></i>
+        </div>
+      </div>
+      <div class="f-col pc-reveal">
+        <h4>Navigation</h4>
+        <ul class="f-links">
+          <li><a href="/">Home</a></li>
+          {% if user %}
+            <li><a href="/patient_dashboard">My Profile</a></li>
+          {% else %}
+            <li><a href="#" onclick="openAuthModal('login')">Login</a></li>
+          {% endif %}
+          {% if session.get('admin_logged_in') %}
+          <li><a href="/admin" id="adminLoginDiv" style="color: #6366f1; font-weight: bold;">Admin Panel</a></li>
+          {% else %}
+          <li><a href="/admin" id="adminLoginDiv">Admin Login</a></li>
+          {% endif %}
+          <li><a href="#doctors-anchor">Doctors</a></li>
+          <li><a href="#contact-section">Contact</a></li>          
+          <li><a href="#heritage-section">About Us</a></li>
+        </ul>
+      </div>
+ 
+      <div class="f-col pc-reveal">
+        <h4>Contact Us</h4>
+        <div class="f-contact-info">
+          PrimeCare Clinic<br>
+          {{ settings.clinic_address }}<br><br>
+          Phone: <a href="tel:{{ settings.clinic_phone | replace(' ','') }}" style="color:inherit; text-decoration:none;">{{ settings.clinic_phone }}</a>
+        </div>
+      </div>
+    </div>
+    <div class="pc-copy">
+      <p>© 2026 PrimeCare Clinic. All rights reserved.</p>
+    </div>
+  </footer>
+
+  
+<!-- MOBILE ACTION BAR (Max-width 767px) -->
+  <nav class="pc-actionbar" aria-label="Quick actions">
+    <a class="pc-ab-item" href="tel:{{ settings.clinic_phone | replace(' ','') }}">
+      <i data-lucide="phone"></i>
+      <span>Call</span>
+    </a>
+    <a class="pc-ab-item pc-ab-book" href="/booking">
+      <i data-lucide="calendar-plus"></i>
+      <span>Book</span>
+    </a>
+    <a class="pc-ab-item" href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" rel="noopener">
+      <svg style="width:22px; height:22px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      <span>WhatsApp</span>
+    </a>
+  </nav>
+
+
+<!-- HOW IT WORKS MODAL -->
   <div class="info-modal-overlay" id="infoModal" role="dialog" aria-modal="true" aria-label="How booking works">
     <div class="info-modal">
       <button class="info-modal-close" id="infoModalClose" aria-label="Close">
@@ -1822,7 +2008,8 @@
     </div>
   </div>
 
-  <!-- PATIENT AUTH MODAL -->
+  
+<!-- PATIENT AUTH MODAL -->
   <div class="auth-modal-overlay" id="authModal">
     <div class="auth-modal" style="position: relative;">
       <!-- Reciprocal Portal Navigation (Doctor stethoscope <-> Patient user icon) -->
@@ -2023,183 +2210,7 @@
     </div>
   </div>
 
-  <!-- DOCTORS SECTION (Bounded Sticky Scope) -->
-  <div id="doctors-full-section">
-    <div class="pc-head pc-reveal" style="max-width: 1200px; margin: 0 auto 1.5rem; padding: 0 20px;">
-      <span class="section-tag">Doctors</span>
-      <h2 class="pc-title">Find your doctor</h2>
-      <p class="pc-lead">Choose a doctor, check their timings and book a token.</p>
-    </div>
-    <div id="doctors-anchor"></div>
-    <h2 class="doctors-heading" id="doctors-section">
-      <i data-lucide="stethoscope"></i>
-      Our Doctors
-    </h2>
-
-  <main class="content-inner">
-    {% if not doctors %}
-      <div class="no-doctors">
-        <i data-lucide="circle-alert" style="width:32px;height:32px;color:#bbb;display:block;margin:0 auto 0.5rem;"></i>
-        Doctor list is currently unavailable. Please contact the clinic or try again later.
-      </div>
-    {% else %}
-      {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
-
-      {% for group in doctors | groupby('Specialization') %}
-        {% set spec_index = loop.index %}
-        <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}">
-          <h2 class="spec-heading">
-            <i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i>
-            {{ group.grouper }}
-          </h2>
-          <div class="doctor-grid">
-            {% for doc in group.list %}
-              {% set card_id = 'timing-' ~ spec_index ~ '-' ~ loop.index0 %}
-              <article class="doctor-card pc-reveal">
-
-                <!-- Timing popup -->
-                <div class="card-timing-popup" id="{{ card_id }}">
-                  <div class="card-timing-header">
-                    <div class="card-timing-title">
-                      <i data-lucide="clock-3"></i>
-                      {{ doc.Name }}
-                    </div>
-                    <button type="button" class="close-timing" aria-label="Close timings">
-                      <i data-lucide="x"></i>
-                    </button>
-                  </div>
-                  <ul class="timing-list">
-                    {% for day in day_order %}
-                      {% set t = doc.DayTimes.get(day) if doc.DayTimes else None %}
-                      <li>
-                        <span class="timing-day">
-                          <i data-lucide="calendar-days"></i>
-                          <span class="full-day">{{ day }}</span>
-                          <span class="short-day">{{ day[:3] }}</span>
-                        </span>
-                        {% if day not in doc.Days %}
-                          <span class="timing-na">Not working</span>
-                        {% elif t %}
-                          <span class="timing-time">{{ t }}</span>
-                        {% else %}
-                          <span class="timing-na">Time not set</span>
-                        {% endif %}
-                      </li>
-                    {% endfor %}
-                  </ul>
-                </div>
-
-                <!-- Doctor image -->
-                <div class="doctor-img">
-                  {% if doc.Image %}
-                    <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" decoding="async" />
-                  {% else %}
-                    <img src="{{ url_for('static', filename='doctor_images/default.png') }}"
-                         alt="No image" loading="lazy" decoding="async" />
-                  {% endif %}
-                </div>
-
-                <!-- Doctor info -->
-                <div class="doctor-info">
-                  <h4>{{ doc.Name }}</h4>
-                  <p class="doctor-meta">
-                    <i data-lucide="stethoscope"></i>
-                    {{ doc.Specialization }}
-                  </p>
-                  <div class="pc-days">
-                    {% for day in day_order %}
-                    <span class="pc-day {{ 'on' if day in doc.Days else 'off' }}">{{ day[:3] }}</span>
-                    {% endfor %}
-                  </div>
-                  <div class="doctor-actions">
-                    <button type="button" class="btn-timing" data-target="{{ card_id }}">
-                      <i data-lucide="clock"></i>
-                      View timings
-                    </button>
-                    <a class="btn btn-primary pc-card-book" href="/booking">Book Appointment</a>
-                  </div>
-                </div>
-              </article>
-            {% endfor %}
-          </div>
-        </section>
-      {% endfor %}
-    {% endif %}
-  </main>
-  </div>
-
-  <!-- CLOSING BANNER -->
-  <section class="pc-cta pc-reveal">
-    <div class="pc-cta-box">
-      <div class="pc-cta-text">
-        <h2>Ready to see a doctor?</h2>
-        <p>Choose your doctor, pick a time and get your digital token instantly.</p>
-      </div>
-      <a class="btn pc-btn-amber" href="/booking">Book Appointment</a>
-    </div>
-  </section>
-
-  <footer class="site-footer-pro">
-    <div class="f-content">
-      <div class="f-col f-brand pc-reveal">
-        <h2>PrimeCare Clinic</h2>
-        <p class="f-blurb">Trusted healthcare for Koorachundu since 2012. Your health is our mission.</p>
-        <div class="f-socials">
-          <i data-lucide="instagram"></i>
-          <i data-lucide="facebook"></i>
-          <i data-lucide="twitter"></i>
-        </div>
-      </div>
-      <div class="f-col pc-reveal">
-        <h4>Navigation</h4>
-        <ul class="f-links">
-          <li><a href="/">Home</a></li>
-          {% if user %}
-            <li><a href="/patient_dashboard">My Profile</a></li>
-          {% else %}
-            <li><a href="#" onclick="openAuthModal('login')">Login</a></li>
-          {% endif %}
-          {% if session.get('admin_logged_in') %}
-          <li><a href="/admin" id="adminLoginDiv" style="color: #6366f1; font-weight: bold;">Admin Panel</a></li>
-          {% else %}
-          <li><a href="/admin" id="adminLoginDiv">Admin Login</a></li>
-          {% endif %}
-          <li><a href="#doctors-anchor">Doctors</a></li>
-          <li><a href="#contact-section">Contact</a></li>          
-          <li><a href="#heritage-section">About Us</a></li>
-        </ul>
-      </div>
- 
-      <div class="f-col pc-reveal">
-        <h4>Contact Us</h4>
-        <div class="f-contact-info">
-          PrimeCare Clinic<br>
-          {{ settings.clinic_address }}<br><br>
-          Phone: <a href="tel:{{ settings.clinic_phone | replace(' ','') }}" style="color:inherit; text-decoration:none;">{{ settings.clinic_phone }}</a>
-        </div>
-      </div>
-    </div>
-    <div class="pc-copy">
-      <p>© 2026 PrimeCare Clinic. All rights reserved.</p>
-    </div>
-  </footer>
-
-  <!-- MOBILE ACTION BAR (Max-width 767px) -->
-  <nav class="pc-actionbar" aria-label="Quick actions">
-    <a class="pc-ab-item" href="tel:{{ settings.clinic_phone | replace(' ','') }}">
-      <i data-lucide="phone"></i>
-      <span>Call</span>
-    </a>
-    <a class="pc-ab-item pc-ab-book" href="/booking">
-      <i data-lucide="calendar-plus"></i>
-      <span>Book</span>
-    </a>
-    <a class="pc-ab-item" href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" rel="noopener">
-      <svg style="width:22px; height:22px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      <span>WhatsApp</span>
-    </a>
-  </nav>
-
+  
   <script>
     // Init Lucide icons
     lucide.createIcons();

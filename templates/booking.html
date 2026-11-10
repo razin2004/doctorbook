@@ -7296,6 +7296,24 @@
           }, 400);
         }
       }
+
+      const doctorParam = urlParams.get('doctor');
+      if (doctorParam) {
+        showSection('bookDoctor', document.getElementById('panelDoctor'));
+        const doctorSelect = document.getElementById('doctorSelect');
+        if (doctorSelect) {
+          const docTarget = decodeURIComponent(doctorParam).trim().toLowerCase();
+          for (let i = 0; i < doctorSelect.options.length; i++) {
+            const optVal = String(doctorSelect.options[i].value || '').toLowerCase();
+            const optTxt = String(doctorSelect.options[i].textContent || '').toLowerCase();
+            if (optVal === docTarget || (docTarget && (optTxt.includes(docTarget) || docTarget.includes(optVal)))) {
+              doctorSelect.selectedIndex = i;
+              doctorSelect.dispatchEvent(new Event('change'));
+              break;
+            }
+          }
+        }
+      }
       {% endif %}
 
       // 5. Restore last active admin panel if we are in admin section

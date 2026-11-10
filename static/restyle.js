@@ -37,3 +37,4 @@
   if (fab) setTimeout(function () { var p = d.getElementById('aiChatPanel'); if (!p || p.classList.contains('open')) return;
     fab.classList.add('pc-nudge'); fab.addEventListener('animationend', function () { fab.classList.remove('pc-nudge'); }, { once: true }); }, 5000);
 })();
+

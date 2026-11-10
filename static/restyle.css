@@ -194,7 +194,14 @@ header.top-bar {
   }
 
   .brand-sub {
-    display: none !important;
+    display: block !important;
+    font-size: 11px !important;
+    color: var(--pc-muted) !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   /* Override 520px trap: top-actions stays single horizontal row */
@@ -249,16 +256,9 @@ header.top-bar {
     border: 0 !important;
   }
 
-  /* Book Now Button on Mobile Header */
+  /* Book Now Button on Mobile Header - hidden per user request, only login button */
   .top-actions .btn-primary {
-    height: 44px !important;
-    min-height: 44px !important;
-    padding: 0 16px !important;
-    font-size: 14px !important;
-    font-weight: 700 !important;
-    border-radius: 12px !important;
-    min-width: 0 !important;
-    white-space: nowrap !important;
+    display: none !important;
   }
 
   .admin-dropdown-menu {
@@ -991,51 +991,19 @@ header.top-bar {
 
 /* ─── STEP 0. SECTION ORDER & BASE LAYOUT ─── */
 body {
-  display: flex !important;
-  flex-direction: column !important;
+  display: block !important;
   min-height: 100dvh !important;
 }
 
-/* In-flow top-level blocks must span full width in flex-col */
+/* In-flow top-level blocks span full width */
 .home-section,
 .leadership-bg,
 #doctors-full-section,
 .content-inner,
 .pc-how,
-.pc-cta,
 .site-footer-pro {
   width: 100% !important;
   box-sizing: border-box !important;
-}
-
-/* Header, ticker, hero, trust strip stay order 0 */
-.top-bar { order: 0 !important; }
-#liveTicker { order: 0 !important; }
-.hero-premium { order: 0 !important; }
-.trust-strip { order: 0 !important; }
-
-/* Mobile order (max-width 767px) - Doctors & Booking first */
-@media (max-width: 767px) {
-  #doctors-full-section { order: 10 !important; }
-  .pc-how { order: 20 !important; }
-  #services-grid { order: 30 !important; }
-  #heritage-section { order: 40 !important; }
-  .leadership-bg { order: 50 !important; }
-  #visit-section { order: 60 !important; }
-  .pc-cta { order: 70 !important; }
-  .site-footer-pro { order: 80 !important; }
-}
-
-/* Tablet & Desktop order (min-width: 768px) - Departments first */
-@media (min-width: 768px) {
-  #services-grid { order: 10 !important; }
-  #doctors-full-section { order: 20 !important; }
-  .pc-how { order: 30 !important; }
-  #heritage-section { order: 40 !important; }
-  .leadership-bg { order: 50 !important; }
-  #visit-section { order: 60 !important; }
-  .pc-cta { order: 70 !important; }
-  .site-footer-pro { order: 80 !important; }
 }
 
 :root {
@@ -1094,19 +1062,62 @@ body {
 /* ─── STEP 1. DEPARTMENTS (COMPACT CARDS PER USER REQUEST) ─── */
 .dept-grid {
   display: grid !important;
-  grid-template-columns: 1fr !important;
-  gap: 12px !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
 }
 @media (min-width: 768px) and (max-width: 1023px) {
   .dept-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 16px !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 14px !important;
   }
 }
 @media (min-width: 1024px) {
   .dept-grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
-    gap: 18px !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+  }
+}
+
+/* Mobile: Odd last card spans full row */
+@media (max-width: 767px) {
+  .dept-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1 !important;
+  }
+  .dept-card {
+    padding: 10px 12px !important;
+    gap: 10px !important;
+  }
+  .dept-icon {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  .dept-icon svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .dept-info h4 {
+    font-size: 13px !important;
+  }
+  .dept-info p {
+    font-size: 11px !important;
+  }
+}
+
+/* Tablet: 3n+1 lone last card spans full row */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .dept-card:last-child:nth-child(3n + 1) {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+/* Desktop: 4 columns - 1 lone card spans 4 columns, or 2 last cards each span 2 columns */
+@media (min-width: 1024px) {
+  .dept-card:last-child:nth-child(4n + 1) {
+    grid-column: 1 / -1 !important;
+  }
+  .dept-card:nth-last-child(2):nth-child(4n + 1),
+  .dept-card:last-child:nth-child(4n + 2) {
+    grid-column: span 2 !important;
   }
 }
 
@@ -1244,19 +1255,114 @@ body {
 }
 .doctor-grid {
   display: grid !important;
-  grid-template-columns: 1fr !important;
-  gap: 20px !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
 }
 @media (min-width: 768px) and (max-width: 1023px) {
   .doctor-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 20px !important;
+    gap: 18px !important;
   }
 }
 @media (min-width: 1024px) {
   .doctor-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 24px !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 20px !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .doctor-card {
+    min-height: 0 !important;
+    border-radius: 16px !important;
+  }
+  .doctor-img {
+    aspect-ratio: 1 / 1 !important;
+  }
+  .doctor-info {
+    padding: 10px 10px 12px !important;
+  }
+  .doctor-info h4 {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    margin: 0 0 2px !important;
+    line-height: 1.25 !important;
+  }
+  .doctor-meta {
+    font-size: 11px !important;
+    margin: 0 0 4px !important;
+    gap: 4px !important;
+  }
+  .doctor-meta svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
+  .pc-days {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    gap: 2px !important;
+    margin: 4px 0 8px !important;
+  }
+  .pc-day {
+    height: 18px !important;
+    font-size: 9px !important;
+    border-radius: 4px !important;
+  }
+  .doctor-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+  }
+  .doctor-actions .btn-timing {
+    height: 30px !important;
+    min-height: 30px !important;
+    font-size: 11px !important;
+    padding: 0 6px !important;
+    border-radius: 8px !important;
+  }
+  .doctor-actions .pc-card-book {
+    height: 32px !important;
+    min-height: 32px !important;
+    font-size: 11px !important;
+    padding: 0 6px !important;
+    border-radius: 8px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .doctor-card {
+    min-height: 0 !important;
+    border-radius: 20px !important;
+  }
+  .doctor-info {
+    padding: 16px !important;
+  }
+  .doctor-info h4 {
+    font-size: 18px !important;
+    margin: 0 0 4px !important;
+  }
+  .doctor-meta {
+    font-size: 13px !important;
+    margin: 0 0 6px !important;
+  }
+  .pc-days {
+    gap: 4px !important;
+    margin-top: 8px !important;
+    margin-bottom: 12px !important;
+  }
+  .pc-day {
+    height: 24px !important;
+    font-size: 10px !important;
+    border-radius: 6px !important;
+  }
+  .doctor-actions {
+    gap: 8px !important;
+  }
+  .doctor-actions .btn-timing,
+  .doctor-actions .pc-card-book {
+    height: 38px !important;
+    min-height: 38px !important;
+    font-size: 12px !important;
   }
 }
 .doctor-card {
@@ -1854,20 +1960,16 @@ body {
 }
 .leader-card {
   display: flex !important;
-  align-items: stretch !important;
-  padding: 0 !important;
-  gap: 0 !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  padding: 14px !important;
+  gap: 14px !important;
   overflow: hidden !important;
   background: var(--pc-tint) !important;
   border: 1px solid #e0edf5 !important;
   border-radius: 20px !important;
   text-align: left !important;
   transition: transform var(--pc-fast) var(--pc-ease), border-color var(--pc-fast) var(--pc-ease) !important;
-}
-@media (min-width: 1024px) {
-  .leader-card {
-    border-radius: 24px !important;
-  }
 }
 @media (hover: hover) {
   .leader-card:hover {
@@ -1876,33 +1978,52 @@ body {
   }
 }
 .leader-img {
-  width: 112px !important;
-  height: auto !important;
-  min-height: 168px !important;
-  border-radius: 0 !important;
+  width: 84px !important;
+  height: 84px !important;
+  min-height: 84px !important;
+  max-height: 84px !important;
+  border-radius: 16px !important;
   flex-shrink: 0 !important;
   overflow: hidden !important;
-}
-@media (min-width: 1024px) {
-  .leader-img {
-    width: 220px !important;
-    min-height: 300px !important;
-  }
 }
 .leader-img img {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
-  object-position: 50% 18% !important;
+  border-radius: 16px !important;
   display: block !important;
 }
 .leader-info {
-  padding: 16px !important;
+  padding: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
+  align-items: flex-start !important;
+  text-align: left !important;
   min-width: 0 !important;
   flex: 1 !important;
+}
+
+@media (min-width: 1024px) {
+  .leader-card {
+    border-radius: 24px !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    align-items: stretch !important;
+  }
+  .leader-img {
+    width: 220px !important;
+    height: auto !important;
+    min-height: 300px !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+  }
+  .leader-img img {
+    border-radius: 0 !important;
+  }
+  .leader-info {
+    padding: 32px !important;
+  }
 }
 @media (min-width: 1024px) {
   .leader-info {
@@ -2082,23 +2203,38 @@ body {
     background: rgba(255,255,255,.12) !important;
   }
 }
+.visit-card {
+  align-items: stretch !important;
+}
 .visit-visual {
-  height: 200px !important;
-  min-height: 0 !important;
+  position: relative !important;
+  height: 220px !important;
+  min-height: 220px !important;
   border-radius: 18px !important;
   overflow: hidden !important;
-  position: relative !important;
 }
 @media (min-width: 1024px) {
   .visit-visual {
-    height: auto !important;
+    height: 100% !important;
     min-height: 420px !important;
     border-radius: 20px !important;
   }
 }
+.visit-visual > div:first-child {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-size: cover !important;
+  background-position: center !important;
+  opacity: 0.6 !important;
+  filter: grayscale(20%) !important;
+}
 
 /* ─── STEP 7. CLOSING BANNER ─── */
 .pc-cta {
+  width: auto !important;
+  max-width: 100% !important;
   margin: 0 16px 48px !important;
   box-sizing: border-box !important;
 }
