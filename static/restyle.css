@@ -14,12 +14,43 @@
 
 /* ─── STEP 1. FOUNDATION ─── */
 body {
-  background: var(--pc-tint) !important;
+  background: transparent !important;
   color: var(--pc-ink) !important;
+  min-height: 100vh;
 }
 
-.bg-image, .bg-blur, .bg-overlay {
-  display: none !important;
+.bg-image {
+  display: block !important;
+  position: fixed !important;
+  inset: 0 !important;
+  background-image: url("/static/image/background11.jpeg") !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
+  background-attachment: fixed !important;
+  z-index: -3 !important;
+}
+
+.bg-blur {
+  display: block !important;
+  position: fixed !important;
+  inset: 0 !important;
+  background-image: url("/static/image/background11.jpeg") !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
+  background-attachment: fixed !important;
+  filter: blur(8px) !important;
+  transform: scale(1.03) !important;
+  z-index: -2 !important;
+}
+
+.bg-overlay {
+  display: block !important;
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(255, 255, 255, 0.68) !important;
+  z-index: -1 !important;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -2711,30 +2742,53 @@ body {
 }
 
 /* ─── STEP 2. FLOATING ASSISTANT ─── */
-#aiChatFab {
-  z-index: 9000 !important;
+@keyframes fabPulse {
+  0% {
+    box-shadow: 0 8px 24px rgba(0, 119, 182, 0.45), 0 0 0 0 rgba(0, 119, 182, 0.55);
+  }
+  50% {
+    box-shadow: 0 12px 36px rgba(0, 119, 182, 0.65), 0 0 0 12px rgba(0, 119, 182, 0);
+  }
+  100% {
+    box-shadow: 0 8px 24px rgba(0, 119, 182, 0.45), 0 0 0 0 rgba(0, 119, 182, 0);
+  }
 }
+
+#aiChatFab,
+#adminAiChatFab {
+  z-index: 9000 !important;
+  animation: fabPulse 2.8s ease-in-out infinite !important;
+  cursor: pointer !important;
+}
+
 @media (max-width: 767px) {
-  #aiChatFab {
+  #aiChatFab,
+  #adminAiChatFab {
     width: 56px !important;
     height: 56px !important;
     right: 16px !important;
     bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 16px) !important;
-    animation: none !important;
   }
-  #aiChatFab:active {
+  #aiChatFab:active,
+  #adminAiChatFab:active {
     transform: scale(0.94) !important;
   }
 }
+
 @media (min-width: 768px) {
-  #aiChatFab {
+  #aiChatFab,
+  #adminAiChatFab {
     width: 62px !important;
     height: 62px !important;
     right: 32px !important;
     bottom: 32px !important;
     background: var(--pc-primary) !important;
     border: 3px solid #ffffff !important;
-    box-shadow: var(--pc-sh-btn) !important;
+  }
+  #aiChatFab:hover,
+  #adminAiChatFab:hover {
+    transform: scale(1.08) translateY(-3px) !important;
+    box-shadow: 0 16px 40px rgba(0, 119, 182, 0.6), 0 0 0 14px rgba(0, 119, 182, 0.15) !important;
   }
 }
 .fab-badge {
