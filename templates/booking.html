@@ -3849,12 +3849,42 @@
     let workingDays = [];
     let lastActiveAdminPanel = null; // Track last active admin sub-panel
 
+    function populateAdminBookDocOptions(selectEl, doctors) {
+      if (!selectEl) selectEl = document.getElementById('adminBookDoc');
+      if (!selectEl) return;
+      if (!doctors || !Array.isArray(doctors) || doctors.length === 0) return;
+
+      const prevAdminDoc = selectEl.value;
+      selectEl.innerHTML = "<option value=''>-- Select Doctor --</option>";
+      doctors.forEach(d => {
+        if (!d.Name || !d.Specialization) return;
+        const opt = document.createElement('option');
+        opt.value = d.id || d.doctor_id || '';
+        opt.textContent = `${d.Name} (${d.Specialization})`;
+        const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
+        opt.dataset.days = daysArr.join(',');
+        opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
+        opt.dataset.docName = d.Name;
+        opt.dataset.docSpec = d.Specialization;
+        selectEl.appendChild(opt);
+      });
+      if (prevAdminDoc && Array.from(selectEl.options).some(o => o.value === prevAdminDoc)) {
+        selectEl.value = prevAdminDoc;
+      }
+    }
+
     function populateDoctorDropdowns(doctors) {
       if (!doctors || !Array.isArray(doctors) || doctors.length === 0) return;
       const doctorSelect = document.getElementById('doctorSelect');
       const specSelect   = document.getElementById('specSelect');
       const adminBookDoc = document.getElementById('adminBookDoc');
 
+      // 1. Populate adminBookDoc directly from doctors data
+      if (adminBookDoc) {
+        populateAdminBookDocOptions(adminBookDoc, doctors);
+      }
+
+      // 2. Populate patient dropdowns if present in DOM
       if (doctorSelect) {
         const prevVal = doctorSelect.value;
         doctorSelect.innerHTML = "<option value=''>-- Select Doctor --</option>";
@@ -3890,17 +3920,6 @@
           }
         }
 
-        if (adminBookDoc) {
-          const prevAdminDoc = adminBookDoc.value;
-          adminBookDoc.innerHTML = "<option value=''>-- Select Doctor --</option>";
-          Array.from(doctorSelect.options).forEach(opt => {
-            if (opt.value) adminBookDoc.appendChild(opt.cloneNode(true));
-          });
-          if (prevAdminDoc && Array.from(adminBookDoc.options).some(o => o.value === prevAdminDoc)) {
-            adminBookDoc.value = prevAdminDoc;
-          }
-        }
-
         if (prevVal && Array.from(doctorSelect.options).some(o => o.value === prevVal)) {
           doctorSelect.value = prevVal;
         }
@@ -3914,6 +3933,11 @@
       const leavesSelect = document.getElementById('leaveDoctorSelect');
       const cancelSelect = document.getElementById('cancelBookingDoctorSelect');
       const deleteSelect = document.getElementById('deleteDoctorSelect');
+      const adminBookDoc = document.getElementById('adminBookDoc');
+
+      if (adminBookDoc) {
+        populateAdminBookDocOptions(adminBookDoc, doctors);
+      }
 
       if (!select && !viewSelect && !leavesSelect && !cancelSelect && !deleteSelect) return;
 
@@ -5906,27 +5930,31 @@
     async function loadDoctorsForAdminBooking() {
       const select = document.getElementById('adminBookDoc');
       if (!select) return;
-      
-      // Use existing loadDoctors to ensure data is fresh
-      await loadDoctors(); 
-      
-      const mainSelect = document.getElementById('doctorSelect');
-      if (!mainSelect) return;
-      
-      select.innerHTML = "<option value=''>-- Select Doctor --</option>";
-      // Copy options from the main doctor select
-      Array.from(mainSelect.options).forEach(opt => {
-        if (opt.value) {
-          const newOpt = opt.cloneNode(true);
-          select.appendChild(newOpt);
-        }
-      });
-      
+
       // Set min date to today
       const dateInput = document.getElementById('adminBookDate');
       if (dateInput) {
         const today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'});
         dateInput.setAttribute('min', today);
+      }
+
+      // 1. Immediately populate from preloaded cache if available
+      if (window.__PRELOADED_DOCTORS__ && Array.isArray(window.__PRELOADED_DOCTORS__) && window.__PRELOADED_DOCTORS__.length > 0) {
+        populateAdminBookDocOptions(select, window.__PRELOADED_DOCTORS__);
+      }
+
+      // 2. Fetch fresh doctors from server
+      try {
+        const res = await fetch('/get_doctors');
+        if (res.ok) {
+          const freshDoctors = await res.json();
+          if (Array.isArray(freshDoctors) && freshDoctors.length > 0) {
+            window.__PRELOADED_DOCTORS__ = freshDoctors;
+            populateAdminBookDocOptions(select, freshDoctors);
+          }
+        }
+      } catch (err) {
+        console.error("Error refreshing doctors for admin booking:", err);
       }
     }
 
@@ -6122,8 +6150,10 @@
 
     document.getElementById('adminBookPatientForm')?.addEventListener('submit', async e => {
       e.preventDefault();
+      const docSelect = document.getElementById('adminBookDoc');
       const payload = {
-        sheet_url: document.getElementById('adminBookDoc').value,
+        sheet_url: docSelect ? docSelect.value : '',
+        doctor_id: docSelect ? docSelect.value : '',
         date: document.getElementById('adminBookDate').value,
         name: document.getElementById('adminBookName').value.trim(),
         age: document.getElementById('adminBookAge').value.trim(),
