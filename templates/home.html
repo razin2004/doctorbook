@@ -164,17 +164,10 @@
     /* ── FLOATING LIVE TICKER OVERLAY (NON-STICKY) ── */
     #liveTicker {
       position: relative; top: 0; left: 0; right: 0;
-      z-index: 90; height: 32px;
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      background: rgba(3, 4, 94, 0.7);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      z-index: 90;
       display: none; align-items: center;
-      pointer-events: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       margin-top: 0;
     }
-    #liveTicker .ticker-item { color: #fff; font-weight: 500; font-size: 0.78rem; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-    #liveTicker .status-dot.live { background: #10b981; box-shadow: 0 0 8px #10b981; }
     
     
     .banner-left { flex: 1; display: flex; flex-direction: column; gap: 2px; }
@@ -893,39 +886,38 @@
     /* ── LIVE STATUS TICKER ── */
     .ticker-wrapper {
       width: 100%;
-      background: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      border-bottom: 1px solid rgba(0, 119, 182, 0.1);
       overflow: hidden;
-      height: 48px;
-      display: none; /* Hidden by default, shown by JS if docs exist */
+      display: none;
       align-items: center;
       position: relative;
       z-index: 90;
     }
     .ticker-container {
       display: flex;
+      align-items: center;
+      height: 100%;
       white-space: nowrap;
-      animation: ticker-slide 60s linear infinite;
-      padding-left: 100%; /* Start off-screen */
+      animation: ticker-slide 35s linear infinite;
     }
     .ticker-container:hover { animation-play-state: paused; }
     
     .ticker-item {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 12px;
-      padding: 0 40px;
+      gap: 10px;
+      padding: 0 28px;
       font-size: 0.88rem;
       font-weight: 600;
-      color: #334155;
+      color: #ffffff;
+      flex-shrink: 0;
     }
     .status-dot {
       width: 10px; height: 10px; border-radius: 50%;
       position: relative;
+      flex-shrink: 0;
     }
-    .status-dot.live { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
-    .status-dot.upcoming { background: #0077b6; box-shadow: 0 0 10px rgba(0, 119, 182, 0.4); }
+    .status-dot.live { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.6); }
+    .status-dot.upcoming { background: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.6); }
     
     .status-dot::after {
       content: '';
@@ -939,17 +931,11 @@
     
     @keyframes ticker-slide {
       0% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
+      100% { transform: translateX(-50%); }
     }
     @keyframes status-pulse {
       0% { transform: scale(1); opacity: 0.4; }
       100% { transform: scale(2.4); opacity: 0; }
-    }
-
-    /* Mobile adjustments */
-    @media (max-width: 600px) {
-        .ticker-wrapper { height: 42px; }
-        .ticker-item { font-size: 0.82rem; padding: 0 25px; }
     }
 
     /* Admin profile dropdown styling */
@@ -1392,7 +1378,7 @@
     }
 
   </style>
-  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.3">
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.4">
 </head>
 
 <body>
@@ -3297,30 +3283,60 @@
           if (data.success) {
             let tickerItems = [];
 
-            // 1. Admin Messages (Always show if present)
+            // 1. Admin Broadcast Announcements (Always show if present)
             if (data.admin_messages && data.admin_messages.length > 0) {
               data.admin_messages.forEach(msg => {
                 let dotColor = '#f59e0b';
-                if (msg.color_dot === 'red') dotColor = '#ef4444';
-                else if (msg.color_dot === 'green') dotColor = '#10b981';
+                let badgeBg = 'rgba(245, 158, 11, 0.25)';
+                let badgeBorder = '#f59e0b';
+                let badgeText = 'ANNOUNCEMENT';
+                if (msg.color_dot === 'red') {
+                  dotColor = '#ef4444';
+                  badgeBg = 'rgba(239, 68, 68, 0.3)';
+                  badgeBorder = '#ef4444';
+                  badgeText = 'URGENT';
+                } else if (msg.color_dot === 'green') {
+                  dotColor = '#10b981';
+                  badgeBg = 'rgba(16, 185, 129, 0.3)';
+                  badgeBorder = '#10b981';
+                  badgeText = 'NOTICE';
+                }
                 
                 tickerItems.push(`
-                  <div class="ticker-item">
-                    <div class="status-dot live" style="background:${dotColor}; box-shadow: 0 0 8px ${dotColor};"></div>
-                    <span>${msg.content}</span>
+                  <div class="ticker-item ticker-broadcast-item">
+                    <span class="ticker-badge" style="background:${badgeBg}; color:#fff; border: 1px solid ${badgeBorder};">${badgeText}</span>
+                    <div class="status-dot live" style="background:${dotColor}; box-shadow: 0 0 10px ${dotColor};"></div>
+                    <span style="color:#ffffff; font-weight:600;">${msg.content}</span>
                   </div>
                 `);
               });
             }
 
-            // 2. Holiday Messages + Doctor Statuses (Skip if solo_mode)
+            // 2. Doctor-Specific Broadcast Alerts (e.g. delays, emergency duty)
+            if (!data.solo_mode && data.data && data.data.length > 0) {
+              data.data.forEach(d => {
+                if (d.broadcast_message && d.broadcast_message.trim()) {
+                  const docDisplay = d.doctor_name.toLowerCase().startsWith('dr') ? d.doctor_name : `Dr. ${d.doctor_name}`;
+                  tickerItems.push(`
+                    <div class="ticker-item ticker-doc-broadcast">
+                      <span class="ticker-badge" style="background:rgba(245, 158, 11, 0.3); color:#fff; border: 1px solid #f59e0b;">DOCTOR ALERT</span>
+                      <div class="status-dot live" style="background:#f59e0b; box-shadow: 0 0 10px #f59e0b;"></div>
+                      <span style="color:#ffffff; font-weight:600;"><strong>${docDisplay}:</strong> ${d.broadcast_message.trim()}</span>
+                    </div>
+                  `);
+                }
+              });
+            }
+
+            // 3. Holiday Messages + Doctor Statuses (Skip if solo_mode)
             if (!data.solo_mode) {
               // 🔴 Today Holiday
               if (data.today_holiday) {
                 tickerItems.push(`
-                  <div class="ticker-item" style="color:#ef4444;">
-                    <div class="status-dot live" style="background:#ef4444;"></div>
-                    <span><b>Clinic is closed today: ${data.today_holiday}</b></span> 
+                  <div class="ticker-item" style="color:#ffffff;">
+                    <span class="ticker-badge" style="background:rgba(239, 68, 68, 0.35); color:#fff; border: 1px solid #ef4444;">CLOSED TODAY</span>
+                    <div class="status-dot live" style="background:#ef4444; box-shadow: 0 0 10px #ef4444;"></div>
+                    <span style="color:#ffffff; font-weight:700;">Clinic is closed today: ${data.today_holiday}</span> 
                   </div>
                 `);
               }
@@ -3328,9 +3344,10 @@
               // 🟠 Tomorrow Holiday
               if (data.tomorrow_holiday) {
                 tickerItems.push(`
-                  <div class="ticker-item" style="color:#f97316;">
-                    <div class="status-dot upcoming" style="background:#f97316;"></div>
-                    <span><b>Clinic will be closed tomorrow: ${data.tomorrow_holiday}</b></span>
+                  <div class="ticker-item" style="color:#ffffff;">
+                    <span class="ticker-badge" style="background:rgba(249, 115, 22, 0.35); color:#fff; border: 1px solid #f97316;">HOLIDAY TOMORROW</span>
+                    <div class="status-dot upcoming" style="background:#f97316; box-shadow: 0 0 10px #f97316;"></div>
+                    <span style="color:#ffffff; font-weight:700;">Clinic will be closed tomorrow: ${data.tomorrow_holiday}</span>
                   </div>
                 `);
               }
@@ -3378,16 +3395,13 @@
                     // Time Parsing logic
                     let timeMsg = "";
                     try {
-                      // Support both " - " and "-" separators
                       const times = d.time.split(/\s*-\s*/);
                       if (times.length === 2) {
                         const start = parseTime(times[0]);
                         const end = parseTime(times[1]);
                         
-                        // 1. SKIP if current time is past the end time (e.g. shift over)
                         if (currentMin > end.min) return;
 
-                        // 2. SKIP if not live and more than 60 minutes away
                         const minDiff = start.min - currentMin;
                         if (!isLive && minDiff > 60) return;
 
@@ -3410,7 +3424,7 @@
                     tickerItems.push(`
                       <div class="ticker-item">
                         <div class="status-dot ${dotClass}"></div>
-                        <span>${docDisplay} ${timeMsg}</span>
+                        <span style="color:#ffffff;">${docDisplay} ${timeMsg}</span>
                       </div>
                     `);
                   }
@@ -3422,13 +3436,14 @@
               tickerWrapper.classList.add('has-messages');
               tickerWrapper.style.setProperty('display', 'flex', 'important');
               
-              const html = tickerItems.join('');
-              // Triple the content to ensure smooth seamless looping
-              tickerContent.innerHTML = html + html + html;
+              const singleHtml = tickerItems.join('');
+              // Repeat items for seamless continuous looping
+              const html = singleHtml + singleHtml + singleHtml + singleHtml;
+              tickerContent.innerHTML = html;
               
-              // Adjust animation speed based on content length
-              const duration = tickerItems.length * 12; // ~12s per item
-              tickerContent.style.animationDuration = `${Math.max(duration, 30)}s`;
+              // Smooth comfortable animation duration
+              const duration = Math.max(tickerItems.length * 9, 25);
+              tickerContent.style.animationDuration = `${duration}s`;
             } else {
               tickerWrapper.classList.remove('has-messages');
               tickerWrapper.style.setProperty('display', 'none', 'important');
@@ -3448,8 +3463,8 @@
       }
 
       updateTicker();
-      // Refresh status every 5 minutes
-      setInterval(updateTicker, 300000);
+      // Refresh status every 60 seconds
+      setInterval(updateTicker, 60000);
     })();
   </script>
 

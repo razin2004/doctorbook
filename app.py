@@ -4936,7 +4936,9 @@ def admin_add_ticker_msg():
         return jsonify({"success": False, "msg": "Message cannot be empty"})
         
     try:
-        start_time = datetime.fromisoformat(start_time_str) if start_time_str else datetime.utcnow()
+        ist = pytz.timezone('Asia/Kolkata')
+        now_default = datetime.now(ist).replace(tzinfo=None)
+        start_time = datetime.fromisoformat(start_time_str) if start_time_str else now_default
         end_time = datetime.fromisoformat(end_time_str) if end_time_str else (start_time + timedelta(days=1))
     except Exception as e:
         return jsonify({"success": False, "msg": f"Invalid date/time format: {e}"})
@@ -4948,7 +4950,8 @@ def admin_add_ticker_msg():
         content=msg_content,
         start_time=start_time,
         end_time=end_time,
-        color_dot=color_dot
+        color_dot=color_dot,
+        is_active=True
     )
     db.session.add(new_msg)
     db.session.commit()
@@ -7575,14 +7578,16 @@ def live_tokens():
         pass
 
     # ── Fetch Admin Messages ──
-    # Only return messages that are active today (start_time <= now <= end_time)
+    # Return messages that are active right now (handling both IST and UTC timestamps gracefully)
     ist = pytz.timezone('Asia/Kolkata')
-    now_naive = datetime.now(ist).replace(tzinfo=None)
+    now_ist = datetime.now(ist).replace(tzinfo=None)
+    now_utc = datetime.utcnow()
     active_msgs = TickerMessage.query.filter(
-        (TickerMessage.start_time == None) | (TickerMessage.start_time <= now_naive),
-        (TickerMessage.end_time == None) | (TickerMessage.end_time >= now_naive)
+        (TickerMessage.is_active == True) | (TickerMessage.is_active == None),
+        (TickerMessage.start_time == None) | (TickerMessage.start_time <= now_ist) | (TickerMessage.start_time <= now_utc),
+        (TickerMessage.end_time == None) | (TickerMessage.end_time >= now_ist) | (TickerMessage.end_time >= now_utc)
     ).all()
-    admin_msgs = [{"content": m.content, "color_dot": m.color_dot or "yellow"} for m in active_msgs]
+    admin_msgs = [{"id": m.id, "content": m.content, "color_dot": m.color_dot or "yellow"} for m in active_msgs]
     solo_setting = AppSettings.query.filter_by(key="ticker_solo_mode").first()
     is_solo = solo_setting.value == "enabled" if solo_setting else False
     

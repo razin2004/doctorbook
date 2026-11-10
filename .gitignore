@@ -10,3 +10,5 @@ instance/*.db
 scratch/
 data/
 .coverage
+vapid_keys.json
+

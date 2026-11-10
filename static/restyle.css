@@ -482,7 +482,7 @@ header.top-bar {
   color: var(--pc-danger) !important;
 }
 
-/* ─── STEP 3. LIVE TICKER ─── */
+/* ─── STEP 3. LIVE TICKER / BROADCAST BAR ─── */
 .ticker-wrapper#liveTicker {
   display: none !important;
   height: 0 !important;
@@ -494,21 +494,75 @@ header.top-bar {
 
 .ticker-wrapper#liveTicker.has-messages {
   display: flex !important;
-  height: 36px !important;
-  background: var(--pc-sky) !important;
-  border-bottom: 1px solid #d3e8f5 !important;
-  padding: 0 16px !important;
-  font-size: 12px !important;
-  color: var(--pc-ink) !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  background: linear-gradient(90deg, #023e8a 0%, #0077b6 50%, #023e8a 100%) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+  z-index: 90 !important;
   align-items: center !important;
+  box-shadow: 0 2px 10px rgba(2, 62, 138, 0.2) !important;
+  pointer-events: auto !important;
 }
 
 @media (min-width: 768px) {
   .ticker-wrapper#liveTicker.has-messages {
-    height: 40px !important;
-    padding: 0 24px !important;
-    font-size: 13px !important;
+    height: 44px !important;
+    min-height: 44px !important;
   }
+}
+
+.ticker-wrapper#liveTicker .ticker-container {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  white-space: nowrap !important;
+  animation: ticker-slide 35s linear infinite !important;
+  padding-left: 16px !important;
+}
+
+.ticker-wrapper#liveTicker .ticker-container:hover {
+  animation-play-state: paused !important;
+  cursor: default !important;
+}
+
+.ticker-wrapper#liveTicker .ticker-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 0 24px !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45) !important;
+  letter-spacing: 0.01em !important;
+  line-height: 1 !important;
+}
+
+.ticker-wrapper#liveTicker .ticker-item span {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.ticker-wrapper#liveTicker .ticker-item b,
+.ticker-wrapper#liveTicker .ticker-item strong {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.ticker-wrapper#liveTicker .ticker-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 8px !important;
+  border-radius: 9999px !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25) !important;
 }
 
 /* ─── STEP 4. HERO ─── */
