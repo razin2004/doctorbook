@@ -4,15 +4,16 @@
   <meta charset="UTF-8" />
   <title>PrimeCare Clinic – Trusted Healthcare</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Book appointments at PrimeCare Clinic. Experienced specialists, online token booking, instant confirmation." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}" />
   <link rel="manifest" href="/static/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -42,200 +43,79 @@
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
       height: 100%; margin: 0; padding: 0; overflow-x: hidden;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #12303A;
+      font-family: 'Inter', system-ui, sans-serif; color: #222;
       -webkit-font-smoothing: antialiased;
     }
-    body { background: #FAFCFC; }
+    body { background: #f0f4f8; }
 
-    /* Background (calm clean canvas) */
-    .bg-image, .bg-blur, .bg-overlay {
-      display: none !important;
+    /* Background */
+    .bg-image {
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover; background-repeat: no-repeat;
+      background-position: center; background-attachment: fixed;
+      position: fixed; inset: 0; z-index: -3;
+    }
+    .bg-blur {
+      position: fixed; inset: 0;
+      background-image: url("{{ url_for('static', filename='image/background11.jpeg') }}");
+      background-size: cover; background-repeat: no-repeat;
+      background-position: center; background-attachment: fixed;
+      filter: blur(8px); z-index: -2;
+    }
+    .bg-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,0.68); z-index: -1;
     }
 
-    /* ── CLINICAL PREMIUM DESIGN TOKENS ── */
-    :root {
-      --pc-teal-deep: #0B5D66;
-      --pc-teal-hover: #08484F;
-      --pc-teal-soft: #E6F4F3;
-      --pc-teal-subtle: #F0F9F8;
-      --pc-amber-accent: #F5B83D;
-      --pc-amber-hover: #DE9E22;
-      --pc-ink: #12303A;
-      --pc-muted: #5B6F78;
-      --pc-border: #DCE8E8;
-      --pc-page-bg: #FAFCFC;
-      --pc-card-bg: #FFFFFF;
-      --pc-success: #1F9D63;
-      --pc-warning: #E6A100;
-      --pc-error: #D64545;
-
-      --pc-shadow-soft: 0 8px 30px rgba(11, 93, 102, 0.08);
-      --pc-shadow-card: 0 10px 32px rgba(11, 93, 102, 0.07);
-      --pc-shadow-hover: 0 16px 40px rgba(11, 93, 102, 0.12);
-
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 20px;
-      --radius-full: 999px;
-
-      /* Backward compatible aliases */
-      --primary: var(--pc-teal-deep);
-      --primary-dark: var(--pc-teal-hover);
-      --primary-soft: var(--pc-teal-soft);
-      --accent: var(--pc-amber-accent);
-      --text-main: var(--pc-ink);
-      --text-muted: var(--pc-muted);
-      --surface: var(--pc-card-bg);
-      --glass: rgba(255, 255, 255, 0.94);
-      --border-light: var(--pc-border);
-      --shadow-premium: var(--pc-shadow-soft);
-    }
-
-    h1, h2, h3, h4, .brand-title, .hero-content h1 {
-      font-family: 'Manrope', 'Inter', system-ui, sans-serif;
-      letter-spacing: -0.02em;
-    }
-
-    /* ── SLIM STICKY TOP BAR ── */
+    /* ── TOP BAR ── */
     .top-bar {
       position: sticky; top: 0; z-index: 1000;
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      background: rgba(255, 255, 255, 0.95);
-      border-bottom: 1px solid var(--pc-border);
-      box-shadow: 0 2px 14px rgba(11, 93, 102, 0.05);
-      transition: all 0.25s ease;
-    }
-    .top-bar.scrolled {
-      box-shadow: 0 4px 20px rgba(11, 93, 102, 0.09);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      background: rgba(255,255,255,0.96);
+      border-bottom: 1px solid rgba(0,119,182,0.1);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }
     .top-bar-inner {
       max-width: 1200px; margin: 0 auto;
-      padding: 0.65rem 1.5rem;
+      padding: 0.6rem 1.5rem;
       display: flex; align-items: center;
-      justify-content: space-between; gap: 1rem;
-      min-height: 64px;
+      justify-content: space-between; gap: 0.75rem;
     }
-    .brand {
-      display: flex; flex-direction: row; align-items: center; gap: 0.65rem;
-      flex-shrink: 1; min-width: 0; text-decoration: none;
-    }
+    .brand { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex-shrink: 1; }
     .brand-title {
-      font-size: 1.35rem; font-weight: 800; color: var(--pc-teal-deep);
-      letter-spacing: -0.02em; white-space: nowrap;
+      font-size: 1.35rem; font-weight: 800; color: #0077b6;
+      letter-spacing: 0.02em; white-space: nowrap;
       overflow: hidden; text-overflow: ellipsis;
     }
     .brand-sub {
-      font-size: 0.76rem; color: var(--pc-muted); font-weight: 500;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .desktop-header-nav {
-      display: flex; align-items: center; gap: 1.4rem;
-    }
-    .header-nav-link {
-      color: var(--pc-ink); text-decoration: none; font-size: 0.92rem;
-      font-weight: 600; padding: 0.35rem 0.2rem; position: relative;
-      transition: color 0.2s ease;
-    }
-    .header-nav-link:hover {
-      color: var(--pc-teal-deep);
-    }
-    .header-nav-link::after {
-      content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px;
-      background: var(--pc-teal-deep); transition: width 0.2s ease; border-radius: 2px;
-    }
-    .header-nav-link:hover::after {
-      width: 100%;
+      font-size: 0.74rem; color: #6b7280; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
     }
     .top-actions {
-      display: flex; gap: 0.55rem; align-items: center;
+      display: flex; gap: 0.45rem; align-items: center;
       flex-shrink: 0; flex-wrap: nowrap;
     }
-    .mobile-nav-toggle-btn {
-      display: none; background: none; border: 1.5px solid var(--pc-border);
-      border-radius: 12px; width: 44px; height: 44px;
-      align-items: center; justify-content: center;
-      color: var(--pc-ink); cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .mobile-nav-toggle-btn:hover {
-      background: var(--pc-teal-soft); color: var(--pc-teal-deep);
-    }
-    .mobile-nav-drawer {
-      display: none; background: #ffffff;
-      border-bottom: 1px solid var(--pc-border);
-      box-shadow: 0 16px 32px rgba(11, 93, 102, 0.08);
-      animation: drawerSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes drawerSlideDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .mobile-nav-inner {
-      padding: 1rem 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 0.4rem;
-    }
-    .mobile-drawer-link {
-      display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0.9rem;
-      color: var(--pc-ink); text-decoration: none; font-weight: 600;
-      font-size: 0.95rem; border-radius: 10px; transition: background 0.15s ease;
-    }
-    .mobile-drawer-link:hover, .mobile-drawer-link:active {
-      background: var(--pc-teal-soft); color: var(--pc-teal-deep);
-    }
-    .mobile-drawer-link svg {
-      width: 18px; height: 18px; color: var(--pc-teal-deep);
-    }
-    .mobile-drawer-divider {
-      height: 1px; background: var(--pc-border); margin: 0.4rem 0;
-    }
-    .admin-drawer-link {
-      color: var(--pc-teal-deep); font-weight: 700;
-    }
-
-    /* ── BUTTONS ── */
     .btn {
-      border: none; cursor: pointer; border-radius: 12px;
-      padding: 0.55rem 1.25rem; font-size: 0.92rem; font-weight: 600;
+      border: none; cursor: pointer; border-radius: 999px;
+      padding: 0.42rem 1.1rem; font-size: 0.86rem; font-weight: 600;
       font-family: inherit;
       display: inline-flex; align-items: center; justify-content: center;
-      gap: 0.45rem;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      gap: 0.35rem;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
       white-space: nowrap; text-decoration: none;
-      min-height: 48px;
+      min-width: 105px; /* Standardize size for header buttons */
     }
-    .btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
     .btn-primary {
-      background: var(--pc-teal-deep);
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(11, 93, 102, 0.22);
+      background: linear-gradient(135deg,#0077b6,#0096c7);
+      color: #fff; box-shadow: 0 4px 12px rgba(0,119,182,0.28);
     }
-    .btn-primary:hover {
-      background: var(--pc-teal-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 22px rgba(11, 93, 102, 0.32);
-    }
-    .btn-primary:active {
-      transform: scale(0.98);
-    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,119,182,0.42); }
     .btn-outline {
-      background: #fff;
-      color: var(--pc-teal-deep);
-      border: 1.5px solid var(--pc-teal-deep);
+      background: #fff; color: #0077b6;
+      border: 1.5px solid rgba(0,119,182,0.28);
     }
-    .btn-outline:hover {
-      background: var(--pc-teal-soft);
-      transform: translateY(-2px);
-    }
-    .btn-amber {
-      background: var(--pc-amber-accent);
-      color: var(--pc-ink);
-      font-weight: 700;
-      box-shadow: 0 4px 14px rgba(245, 184, 61, 0.35);
-    }
-    .btn-amber:hover {
-      background: var(--pc-amber-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 22px rgba(245, 184, 61, 0.45);
-    }
+    .btn-outline:hover { background: #e6f4ff; transform: translateY(-1px); }
 
     @keyframes pulse {
       0% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0)); }
@@ -310,154 +190,92 @@
     .stat-live { color: #10b981; }
     .stat-mine { color: #0077b6; }
 
+    /* ── MOBILE-PRO PREMIUM SYSTEM ── */
+    :root {
+      --primary: #0077b6;
+      --primary-dark: #03045e;
+      --primary-soft: #caf0f8;
+      --accent: #f59e0b;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --surface: #ffffff;
+      --glass: rgba(255, 255, 255, 0.85);
+      --border-light: rgba(0, 119, 182, 0.1);
+      --shadow-premium: 0 15px 35px -12px rgba(3, 4, 94, 0.1);
+      --radius-lg: 20px;
+    }
+
+    .home-section { 
+      padding: 5rem 1.5rem; 
+      max-width: 1200px; 
+      margin: 0 auto;
+      position: relative;
+    }
+    .section-tag {
+      display: inline-block;
+      color: var(--primary);
+      background: var(--primary-soft);
+      padding: 0.35rem 0.85rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 1rem;
+    }
+
     /* ── HERO PRO ── */
     .hero-premium {
-      min-height: 72vh;
+      min-height: 80vh;
       position: relative;
       overflow: hidden;
       display: flex;
-      align-items: center;
-      padding: clamp(3.5rem, 8vh, 6.5rem) 0 clamp(4.5rem, 10vh, 7.5rem);
-      background: linear-gradient(135deg, #09474E 0%, #0B5D66 50%, #0E747F 100%);
-      color: #fff;
+      align-items: flex-start; /* Move content upward */
+      padding-top: clamp(60px, 12vh, 120px);
+      background: #023e8a;
+      border-bottom: 5px solid var(--accent);
     }
     .hero-bg {
       position: absolute; inset: 0;
-      background: radial-gradient(circle at 80% 20%, rgba(245, 184, 61, 0.12) 0%, transparent 45%),
-                  radial-gradient(circle at 15% 85%, rgba(230, 244, 243, 0.08) 0%, transparent 50%);
-      opacity: 0.9;
+      background: url('/static/image/hero_premium.png') center/cover no-repeat;
+      opacity: 0.7;
+      filter: brightness(0.9);
     }
     .hero-overlay {
       position: absolute; inset: 0;
-      background: rgba(11, 93, 102, 0.25);
+      background: linear-gradient(110deg, rgba(3, 4, 94, 0.95) 0%, rgba(3, 4, 94, 0.6) 100%);
     }
     .hero-content {
       position: relative; z-index: 10;
-      width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 1.5rem;
+      width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 2rem;
+      color: #fff;
+      text-align: left; /* Strict left alignment */
     }
-    .hero-grid-inner {
-      display: grid; grid-template-columns: 1.25fr 0.75fr;
-      gap: 3.5rem; align-items: center;
+    .hero-content h1 {
+      font-size: clamp(2rem, 5vw, 4.5rem);
+      font-weight: 900; line-height: 1.1; margin-bottom: 1.2rem;
+      max-width: 800px;
     }
-    .hero-badge-pill {
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      padding: 0.45rem 1.1rem; border-radius: var(--radius-full);
-      font-size: 0.82rem; font-weight: 700; display: inline-flex;
-      align-items: center; gap: 0.45rem; margin-bottom: 1.5rem;
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      letter-spacing: 0.01em; color: #FFFFFF;
+    .hero-content h1 span { color: var(--accent); }
+    .hero-content p {
+      font-size: clamp(1rem, 1.8vw, 1.25rem);
+      max-width: 600px; opacity: 0.9; margin-bottom: 2.5rem; line-height: 1.6;
     }
-    .hero-badge-pill svg { width: 15px; height: 15px; color: var(--pc-amber-accent); }
-    .hero-main-title {
-      font-size: clamp(2.2rem, 4.8vw, 3.8rem);
-      font-weight: 850; line-height: 1.15; margin: 0 0 1.2rem;
-      color: #FFFFFF; max-width: 750px;
-    }
-    .hero-highlight {
-      color: var(--pc-amber-accent);
-      position: relative;
-    }
-    .hero-subtext {
-      font-size: clamp(1rem, 1.4vw, 1.18rem);
-      max-width: 620px; color: rgba(255, 255, 255, 0.92);
-      margin: 0 0 2.2rem; line-height: 1.65;
-      font-weight: 400;
-    }
-    .hero-btns {
-      display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
-    }
-    .hero-btn-main {
-      background: var(--pc-amber-accent) !important;
-      color: var(--pc-ink) !important;
-      font-weight: 700 !important;
-      font-size: 1rem !important;
-      padding: 0.75rem 1.8rem !important;
-      min-height: 52px !important;
-      border-radius: var(--radius-md) !important;
-      box-shadow: 0 8px 24px rgba(245, 184, 61, 0.35) !important;
-    }
-    .hero-btn-main:hover {
-      background: var(--pc-amber-hover) !important;
-      transform: translateY(-2px) !important;
-      box-shadow: 0 12px 28px rgba(245, 184, 61, 0.45) !important;
-    }
-    .hero-btn-sub {
-      background: rgba(255, 255, 255, 0.12) !important;
-      border: 1.5px solid rgba(255, 255, 255, 0.4) !important;
-      color: #FFFFFF !important;
-      font-weight: 600 !important;
-      font-size: 0.98rem !important;
-      padding: 0.75rem 1.6rem !important;
-      min-height: 52px !important;
-      border-radius: var(--radius-md) !important;
-      backdrop-filter: blur(8px);
-    }
-    .hero-btn-sub:hover {
-      background: rgba(255, 255, 255, 0.22) !important;
-      border-color: #FFFFFF !important;
-      transform: translateY(-2px) !important;
-    }
-    .hero-floating-hours-card {
-      background: rgba(255, 255, 255, 0.96);
-      border-radius: var(--radius-lg);
-      padding: 2.2rem;
-      color: var(--pc-ink);
-      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
-      border: 1.5px solid rgba(255, 255, 255, 0.8);
-      position: relative;
-    }
-    .hours-card-header {
-      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;
-    }
-    .hours-status-pulse {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: var(--pc-success);
-      box-shadow: 0 0 0 3px rgba(31, 157, 99, 0.25);
-    }
-    .hours-status-text {
-      font-size: 0.8rem; font-weight: 800; text-transform: uppercase;
-      letter-spacing: 0.06em; color: var(--pc-success);
-    }
-    .hours-time {
-      font-size: 1.65rem; font-weight: 850; color: var(--pc-teal-deep);
-      margin-bottom: 0.6rem; font-family: 'Manrope', sans-serif;
-    }
-    .hours-desc {
-      font-size: 0.88rem; color: var(--pc-muted); line-height: 1.5; margin: 0 0 1.25rem;
-    }
-    .hours-feature-pills {
-      display: flex; flex-direction: column; gap: 0.5rem;
-    }
-    .hours-pill {
-      display: flex; align-items: center; gap: 0.45rem;
-      font-size: 0.84rem; font-weight: 600; color: var(--pc-ink);
-    }
-    .hours-pill svg { width: 15px; height: 15px; color: var(--pc-teal-deep); }
 
     /* ── TRUST STRIP ── */
     .trust-strip {
-      max-width: 1080px; margin: -42px auto 3rem;
-      background: #ffffff;
-      border: 1px solid var(--pc-border);
-      padding: 1.6rem 2rem; border-radius: var(--radius-lg);
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
-      box-shadow: var(--pc-shadow-soft); position: relative; z-index: 20;
+      max-width: 1050px; margin: -50px auto 3rem;
+      background: var(--glass);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1.5px solid rgba(255,255,255,0.6);
+      padding: 1.8rem; border-radius: var(--radius-lg);
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+      box-shadow: var(--shadow-premium); position: relative; z-index: 20;
     }
-    .trust-item {
-      text-align: center; border-right: 1px solid var(--pc-border);
-      padding: 0 0.8rem;
-    }
+    .trust-item { text-align: center; border-right: 1px solid rgba(0,0,0,0.05); }
     .trust-item:last-child { border-right: none; }
-    .trust-val {
-      display: block; font-size: 1.85rem; font-weight: 850;
-      color: var(--pc-teal-deep); font-family: 'Manrope', sans-serif;
-      line-height: 1.1; margin-bottom: 0.3rem;
-    }
-    .trust-label {
-      font-size: 0.78rem; color: var(--pc-muted);
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-    }
+    .trust-val { display: block; font-size: 1.8rem; font-weight: 900; color: var(--primary-dark); }
+    .trust-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
 
     /* ── HERITAGE ── */
     .heritage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
@@ -512,64 +330,31 @@
     .pill-whatsapp { background: #25d366; color: #fff; border-color: rgba(0,0,0,0.05); }
     .pill-whatsapp:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(37,211,102,0.3); background: #22c35e; }
 
-    /* ── FOOTER PRO (CLINICAL PREMIUM) ── */
+    /* ── FOOTER PRO (ULTIMATE EDGE-TO-EDGE) ── */
     .site-footer-pro {
-      background: #082025; color: #fff; padding: 4.5rem 0 0; margin-top: 5rem;
+      background: #020617; color: #fff; padding: 5rem 0 0; margin-top: 5rem;
       width: 100vw; position: relative; left: 50%; right: 50%;
       margin-left: -50vw; margin-right: -50vw;
       margin-bottom: 0 !important;
-      border-top: 3px solid var(--pc-teal-deep);
     }
-    .f-content {
-      margin: 0 auto; display: grid; grid-template-columns: 1.6fr 1.1fr 1.3fr;
-      gap: 3.5rem; width: 100%; max-width: 1200px; padding: 0 1.5rem 3.5rem;
-    }
-    .f-col h4 {
-      font-size: 0.88rem; font-weight: 800; text-transform: uppercase;
-      letter-spacing: 0.06em; color: var(--pc-amber-accent); margin-bottom: 1.4rem;
-      font-family: 'Manrope', sans-serif;
-    }
+    .f-content { margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr; gap: 4rem; width: 100%; max-width: 1200px; padding: 0 2rem 4rem; }
+    .f-col h4 { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--accent); margin-bottom: 1.5rem; }
     .f-links { list-style: none; padding: 0; margin: 0; }
-    .f-links li { margin-bottom: 0.75rem; }
-    .f-links a {
-      color: #94a3b8; text-decoration: none; font-size: 0.92rem;
-      transition: all 0.2s ease; display: inline-block;
-    }
-    .f-links a:hover {
-      color: #ffffff; transform: translateX(3px);
-    }
+    .f-links li { margin-bottom: 0.8rem; }
+    .f-links a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+    .f-links a:hover { color: #fff; }
 
     /* ── MOBILE OVERRIDES (Correct Scaling) ── */
-    @media (max-width: 992px) {
-      .desktop-header-nav { display: none; }
-      .mobile-nav-toggle-btn { display: flex; }
-      .hero-grid-inner { grid-template-columns: 1fr; gap: 2.5rem; }
-      .hero-card-col { display: none; }
-      .f-content { grid-template-columns: 1fr 1fr; gap: 2.5rem; }
+    @media (max-width: 968px) {
+      .f-content { grid-template-columns: 1fr 1fr; gap: 3rem; }
     }
     @media (max-width: 768px) {
       .heritage-grid, .leadership-grid, .visit-card { grid-template-columns: 1fr; gap: 2.5rem; }
-      .top-bar-inner { padding: 0.5rem 1rem; min-height: 56px; }
-      .brand-sub { display: none; }
-      .trust-strip {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem; padding: 1.25rem 1rem; margin-top: -30px;
-      }
-      .trust-item { border-right: none; }
-      .trust-item:nth-child(1), .trust-item:nth-child(2) {
-        border-bottom: 1px solid var(--pc-border); padding-bottom: 0.8rem;
-      }
-      .trust-item:nth-child(1) {
-        border-right: 1px solid var(--pc-border);
-      }
-      .trust-item:nth-child(3) {
-        border-right: 1px solid var(--pc-border);
-      }
+      .trust-strip { grid-template-columns: 1fr 1fr; padding: 1.2rem; margin-top: -95px; }
       .visit-card { padding: 2.2rem 1.2rem; }
       .hero-content { padding: 0 1.2rem; text-align: left; }
-      .hero-content h1 { font-size: 2.2rem; }
+      .hero-content h1 { font-size: 2.1rem; }
       .hero-content p { margin: 0 0 2rem; }
-      .f-content { grid-template-columns: 1fr; gap: 2.5rem; }
     }
     @media (max-width: 600px) {
       .dept-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
@@ -580,26 +365,36 @@
     }
     @media (max-width: 500px) {
       .home-section { padding: 3.5rem 1.25rem; }
+      .trust-item { border-right: none; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+      .trust-item:nth-child(even) { border-left: 1px solid rgba(0,0,0,0.05); border-bottom: 1px solid rgba(0,0,0,0.05); }
       .leader-card { flex-direction: column; text-align: center; padding: 1.5rem; }
       .leader-img { width: 90px; height: 90px; }
+      .f-content { 
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2.5rem 1.5rem; 
+        width: 100%; 
+        text-align: left; 
+      }
+      .f-col.f-brand { grid-column: span 2; }
       .site-footer-pro { 
-        padding: 3.5rem 0 0; 
+        padding: 4rem 0 0; 
         width: 100vw; margin-left: -50vw;
       }
 
-      /* Force clean button alignment on small mobile */
+      /* Force side-by-side buttons/pills on small mobile */
       .hero-content .hero-btns, .visit-info .action-pill-container {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: wrap !important;
+        flex-wrap: nowrap !important;
         gap: 0.6rem !important;
       }
       .hero-content .btn, .visit-info .action-pill {
         flex: 1;
-        min-width: 140px;
         padding: 0 0.8rem !important;
-        font-size: 0.84rem !important;
+        font-size: 0.75rem !important;
         height: 48px !important;
+        min-width: 0 !important;
         white-space: nowrap;
       }
       .action-pill i, .action-pill svg { width: 14px !important; height: 14px !important; }
@@ -1606,10 +1401,8 @@
   <header class="top-bar">
     <div class="top-bar-inner">
       <!-- Logo + text column: logo on left, clinic name + tagline stacked on right -->
-      <a href="/" class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.6rem;flex-shrink:1;min-width:0;text-decoration:none;">
-        <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
-             style="width:36px;height:36px;object-fit:contain;flex-shrink:0;"
-             alt="PrimeCare Logo" />
+      <a href="/" class="brand">
+        <img src="{{ url_for('static', filename='primecare-logo.svg') }}" alt="PrimeCare Logo" />
         <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
           <div class="brand-title">PrimeCare Clinic</div>
           <div class="brand-sub">Care you can trust, close to home</div>
@@ -1617,11 +1410,12 @@
       </a>
 
       <!-- Desktop Navigation Links -->
-      <nav class="desktop-header-nav" aria-label="Main Navigation">
-        <a href="#doctors-anchor" class="header-nav-link">Doctors</a>
-        <a href="#services-grid" class="header-nav-link">Departments</a>
-        <a href="#heritage-section" class="header-nav-link">About</a>
-        <a href="#visit-section" class="header-nav-link">Contact</a>
+      <nav class="pc-desktop-nav" aria-label="Main Navigation">
+        <a href="/" class="active">Home</a>
+        <a href="#departments">Doctors</a>
+        <a href="#how-it-works-section">How It Works</a>
+        <a href="#heritage-section">About</a>
+        <a href="#visit-section">Contact</a>
       </nav>
 
       <div class="top-actions">
@@ -1704,113 +1498,122 @@
           </div>
         {% else %}
           {% if session.get('user_id') %}
-          <button id="profileBtn" class="btn btn-outline" onclick="window.location.href='{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}'">
+          <button id="profileBtn" class="btn btn-login-outline" onclick="window.location.href='{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}'">
             <i data-lucide="user"></i>
             <span>Profile</span>
           </button>
           {% else %}
-          <button id="loginBtn" class="btn btn-outline" onclick="openAuthModal('login')">
+          <button id="loginBtn" class="btn btn-login-outline" onclick="openAuthModal('login')">
             <i data-lucide="log-in"></i>
             <span>Login</span>
           </button>
           {% endif %}
-          <button id="bookNowBtn" class="btn btn-primary" onclick="window.location.href='/booking'">
+          <button class="btn btn-book-primary" onclick="window.location.href='/booking'">
             <i data-lucide="calendar-plus"></i>
             <span>Book Now</span>
           </button>
         {% endif %}
-
-        <!-- Mobile Navigation Toggle Button -->
-        <button id="mobileNavToggle" class="mobile-nav-toggle-btn" aria-label="Toggle navigation menu" onclick="toggleMobileNavDrawer()">
-          <i data-lucide="menu" id="mobileNavIcon"></i>
+        <button class="pc-mobile-toggle" id="pcMobileNavToggle" onclick="toggleMobileNavDrawer()" aria-label="Toggle Navigation Menu">
+          <i data-lucide="menu" id="pcMobileNavIcon"></i>
         </button>
       </div>
     </div>
-
-    <!-- Mobile Navigation Drawer -->
-    <div id="mobileNavDrawer" class="mobile-nav-drawer" style="display:none;">
-      <div class="mobile-nav-inner">
-        <a href="#doctors-anchor" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
-          <i data-lucide="stethoscope"></i>
-          <span>Doctors</span>
-        </a>
-        <a href="#services-grid" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
-          <i data-lucide="layout-grid"></i>
-          <span>Departments</span>
-        </a>
-        <a href="#heritage-section" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
-          <i data-lucide="building-2"></i>
-          <span>About Us</span>
-        </a>
-        <a href="#visit-section" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
-          <i data-lucide="map-pin"></i>
-          <span>Find & Contact Us</span>
-        </a>
-        <div class="mobile-drawer-divider"></div>
-        {% if session.get('user_id') %}
-        <a href="{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false)">
-          <i data-lucide="user-check"></i>
-          <span>My Profile ({{ 'Doctor' if session.get('user_role') == 'doctor' else 'Patient' }})</span>
-        </a>
-        {% else %}
-        <a href="javascript:void(0)" class="mobile-drawer-link" onclick="toggleMobileNavDrawer(false); openAuthModal('login');">
-          <i data-lucide="log-in"></i>
-          <span>Patient / Doctor Login</span>
-        </a>
-        {% endif %}
-        <a href="/admin" class="mobile-drawer-link admin-drawer-link" onclick="toggleMobileNavDrawer(false)">
-          <i data-lucide="shield-check"></i>
-          <span>Admin Portal</span>
-        </a>
-      </div>
-    </div>
   </header>
+
+  <!-- Mobile Navigation Drawer -->
+  <div class="pc-mobile-drawer" id="pcMobileNavDrawer">
+    <a href="/" onclick="toggleMobileNavDrawer(false)"><i data-lucide="home"></i> Home</a>
+    <a href="#departments" onclick="toggleMobileNavDrawer(false)"><i data-lucide="stethoscope"></i> Doctors</a>
+    <a href="#how-it-works-section" onclick="toggleMobileNavDrawer(false)"><i data-lucide="help-circle"></i> How It Works</a>
+    <a href="#heritage-section" onclick="toggleMobileNavDrawer(false)"><i data-lucide="info"></i> About</a>
+    <a href="#visit-section" onclick="toggleMobileNavDrawer(false)"><i data-lucide="map-pin"></i> Contact</a>
+    {% if session.get('user_id') %}
+    <a href="{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}"><i data-lucide="user"></i> My Profile</a>
+    {% else %}
+    <a href="#" onclick="toggleMobileNavDrawer(false); openAuthModal('login'); return false;"><i data-lucide="log-in"></i> Sign in</a>
+    {% endif %}
+    {% if session.get('admin_logged_in') %}
+    <a href="/admin" style="color: var(--pc-amber);"><i data-lucide="shield"></i> Admin Panel</a>
+    {% else %}
+    <a href="/admin"><i data-lucide="shield"></i> Admin Login</a>
+    {% endif %}
+  </div>
   
   <!-- Who's In Now Live Ticker (Non-Sticky) -->
   <div class="ticker-wrapper" id="liveTicker">
-    <div class="ticker-container" id="tickerContent">
+    <div class="ticker-pill">
+      <span class="ticker-pulse-dot"></span>
+      Who's in now
+    </div>
+    <div class="ticker-container" id="tickerContent" style="flex:1;overflow:hidden;">
       <!-- Injected by JS -->
     </div>
   </div>
 
   <!-- HERO SECTION -->
   <section class="hero-premium">
-    <div class="hero-bg"></div>
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <div class="hero-grid-inner">
-        <div class="hero-text-col">
-          <div class="hero-badge-pill">
-            <i data-lucide="shield-check"></i>
-            <span>Caring for Koorachundu since {{ settings.stat_since }}</span>
+    <div class="pc-hero-inner">
+      <div class="pc-hero-content">
+        <span class="pc-hero-badge">
+          <i data-lucide="shield-check" style="width:16px; height:16px; color: var(--pc-amber);"></i>
+          Caring for Koorachundu since {{ settings.stat_since }}
+        </span>
+        <h1>{{ settings.promo_heading | safe }}</h1>
+        <p>{{ settings.promo_subheading }}</p>
+        <div class="pc-hero-actions">
+          <button class="btn-hero-primary" onclick="window.location.href='/booking'">
+            <i data-lucide="calendar"></i> Book Appointment
+          </button>
+          <a href="#departments" class="btn-hero-secondary">
+            Explore Departments <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+          </a>
+        </div>
+        <div class="pc-hero-features">
+          <div class="pc-hero-feature-item">
+            <span class="pc-hero-feature-icon"><i data-lucide="clock" style="width:18px;height:18px;"></i></span>
+            Open 8 AM - 9 PM
           </div>
-          <h1 class="hero-main-title">Trusted care for <br><span class="hero-highlight">healthier living.</span></h1>
-          <p class="hero-subtext">See experienced doctors at PrimeCare Clinic. Choose your doctor, pick a time and get your digital token instantly, backed by modern diagnostics.</p>
-          <div class="hero-btns">
-            <button class="btn hero-btn-main" onclick="window.location.href='/booking'">
-              <i data-lucide="calendar-plus"></i>
-              <span>Book Appointment</span>
-            </button> 
-            <button class="btn hero-btn-sub" onclick="document.getElementById('services-grid').scrollIntoView({behavior:'smooth'})">
-              <span>Explore Departments</span>
-              <i data-lucide="arrow-right"></i>
-            </button>
+          <div class="pc-hero-feature-item">
+            <span class="pc-hero-feature-icon"><i data-lucide="ticket" style="width:18px;height:18px;"></i></span>
+            Instant digital token
+          </div>
+          <div class="pc-hero-feature-item">
+            <span class="pc-hero-feature-icon"><i data-lucide="activity" style="width:18px;height:18px;"></i></span>
+            Live token tracking
           </div>
         </div>
+      </div>
 
-        <div class="hero-card-col">
-          <div class="hero-floating-hours-card">
-            <div class="hours-card-header">
-              <span class="hours-status-pulse"></span>
-              <span class="hours-status-text">Open Today</span>
-            </div>
-            <div class="hours-time">08:00 AM – 09:00 PM</div>
-            <p class="hours-desc">Token queues operate on standard clinic hours. Emergency & priority cases supported.</p>
-            <div class="hours-feature-pills">
-              <span class="hours-pill"><i data-lucide="check-circle-2"></i> Instant Online Tokens</span>
-              <span class="hours-pill"><i data-lucide="map-pin"></i> Central Koorachundu</span>
+      <!-- Desktop Visual Showcase -->
+      <div class="pc-hero-visual">
+        <div class="pc-hero-card-doctor">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="width:58px;height:58px;border-radius:50%;background:var(--pc-soft-blue);color:var(--pc-navy);font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center">DR</div>
+            <div>
+              <div style="font-size:19px;font-weight:800;color:var(--pc-navy)">Dr. Razin</div>
+              <div style="font-size:14px;color:var(--pc-subtle);font-weight:500">General Physician</div>
             </div>
           </div>
+          <div style="margin-top:20px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--pc-subtle)">Available days</div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <span style="padding:6px 0;width:44px;text-align:center;border-radius:8px;background:var(--pc-success-soft);color:var(--pc-success-ink);font-size:12px;font-weight:700">Mon</span>
+            <span style="padding:6px 0;width:44px;text-align:center;border-radius:8px;background:#eef2f6;color:var(--pc-subtle);font-size:12px;font-weight:600">Tue</span>
+            <span style="padding:6px 0;width:44px;text-align:center;border-radius:8px;background:var(--pc-success-soft);color:var(--pc-success-ink);font-size:12px;font-weight:700">Wed</span>
+            <span style="padding:6px 0;width:44px;text-align:center;border-radius:8px;background:var(--pc-success-soft);color:var(--pc-success-ink);font-size:12px;font-weight:700">Thu</span>
+            <span style="padding:6px 0;width:44px;text-align:center;border-radius:8px;background:var(--pc-success-soft);color:var(--pc-success-ink);font-size:12px;font-weight:700">Fri</span>
+            <span style="padding:6px 0;width:44px;text-align:center;border-radius:8px;background:#eef2f6;color:var(--pc-subtle);font-size:12px;font-weight:600">Sat</span>
+          </div>
+          <button type="button" onclick="window.location.href='/booking'" style="margin-top:20px;width:100%;height:46px;border-radius:12px;border:0;background:var(--pc-primary);color:#ffffff;font-size:15px;font-weight:700;cursor:pointer;">Book Appointment</button>
+        </div>
+        <div class="pc-hero-card-token">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--pc-subtle)">Digital token</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--pc-success-ink)"><span class="ticker-pulse-dot" style="width:6px;height:6px;"></span>Live</span>
+          </div>
+          <div style="font-size:54px;line-height:1.05;font-weight:800;color:var(--pc-navy);margin-top:6px;letter-spacing:-0.03em">#07</div>
+          <div style="border-top:2px dashed #cfe0ec;margin:12px 0"></div>
+          <div style="font-size:14px;font-weight:700;color:var(--pc-ink)">Dr. Razin</div>
+          <div style="font-size:12px;color:var(--pc-subtle);margin-top:2px">Track turn live from phone</div>
         </div>
       </div>
     </div>
@@ -1819,84 +1622,324 @@
   <!-- TRUST STRIP -->
   <div class="trust-strip">
     <div class="trust-item">
-      <span class="trust-val">25+</span>
-      <span class="trust-label">Specialists</span>
+      <div class="trust-icon-box"><i data-lucide="users"></i></div>
+      <div>
+        <span class="trust-val">{{ settings.stat_specialists }}</span>
+        <span class="trust-label">Specialists</span>
+      </div>
     </div>
     <div class="trust-item">
-      <span class="trust-val">50,000+</span>
-      <span class="trust-label">Patients Served</span>
+      <div class="trust-icon-box"><i data-lucide="heart"></i></div>
+      <div>
+        <span class="trust-val">{{ settings.stat_patients }}</span>
+        <span class="trust-label">Patients Served</span>
+      </div>
     </div>
     <div class="trust-item">
-      <span class="trust-val">Since {{ settings.stat_since }}</span>
-      <span class="trust-label">Local Care</span>
+      <div class="trust-icon-box"><i data-lucide="calendar"></i></div>
+      <div>
+        <span class="trust-val">{{ settings.stat_since }}</span>
+        <span class="trust-label">Since</span>
+      </div>
     </div>
     <div class="trust-item">
-      <span class="trust-val">Verified</span>
-      <span class="trust-label">Facility</span>
+      <div class="trust-icon-box"><i data-lucide="award"></i></div>
+      <div>
+        <span class="trust-val">{{ settings.stat_certified }}</span>
+        <span class="trust-label">Certified</span>
+      </div>
     </div>
   </div>
 
-  <section class="home-section" id="heritage-section">
+
+
+  <!-- DEPARTMENTS AND DOCTORS -->
+  <section class="home-section" id="departments" style="scroll-margin-top: 5rem;">
+    <!-- Backward compatibility anchors -->
+    <div id="services-grid" style="position: absolute; top: -100px;"></div>
+    <div id="services-section" style="position: absolute; top: -100px;"></div>
+    <div id="doctors-anchor" style="position: absolute; top: -100px;"></div>
+    <div id="doctors-full-section">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:20px; margin-bottom: 28px;">
+        <div>
+          <span class="section-tag">Departments</span>
+          <h2 style="margin: 16px 0 12px; font-size: clamp(30px, 3.2vw, 42px); line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; color: var(--pc-navy);">Find your doctor</h2>
+          <p style="margin: 0; font-size: 17px; line-height: 1.65; color: var(--pc-subtle); max-width: 520px;">Search by doctor or specialization, then choose a time that suits you.</p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-book-primary" onclick="window.location.href='/booking'" style="height:48px; padding:0 24px; border-radius:12px; border:0; background:var(--pc-primary); color:#ffffff; font-size:15px; font-weight:700; display:inline-flex; align-items:center; gap:8px; cursor:pointer;">
+            <i data-lucide="calendar"></i> Book Appointment
+          </button>
+        </div>
+      </div>
+
+      <!-- Department Pills -->
+      <div class="pc-dept-container">
+        {% for group in doctors | groupby('Specialization') %}
+        <button type="button" class="pc-dept-pill" onclick="scrollToSpec('{{ group.grouper }}')">
+          <i data-lucide="{{ icons.get(group.grouper, 'activity') }}" style="width:16px;height:16px;"></i>
+          <span>{{ group.grouper }}</span>
+          <span class="count">{{ group.list | length }} {% if group.list | length == 1 %}doctor{% else %}doctors{% endif %}</span>
+        </button>
+        {% endfor %}
+      </div>
+
+      {% if not doctors %}
+        <div class="no-doctors" style="text-align:center; padding: 48px 24px; background:#ffffff; border-radius: 20px; border: 1px solid var(--pc-border); margin-top: 32px;">
+          <i data-lucide="circle-alert" style="width:36px;height:36px;color:var(--pc-muted);display:block;margin:0 auto 0.75rem;"></i>
+          <div style="font-size:16px; font-weight:600; color:var(--pc-ink);">Doctor list is currently unavailable.</div>
+          <p style="color:var(--pc-subtle); margin:4px 0 0; font-size:14px;">Please contact the clinic or try again later.</p>
+        </div>
+      {% else %}
+        {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+
+        {% for group in doctors | groupby('Specialization') %}
+          {% set spec_index = loop.index %}
+          <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}" style="scroll-margin-top: 6rem; margin-top: 48px;">
+            <h3 class="spec-heading" style="display:flex; align-items:center; gap:10px; font-size:22px; font-weight:800; color:var(--pc-navy); margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1.5px solid var(--pc-border-light);">
+              <i data-lucide="{{ icons.get(group.grouper, 'activity') }}" style="width:22px; height:22px; color:var(--pc-primary);"></i>
+              <span>{{ group.grouper }}</span>
+              <span style="font-size:13px; font-weight:700; color:var(--pc-muted); background:var(--pc-soft-blue); padding:3px 10px; border-radius:999px;">{{ group.list | length }} {% if group.list | length == 1 %}doctor{% else %}doctors{% endif %}</span>
+            </h3>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 24px;">
+              {% for doc in group.list %}
+                {% set card_id = 'timing-' ~ spec_index ~ '-' ~ loop.index0 %}
+                <article class="doctor-card">
+                  <!-- Timing popup inside doctor card -->
+                  <div class="card-timing-popup" id="{{ card_id }}">
+                    <div class="card-timing-header">
+                      <div class="card-timing-title">
+                        <i data-lucide="clock-3"></i>
+                        {{ doc.Name }}
+                      </div>
+                      <button type="button" class="close-timing" aria-label="Close timings">
+                        <i data-lucide="x"></i>
+                      </button>
+                    </div>
+                    <ul class="timing-list">
+                      {% for day in day_order %}
+                        {% set t = doc.DayTimes.get(day) if doc.DayTimes else None %}
+                        <li>
+                          <span class="timing-day">
+                            <i data-lucide="calendar-days"></i>
+                            <span class="full-day">{{ day }}</span>
+                            <span class="short-day">{{ day[:3] }}</span>
+                          </span>
+                          {% if day not in doc.Days %}
+                            <span class="timing-na">Not working</span>
+                          {% elif t %}
+                            <span class="timing-time">{{ t }}</span>
+                          {% else %}
+                            <span class="timing-na">Time not set</span>
+                          {% endif %}
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+
+                  <!-- Doctor Image or Initials -->
+                  <div class="doctor-img">
+                    {% if doc.Image %}
+                      <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" />
+                    {% else %}
+                      <div style="font-size: 48px; font-weight: 800; color: var(--pc-navy);">DR</div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Doctor Info -->
+                  <div class="doctor-info">
+                    <span style="display:inline-block; align-self:flex-start; padding:4px 12px; border-radius:999px; background:var(--pc-soft-blue); color:var(--pc-navy); font-size:12px; font-weight:700;">{{ doc.Specialization }}</span>
+                    <h4 style="margin: 10px 0 6px; font-size: 22px; font-weight: 800; color: var(--pc-navy);">{{ doc.Name }}</h4>
+                    <p style="margin: 0 0 10px; font-size: 14px; color: var(--pc-subtle); display:flex; align-items:center; gap:6px;">
+                      <i data-lucide="calendar-check" style="width:15px; height:15px; color:var(--pc-primary);"></i>
+                      <span>{% if doc.Days %}{{ doc.Days | join(', ') }}{% else %}Consultation days not set{% endif %}</span>
+                    </p>
+
+                    <div class="pc-doc-schedule-grid">
+                      {% for day in day_order %}
+                        {% if doc.Days and day in doc.Days %}
+                          {% set t = doc.DayTimes.get(day) if doc.DayTimes else None %}
+                          <div class="pc-doc-schedule-pill">
+                            <span class="day-label">{{ day[:3] }}</span>
+                            <span class="time-label">{{ t if t else 'Available' }}</span>
+                          </div>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:12px; margin-top: 14px; flex-wrap:wrap;">
+                      <button type="button" class="btn btn-book-primary" onclick="window.location.href='/booking'" style="height:44px; padding:0 20px; border-radius:12px; border:0; background:var(--pc-primary); color:#ffffff; font-size:14px; font-weight:700; cursor:pointer;">
+                        Book Appointment
+                      </button>
+                      <button type="button" class="btn-timing" data-target="{{ card_id }}" style="background:none; border:0; font-size:14px; font-weight:700; color:var(--pc-primary); cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                        <i data-lucide="clock" style="width:15px; height:15px;"></i> See timings
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+          </section>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- HOW BOOKING WORKS -->
+  <section class="pc-how-it-works-bg" id="how-it-works-section" style="scroll-margin-top: 5rem;">
+    <div class="home-section" style="padding: 0 !important;">
+      <div class="section-header-center">
+        <span class="section-tag">How it works</span>
+        <h2>How booking works</h2>
+        <p>Six simple steps, from choosing a doctor to tracking your turn.</p>
+      </div>
+      <div class="pc-steps-grid">
+        <div class="pc-step-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="width:44px; height:44px; border-radius:50%; background:var(--pc-primary); color:#ffffff; font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center;">1</span>
+            <i data-lucide="search" style="width:24px; height:24px; color:var(--pc-primary);"></i>
+          </div>
+          <h3 style="margin:20px 0 8px; font-size:20px; font-weight:800; color:var(--pc-navy);">Find your doctor</h3>
+          <p style="margin:0; font-size:15px; line-height:1.6; color:var(--pc-subtle);">Search by name or specialization and pick a time.</p>
+        </div>
+
+        <div class="pc-step-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="width:44px; height:44px; border-radius:50%; background:var(--pc-primary); color:#ffffff; font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center;">2</span>
+            <i data-lucide="ticket" style="width:24px; height:24px; color:var(--pc-primary);"></i>
+          </div>
+          <h3 style="margin:20px 0 8px; font-size:20px; font-weight:800; color:var(--pc-navy);">Get your token</h3>
+          <p style="margin:0; font-size:15px; line-height:1.6; color:var(--pc-subtle);">Enter name, age and gender to secure it instantly.</p>
+        </div>
+
+        <div class="pc-step-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="width:44px; height:44px; border-radius:50%; background:var(--pc-primary); color:#ffffff; font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span>
+            <i data-lucide="calendar-check" style="width:24px; height:24px; color:var(--pc-primary);"></i>
+          </div>
+          <h3 style="margin:20px 0 8px; font-size:20px; font-weight:800; color:var(--pc-navy);">Manage bookings</h3>
+          <p style="margin:0; font-size:15px; line-height:1.6; color:var(--pc-subtle);">View history, download tokens or cancel from your profile.</p>
+        </div>
+
+        <div class="pc-step-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="width:44px; height:44px; border-radius:50%; background:var(--pc-primary); color:#ffffff; font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center;">4</span>
+            <i data-lucide="file-text" style="width:24px; height:24px; color:var(--pc-primary);"></i>
+          </div>
+          <h3 style="margin:20px 0 8px; font-size:20px; font-weight:800; color:var(--pc-navy);">Keep your prescriptions</h3>
+          <p style="margin:0; font-size:15px; line-height:1.6; color:var(--pc-subtle);">They stay saved in your profile for future visits.</p>
+        </div>
+
+        <div class="pc-step-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="width:44px; height:44px; border-radius:50%; background:var(--pc-primary); color:#ffffff; font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center;">5</span>
+            <i data-lucide="activity" style="width:24px; height:24px; color:var(--pc-primary);"></i>
+          </div>
+          <h3 style="margin:20px 0 8px; font-size:20px; font-weight:800; color:var(--pc-navy);">Track your turn live</h3>
+          <p style="margin:0; font-size:15px; line-height:1.6; color:var(--pc-subtle);">See current tokens in real time from your phone.</p>
+        </div>
+
+        <div class="pc-step-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="width:44px; height:44px; border-radius:50%; background:var(--pc-primary); color:#ffffff; font-size:18px; font-weight:800; display:flex; align-items:center; justify-content:center;">6</span>
+            <i data-lucide="message-circle" style="width:24px; height:24px; color:var(--pc-primary);"></i>
+          </div>
+          <h3 style="margin:20px 0 8px; font-size:20px; font-weight:800; color:var(--pc-navy);">Instant help</h3>
+          <p style="margin:0; font-size:15px; line-height:1.6; color:var(--pc-subtle);">Call the clinic or talk to the AI assistant any time.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT SECTION -->
+  <section class="home-section" id="heritage-section" style="scroll-margin-top: 5rem;">
+    <div id="about" style="position: absolute; top: -100px;"></div>
     <div class="heritage-grid">
       <div class="heritage-text">
         <span class="section-tag">Clinical Heritage</span>
         <h2>{{ settings.promo_heritage_heading | safe }}</h2>
         <p>{{ settings.promo_heritage_text }}</p>
-        <div style="display:flex; gap:2rem;">
-          <div style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 900; color: var(--primary);">{{ settings.departments_count }}+</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Departments</div>
+
+        <div class="pc-proof-cards-grid">
+          <div class="pc-proof-card">
+            <div class="pc-proof-card-val">24/7</div>
+            <div class="pc-proof-card-label">Support</div>
+            <div style="font-size:13px; color:var(--pc-muted); margin-top:4px;">Emergency & triage assistance</div>
           </div>
-          <div style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 900; color: var(--primary);">24/7</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Support</div>
+          <div class="pc-proof-card">
+            <div class="pc-proof-card-val">Online</div>
+            <div class="pc-proof-card-label">Digital Token Booking</div>
+            <div style="font-size:13px; color:var(--pc-muted); margin-top:4px;">No standing in long morning queues</div>
+          </div>
+        </div>
+
+        <div class="pc-award-banner">
+          <div style="width:44px; height:44px; border-radius:12px; background:var(--pc-soft-blue); color:var(--pc-primary); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <i data-lucide="award" style="width:24px; height:24px;"></i>
+          </div>
+          <div>
+            <div style="font-size:16px; font-weight:800; color:var(--pc-navy);">{{ settings.promo_award_title }}</div>
+            <div style="font-size:14px; color:var(--pc-subtle); margin-top:2px;">{{ settings.promo_award_desc }}</div>
           </div>
         </div>
       </div>
-      <div class="heritage-visual" style="height: 380px; background: url('{{ settings.promo_heritage_image }}') center/cover no-repeat; border-radius: var(--radius-lg); position: relative;">
-        <div style="position: absolute; bottom: 18px; left: 18px; background: #fff; padding: 1rem; border-radius: 16px; border: 1px solid var(--primary-soft); box-shadow: 0 10px 20px rgba(0,0,0,0.05);">
-          <i data-lucide="award" style="color: var(--primary); margin-bottom: 4px;"></i>
-          <h4 style="margin:0; font-size: 0.85rem; color: var(--primary-dark);">{{ settings.promo_award_title }}</h4>
-          <p style="margin:0; font-size: 0.7rem; color: var(--text-muted);">{{ settings.promo_award_desc }}</p>
+
+      <div class="heritage-visual" style="height: 440px; background: url('{{ settings.promo_heritage_image }}') center/cover no-repeat; border-radius: 28px; position: relative; overflow:hidden; box-shadow: var(--pc-shadow-card);">
+        <div style="position: absolute; inset:0; background: linear-gradient(180deg, transparent 60%, rgba(3,4,94,0.6) 100%);"></div>
+        <div style="position: absolute; bottom: 20px; left: 20px; right: 20px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 14px 18px; border-radius: 16px; border: 1px solid var(--pc-border); box-shadow: 0 10px 24px rgba(3,4,94,0.1);">
+          <div style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:var(--pc-navy);">
+            <i data-lucide="shield-check" style="width:18px; height:18px; color:var(--pc-primary);"></i>
+            <span>Community Care Since {{ settings.stat_since }}</span>
+          </div>
+          <div style="font-size:12px; color:var(--pc-subtle); margin-top:2px;">PrimeCare Clinic • Koorachundu</div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="leadership-bg">
-    <div class="home-section">
-      <div style="text-align: center; margin-bottom: 3rem;">
+  <!-- LEADERSHIP SECTION -->
+  <section class="leadership-bg" id="leadership" style="scroll-margin-top: 5rem;">
+    <div class="home-section" style="padding: 0 !important;">
+      <div class="section-header-center">
         <span class="section-tag">Governance</span>
-        <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--primary-dark); font-weight: 900;">Our Leadership</h2>
+        <h2>Meet the people behind PrimeCare</h2>
       </div>
       <div class="leadership-grid">
-        <div class="leader-card">
-          <div class="leader-img"><img src="{{ settings.promo_leader_1_image }}" alt="CMO"></div>
+        <article class="leader-card">
+          <div class="leader-img">
+            <img src="{{ settings.promo_leader_1_image }}" alt="{{ settings.promo_leader_1_name }}" style="width:100%; height:100%; object-fit:cover; object-position: 50% 18%;">
+          </div>
           <div class="leader-info">
-            <h3>{{ settings.promo_leader_1_name }}</h3>
             <span class="leader-role">{{ settings.promo_leader_1_role }}</span>
+            <h3 style="margin: 12px 0 8px; font-size: 24px; font-weight: 800; color: var(--pc-navy);">{{ settings.promo_leader_1_name }}</h3>
             <p class="leader-bio">{{ settings.promo_leader_1_bio }}</p>
           </div>
-        </div>
-        <div class="leader-card">
-          <div class="leader-img"><img src="{{ settings.promo_leader_2_image }}" alt="GM"></div>
+        </article>
+
+        <article class="leader-card">
+          <div class="leader-img">
+            <img src="{{ settings.promo_leader_2_image }}" alt="{{ settings.promo_leader_2_name }}" style="width:100%; height:100%; object-fit:cover; object-position: 52% 20%;">
+          </div>
           <div class="leader-info">
-            <h3>{{ settings.promo_leader_2_name }}</h3>
             <span class="leader-role">{{ settings.promo_leader_2_role }}</span>
+            <h3 style="margin: 12px 0 8px; font-size: 24px; font-weight: 800; color: var(--pc-navy);">{{ settings.promo_leader_2_name }}</h3>
             <p class="leader-bio">{{ settings.promo_leader_2_bio }}</p>
           </div>
-        </div>
+        </article>
       </div>
     </div>
   </section>
 
+  <!-- CONTACT & FACILITY -->
   <section class="home-section" id="visit-section" style="scroll-margin-top: 5rem;">
+    <div id="contact" style="position: absolute; top: -100px;"></div>
     <div id="contact-section" style="position: absolute; top: -100px;"></div>
-    <div class="visit-card" style="box-shadow: 0 25px 60px -15px rgba(3, 4, 94, 0.25);">
+    <div class="visit-card">
       <div class="visit-info">
-        <span class="section-tag" style="background:rgba(255,255,255,0.15); color:#fff; border: 1px solid rgba(255,255,255,0.2);">Our Facility</span>
-        <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); margin-bottom: 2rem; font-weight: 900; letter-spacing: -0.02em;">Central Facility <br>in Koorachundu</h2>
-        
+        <span class="section-tag" style="background:rgba(255,255,255,0.15); color:#fff; border: 1px solid rgba(255,255,255,0.2);">Visit Us</span>
+        <h2 style="font-size: clamp(28px, 3.2vw, 38px); margin: 16px 0 28px; font-weight: 800; letter-spacing: -0.02em; color:#ffffff;">Find us in Koorachundu</h2>
+
         <div class="c-row">
           <div class="c-icon"><i data-lucide="map-pin"></i></div>
           <div class="c-text">
@@ -1904,59 +1947,57 @@
             <p>{{ settings.clinic_address }}</p>
           </div>
         </div>
-        
-        <div class="c-row" style="margin-bottom: 2.5rem;">
-          <div style="display:flex; gap:2rem; flex-wrap: wrap;">
+
+        <div class="c-row" style="margin-bottom: 2rem;">
+          <div style="display:flex; gap:1.8rem; flex-wrap: wrap;">
             <div style="display:flex; gap:0.6rem; align-items:center;">
-              <i data-lucide="clock" style="width:16px; opacity:0.6;"></i>
-              <span style="font-size:0.9rem; font-weight:600;">08:00 AM - 09:00 PM</span>
+              <i data-lucide="clock" style="width:16px; opacity:0.7;"></i>
+              <span style="font-size:0.95rem; font-weight:600;">08:00 AM – 09:00 PM Daily</span>
             </div>
             <div style="display:flex; gap:0.6rem; align-items:center;">
-              <i data-lucide="phone-call" style="width:16px; opacity:0.6;"></i>
-              <span style="font-size:0.9rem; font-weight:600;">{{ settings.clinic_phone }}</span>
+              <i data-lucide="phone-call" style="width:16px; opacity:0.7;"></i>
+              <span style="font-size:0.95rem; font-weight:600;">{{ settings.clinic_phone }}</span>
             </div>
           </div>
         </div>
 
         <div class="action-pill-container" style="display:flex; gap:1rem; flex-wrap: wrap;">
-          <a href="{{ settings.clinic_map_link }}" target="_blank" class="action-pill pill-directions">
-            <i data-lucide="navigation"></i> Get Directions
+          <a href="{{ settings.clinic_map_link }}" target="_blank" class="action-pill pill-directions" style="background:var(--pc-amber); color:var(--pc-navy); font-weight:800; text-decoration:none; display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:12px; box-shadow:var(--pc-shadow-amber);">
+            <i data-lucide="navigation" style="width:18px;height:18px;"></i> Get Directions
           </a>
-          <a href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" class="action-pill pill-whatsapp">
-            <svg style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp Enquiry
+          <a href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" class="action-pill pill-whatsapp" style="background:transparent; border:1.5px solid rgba(255,255,255,0.6); color:#ffffff; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:12px;">
+            <i data-lucide="message-circle" style="width:18px;height:18px;"></i> WhatsApp Enquiry
           </a>
         </div>
       </div>
-      <div class="visit-visual" style="border-radius: 20px; overflow: hidden; position: relative; min-height: 280px;">
-        <div style="width:100%; height:100%; background: url('{{ settings.promo_facility_image }}') center/cover; opacity: 0.6; filter: grayscale(20%);"></div>
-        <div style="position: absolute; inset: 0; background: linear-gradient(to right, var(--primary-dark) 0%, transparent 100%);"></div>
-        <div style="position: absolute; bottom: 30px; left: 30px; color:#fff;">
-          <div style="display:flex; align-items:center; gap:0.5rem; opacity:0.8; font-size: 0.8rem; margin-bottom: 0.2rem;">
-            <i data-lucide="shield-check" style="width:14px;"></i> Verified Facility
+
+      <div class="visit-visual" style="min-height: 320px; position: relative; overflow:hidden;">
+        <div style="width:100%; height:100%; background: url('{{ settings.promo_facility_image }}') center/cover no-repeat; opacity: 0.75;"></div>
+        <div style="position: absolute; inset: 0; background: linear-gradient(to right, var(--pc-navy) 0%, transparent 100%);"></div>
+        <div style="position: absolute; bottom: 32px; left: 32px; color:#ffffff;">
+          <div style="display:flex; align-items:center; gap:0.5rem; opacity:0.85; font-size: 0.82rem; margin-bottom: 0.3rem;">
+            <i data-lucide="shield-check" style="width:15px; height:15px; color:var(--pc-amber);"></i> Verified Facility
           </div>
-          <div style="font-weight:900; font-size: 1.4rem;">PrimeCare Clinic</div>
+          <div style="font-weight:800; font-size: 1.5rem;">PrimeCare Clinic</div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="home-section" id="services-grid" style="scroll-margin-top: 0rem;">
-    <div id="services-section" style="position: absolute; top: -100px;"></div>
-    <div style="text-align: center; margin-bottom: 2rem;">
-      <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--primary-dark); font-weight: 900;">Our Departments</h2>
-    </div>
-    <div class="dept-grid">
-      {% for group in doctors | groupby('Specialization') %}
-      <div class="dept-card" onclick="scrollToSpec('{{ group.grouper }}')">
-        <div class="dept-icon"><i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i></div>
-        <h4>{{ group.grouper }}</h4>
-        <p>{{ group.list | length }} Doctors</p>
+  <!-- CLOSING CTA CARD -->
+  <section class="pc-closing-cta-section">
+    <div class="pc-closing-cta-card">
+      <div>
+        <h2>Ready to see a doctor?</h2>
+        <p>Choose your doctor, pick a time and get your digital token instantly.</p>
       </div>
-      {% endfor %}
+      <button type="button" class="btn-hero-primary" style="background:var(--pc-amber); color:var(--pc-navy); font-weight:800; height:56px; padding:0 34px; border-radius:14px; border:0; display:inline-flex; align-items:center; gap:10px; cursor:pointer; flex-shrink:0; box-shadow:var(--pc-shadow-amber);" onclick="window.location.href='/booking'">
+        <i data-lucide="calendar"></i> Book Appointment
+      </button>
     </div>
   </section>
 
-  <!-- HOW IT WORKS MODAL -->
+<!-- HOW IT WORKS MODAL -->
   <div class="info-modal-overlay" id="infoModal" role="dialog" aria-modal="true" aria-label="How booking works">
     <div class="info-modal">
       <button class="info-modal-close" id="infoModalClose" aria-label="Close">
@@ -2189,171 +2230,93 @@
     </div>
   </div>
 
-  <!-- DOCTORS SECTION (Bounded Sticky Scope) -->
-  <div id="doctors-full-section">
-    <div id="doctors-anchor" style="scroll-margin-top: 4.5rem;"></div>
-    <h2 class="doctors-heading" id="doctors-section">
-      <i data-lucide="stethoscope"></i>
-      Our Doctors
-    </h2>
-
-  <main class="content-inner">
-    {% if not doctors %}
-      <div class="no-doctors">
-        <i data-lucide="circle-alert" style="width:32px;height:32px;color:#bbb;display:block;margin:0 auto 0.5rem;"></i>
-        Doctor list is currently unavailable. Please contact the clinic or try again later.
-      </div>
-    {% else %}
-      {% set day_order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
-
-      {% for group in doctors | groupby('Specialization') %}
-        {% set spec_index = loop.index %}
-        <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}" style="scroll-margin-top: 8rem;" >
-          <h2 class="spec-heading">
-            <i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i>
-            {{ group.grouper }}
-          </h2>
-          <div class="doctor-grid">
-            {% for doc in group.list %}
-              {% set card_id = 'timing-' ~ spec_index ~ '-' ~ loop.index0 %}
-              <article class="doctor-card">
-
-                <!-- Timing popup -->
-                <div class="card-timing-popup" id="{{ card_id }}">
-                  <div class="card-timing-header">
-                    <div class="card-timing-title">
-                      <i data-lucide="clock-3"></i>
-                      {{ doc.Name }}
-                    </div>
-                    <button type="button" class="close-timing" aria-label="Close timings">
-                      <i data-lucide="x"></i>
-                    </button>
-                  </div>
-                  <ul class="timing-list">
-                    {% for day in day_order %}
-                      {% set t = doc.DayTimes.get(day) if doc.DayTimes else None %}
-                      <li>
-                        <span class="timing-day">
-                          <i data-lucide="calendar-days"></i>
-                          <span class="full-day">{{ day }}</span>
-                          <span class="short-day">{{ day[:3] }}</span>
-                        </span>
-                        {% if day not in doc.Days %}
-                          <span class="timing-na">Not working</span>
-                        {% elif t %}
-                          <span class="timing-time">{{ t }}</span>
-                        {% else %}
-                          <span class="timing-na">Time not set</span>
-                        {% endif %}
-                      </li>
-                    {% endfor %}
-                  </ul>
-                </div>
-
-                <!-- Doctor image -->
-                <div class="doctor-img">
-                  {% if doc.Image %}
-                    <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" />
-                  {% else %}
-                    <img src="{{ url_for('static', filename='doctor_images/default.png') }}"
-                         alt="No image" loading="lazy" />
-                  {% endif %}
-                </div>
-
-                <!-- Doctor info -->
-                <div class="doctor-info">
-                  <h4>{{ doc.Name }}</h4>
-                  <p class="doctor-meta">
-                    <i data-lucide="stethoscope"></i>
-                    {{ doc.Specialization }}
-                  </p>
-                  <p class="doctor-meta">
-                    <i data-lucide="calendar-check"></i>
-                    {% if doc.Days %}{{ doc.Days | join(', ') }}{% else %}Not set{% endif %}
-                  </p>
-                  <button type="button" class="btn-timing" data-target="{{ card_id }}">
-                    <i data-lucide="clock"></i>
-                    View timings
-                  </button>
-                </div>
-              </article>
-            {% endfor %}
-          </div>
-        </section>
-      {% endfor %}
-    {% endif %}
-  </div>
-
+  <!-- FOOTER -->
   <footer class="site-footer-pro">
     <div class="f-content">
       <div class="f-col f-brand">
-        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
-          <img src="{{ url_for('static', filename='primecare-logo.svg') }}" style="width:34px;height:34px;object-fit:contain;filter:brightness(0) invert(1);" alt="PrimeCare Logo" />
-          <h2 style="color: #fff; margin: 0; font-size:1.45rem;">PrimeCare Clinic</h2>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom: 1rem;">
+          <img src="{{ url_for('static', filename='primecare-logo.svg') }}" alt="PrimeCare logo" style="width:40px; height:40px; object-fit:contain; background:#ffffff; border-radius:10px; padding:5px;">
+          <span style="font-size:22px; font-weight:800; color:#ffffff; letter-spacing:-0.02em;">PrimeCare Clinic</span>
         </div>
-        <p style="color: #94a3b8; line-height: 1.6; font-size: 0.95rem;">Trusted healthcare for Koorachundu since 2012. Your health is our mission.</p>
+        <p style="color: #cfe3f1; line-height: 1.65; font-size: 0.95rem; max-width: 380px;">Trusted healthcare for Koorachundu since 2012. Your health is our mission.</p>
         <div style="display:flex; gap:1.1rem; margin-top:1.8rem; color: rgba(255,255,255,0.6);">
           <a href="#" aria-label="Instagram" style="color:inherit;"><i data-lucide="instagram"></i></a>
           <a href="#" aria-label="Facebook" style="color:inherit;"><i data-lucide="facebook"></i></a>
           <a href="#" aria-label="Twitter" style="color:inherit;"><i data-lucide="twitter"></i></a>
         </div>
       </div>
+
       <div class="f-col">
         <h4>Navigation</h4>
         <ul class="f-links">
           <li><a href="/">Home</a></li>
-          {% if user %}
-            <li><a href="/patient_dashboard">My Profile</a></li>
+          {% if user or session.get('user_id') %}
+            <li><a href="{{ '/doctor_dashboard' if session.get('user_role') == 'doctor' else '/patient_dashboard' }}">My Profile</a></li>
           {% else %}
             <li><a href="#" onclick="openAuthModal('login')">Login</a></li>
           {% endif %}
-          <li><a href="#doctors-anchor">Doctors</a></li>
-          <li><a href="#services-grid">Departments</a></li>
-          <li><a href="#heritage-section">About Us</a></li>
-          <li><a href="#visit-section">Contact & Location</a></li>          
           {% if session.get('admin_logged_in') %}
-          <li><a href="/admin" id="adminLoginDiv" style="color: var(--pc-amber-accent); font-weight: bold;">Admin Panel</a></li>
+          <li><a href="/admin" id="adminLoginDiv" style="color: var(--pc-amber); font-weight: bold;">Admin Panel</a></li>
           {% else %}
           <li><a href="/admin" id="adminLoginDiv">Admin Login</a></li>
           {% endif %}
+          <li><a href="#departments">Doctors</a></li>
+          <li><a href="#how-it-works-section">How It Works</a></li>
+          <li><a href="#heritage-section">About Us</a></li>
+          <li><a href="#visit-section">Contact & Location</a></li>          
         </ul>
       </div>
- 
+
       <div class="f-col">
-        <h4>Contact & Hours</h4>
-        <div style="color: #94a3b8; font-size: 0.92rem; line-height: 1.7;">
-          <strong style="color:#fff;display:block;margin-bottom:0.25rem;">PrimeCare Clinic</strong>
+        <h4>Contact Us</h4>
+        <div style="color: #cfe3f1; font-size: 0.92rem; line-height: 1.7;">
+          <strong style="color:#ffffff; display:block; margin-bottom:0.25rem;">PrimeCare Clinic</strong>
           {{ settings.clinic_address }}<br><br>
           <span>Phone: {{ settings.clinic_phone }}</span><br>
           <span>WhatsApp: +91 8592031725</span><br>
-          <span style="color:#e2e8f0;display:block;margin-top:0.4rem;">Daily Hours: 08:00 AM – 09:00 PM</span>
+          <span style="color:#ffffff; display:block; margin-top:0.4rem; font-weight:600;">Daily Hours: 08:00 AM – 09:00 PM</span>
         </div>
       </div>
     </div>
-    <div style="width: 100%; padding: 1.6rem 1.5rem 2rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: center; color: #64748b; font-size: 0.86rem; margin-top: 0;">
-      <p style="margin-bottom: 0;">© 2026 PrimeCare Clinic. All rights reserved.</p>
+
+    <div class="pc-footer-bottom">
+      <p style="margin: 0;">© 2026 PrimeCare Clinic. All rights reserved.</p>
     </div>
   </footer>
 
-  <script>
+  <!-- MOBILE STICKY BOTTOM ACTION BAR -->
+  <nav class="pc-mobile-action-bar" aria-label="Mobile Quick Actions">
+    <a href="tel:{{ settings.clinic_phone }}" class="pc-bar-action pc-bar-call">
+      <i data-lucide="phone"></i>
+      <span>Call</span>
+    </a>
+    <a href="/booking" class="pc-bar-action pc-bar-book-btn">
+      <i data-lucide="calendar"></i>
+      <span>Book Now</span>
+    </a>
+    <a href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" class="pc-bar-action pc-bar-whatsapp">
+      <i data-lucide="message-circle"></i>
+      <span>WhatsApp</span>
+    </a>
+  </nav>
+
+<script>
     // Init Lucide icons
     lucide.createIcons();
 
     // Mobile Navigation Drawer Toggle
     function toggleMobileNavDrawer(forceState) {
-      const drawer = document.getElementById('mobileNavDrawer');
-      const icon = document.getElementById('mobileNavIcon');
+      const drawer = document.getElementById('pcMobileNavDrawer');
+      const icon = document.getElementById('pcMobileNavIcon');
       if (!drawer) return;
-      const isCurrentlyOpen = drawer.classList.contains('open') || drawer.style.display === 'block';
+      const isCurrentlyOpen = drawer.classList.contains('open');
       const shouldOpen = (typeof forceState === 'boolean') ? forceState : !isCurrentlyOpen;
       
       if (shouldOpen) {
-        drawer.style.display = 'block';
         drawer.classList.add('open');
         if (icon) icon.setAttribute('data-lucide', 'x');
       } else {
         drawer.classList.remove('open');
-        drawer.style.display = 'none';
         if (icon) icon.setAttribute('data-lucide', 'menu');
       }
       if (window.lucide && lucide.createIcons) lucide.createIcons();
@@ -2370,6 +2333,15 @@
         }
       }
     }, { passive: true });
+
+    // Hide Mobile Sticky Action Bar on virtual keyboard focus
+    document.addEventListener('DOMContentLoaded', () => {
+      const inputs = document.querySelectorAll('input, textarea, select');
+      inputs.forEach(el => {
+        el.addEventListener('focusin', () => document.body.classList.add('keyboard-open'));
+        el.addEventListener('focusout', () => document.body.classList.remove('keyboard-open'));
+      });
+    });
 
     // --- NAVIGATION LOGIC ---
     function scrollToSpec(specName) {

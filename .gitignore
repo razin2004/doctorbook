@@ -4,6 +4,7 @@ __pycache__/
 .env
 !.env.example
 token.json
+vapid_keys.json
 instance/*.db
 .pytest_cache/
 *.bak
