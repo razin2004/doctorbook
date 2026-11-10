@@ -741,33 +741,35 @@ header.top-bar {
 
 @media (max-width: 767px) {
   .pc-hero-points {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 10px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 18px !important;
     margin: 20px 0 0 !important;
     padding: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    flex-wrap: nowrap !important;
   }
   .pc-point-item {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    justify-content: flex-start !important;
     text-align: left !important;
     gap: 8px !important;
-    background: rgba(255, 255, 255, 0.10) !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    border-radius: 12px !important;
-    padding: 8px 10px !important;
-    box-sizing: border-box !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
     min-width: 0 !important;
   }
   .pc-point-ic {
-    width: 30px !important;
-    height: 30px !important;
-    border-radius: 8px !important;
-    background: rgba(255, 255, 255, 0.18) !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.14) !important;
     color: #ffffff !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -775,14 +777,15 @@ header.top-bar {
     flex-shrink: 0 !important;
   }
   .pc-point-ic svg {
-    width: 15px !important;
-    height: 15px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
   .pc-point-label {
-    font-size: 11px !important;
-    font-weight: 700 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
     color: #ffffff !important;
     line-height: 1.25 !important;
+    white-space: normal !important;
   }
 }
 
@@ -1078,10 +1081,11 @@ body {
 #heritage-section,
 #visit-section,
 #services-grid,
+#doctors-full-section,
 #doctors-anchor,
 .spec-section,
 #how-section {
-  scroll-margin-top: calc(var(--pc-header-h) + 12px) !important;
+  scroll-margin-top: calc(var(--pc-header-h) + 16px) !important;
 }
 
 /* ─── SHARED SECTION HEADS ─── */
@@ -1340,7 +1344,7 @@ body {
   .doctor-img {
     width: 100% !important;
     aspect-ratio: 4 / 5 !important;
-    min-height: 180px !important;
+    height: auto !important;
     border-radius: 16px 16px 0 0 !important;
     overflow: hidden !important;
     background: #f1f5f9 !important;
@@ -1349,12 +1353,14 @@ body {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
-    object-position: center 15% !important;
+    object-position: center 20% !important;
     display: block !important;
   }
   .doctor-info {
     padding: 10px 10px 12px !important;
     flex: none !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
   .doctor-info h4 {
     font-size: 14px !important;
@@ -1371,12 +1377,13 @@ body {
     width: 13px !important;
     height: 13px !important;
   }
-  /* 2 rows for 7 days (4 on row 1, 3 on row 2) with 3-char codes */
+  /* 2 rows for 7 days (4 on row 1, 3 on row 2) with 3-char codes and minimal gap */
   .pc-days {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
     gap: 4px !important;
-    margin: 6px 0 8px !important;
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
   }
   .pc-day {
     height: 22px !important;
@@ -1389,8 +1396,8 @@ body {
   .doctor-actions {
     display: flex !important;
     flex-direction: column !important;
-    gap: 6px !important;
-    margin-top: 6px !important;
+    gap: 5px !important;
+    margin-top: 4px !important;
   }
   .doctor-actions .btn-timing {
     height: 32px !important;
@@ -1522,13 +1529,13 @@ body {
   flex-shrink: 0 !important;
 }
 
-/* Day chips */
+/* Day chips - Default desktop 7 in 1 row */
 .pc-days {
   display: grid !important;
   grid-template-columns: repeat(7, 1fr) !important;
   gap: 4px !important;
   margin-top: 8px !important;
-  margin-bottom: 12px !important;
+  margin-bottom: 10px !important;
 }
 .pc-day {
   height: 26px !important;
@@ -1540,22 +1547,8 @@ body {
   justify-content: center !important;
   min-width: 0 !important;
   text-transform: uppercase !important;
-  padding: 0 !important;
+  padding: 0 2px !important;
   letter-spacing: -0.02em !important;
-}
-.day-code-mobile {
-  display: none !important;
-}
-.day-code-desktop {
-  display: inline !important;
-}
-@media (max-width: 767px) {
-  .day-code-desktop {
-    display: none !important;
-  }
-  .day-code-mobile {
-    display: inline !important;
-  }
 }
 .pc-day.on {
   background: var(--pc-ok-bg) !important;
@@ -1567,28 +1560,18 @@ body {
   font-weight: 600 !important;
 }
 
+/* Base doctor actions & button sizing */
 .doctor-actions {
   margin-top: auto !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 10px !important;
 }
-@media (min-width: 768px) {
-  .doctor-actions {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-    align-items: stretch !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    margin-top: auto !important;
-  }
-}
 .btn-timing {
   width: 100% !important;
-  height: 44px !important;
-  border-radius: 12px !important;
-  font-size: 15px !important;
+  height: 42px !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
   font-weight: 700 !important;
   background: #ffffff !important;
   border: 1.5px solid var(--pc-primary) !important;
@@ -1599,15 +1582,52 @@ body {
   gap: 6px !important;
   cursor: pointer !important;
   transition: background-color var(--pc-fast) var(--pc-ease), color var(--pc-fast) var(--pc-ease) !important;
+  box-sizing: border-box !important;
 }
+.pc-card-book {
+  width: 100% !important;
+  height: 42px !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: var(--pc-primary) !important;
+  border: 1.5px solid var(--pc-primary) !important;
+  color: #ffffff !important;
+  text-decoration: none !important;
+  transition: background-color var(--pc-fast) var(--pc-ease) !important;
+  box-sizing: border-box !important;
+}
+@media (hover: hover) {
+  .btn-timing:hover {
+    background: var(--pc-sky) !important;
+  }
+  .pc-card-book:hover {
+    background: #0076a8 !important;
+  }
+}
+
+/* Desktop: timing and book button exact same size and exact same line */
 @media (min-width: 768px) {
-  .btn-timing,
-  .pc-card-book {
+  .doctor-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    align-items: center !important;
     width: 100% !important;
-    height: 38px !important;
-    min-height: 38px !important;
-    max-height: 38px !important;
-    padding: 0 6px !important;
+    box-sizing: border-box !important;
+    margin-top: auto !important;
+  }
+  .doctor-actions .btn-timing,
+  .doctor-actions .pc-card-book {
+    width: 100% !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    padding: 0 8px !important;
     font-size: 13px !important;
     font-weight: 700 !important;
     border-radius: 10px !important;
@@ -1618,35 +1638,32 @@ body {
     text-align: center !important;
     white-space: nowrap !important;
     margin: 0 !important;
+    line-height: 1 !important;
     flex: none !important;
   }
-  .btn-timing {
-    border: 1.5px solid var(--pc-primary) !important;
-    background: #ffffff !important;
-    color: var(--pc-primary) !important;
+}
+
+/* Mobile: strictly enforce 2 rows for days (4 on row 1, 3 on row 2) and minimal gap to buttons */
+@media (max-width: 767px) {
+  .pc-days {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+  }
+  .pc-day {
+    height: 22px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    border-radius: 5px !important;
+    padding: 0 !important;
+    letter-spacing: -0.02em !important;
+  }
+  .doctor-actions {
+    margin-top: 4px !important;
     gap: 5px !important;
   }
-  .pc-card-book {
-    border: 1.5px solid var(--pc-primary) !important;
-    background: var(--pc-primary) !important;
-    color: #ffffff !important;
-  }
-}
-@media (hover: hover) {
-  .btn-timing:hover {
-    background: var(--pc-sky) !important;
-  }
-}
-.pc-card-book {
-  width: 100% !important;
-  height: 48px !important;
-  border-radius: 12px !important;
-  font-size: 15px !important;
-  font-weight: 700 !important;
-  text-align: center !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
 }
 
 /* Timings Pop-up */
