@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>PrimeCare Clinic – Trusted Healthcare</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="description" content="Book appointments at PrimeCare Clinic. Experienced specialists, online token booking, instant confirmation." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1389,6 +1389,7 @@
 </head>
 
 <body>
+  <a class="pc-skip" href="#doctors-anchor">Skip to doctors</a>
   {% set icons = {'General Physician':'activity','Cardiologist':'heart','Pediatrician':'baby','Dermatologist':'sparkles','Orthopedics':'bone','Neurologist':'brain','ENT':'ear','Gynecologist':'heart-pulse','Ophthalmologist':'eye','Psychiatrist':'brain-cog','Oncologist':'cancer','Urologist':'kidney','Gastroenterologist':'utensils','Endocrinology':'droplet','Radiologist':'scan','Anesthesiology':'pill','Dentist':'tooth','Physiotherapist':'dumbbell','General Surgeon':'scalpel','Psychologist':'brain'} %}
 
 
@@ -1598,26 +1599,28 @@
 
   <section class="home-section" id="heritage-section">
     <div class="heritage-grid">
-      <div class="heritage-text">
-        <span class="section-tag">Clinical Heritage</span>
+      <div class="heritage-text pc-reveal">
+        <span class="section-tag">About us</span>
         <h2>{{ settings.promo_heritage_heading | safe }}</h2>
         <p>{{ settings.promo_heritage_text }}</p>
-        <div style="display:flex; gap:2rem;">
-          <div style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 900; color: var(--primary);">{{ settings.departments_count }}+</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Departments</div>
+        <div class="pc-stats">
+          <div class="pc-stat">
+            <div class="pc-stat-val">{{ settings.departments_count }}+</div>
+            <div class="pc-stat-lbl">Departments</div>
           </div>
-          <div style="text-align: center;">
-            <div style="font-size: 2rem; font-weight: 900; color: var(--primary);">24/7</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Support</div>
+          <div class="pc-stat">
+            <div class="pc-stat-val">24/7</div>
+            <div class="pc-stat-lbl">Support</div>
           </div>
         </div>
       </div>
-      <div class="heritage-visual" style="height: 380px; background: url('{{ settings.promo_heritage_image }}') center/cover no-repeat; border-radius: var(--radius-lg); position: relative;">
-        <div style="position: absolute; bottom: 18px; left: 18px; background: #fff; padding: 1rem; border-radius: 16px; border: 1px solid var(--primary-soft); box-shadow: 0 10px 20px rgba(0,0,0,0.05);">
-          <i data-lucide="award" style="color: var(--primary); margin-bottom: 4px;"></i>
-          <h4 style="margin:0; font-size: 0.85rem; color: var(--primary-dark);">{{ settings.promo_award_title }}</h4>
-          <p style="margin:0; font-size: 0.7rem; color: var(--text-muted);">{{ settings.promo_award_desc }}</p>
+      <div class="heritage-visual pc-reveal" style="background-image: url('{{ settings.promo_heritage_image }}');">
+        <div class="pc-award">
+          <div class="pc-award-ic"><i data-lucide="award"></i></div>
+          <div class="pc-award-text">
+            <h4>{{ settings.promo_award_title }}</h4>
+            <p>{{ settings.promo_award_desc }}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -1625,21 +1628,21 @@
 
   <section class="leadership-bg">
     <div class="home-section">
-      <div style="text-align: center; margin-bottom: 3rem;">
-        <span class="section-tag">Governance</span>
-        <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--primary-dark); font-weight: 900;">Our Leadership</h2>
+      <div class="pc-head pc-head--center pc-reveal" style="margin-bottom: 2rem;">
+        <span class="section-tag">Leadership</span>
+        <h2 class="pc-title">Meet the people behind PrimeCare</h2>
       </div>
       <div class="leadership-grid">
-        <div class="leader-card">
-          <div class="leader-img"><img src="{{ settings.promo_leader_1_image }}" alt="CMO"></div>
+        <div class="leader-card pc-reveal">
+          <div class="leader-img"><img src="{{ settings.promo_leader_1_image }}" alt="{{ settings.promo_leader_1_name }}" loading="lazy" decoding="async"></div>
           <div class="leader-info">
             <h3>{{ settings.promo_leader_1_name }}</h3>
             <span class="leader-role">{{ settings.promo_leader_1_role }}</span>
             <p class="leader-bio">{{ settings.promo_leader_1_bio }}</p>
           </div>
         </div>
-        <div class="leader-card">
-          <div class="leader-img"><img src="{{ settings.promo_leader_2_image }}" alt="GM"></div>
+        <div class="leader-card pc-reveal">
+          <div class="leader-img"><img src="{{ settings.promo_leader_2_image }}" alt="{{ settings.promo_leader_2_name }}" loading="lazy" decoding="async"></div>
           <div class="leader-info">
             <h3>{{ settings.promo_leader_2_name }}</h3>
             <span class="leader-role">{{ settings.promo_leader_2_role }}</span>
@@ -1650,12 +1653,12 @@
     </div>
   </section>
 
-  <section class="home-section" id="visit-section" style="scroll-margin-top: 5rem;">
+  <section class="home-section" id="visit-section">
     <div id="contact-section" style="position: absolute; top: -100px;"></div>
-    <div class="visit-card" style="box-shadow: 0 25px 60px -15px rgba(3, 4, 94, 0.25);">
+    <div class="visit-card pc-reveal">
       <div class="visit-info">
-        <span class="section-tag" style="background:rgba(255,255,255,0.15); color:#fff; border: 1px solid rgba(255,255,255,0.2);">Our Facility</span>
-        <h2 style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); margin-bottom: 2rem; font-weight: 900; letter-spacing: -0.02em;">Central Facility <br>in Koorachundu</h2>
+        <span class="section-tag pc-tag-light">Visit us</span>
+        <h2>Find us in Koorachundu</h2>
         
         <div class="c-row">
           <div class="c-icon"><i data-lucide="map-pin"></i></div>
@@ -1665,32 +1668,35 @@
           </div>
         </div>
         
-        <div class="c-row" style="margin-bottom: 2.5rem;">
-          <div style="display:flex; gap:2rem; flex-wrap: wrap;">
-            <div style="display:flex; gap:0.6rem; align-items:center;">
-              <i data-lucide="clock" style="width:16px; opacity:0.6;"></i>
-              <span style="font-size:0.9rem; font-weight:600;">08:00 AM - 09:00 PM</span>
-            </div>
-            <div style="display:flex; gap:0.6rem; align-items:center;">
-              <i data-lucide="phone-call" style="width:16px; opacity:0.6;"></i>
-              <span style="font-size:0.9rem; font-weight:600;">{{ settings.clinic_phone }}</span>
-            </div>
+        <div class="c-row">
+          <div class="c-icon"><i data-lucide="clock"></i></div>
+          <div class="c-text">
+            <h4>Working Hours</h4>
+            <p>08:00 AM - 09:00 PM</p>
           </div>
         </div>
 
-        <div class="action-pill-container" style="display:flex; gap:1rem; flex-wrap: wrap;">
-          <a href="{{ settings.clinic_map_link }}" target="_blank" class="action-pill pill-directions">
+        <div class="c-row">
+          <div class="c-icon"><i data-lucide="phone-call"></i></div>
+          <div class="c-text">
+            <h4>Phone Number</h4>
+            <p><a href="tel:{{ settings.clinic_phone | replace(' ','') }}" style="color:#fff; text-decoration:none;">{{ settings.clinic_phone }}</a></p>
+          </div>
+        </div>
+
+        <div class="action-pill-container">
+          <a href="{{ settings.clinic_map_link }}" target="_blank" rel="noopener" class="action-pill pill-directions">
             <i data-lucide="navigation"></i> Get Directions
           </a>
-          <a href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" class="action-pill pill-whatsapp">
+          <a href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" rel="noopener" class="action-pill pill-whatsapp">
             <svg style="width:18px; height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> WhatsApp Enquiry
           </a>
         </div>
       </div>
-      <div class="visit-visual" style="border-radius: 20px; overflow: hidden; position: relative; min-height: 280px;">
+      <div class="visit-visual pc-reveal">
         <div style="width:100%; height:100%; background: url('{{ settings.promo_facility_image }}') center/cover; opacity: 0.6; filter: grayscale(20%);"></div>
-        <div style="position: absolute; inset: 0; background: linear-gradient(to right, var(--primary-dark) 0%, transparent 100%);"></div>
-        <div style="position: absolute; bottom: 30px; left: 30px; color:#fff;">
+        <div style="position: absolute; inset: 0; background: linear-gradient(to right, var(--pc-navy) 0%, transparent 100%);"></div>
+        <div style="position: absolute; bottom: 20px; left: 20px; color:#fff;">
           <div style="display:flex; align-items:center; gap:0.5rem; opacity:0.8; font-size: 0.8rem; margin-bottom: 0.2rem;">
             <i data-lucide="shield-check" style="width:14px;"></i> Verified Facility
           </div>
@@ -1700,19 +1706,83 @@
     </div>
   </section>
 
-  <section class="home-section" id="services-grid" style="scroll-margin-top: 0rem;">
+  <section class="home-section" id="services-grid">
     <div id="services-section" style="position: absolute; top: -100px;"></div>
-    <div style="text-align: center; margin-bottom: 2rem;">
-      <h2 style="font-size: clamp(1.8rem, 3vw, 2.5rem); color: var(--primary-dark); font-weight: 900;">Our Departments</h2>
+    <div class="pc-head pc-reveal" style="margin-bottom: 1.5rem;">
+      <span class="section-tag">Departments</span>
+      <h2 class="pc-title">Our departments</h2>
     </div>
     <div class="dept-grid">
       {% for group in doctors | groupby('Specialization') %}
-      <div class="dept-card" onclick="scrollToSpec('{{ group.grouper }}')">
+      <div class="dept-card pc-reveal" onclick="scrollToSpec('{{ group.grouper }}')">
         <div class="dept-icon"><i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i></div>
-        <h4>{{ group.grouper }}</h4>
-        <p>{{ group.list | length }} Doctors</p>
+        <div class="dept-info">
+          <h4>{{ group.grouper }}</h4>
+          <p><span class="dept-count-badge">{{ group.list | length }}</span> {{ 'Doctor' if group.list | length == 1 else 'Doctors' }}</p>
+        </div>
       </div>
       {% endfor %}
+    </div>
+  </section>
+
+  <!-- HOW BOOKING WORKS -->
+  <section class="pc-how" id="how-section">
+    <div class="pc-inner">
+      <div class="pc-head pc-head--center pc-reveal" style="margin-bottom: 2rem;">
+        <span class="section-tag">How it works</span>
+        <h2 class="pc-title">How booking works</h2>
+        <p class="pc-lead">Six simple steps, from choosing a doctor to tracking your turn.</p>
+      </div>
+      <ol class="pc-steps">
+        <li class="pc-reveal">
+          <span class="pc-num">1</span>
+          <div class="pc-step-body">
+            <i data-lucide="search" class="pc-step-ic"></i>
+            <h3>Find your doctor</h3>
+            <p>Search by name or specialization and pick a time.</p>
+          </div>
+        </li>
+        <li class="pc-reveal">
+          <span class="pc-num">2</span>
+          <div class="pc-step-body">
+            <i data-lucide="ticket" class="pc-step-ic"></i>
+            <h3>Get your token</h3>
+            <p>Enter name, age and gender to secure it instantly.</p>
+          </div>
+        </li>
+        <li class="pc-reveal">
+          <span class="pc-num">3</span>
+          <div class="pc-step-body">
+            <i data-lucide="calendar-check" class="pc-step-ic"></i>
+            <h3>Manage bookings</h3>
+            <p>View history, download tokens or cancel from your profile.</p>
+          </div>
+        </li>
+        <li class="pc-reveal">
+          <span class="pc-num">4</span>
+          <div class="pc-step-body">
+            <i data-lucide="file-text" class="pc-step-ic"></i>
+            <h3>Keep your prescriptions</h3>
+            <p>They stay saved in your profile for future visits.</p>
+          </div>
+        </li>
+        <li class="pc-reveal">
+          <span class="pc-num">5</span>
+          <div class="pc-step-body">
+            <i data-lucide="activity" class="pc-step-ic"></i>
+            <h3>Track your turn</h3>
+            <p>Follow live token status and get alerts on your phone.</p>
+          </div>
+        </li>
+        <li class="pc-reveal">
+          <span class="pc-num">6</span>
+          <div class="pc-step-body">
+            <i data-lucide="life-buoy" class="pc-step-ic"></i>
+            <h3>Get help fast</h3>
+            <p>Contact our support team whenever you need it.</p>
+          </div>
+        </li>
+      </ol>
     </div>
   </section>
 
@@ -1767,7 +1837,7 @@
       <!-- PATIENT LOGIN VIEW -->
       <div id="authView-login" class="view-section active">
         <h3 class="auth-title">Welcome Back</h3>
-        <p class="auth-subtitle">Login to your patient account</p>
+        <p class="auth-subtitle">Sign in to manage your appointments</p>
         <form onsubmit="handleAuthSubmit(event, 'login')">
           <div class="form-group">
             <label>Mobile Number or Email</label>
@@ -1788,6 +1858,7 @@
 
       <!-- DOCTOR LOGIN VIEW (Reciprocal to Patient Login) -->
       <div id="authView-doctorLogin" class="view-section">
+        <span class="pc-portal-tag">Doctor workspace</span>
         <h3 class="auth-title">Doctor Login</h3>
         <p class="auth-subtitle">Sign in to your doctor consultation workspace</p>
         <form onsubmit="handleAuthSubmit(event, 'doctorLogin')">
@@ -1812,6 +1883,7 @@
 
       <!-- DOCTOR FORGOT PASSWORD VIEW -->
       <div id="authView-doctorForgot" class="view-section">
+        <span class="pc-portal-tag">Doctor workspace</span>
         <h3 class="auth-title">Doctor Password Recovery</h3>
         <p class="auth-subtitle">Enter your registered email or mobile number</p>
         <form onsubmit="handleAuthSubmit(event, 'doctorForgot')">
@@ -1826,6 +1898,7 @@
 
       <!-- DOCTOR OTP VIEW -->
       <div id="authView-doctorOtp" class="view-section">
+        <span class="pc-portal-tag">Doctor workspace</span>
         <h3 class="auth-title">Enter Verification Code</h3>
         <p class="auth-subtitle">A 6-digit code was sent to your registered email</p>
         <form onsubmit="handleAuthSubmit(event, 'doctorOtp')">
@@ -1844,6 +1917,7 @@
 
       <!-- DOCTOR RESET PASSWORD VIEW -->
       <div id="authView-doctorReset" class="view-section">
+        <span class="pc-portal-tag">Doctor workspace</span>
         <h3 class="auth-title">New Doctor Password</h3>
         <p class="auth-subtitle">Create a secure new password</p>
         <form onsubmit="handleAuthSubmit(event, 'doctorReset')">
@@ -1863,7 +1937,7 @@
 
       <!-- PATIENT REGISTER VIEW -->
       <div id="authView-register" class="view-section">
-        <h3 class="auth-title">Create Patient Account</h3>
+        <h3 class="auth-title">Create your account</h3>
         <p class="auth-subtitle">Register with your mobile number</p>
         <form onsubmit="handleAuthSubmit(event, 'register')">
           <div class="form-group">
@@ -1951,7 +2025,12 @@
 
   <!-- DOCTORS SECTION (Bounded Sticky Scope) -->
   <div id="doctors-full-section">
-    <div id="doctors-anchor" style="scroll-margin-top: 4.5rem;"></div>
+    <div class="pc-head pc-reveal" style="max-width: 1200px; margin: 0 auto 1.5rem; padding: 0 20px;">
+      <span class="section-tag">Doctors</span>
+      <h2 class="pc-title">Find your doctor</h2>
+      <p class="pc-lead">Choose a doctor, check their timings and book a token.</p>
+    </div>
+    <div id="doctors-anchor"></div>
     <h2 class="doctors-heading" id="doctors-section">
       <i data-lucide="stethoscope"></i>
       Our Doctors
@@ -1968,7 +2047,7 @@
 
       {% for group in doctors | groupby('Specialization') %}
         {% set spec_index = loop.index %}
-        <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}" style="scroll-margin-top: 8rem;" >
+        <section class="spec-section" id="dept-{{ group.grouper | replace(' ', '-') | lower }}">
           <h2 class="spec-heading">
             <i data-lucide="{{ icons.get(group.grouper, 'activity') }}"></i>
             {{ group.grouper }}
@@ -1976,7 +2055,7 @@
           <div class="doctor-grid">
             {% for doc in group.list %}
               {% set card_id = 'timing-' ~ spec_index ~ '-' ~ loop.index0 %}
-              <article class="doctor-card">
+              <article class="doctor-card pc-reveal">
 
                 <!-- Timing popup -->
                 <div class="card-timing-popup" id="{{ card_id }}">
@@ -2013,10 +2092,10 @@
                 <!-- Doctor image -->
                 <div class="doctor-img">
                   {% if doc.Image %}
-                    <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" />
+                    <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" decoding="async" />
                   {% else %}
                     <img src="{{ url_for('static', filename='doctor_images/default.png') }}"
-                         alt="No image" loading="lazy" />
+                         alt="No image" loading="lazy" decoding="async" />
                   {% endif %}
                 </div>
 
@@ -2027,14 +2106,18 @@
                     <i data-lucide="stethoscope"></i>
                     {{ doc.Specialization }}
                   </p>
-                  <p class="doctor-meta">
-                    <i data-lucide="calendar-check"></i>
-                    {% if doc.Days %}{{ doc.Days | join(', ') }}{% else %}Not set{% endif %}
-                  </p>
-                  <button type="button" class="btn-timing" data-target="{{ card_id }}">
-                    <i data-lucide="clock"></i>
-                    View timings
-                  </button>
+                  <div class="pc-days">
+                    {% for day in day_order %}
+                    <span class="pc-day {{ 'on' if day in doc.Days else 'off' }}">{{ day[:3] }}</span>
+                    {% endfor %}
+                  </div>
+                  <div class="doctor-actions">
+                    <button type="button" class="btn-timing" data-target="{{ card_id }}">
+                      <i data-lucide="clock"></i>
+                      View timings
+                    </button>
+                    <a class="btn btn-primary pc-card-book" href="/booking">Book Appointment</a>
+                  </div>
                 </div>
               </article>
             {% endfor %}
@@ -2042,20 +2125,32 @@
         </section>
       {% endfor %}
     {% endif %}
+  </main>
   </div>
+
+  <!-- CLOSING BANNER -->
+  <section class="pc-cta pc-reveal">
+    <div class="pc-cta-box">
+      <div class="pc-cta-text">
+        <h2>Ready to see a doctor?</h2>
+        <p>Choose your doctor, pick a time and get your digital token instantly.</p>
+      </div>
+      <a class="btn pc-btn-amber" href="/booking">Book Appointment</a>
+    </div>
+  </section>
 
   <footer class="site-footer-pro">
     <div class="f-content">
-      <div class="f-col f-brand">
-        <h2 style="color: #fff; margin-bottom: 1rem;">PrimeCare Clinic</h2>
-        <p style="color: #94a3b8; line-height: 1.6; font-size: 0.95rem;">Providing institutional-grade healthcare since 2012. Your trust is our foundation, and your health is our mission.</p>
-        <div style="display:flex; gap:1rem; margin-top:2rem; color: rgba(255,255,255,0.4);">
+      <div class="f-col f-brand pc-reveal">
+        <h2>PrimeCare Clinic</h2>
+        <p class="f-blurb">Trusted healthcare for Koorachundu since 2012. Your health is our mission.</p>
+        <div class="f-socials">
           <i data-lucide="instagram"></i>
           <i data-lucide="facebook"></i>
           <i data-lucide="twitter"></i>
         </div>
       </div>
-      <div class="f-col">
+      <div class="f-col pc-reveal">
         <h4>Navigation</h4>
         <ul class="f-links">
           <li><a href="/">Home</a></li>
@@ -2075,19 +2170,35 @@
         </ul>
       </div>
  
-      <div class="f-col">
+      <div class="f-col pc-reveal">
         <h4>Contact Us</h4>
-        <div style="color: #94a3b8; font-size: 0.9rem; line-height: 1.7;">
+        <div class="f-contact-info">
           PrimeCare Clinic<br>
           {{ settings.clinic_address }}<br><br>
-          Phone: {{ settings.clinic_phone }}
+          Phone: <a href="tel:{{ settings.clinic_phone | replace(' ','') }}" style="color:inherit; text-decoration:none;">{{ settings.clinic_phone }}</a>
         </div>
       </div>
     </div>
-    <div style="width: 100%; padding: 2rem 1.5rem 2.5rem; border-top: 1px solid rgba(255,255,255,0.05); text-align: center; color: #475569; font-size: 0.85rem; margin-top: 0;">
-      <p style="margin-bottom: 0;">© 2026 PrimeCare Clinic. Delivering Excellence for 25+ Years.</p>
+    <div class="pc-copy">
+      <p>© 2026 PrimeCare Clinic. All rights reserved.</p>
     </div>
   </footer>
+
+  <!-- MOBILE ACTION BAR (Max-width 767px) -->
+  <nav class="pc-actionbar" aria-label="Quick actions">
+    <a class="pc-ab-item" href="tel:{{ settings.clinic_phone | replace(' ','') }}">
+      <i data-lucide="phone"></i>
+      <span>Call</span>
+    </a>
+    <a class="pc-ab-item pc-ab-book" href="/booking">
+      <i data-lucide="calendar-plus"></i>
+      <span>Book</span>
+    </a>
+    <a class="pc-ab-item" href="https://wa.me/{{ settings.clinic_whatsapp }}?text=Hello%20PrimeCare%2C%20I'd%20like%20to%20enquire%20about%20appointment..." target="_blank" rel="noopener">
+      <svg style="width:22px; height:22px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.436 5.628 1.436h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      <span>WhatsApp</span>
+    </a>
+  </nav>
 
   <script>
     // Init Lucide icons
@@ -3704,5 +3815,6 @@
   })();
   </script>
 
+  <script src="{{ url_for('static', filename='restyle.js') }}" defer></script>
 </body>
 </html>
