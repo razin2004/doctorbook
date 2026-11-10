@@ -542,10 +542,13 @@ def dispatch_inbound_message_reply(
         # -------------------------------------------------------------
         # If user sends a greeting or menu request, cancel any stale/active booking session so they are not trapped
         if is_greeting_message(inbound_body):
-            from models import WhatsAppBookingSession
-            active_s = WhatsAppBookingSession.get_active_session(conversation.id)
+            from app import WhatsAppBookingSession
+            active_s = WhatsAppBookingSession.query.filter_by(
+                conversation_id=conversation.id,
+                status='in_progress'
+            ).first()
             if active_s:
-                active_s.cancel()
+                active_s.status = 'cancelled'
                 db.session.commit()
 
         from services.whatsapp_booking_flow import handle_whatsapp_booking_flow
@@ -895,7 +898,7 @@ def get_clinic_whatsapp_numbers() -> set:
     when explicit direction metadata is not provided.
     """
     numbers = set()
-    for env_key in ("KAPSO_PHONE_NUMBER", "CLINIC_WHATSAPP_PHONE", "KAPSO_PHONE_NUMBER_ID"):
+    for env_key in ("KAPSO_PHONE_NUMBER", "CLINIC_WHATSAPP_PHONE", "PRIMECARE_CLINIC_PHONE", "KAPSO_PHONE_NUMBER_ID"):
         val = os.environ.get(env_key)
         if val:
             clean = str(val).strip()
@@ -905,9 +908,9 @@ def get_clinic_whatsapp_numbers() -> set:
                 numbers.add(norm)
                 numbers.add(norm.lstrip("+"))
 
-    # Known clinic phone number IDs as baseline (IDs only, never hardcoded personal mobile numbers)
+    # Known clinic phone number IDs as baseline (IDs and default clinic number for coexistence echo detection)
     known = [
-        "1387431517794285", "597907523413541"
+        "1387431517794285", "597907523413541", "+917511135687", "917511135687", "7511135687"
     ]
     for kn in known:
         numbers.add(kn)
@@ -947,6 +950,14 @@ def is_outbound_or_echo_message(message: Dict[str, Any]) -> Tuple[bool, str]:
         if dir_str == "outbound":
             return True, "explicit_outbound_direction"
         if dir_str == "inbound":
+            # Coexistence echo guard: if message claims inbound but sender is clinic, it is an echo
+            sender = message.get("from") or message.get("phone_number")
+            if sender:
+                sender_str = str(sender).strip()
+                norm_sender = normalize_phone_number(sender_str)
+                clinic_numbers = get_clinic_whatsapp_numbers()
+                if sender_str in clinic_numbers or (norm_sender and norm_sender in clinic_numbers) or (norm_sender and norm_sender.lstrip("+") in clinic_numbers):
+                    return True, "clinic_sender_echo"
             return False, "explicit_inbound_direction"
 
     # 2. Check explicit is_echo
