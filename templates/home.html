@@ -1702,10 +1702,7 @@
                   </p>
                   <div class="pc-days" aria-label="Available days">
                     {% for day in day_order %}
-                    <span class="pc-day {{ 'on' if day in doc.Days else 'off' }}" title="{{ day }}: {{ 'Available' if day in doc.Days else 'Not available' }}">
-                      <span class="day-code-desktop">{{ day[:2] }}</span>
-                      <span class="day-code-mobile">{{ day[0] }}</span>
-                    </span>
+                    <span class="pc-day {{ 'on' if day in doc.Days else 'off' }}" title="{{ day }}: {{ 'Available' if day in doc.Days else 'Not available' }}">{{ day[:3] }}</span>
                     {% endfor %}
                   </div>
                   <div class="doctor-actions">
@@ -3843,13 +3840,6 @@
     const navLinks = document.querySelectorAll('.pc-nav .pc-nav-link');
     if (!navLinks.length) return;
 
-    const navTargets = [
-      { nav: 'home', el: document.getElementById('hero-section') || document.querySelector('.hero-premium') },
-      { nav: 'doctors', el: document.getElementById('doctors-anchor') || document.getElementById('doctors-full-section') },
-      { nav: 'about', el: document.getElementById('heritage-section') },
-      { nav: 'contact', el: document.getElementById('contact-section') || document.getElementById('visit-section') }
-    ];
-
     function setActiveNav(navKey) {
       navLinks.forEach(link => {
         if (link.getAttribute('data-nav') === navKey) {
@@ -3860,52 +3850,112 @@
       });
     }
 
+    let isManualClick = false;
+    let manualTimeout = null;
+
     navLinks.forEach(link => {
       link.addEventListener('click', function (e) {
         const navKey = this.getAttribute('data-nav');
         const href = this.getAttribute('href');
         if (href && href.startsWith('#')) {
           e.preventDefault();
-          const targetEl = document.querySelector(href);
-          if (targetEl) {
-            setActiveNav(navKey);
-            targetEl.scrollIntoView({ behavior: 'smooth' });
-            history.pushState(null, null, href);
+          isManualClick = true;
+          clearTimeout(manualTimeout);
+          setActiveNav(navKey);
+
+          if (navKey === 'home') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            history.pushState(null, null, window.location.pathname);
+          } else {
+            const targetEl = document.querySelector(href);
+            if (targetEl) {
+              const headerH = 80;
+              const targetTop = targetEl.getBoundingClientRect().top + window.scrollY - headerH;
+              window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+              history.pushState(null, null, href);
+            }
           }
+
+          manualTimeout = setTimeout(() => {
+            isManualClick = false;
+            updateNavOnScroll();
+          }, 850);
         }
       });
     });
 
-    let spyTick = false;
     function updateNavOnScroll() {
+      if (isManualClick) return;
+
+      const scrollY = window.scrollY;
+      const headerOffset = 110;
+
+      // 1. If at top of page or fresh load (< 200px) -> always Home
+      if (scrollY < 200) {
+        setActiveNav('home');
+        return;
+      }
+
+      // 2. Sections check
+      const docSec = document.getElementById('doctors-full-section');
+      const aboutSec = document.getElementById('heritage-section');
+      const leaderSec = document.querySelector('.leadership-bg');
+      const contactSec = document.getElementById('visit-section');
+
+      // Default: if current view is not doctors, about, or contact, show as home
+      let currentNav = 'home';
+
+      // Check Contact section
+      if (contactSec) {
+        const cRect = contactSec.getBoundingClientRect();
+        if (cRect.top <= headerOffset + 60 && cRect.bottom > headerOffset) {
+          currentNav = 'contact';
+        }
+      }
+
+      // Check About section (including leadership)
+      if (aboutSec && currentNav === 'home') {
+        const aRect = aboutSec.getBoundingClientRect();
+        const lRect = leaderSec ? leaderSec.getBoundingClientRect() : aRect;
+        const top = aRect.top;
+        const bottom = lRect ? lRect.bottom : aRect.bottom;
+        if (top <= headerOffset + 60 && bottom > headerOffset) {
+          currentNav = 'about';
+        }
+      }
+
+      // Check Doctors section
+      if (docSec && currentNav === 'home') {
+        const dRect = docSec.getBoundingClientRect();
+        if (dRect.top <= headerOffset + 60 && dRect.bottom > headerOffset) {
+          currentNav = 'doctors';
+        }
+      }
+
+      // Check if at very bottom of page
+      if ((window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 70)) {
+        currentNav = 'contact';
+      }
+
+      setActiveNav(currentNav);
+    }
+
+    let spyTick = false;
+    window.addEventListener('scroll', () => {
       if (spyTick) return;
       spyTick = true;
       requestAnimationFrame(() => {
-        const scrollPos = window.scrollY + 140;
-        let currentNav = 'home';
-        
-        navTargets.forEach(t => {
-          if (t.el) {
-            const top = t.el.getBoundingClientRect().top + window.scrollY;
-            if (scrollPos >= top) {
-              currentNav = t.nav;
-            }
-          }
-        });
-
-        if ((window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 60)) {
-          currentNav = 'contact';
-        } else if (window.scrollY < 180) {
-          currentNav = 'home';
-        }
-
-        setActiveNav(currentNav);
+        updateNavOnScroll();
         spyTick = false;
       });
-    }
+    }, { passive: true });
 
-    window.addEventListener('scroll', updateNavOnScroll, { passive: true });
-    updateNavOnScroll();
+    // Initial state: On refresh or entering page, start with home
+    if (window.scrollY < 200) {
+      setActiveNav('home');
+    } else {
+      updateNavOnScroll();
+    }
   })();
   </script>
 

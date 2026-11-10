@@ -739,6 +739,53 @@ header.top-bar {
   width: 100%;
 }
 
+@media (max-width: 767px) {
+  .pc-hero-points {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin: 20px 0 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .pc-point-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    gap: 8px !important;
+    background: rgba(255, 255, 255, 0.10) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 12px !important;
+    padding: 8px 10px !important;
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+  }
+  .pc-point-ic {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    color: #ffffff !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+  .pc-point-ic svg {
+    width: 15px !important;
+    height: 15px !important;
+  }
+  .pc-point-label {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    line-height: 1.25 !important;
+  }
+}
+
 .pc-point-item {
   display: flex;
   flex-direction: column;
@@ -1287,13 +1334,27 @@ body {
 @media (max-width: 767px) {
   .doctor-card {
     min-height: 0 !important;
+    height: auto !important;
     border-radius: 16px !important;
   }
   .doctor-img {
-    aspect-ratio: 1 / 1 !important;
+    width: 100% !important;
+    aspect-ratio: 4 / 5 !important;
+    min-height: 180px !important;
+    border-radius: 16px 16px 0 0 !important;
+    overflow: hidden !important;
+    background: #f1f5f9 !important;
+  }
+  .doctor-img img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center 15% !important;
+    display: block !important;
   }
   .doctor-info {
     padding: 10px 10px 12px !important;
+    flex: none !important;
   }
   .doctor-info h4 {
     font-size: 14px !important;
@@ -1310,33 +1371,38 @@ body {
     width: 13px !important;
     height: 13px !important;
   }
+  /* 2 rows for 7 days (4 on row 1, 3 on row 2) with 3-char codes */
   .pc-days {
     display: grid !important;
-    grid-template-columns: repeat(7, 1fr) !important;
-    gap: 2px !important;
-    margin: 4px 0 8px !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+    margin: 6px 0 8px !important;
   }
   .pc-day {
-    height: 18px !important;
-    font-size: 9px !important;
-    border-radius: 4px !important;
+    height: 22px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    border-radius: 5px !important;
+    padding: 0 !important;
+    letter-spacing: -0.02em !important;
   }
   .doctor-actions {
     display: flex !important;
     flex-direction: column !important;
-    gap: 5px !important;
+    gap: 6px !important;
+    margin-top: 6px !important;
   }
   .doctor-actions .btn-timing {
-    height: 30px !important;
-    min-height: 30px !important;
-    font-size: 11px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    font-size: 12px !important;
     padding: 0 6px !important;
     border-radius: 8px !important;
   }
   .doctor-actions .pc-card-book {
     height: 32px !important;
     min-height: 32px !important;
-    font-size: 11px !important;
+    font-size: 12px !important;
     padding: 0 6px !important;
     border-radius: 8px !important;
   }
@@ -1509,8 +1575,13 @@ body {
 }
 @media (min-width: 768px) {
   .doctor-actions {
-    flex-direction: row !important;
-    align-items: center !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin-top: auto !important;
   }
 }
 .btn-timing {
@@ -1525,16 +1596,40 @@ body {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
+  gap: 6px !important;
   cursor: pointer !important;
   transition: background-color var(--pc-fast) var(--pc-ease), color var(--pc-fast) var(--pc-ease) !important;
 }
 @media (min-width: 768px) {
+  .btn-timing,
+  .pc-card-book {
+    width: 100% !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 0 6px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+    flex: none !important;
+  }
   .btn-timing {
-    width: auto !important;
-    height: 40px !important;
-    padding: 0 18px !important;
-    flex: 1 !important;
+    border: 1.5px solid var(--pc-primary) !important;
+    background: #ffffff !important;
+    color: var(--pc-primary) !important;
+    gap: 5px !important;
+  }
+  .pc-card-book {
+    border: 1.5px solid var(--pc-primary) !important;
+    background: var(--pc-primary) !important;
+    color: #ffffff !important;
   }
 }
 @media (hover: hover) {
@@ -1552,13 +1647,6 @@ body {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-}
-@media (min-width: 768px) {
-  .pc-card-book {
-    height: 40px !important;
-    padding: 0 18px !important;
-    flex: 1.2 !important;
-  }
 }
 
 /* Timings Pop-up */
