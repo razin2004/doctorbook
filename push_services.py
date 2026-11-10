@@ -4,20 +4,34 @@ import threading
 from datetime import datetime
 from pywebpush import webpush, WebPushException
 
-# Load VAPID private key
+# Load VAPID configuration securely from environment variables, with optional fallback to vapid_keys.json
 VAPID_CLAIMS = {
-    "sub": "mailto:admin@primecare.com"
+    "sub": os.environ.get("VAPID_SUBJECT", "mailto:admin@primecare.com")
 }
-VAPID_PRIVATE_KEY = ""
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "").strip()
 
-try:
-    APP_DIR = os.path.dirname(os.path.abspath(__file__))
-    VAPID_KEYS_PATH = os.path.join(APP_DIR, 'vapid_keys.json')
-    with open(VAPID_KEYS_PATH, 'r') as f:
-        keys = json.load(f)
-        VAPID_PRIVATE_KEY = keys.get('private_key', '')
-except Exception as e:
-    print(f"[Push Service] Warning: Could not load VAPID keys: {e}")
+if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
+    try:
+        APP_DIR = os.path.dirname(os.path.abspath(__file__))
+        VAPID_KEYS_PATH = os.path.join(APP_DIR, 'vapid_keys.json')
+        if os.path.exists(VAPID_KEYS_PATH):
+            with open(VAPID_KEYS_PATH, 'r') as f:
+                keys = json.load(f)
+                if not VAPID_PRIVATE_KEY:
+                    VAPID_PRIVATE_KEY = keys.get('private_key', '').strip()
+                if not VAPID_PUBLIC_KEY:
+                    VAPID_PUBLIC_KEY = keys.get('public_key', '').strip()
+    except Exception as e:
+        print(f"[Push Service] Warning: Could not load VAPID keys from file: {e}")
+
+def get_vapid_public_key():
+    """Returns the configured VAPID public key."""
+    return VAPID_PUBLIC_KEY or os.environ.get("VAPID_PUBLIC_KEY", "").strip()
+
+def get_vapid_private_key():
+    """Returns the configured VAPID private key."""
+    return VAPID_PRIVATE_KEY or os.environ.get("VAPID_PRIVATE_KEY", "").strip()
 
 def trigger_push(doctor_name, date_str, current_token, status, app, db, PatientBooking, PushSubscription):
     """

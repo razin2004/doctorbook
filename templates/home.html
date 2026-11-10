@@ -1378,7 +1378,7 @@
     }
 
   </style>
-  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.4">
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.5">
 </head>
 
 <body>
@@ -3287,24 +3287,11 @@
             if (data.admin_messages && data.admin_messages.length > 0) {
               data.admin_messages.forEach(msg => {
                 let dotColor = '#f59e0b';
-                let badgeBg = 'rgba(245, 158, 11, 0.25)';
-                let badgeBorder = '#f59e0b';
-                let badgeText = 'ANNOUNCEMENT';
-                if (msg.color_dot === 'red') {
-                  dotColor = '#ef4444';
-                  badgeBg = 'rgba(239, 68, 68, 0.3)';
-                  badgeBorder = '#ef4444';
-                  badgeText = 'URGENT';
-                } else if (msg.color_dot === 'green') {
-                  dotColor = '#10b981';
-                  badgeBg = 'rgba(16, 185, 129, 0.3)';
-                  badgeBorder = '#10b981';
-                  badgeText = 'NOTICE';
-                }
+                if (msg.color_dot === 'red') dotColor = '#ef4444';
+                else if (msg.color_dot === 'green') dotColor = '#10b981';
                 
                 tickerItems.push(`
                   <div class="ticker-item ticker-broadcast-item">
-                    <span class="ticker-badge" style="background:${badgeBg}; color:#fff; border: 1px solid ${badgeBorder};">${badgeText}</span>
                     <div class="status-dot live" style="background:${dotColor}; box-shadow: 0 0 10px ${dotColor};"></div>
                     <span style="color:#ffffff; font-weight:600;">${msg.content}</span>
                   </div>
@@ -3319,7 +3306,6 @@
                   const docDisplay = d.doctor_name.toLowerCase().startsWith('dr') ? d.doctor_name : `Dr. ${d.doctor_name}`;
                   tickerItems.push(`
                     <div class="ticker-item ticker-doc-broadcast">
-                      <span class="ticker-badge" style="background:rgba(245, 158, 11, 0.3); color:#fff; border: 1px solid #f59e0b;">DOCTOR ALERT</span>
                       <div class="status-dot live" style="background:#f59e0b; box-shadow: 0 0 10px #f59e0b;"></div>
                       <span style="color:#ffffff; font-weight:600;"><strong>${docDisplay}:</strong> ${d.broadcast_message.trim()}</span>
                     </div>
@@ -3334,7 +3320,6 @@
               if (data.today_holiday) {
                 tickerItems.push(`
                   <div class="ticker-item" style="color:#ffffff;">
-                    <span class="ticker-badge" style="background:rgba(239, 68, 68, 0.35); color:#fff; border: 1px solid #ef4444;">CLOSED TODAY</span>
                     <div class="status-dot live" style="background:#ef4444; box-shadow: 0 0 10px #ef4444;"></div>
                     <span style="color:#ffffff; font-weight:700;">Clinic is closed today: ${data.today_holiday}</span> 
                   </div>
@@ -3345,7 +3330,6 @@
               if (data.tomorrow_holiday) {
                 tickerItems.push(`
                   <div class="ticker-item" style="color:#ffffff;">
-                    <span class="ticker-badge" style="background:rgba(249, 115, 22, 0.35); color:#fff; border: 1px solid #f97316;">HOLIDAY TOMORROW</span>
                     <div class="status-dot upcoming" style="background:#f97316; box-shadow: 0 0 10px #f97316;"></div>
                     <span style="color:#ffffff; font-weight:700;">Clinic will be closed tomorrow: ${data.tomorrow_holiday}</span>
                   </div>
