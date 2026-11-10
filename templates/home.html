@@ -3850,40 +3850,47 @@
       });
     }
 
-    let isManualClick = false;
-    let manualTimeout = null;
+    let isUserScrolling = false;
+    let clickLockTimeout = null;
 
     // Bulletproof click redirection for desktop & mobile
     navLinks.forEach(link => {
       link.addEventListener('click', function (e) {
         const navKey = this.getAttribute('data-nav');
+        e.preventDefault();
+
+        // Lock nav selection to the clicked link during and immediately after smooth scroll
+        isUserScrolling = false;
+        clearTimeout(clickLockTimeout);
+        setActiveNav(navKey);
+
         if (navKey === 'home') {
-          e.preventDefault();
-          isManualClick = true;
-          clearTimeout(manualTimeout);
-          setActiveNav('home');
           window.scrollTo({ top: 0, behavior: 'smooth' });
           if (window.location.hash) {
             history.pushState(null, null, window.location.pathname);
           }
-          manualTimeout = setTimeout(() => { isManualClick = false; updateNavOnScroll(); }, 900);
-          return;
-        }
-
-        const href = this.getAttribute('href');
-        if (href && href.startsWith('#')) {
-          const targetEl = document.querySelector(href);
+        } else {
+          const href = this.getAttribute('href');
+          const targetEl = href ? document.querySelector(href) : null;
           if (targetEl) {
-            e.preventDefault();
-            isManualClick = true;
-            clearTimeout(manualTimeout);
-            setActiveNav(navKey);
             targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
             history.pushState(null, null, href);
-            manualTimeout = setTimeout(() => { isManualClick = false; updateNavOnScroll(); }, 900);
           }
         }
+
+        // Keep clicked link active; only re-enable automatic scroll-spy after scroll settles (2.2s)
+        clickLockTimeout = setTimeout(() => {
+          isUserScrolling = true;
+        }, 2200);
       });
+    });
+
+    // Re-enable scroll spy immediately whenever user actually scrolls with mouse wheel, touch, or keyboard
+    ['wheel', 'touchmove', 'keydown'].forEach(evt => {
+      window.addEventListener(evt, () => {
+        clearTimeout(clickLockTimeout);
+        isUserScrolling = true;
+      }, { passive: true });
     });
 
     const secDoctors = document.getElementById('doctors-full-section');
@@ -3892,24 +3899,26 @@
     const secContact = document.getElementById('visit-section');
 
     function updateNavOnScroll() {
-      if (isManualClick) return;
+      // If user recently clicked a header nav link, keep that link selected!
+      if (!isUserScrolling) return;
 
-      // 1. If at top of page or fresh enter/refresh (< 250px) -> always Home
-      if (window.scrollY < 250) {
+      const scrollY = window.scrollY;
+
+      // 1. If at top of page or fresh load (< 250px) -> always Home
+      if (scrollY < 250) {
         setActiveNav('home');
         return;
       }
 
       // 2. If at bottom of page -> always Contact
-      if ((window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 90)) {
+      if ((window.innerHeight + scrollY) >= (document.documentElement.scrollHeight - 90)) {
         setActiveNav('contact');
         return;
       }
 
-      // 3. Check section boundaries:
-      // If the current section is not doctors, about, or contact, show as Home.
+      // 3. Check section boundaries with generous viewport trigger
+      const triggerY = Math.max(260, window.innerHeight * 0.45);
       let currentNav = 'home';
-      const triggerY = 160;
 
       // Check Contact section
       if (secContact) {
@@ -3953,6 +3962,7 @@
 
     // Initial state on refresh or load -> start with Home active
     setActiveNav('home');
+    isUserScrolling = true;
     if (window.scrollY >= 250) {
       updateNavOnScroll();
     }

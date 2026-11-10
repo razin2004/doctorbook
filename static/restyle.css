@@ -745,12 +745,15 @@ header.top-bar {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    gap: 18px !important;
+    gap: 22px !important;
     margin: 20px 0 0 !important;
     padding: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
     flex-wrap: nowrap !important;
+  }
+  .pc-hero-points .pc-point-item:nth-child(2) {
+    margin-left: 14px !important;
   }
   .pc-point-item {
     display: flex !important;
@@ -1457,11 +1460,15 @@ body {
   border: 1px solid var(--pc-border) !important;
   box-shadow: var(--pc-sh-card) !important;
   overflow: hidden !important;
-  min-height: 440px !important;
   position: relative !important;
   display: flex !important;
   flex-direction: column !important;
   transition: transform var(--pc-fast) var(--pc-ease), box-shadow var(--pc-fast) var(--pc-ease) !important;
+}
+@media (min-width: 768px) {
+  .doctor-card {
+    min-height: 440px !important;
+  }
 }
 @media (hover: hover) {
   .doctor-card:hover {
@@ -1471,7 +1478,7 @@ body {
 }
 .doctor-img {
   width: 100% !important;
-  aspect-ratio: 4/3 !important;
+  aspect-ratio: 4 / 5 !important;
   background: var(--pc-soft) !important;
   border-radius: 0 !important;
   overflow: hidden !important;
@@ -1480,7 +1487,7 @@ body {
 }
 @media (min-width: 768px) {
   .doctor-img {
-    aspect-ratio: 1/1 !important;
+    aspect-ratio: 1 / 1 !important;
   }
 }
 .doctor-img img {
@@ -1492,10 +1499,14 @@ body {
   display: block !important;
 }
 .doctor-info {
-  padding: 18px 18px 20px !important;
-  flex: 1 !important;
   display: flex !important;
   flex-direction: column !important;
+}
+@media (min-width: 768px) {
+  .doctor-info {
+    padding: 18px 18px 20px !important;
+    flex: 1 !important;
+  }
 }
 @media (min-width: 1024px) {
   .doctor-info {
@@ -1643,8 +1654,52 @@ body {
   }
 }
 
-/* Mobile: strictly enforce 2 rows for days (4 on row 1, 3 on row 2) and minimal gap to buttons */
+/* Mobile: Strictly enforce 4:5 image, no blank space below buttons, and 2-row days */
 @media (max-width: 767px) {
+  .doctor-card {
+    min-height: 0 !important;
+    height: auto !important;
+    border-radius: 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .doctor-img {
+    width: 100% !important;
+    aspect-ratio: 4 / 5 !important;
+    height: auto !important;
+    border-radius: 16px 16px 0 0 !important;
+    overflow: hidden !important;
+    background: #f1f5f9 !important;
+    flex: none !important;
+  }
+  .doctor-img img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center 20% !important;
+    display: block !important;
+  }
+  .doctor-info {
+    padding: 10px 10px 10px !important;
+    flex: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .doctor-info h4 {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    margin: 0 0 2px !important;
+    line-height: 1.25 !important;
+  }
+  .doctor-meta {
+    font-size: 11px !important;
+    margin: 0 0 4px !important;
+    gap: 4px !important;
+  }
+  .doctor-meta svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
   .pc-days {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
@@ -1661,8 +1716,21 @@ body {
     letter-spacing: -0.02em !important;
   }
   .doctor-actions {
+    display: flex !important;
+    flex-direction: column !important;
     margin-top: 4px !important;
+    margin-bottom: 0 !important;
     gap: 5px !important;
+  }
+  .doctor-actions .btn-timing,
+  .doctor-actions .pc-card-book {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    font-size: 12px !important;
+    padding: 0 6px !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
   }
 }
 
