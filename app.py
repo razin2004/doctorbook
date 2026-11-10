@@ -190,6 +190,24 @@ else:
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Robust connection pooling configuration
+# pool_pre_ping tests connection liveness before checkout (e.g. SELECT 1 ping)
+# pool_recycle refreshes connections before remote idle socket timeouts (e.g. Neon/Render 300s timeouts)
+if 'postgres' in app.config.get('SQLALCHEMY_DATABASE_URI', '').lower():
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 280,
+        'pool_timeout': 30,
+        'pool_size': 10,
+        'max_overflow': 15,
+    }
+else:
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 280,
+    }
+
 db = SQLAlchemy(app)
 
 # ===================== Database Models =====================

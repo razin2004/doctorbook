@@ -92,6 +92,11 @@ class JobLeaseHeartbeat:
                     db.session.commit()
             except Exception as e:
                 logger.debug(f"Heartbeat lease renewal notice for job {self.job_id}: {e}")
+            finally:
+                try:
+                    db.session.remove()
+                except Exception:
+                    pass
 
 
 def _signal_handler(signum, frame):
@@ -173,8 +178,16 @@ def claim_next_job(
     try:
         recover_stale_jobs(db_session, stale_timeout_seconds=stale_timeout_seconds)
     except Exception as e:
-        db_session.rollback()
-        logger.error(sanitize_log_message(f"Error during stale job recovery: {e}"))
+        try:
+            db_session.rollback()
+        except Exception:
+            pass
+        try:
+            db.session.remove()
+        except Exception:
+            pass
+        logger.warning(sanitize_log_message(f"Stale job recovery skipped: {e}"))
+        return None
 
     engine = db_session.get_bind()
     dialect = engine.dialect.name.lower()
@@ -429,6 +442,7 @@ def run_worker_loop(
             if max_iterations is not None and iterations > max_iterations:
                 break
 
+            had_work = False
             try:
                 job = claim_next_job(
                     db.session,
@@ -437,6 +451,7 @@ def run_worker_loop(
                 )
 
                 if job:
+                    had_work = True
                     logger.info(f"Claimed job {job.id} (event {job.event_id}). Executing pipeline...")
                     process_claimed_job(
                         job_id=job.id,
@@ -446,11 +461,21 @@ def run_worker_loop(
                         groq_client=groq_client
                     )
                     processed_count += 1
-                    # Immediately check for next job without delay if work is queued
-                    continue
-
             except Exception as e:
                 logger.error(sanitize_log_message(f"Unexpected error in queue worker loop: {e}"))
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+            finally:
+                # Release connection back to pool after each cycle so pool_pre_ping/pool_recycle work
+                try:
+                    db.session.remove()
+                except Exception:
+                    pass
+
+            if had_work:
+                continue
 
             # Idle sleep when no pending work exists
             time.sleep(poll_interval)

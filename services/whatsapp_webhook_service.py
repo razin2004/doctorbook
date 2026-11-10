@@ -889,6 +889,11 @@ def _run_async_reply(
             )
         except Exception as e:
             logger.error(sanitize_log_message(f"Unhandled exception in asynchronous WhatsApp reply worker: {e}"))
+        finally:
+            try:
+                db.session.remove()
+            except Exception:
+                pass
 
 
 def get_clinic_whatsapp_numbers() -> set:

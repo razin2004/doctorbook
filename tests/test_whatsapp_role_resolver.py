@@ -115,19 +115,22 @@ class WhatsAppRoleResolverTestSuite(unittest.TestCase):
         """1b. Unconfigured admin phone never falls back to hardcoded default or grants admin silently."""
         AppSettings.query.filter_by(key="admin_whatsapp_phone").delete()
         self.session.commit()
-
-        # Inbound interaction from default clinic phone without explicit admin setting
-        result = resolve_whatsapp_sender_role("+918592031725")
-        self.assertEqual(result["status"], "guest")
-        self.assertEqual(result["role"], "guest")
-        self.assertIsNone(result["user_id"])
-        self.assertIsNone(result["admin_principal"])
-        self.assertIsNone(result["doctor_session_id"])
-
-        # Restore admin setting for other tests
-        restored = AppSettings(key="admin_whatsapp_phone", value="+918592031725")
-        self.session.add(restored)
-        self.session.commit()
+        old_env = os.environ.pop("ADMIN_WHATSAPP_PHONE", None)
+        try:
+            # Inbound interaction from default clinic phone without explicit admin setting
+            result = resolve_whatsapp_sender_role("+918592031725")
+            self.assertEqual(result["status"], "guest")
+            self.assertEqual(result["role"], "guest")
+            self.assertIsNone(result["user_id"])
+            self.assertIsNone(result["admin_principal"])
+            self.assertIsNone(result["doctor_session_id"])
+        finally:
+            if old_env is not None:
+                os.environ["ADMIN_WHATSAPP_PHONE"] = old_env
+            # Restore admin setting for other tests
+            restored = AppSettings(key="admin_whatsapp_phone", value="+918592031725")
+            self.session.add(restored)
+            self.session.commit()
 
     # -----------------------------------------------------------------
     # Test 2: Activated doctor resolves correctly
