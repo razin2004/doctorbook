@@ -1047,6 +1047,12 @@
       letter-spacing: 0.01em;
       margin: 0;
     }
+  
+    .doc-phone-close-btn svg {
+      width: 16px !important;
+      height: 16px !important;
+      stroke-width: 2.5px !important;
+    }
   </style>
 </head>
 <body>
@@ -2521,18 +2527,18 @@
   <div id="doctorPhoneModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:1rem;">
     <div style="background:white; border-radius:24px; max-width:440px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #e2e8f0; overflow:hidden;">
       <!-- Modal Header -->
-      <div style="background:linear-gradient(135deg, #0077b6, #0096c7); padding:1.25rem 1.5rem; color:white; display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; align-items:center; gap:0.6rem;">
-          <div style="background:rgba(255,255,255,0.2); width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
-            <i data-lucide="phone-forwarded" style="width:18px;height:18px;"></i>
+      <div style="background:linear-gradient(135deg, #0077b6, #0096c7); padding:0.95rem 1.15rem; color:white; display:flex; justify-content:space-between; align-items:center; gap:0.6rem;">
+        <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex:1;">
+          <div style="background:rgba(255,255,255,0.2); width:32px; height:32px; min-width:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <i data-lucide="phone-forwarded" style="width:16px;height:16px;"></i>
           </div>
-          <div>
-            <h4 style="margin:0; font-size:1.05rem; font-weight:700; color:white;">Update Mobile Number</h4>
-            <p style="margin:0; font-size:0.75rem; opacity:0.85; color:rgba(255,255,255,0.9);">WhatsApp OTP Verification</p>
+          <div style="min-width:0;">
+            <h4 style="margin:0; font-size:0.96rem; font-weight:700; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Update Mobile Number</h4>
+            <p style="margin:0; font-size:0.72rem; opacity:0.9; color:rgba(255,255,255,0.95);">WhatsApp OTP Verification</p>
           </div>
         </div>
-        <button type="button" onclick="closeDoctorPhoneModal()" style="background:none; border:none; color:white; opacity:0.85; cursor:pointer; font-size:1.2rem; padding:4px;">
-          <i data-lucide="x" style="width:20px;height:20px;"></i>
+        <button type="button" class="doc-phone-close-btn" onclick="closeDoctorPhoneModal()" aria-label="Close" style="width:30px !important; height:30px !important; min-width:30px !important; max-width:30px !important; border-radius:50% !important; background:rgba(255,255,255,0.2) !important; border:none !important; color:white !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:0 !important; cursor:pointer !important; flex-shrink:0 !important; margin:0 !important;">
+          <i data-lucide="x" style="width:16px !important; height:16px !important; stroke-width:2.5px !important;"></i>
         </button>
       </div>
 

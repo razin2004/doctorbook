@@ -1470,18 +1470,23 @@
     }
 
     @media (max-width: 680px) {
+      header.top-bar {
+        margin-bottom: 0 !important;
+      }
       .panel-nav {
         display: grid !important;
         grid-template-columns: repeat(3, 1fr) !important;
         gap: 6px !important;
-        padding: 5px !important;
+        padding: 6px 8px !important;
         background: #ffffff !important;
-        border-radius: 14px !important;
-        border: 1.5px solid #dbe9f2 !important;
-        margin: 0.85rem auto 0.75rem auto !important;
-        box-shadow: 0 4px 16px -6px rgba(3, 4, 94, 0.06) !important;
-        max-width: calc(100% - 1.5rem) !important;
+        border-radius: 0 !important;
+        border: none !important;
+        border-bottom: 1px solid rgba(0, 119, 182, 0.12) !important;
+        margin: 0 !important;
         width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
       }
       .panel-card {
         padding: 0.65rem 0.25rem !important;
@@ -1527,7 +1532,30 @@
       }
       .helper-text {
         font-size: 0.78rem !important;
+        margin-top: 0.75rem !important;
         margin-bottom: 0.8rem !important;
+        padding: 0 1rem !important;
+        text-align: center !important;
+        line-height: 1.35 !important;
+      }
+      .helper-text i,
+      .helper-text svg {
+        display: none !important;
+      }
+      #doctorBookingForm button[type="submit"],
+      #departmentBookingForm button[type="submit"],
+      .booking-section button[type="submit"] {
+        width: 100% !important;
+        min-height: 46px !important;
+        height: 46px !important;
+        border-radius: 12px !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        margin-top: 0.6rem !important;
       }
       .booking-section:not(#admin) .myclass {
         padding: 1.25rem 1rem !important;
@@ -2184,7 +2212,7 @@
             <div style="font-size:0.78rem; color:#64748b;">Choose your preferred physician and consulting date</div>
           </div>
         </div>
-        <span style="background:rgba(0,119,182,0.08); color:#0077b6; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap;">Doctor Portal</span>
+        
       </div>
 
       <div class="booking-grid">
@@ -2288,7 +2316,7 @@
             <div style="font-size:0.78rem; color:#64748b;">Find available specialists by medical department</div>
           </div>
         </div>
-        <span style="background:rgba(0,119,182,0.08); color:#0077b6; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap;">Specialization View</span>
+        
       </div>
 
       <div class="booking-grid">

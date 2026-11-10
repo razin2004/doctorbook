@@ -3850,8 +3850,8 @@
       });
     }
 
-    let isUserScrolling = false;
-    let clickLockTimeout = null;
+    let isClickScrolling = false;
+    let scrollStopTimer = null;
 
     // Bulletproof click redirection for desktop & mobile
     navLinks.forEach(link => {
@@ -3859,13 +3859,17 @@
         const navKey = this.getAttribute('data-nav');
         e.preventDefault();
 
-        // Lock nav selection to the clicked link during and immediately after smooth scroll
-        isUserScrolling = false;
-        clearTimeout(clickLockTimeout);
+        // Immediately highlight the clicked item
         setActiveNav(navKey);
+        isClickScrolling = true;
 
         if (navKey === 'home') {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          const heroEl = document.getElementById('hero-section');
+          if (heroEl) {
+            heroEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+          }
           if (window.location.hash) {
             history.pushState(null, null, window.location.pathname);
           }
@@ -3877,20 +3881,7 @@
             history.pushState(null, null, href);
           }
         }
-
-        // Keep clicked link active; only re-enable automatic scroll-spy after scroll settles (2.2s)
-        clickLockTimeout = setTimeout(() => {
-          isUserScrolling = true;
-        }, 2200);
       });
-    });
-
-    // Re-enable scroll spy immediately whenever user actually scrolls with mouse wheel, touch, or keyboard
-    ['wheel', 'touchmove', 'keydown'].forEach(evt => {
-      window.addEventListener(evt, () => {
-        clearTimeout(clickLockTimeout);
-        isUserScrolling = true;
-      }, { passive: true });
     });
 
     const secDoctors = document.getElementById('doctors-full-section');
@@ -3899,9 +3890,6 @@
     const secContact = document.getElementById('visit-section');
 
     function updateNavOnScroll() {
-      // If user recently clicked a header nav link, keep that link selected!
-      if (!isUserScrolling) return;
-
       const scrollY = window.scrollY;
 
       // 1. If at top of page or fresh load (< 250px) -> always Home
@@ -3952,6 +3940,17 @@
 
     let spyTick = false;
     window.addEventListener('scroll', () => {
+      // If user just clicked a nav link, suppress intermediate updates until smooth scroll settles
+      if (isClickScrolling) {
+        clearTimeout(scrollStopTimer);
+        scrollStopTimer = setTimeout(() => {
+          isClickScrolling = false;
+          updateNavOnScroll();
+        }, 180);
+        return;
+      }
+
+      // Normal scroll tracking (mouse wheel, trackpad, scrollbar thumb drag, touch, keyboard)
       if (spyTick) return;
       spyTick = true;
       requestAnimationFrame(() => {
@@ -3960,9 +3959,8 @@
       });
     }, { passive: true });
 
-    // Initial state on refresh or load -> start with Home active
+    // Initial state on load / refresh -> start with Home active
     setActiveNav('home');
-    isUserScrolling = true;
     if (window.scrollY >= 250) {
       updateNavOnScroll();
     }
