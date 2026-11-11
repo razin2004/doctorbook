@@ -1569,14 +1569,6 @@
                   <span>Live Token Track</span>
                 </a>
               </li>
-              {% if can_switch %}
-              <li>
-                <div class="admin-sidebar-nav-item" onclick="confirmRoleSwitch()">
-                  <i data-lucide="repeat"></i>
-                  <span>Switch to Doctor</span>
-                </div>
-              </li>
-              {% endif %}
             </ul>
           </div>
         </div>
@@ -3227,19 +3219,6 @@
         _addSwipeDismiss(guide, dir => _slideOut(guide, dir, 'installGuideDismissed'), '#installActionBtn');
       }, 3000);
     })();
-
-    function confirmRoleSwitch() {
-        openUniversalModal('warning', 'Switch Account', 'Are you sure you want to switch from User to Doctor?', 'Switch Now', async () => {
-            const res = await fetch('/switch_active_role', { method: 'POST' });
-            const data = await res.json();
-            if (data.success) {
-                showToast(data.msg, 'success');
-                setTimeout(() => window.location.href = data.redirect_url, 1000);
-            } else {
-                showToast(data.msg, 'error');
-            }
-        });
-    }
 
     // ─── Pull to Refresh Logic ───
     (function initPullToRefresh() {

@@ -1457,12 +1457,6 @@
                   <i data-lucide="layout-dashboard"></i>
                   <span>Go to {{ 'Doctor' if session.get('user_role') == 'doctor' else 'User' }} Dashboard</span>
                 </a>
-                {% if can_switch %}
-                <div class="dropdown-item" onclick="switchUserSession()">
-                  <i data-lucide="shuffle"></i>
-                  <span>Switch Role (to {{ 'User' if session.get('user_role') == 'doctor' else 'Doctor' }})</span>
-                </div>
-                {% endif %}
               {% else %}
                 <div class="dropdown-item" onclick="openAuthModalFromAdmin()">
                   <i data-lucide="log-in"></i>
@@ -3518,40 +3512,6 @@
           showToast('Logout failed', 'error');
         }
       }, true);
-    }
-
-    function switchUserSession() {
-      const dropdown = document.getElementById('adminDropdownMenu');
-      if (dropdown) dropdown.classList.remove('show');
-      
-      const currentRole = "{{ session.get('user_role', 'patient') }}";
-      const targetRole = currentRole === 'doctor' ? 'patient' : 'doctor';
-      const fromDisplay = currentRole === 'doctor' ? 'Doctor' : 'User';
-      const toDisplay   = targetRole  === 'doctor' ? 'Doctor' : 'User';
-
-      openModal(
-        'warning',
-        'Switch Account',
-        `Are you sure you want to switch from ${fromDisplay} to ${toDisplay}?`,
-        'Switch Now',
-        async function() {
-          try {
-            const res = await fetch('/switch_active_role', { method: 'POST' });
-            const data = await res.json();
-            if (data.success) {
-              showToast(data.msg, 'success');
-              setTimeout(() => {
-                window.location.reload();
-              }, 1000);
-            } else {
-              showToast(data.msg, 'error');
-            }
-          } catch(err) {
-            console.error(err);
-            showToast('Switch failed', 'error');
-          }
-        }
-      );
     }
 
   </script>

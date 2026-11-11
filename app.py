@@ -4030,7 +4030,7 @@ def patient_dashboard():
                            prescriptions=prescriptions, 
                            all_doctors=all_doctors,
                            referrals=referrals,
-                           can_switch=is_doctor)
+                           can_switch=False)
 
 def mark_pending_referrals_booked(user_id, specialization, patient_name):
     try:
@@ -7154,7 +7154,7 @@ def doctor_dashboard():
                            empty_slots=empty_slots,
                            today_bookings=today_bookings,
                            sched_start=sched_start_today,
-                           can_switch=True)
+                           can_switch=False)
 
 @app.route('/doctor/my_stats')
 def doctor_my_stats():
@@ -7543,13 +7543,7 @@ def save_doctor_broadcast():
 
 @app.route('/live-tracking')
 def live_tracking():
-    if not session.get('user_id') and not is_admin_authenticated():
-        # Capture the full path including query params
-        next_path = request.full_path if '?' in request.full_path else request.path
-        return redirect(url_for('home', 
-                               trigger_login='true', 
-                               next=next_path, 
-                               msg='Login to view live tracking of doctors'))
+    # Public live token tracker available to all patients and visitors without requiring login
     return render_template('live_tracking.html')
 
 @app.route('/live_tokens', methods=['GET'])

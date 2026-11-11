@@ -827,7 +827,7 @@
             <span>Dashboard</span>
           </button>
         {% else %}
-          <button class="btn btn-primary desktop-dashboard-btn" onclick="window.location.href='/#auth'" style="margin-top:0;" title="Login">
+          <button class="btn btn-primary desktop-dashboard-btn" onclick="window.location.href='/login?next=/live-tracking'" style="margin-top:0;" title="Login">
             <i data-lucide="log-in"></i>
             <span>Login</span>
           </button>
@@ -839,7 +839,7 @@
             <i data-lucide="layout-dashboard" style="width:18px;height:18px; stroke-width:2.5px;"></i>
           </button>
         {% else %}
-          <button class="admin-sidebar-toggle-btn mobile-dashboard-btn" onclick="window.location.href='/#auth'" style="margin-top:0;" title="Login">
+          <button class="admin-sidebar-toggle-btn mobile-dashboard-btn" onclick="window.location.href='/login?next=/live-tracking'" style="margin-top:0;" title="Login">
             <i data-lucide="log-in" style="width:18px;height:18px; stroke-width:2.5px;"></i>
           </button>
         {% endif %}
