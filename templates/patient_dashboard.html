@@ -33,7 +33,7 @@
     
 </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.2" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.6" />
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
   <script src="{{ url_for('static', filename='toast.js') }}">
     // Prompt update phone for legacy patient accounts
@@ -1804,9 +1804,9 @@
                 </div>
               </div>
               {% endif %}
-              <div style="font-weight:800; color:var(--slate-900); font-size:1.15rem; display:flex; align-items:center; gap:0.5rem;">
-                <i data-lucide="stethoscope" style="width:18px;height:18px;color:var(--primary);"></i>
-                {{ next_b.doctor_name }} 
+              <div style="font-weight:800; color:var(--slate-900); font-size:1.15rem; display:flex; align-items:center; gap:0.55rem;">
+                <img src="{{ next_b.doctor_image or (next_b.doctor_name | doctor_avatar) }}" class="doc-avatar-round doc-avatar-sm" alt="{{ next_b.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+                <span>{{ next_b.doctor_name }}</span> 
                 <span style="font-weight:500;color:var(--slate-600);font-size:0.9rem;">({{ next_b.specialization }})</span>
               </div>
               <div class="item-meta" style="display:flex; flex-wrap:wrap; gap:0.8rem; font-size:0.85rem; color:var(--slate-600); margin-top:0.3rem;">
@@ -1912,7 +1912,10 @@
                       </div>
                       {% endif %}
                     {% endif %}
-                    <div class="item-title">{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.9rem;">({{ b.specialization }})</span></div>
+                    <div class="item-title" style="display:flex; align-items:center; gap:0.55rem;">
+                      <img src="{{ b.doctor_image or (b.doctor_name | doctor_avatar) }}" class="doc-avatar-round doc-avatar-xs" alt="{{ b.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+                      <span>{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.9rem;">({{ b.specialization }})</span></span>
+                    </div>
                     <div class="item-meta">
                       <span class="meta-tag" style="background:#f1f5f9; padding:0.15rem 0.45rem; border-radius:6px; color:#475569;"><i data-lucide="user" style="width:12px;height:12px;"></i> {{ b.patient_name }} {% if b.age and b.age != '-' %}({{ b.age }} y/o){% endif %}</span>
                       <span class="meta-tag"><i data-lucide="calendar-days" style="width:13px;height:13px;"></i> {{ b.date }}</span>
@@ -1979,7 +1982,10 @@
                 {% for b in past_bookings %}
                 <div class="item-card" style="{% if b.status == 'cancelled' %}opacity:0.6; background:#fafafa; border:1px solid #fee2e2;{% else %}opacity:0.75;{% endif %}">
                   <div class="item-info">
-                    <div class="item-title">{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.9rem;">({{ b.specialization }})</span></div>
+                    <div class="item-title" style="display:flex; align-items:center; gap:0.55rem;">
+                      <img src="{{ b.doctor_image or (b.doctor_name | doctor_avatar) }}" class="doc-avatar-round doc-avatar-xs" alt="{{ b.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+                      <span>{{ b.doctor_name }} <span style="font-weight:500;color:#64748b;font-size:0.9rem;">({{ b.specialization }})</span></span>
+                    </div>
                     <div class="item-meta">
                       <span class="meta-tag" style="background:#f1f5f9; padding:0.15rem 0.45rem; border-radius:6px; color:#475569;"><i data-lucide="user" style="width:12px;height:12px;"></i> {{ b.patient_name }} {% if b.age and b.age != '-' %}({{ b.age }} y/o){% endif %}</span>
                       <span class="meta-tag"><i data-lucide="calendar-days" style="width:13px;height:13px;"></i> {{ b.date }}</span>
@@ -2049,9 +2055,10 @@
                     {% endif %}
                   </div>
                   
-                  <div class="vault-doctor">
+                  <div class="vault-doctor" style="display:flex; align-items:center; gap:0.4rem;">
                     {% if p.doctor_name %}
-                      <i data-lucide="stethoscope"></i> <span>{{ p.doctor_name }}</span>
+                      <img src="{{ p.doctor_name | doctor_avatar }}" class="doc-avatar-round doc-avatar-xs" alt="{{ p.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+                      <span>{{ p.doctor_name }}</span>
                     {% else %}
                       Medical Record: <span>{{ p.patient_name }}</span>
                     {% endif %}
@@ -2294,7 +2301,10 @@
         <i data-lucide="radio" class="pulse"></i> 
         <span id="bannerStatusText">Live Status</span>
       </div>
-      <div class="banner-doctor" id="bannerDocName">--</div>
+      <div class="banner-doctor" id="bannerDocName" style="display:flex; align-items:center; gap:5px;">
+        <img id="bannerDocImg" src="/static/doctor_images/default_doctor.svg" class="doc-avatar-round doc-avatar-xs" style="width:20px;height:20px;" alt="Doctor" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+        <span id="bannerDocText">--</span>
+      </div>
     </div>
     <div class="banner-stats">
       <div class="banner-stat-item">
@@ -2912,7 +2922,13 @@
               }
 
               hasNotification = true;
-              docName.textContent = data.doctor_name;
+              const docTextEl = document.getElementById('bannerDocText');
+              if (docTextEl) docTextEl.textContent = data.doctor_name;
+              else docName.textContent = data.doctor_name;
+              const bannerDocImg = document.getElementById('bannerDocImg');
+              if (bannerDocImg && data.image_url) {
+                bannerDocImg.src = data.image_url;
+              }
               liveTokenEl.textContent = data.current_token;
               yourTokenEl.textContent = data.your_token;
               

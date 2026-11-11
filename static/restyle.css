@@ -3390,3 +3390,44 @@ body {
     display: none !important;
   }
 }
+
+/* ─── DOCTOR CIRCULAR AVATARS ─── */
+.doc-avatar-round {
+  display: inline-block !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  vertical-align: middle !important;
+  background: #f0f9ff !important;
+  border: 1.5px solid rgba(0, 119, 182, 0.18) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.doc-avatar-xs {
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  min-height: 26px !important;
+}
+
+.doc-avatar-sm {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+}
+
+.doc-avatar-md {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+
+.doc-avatar-lg {
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  min-height: 58px !important;
+}
+

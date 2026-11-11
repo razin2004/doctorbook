@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <defs>
+    <linearGradient id="docBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0f2fe" />
+      <stop offset="100%" stop-color="#bae6fd" />
+    </linearGradient>
+    <linearGradient id="coatGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f1f5f9" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle -->
+  <circle cx="60" cy="60" r="60" fill="url(#docBg)" />
+  <!-- Head & Hair -->
+  <circle cx="60" cy="42" r="18" fill="#0077b6" opacity="0.9" />
+  <ellipse cx="60" cy="43" r="15" fill="#f8fafc" />
+  <!-- Neck -->
+  <rect x="55" y="56" width="10" height="10" fill="#f8fafc" />
+  <!-- Doctor White Coat & Body -->
+  <path d="M28 106 C28 78 42 66 60 66 C78 66 92 78 92 106 Z" fill="url(#coatGrad)" />
+  <!-- Shirt V-neck Inner -->
+  <polygon points="60,66 52,80 68,80" fill="#0284c7" opacity="0.3" />
+  <!-- Coat Lapels -->
+  <path d="M48 66 L60 92 L54 106 L34 106 C32 94 38 78 48 66 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+  <path d="M72 66 L60 92 L66 106 L86 106 C88 94 82 78 72 66 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+  <!-- Stethoscope -->
+  <path d="M46 72 C46 90 54 98 60 98 C66 98 74 90 74 72" fill="none" stroke="#0077b6" stroke-width="3" stroke-linecap="round" />
+  <circle cx="60" cy="100" r="4.5" fill="#023e8a" stroke="#ffffff" stroke-width="1.5" />
+</svg>

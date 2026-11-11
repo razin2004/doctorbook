@@ -13,7 +13,7 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.6">
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}">
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
 
@@ -752,7 +752,9 @@
           </div>
           <div class="info-table">
             <div class="info-row">
-              <div class="info-row-icon"><i data-lucide="user-round"></i></div>
+              <div class="info-row-icon" style="background:transparent; border:none; padding:0; display:flex; align-items:center; justify-content:center;">
+                <img src="{{ doctor | doctor_avatar }}" class="doc-avatar-round doc-avatar-sm" alt="{{ doctor }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+              </div>
               <div class="info-label-cell">
                 <div class="info-label">Doctor</div>
                 <div class="info-value">{{ doctor }}</div>

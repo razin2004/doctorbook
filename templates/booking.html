@@ -13,7 +13,7 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.3" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.6" />
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
   <link rel="manifest" href="/static/manifest.json">
@@ -2119,8 +2119,8 @@
           {% for b in upcoming_bookings %}
           <div class="ticket-card" style="{% if b.status == 'cancelled' %}opacity:0.65; background:#fafafa; border-color:#fee2e2;{% endif %}">
             <div class="ticket-left">
-              <div class="ticket-title">
-                <i data-lucide="user-round" style="width:18px;height:18px;color:#0077b6;"></i>
+              <div class="ticket-title" style="display:flex; align-items:center; gap:0.55rem;">
+                <img src="{{ b.doctor_image or (b.doctor_name | doctor_avatar) }}" class="doc-avatar-round doc-avatar-xs" alt="{{ b.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
                 <span>{{ b.doctor_name }}</span>
                 <span class="ticket-spec-badge">{{ b.specialization }}</span>
               </div>
@@ -2186,8 +2186,8 @@
           {% for b in past_bookings %}
           <div class="ticket-card" style="opacity: 0.8; {% if b.status == 'cancelled' %}background:#fafafa; border-color:#fee2e2;{% endif %}">
             <div class="ticket-left" style="padding: 1.1rem 1.4rem;">
-              <div class="ticket-title" style="font-size: 1.05rem;">
-                <i data-lucide="user-round" style="width:16px;height:16px;color:#64748b;"></i>
+              <div class="ticket-title" style="display:flex; align-items:center; gap:0.55rem; font-size: 1.05rem;">
+                <img src="{{ b.doctor_image or (b.doctor_name | doctor_avatar) }}" class="doc-avatar-round doc-avatar-xs" alt="{{ b.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
                 <span>{{ b.doctor_name }}</span>
                 <span class="ticket-spec-badge" style="font-size: 0.72rem;">{{ b.specialization }}</span>
               </div>
@@ -2259,8 +2259,8 @@
           <!-- Dynamic Doctor Info Card -->
           <div id="doctorPreviewCard" class="preview-card" style="display: none;">
             <div class="preview-card-header">
-              <div class="preview-card-avatar">
-                <i data-lucide="stethoscope"></i>
+              <div class="preview-card-avatar" style="overflow:hidden; display:flex; align-items:center; justify-content:center; padding:0; background:transparent;">
+                <img id="previewDocAvatar" src="/static/doctor_images/default_doctor.svg" class="doc-avatar-round doc-avatar-md" alt="Doctor" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
               </div>
               <div class="preview-card-title-group">
                 <h4 id="previewDocName" class="preview-card-title">Doctor Name</h4>
@@ -3038,9 +3038,12 @@
       <form id="adminEditDoctorForm">
 
         <label for="editDoctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
-        <select id="editDoctorSelect" required>
-          <option value="">-- Select Doctor --</option>
-        </select>
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <select id="editDoctorSelect" required style="flex:1;">
+            <option value="">-- Select Doctor --</option>
+          </select>
+          <img id="editDocAvatar" src="/static/doctor_images/default_doctor.svg" class="doc-avatar-round doc-avatar-sm" style="display:none;" alt="Doctor Avatar" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+        </div>
 
         <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:0.9rem 1rem; margin-top:1.1rem;">
           <div style="font-size:0.75rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.6rem; display:flex; align-items:center; gap:6px;">
@@ -3151,9 +3154,12 @@
       </p>
 
       <label for="leaveDoctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
-      <select id="leaveDoctorSelect" required>
-        <option value="">-- Select Doctor --</option>
-      </select>
+      <div style="display:flex; align-items:center; gap:0.6rem;">
+        <select id="leaveDoctorSelect" required style="flex:1;">
+          <option value="">-- Select Doctor --</option>
+        </select>
+        <img id="leaveDocAvatar" src="/static/doctor_images/default_doctor.svg" class="doc-avatar-round doc-avatar-sm" style="display:none;" alt="Doctor Avatar" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+      </div>
 
       <label for="leaveDate" style="margin-top:1rem;"><i data-lucide="calendar-x"></i> Leave Date</label>
       <input type="date" id="leaveDate" />
@@ -3210,7 +3216,10 @@
       <h3><i data-lucide="phone-call"></i> New Appointment</h3>
       <form id="adminBookPatientForm">
         <label for="adminBookDoc"><i data-lucide="stethoscope"></i> Select Doctor</label>
-        <select id="adminBookDoc" required onchange="updateAdminBookDates()"></select>
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <select id="adminBookDoc" required onchange="updateAdminBookDates()" style="flex:1;"></select>
+          <img id="adminBookDocAvatar" src="/static/doctor_images/default_doctor.svg" class="doc-avatar-round doc-avatar-sm" style="display:none;" alt="Doctor Avatar" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+        </div>
 
         <label for="adminBookDate"><i data-lucide="calendar"></i> Select Date</label>
         <input type="date" id="adminBookDate" required />
@@ -3264,9 +3273,12 @@
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap:15px; margin-bottom:1.5rem;">
         <div>
           <label for="viewBookingDoctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
-          <select id="viewBookingDoctorSelect" required>
-            <option value="">-- Select Doctor --</option>
-          </select>
+          <div style="display:flex; align-items:center; gap:0.6rem;">
+            <select id="viewBookingDoctorSelect" required style="flex:1;">
+              <option value="">-- Select Doctor --</option>
+            </select>
+            <img id="viewBookingDocAvatar" src="/static/doctor_images/default_doctor.svg" class="doc-avatar-round doc-avatar-sm" style="display:none;" alt="Doctor Avatar" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+          </div>
         </div>
         <div>
           <label for="viewBookingDate"><i data-lucide="calendar"></i> Select Date</label>
@@ -3312,9 +3324,12 @@
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap:15px; margin-bottom:1rem;">
           <div>
             <label for="cancelBookingDoctorSelect"><i data-lucide="user-round"></i> Select Doctor</label>
-            <select id="cancelBookingDoctorSelect" onchange="fetchCancelBookingsList()" required>
-              <option value="">-- Select Doctor --</option>
-            </select>
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+              <select id="cancelBookingDoctorSelect" onchange="fetchCancelBookingsList()" required style="flex:1;">
+                <option value="">-- Select Doctor --</option>
+              </select>
+              <img id="cancelBookingDocAvatar" src="/static/doctor_images/default_doctor.svg" class="doc-avatar-round doc-avatar-sm" style="display:none;" alt="Doctor Avatar" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+            </div>
           </div>
           <div>
             <label for="cancelBookingDate"><i data-lucide="calendar"></i> Select Date</label>
@@ -3359,7 +3374,10 @@
           </div>
           <div>
             <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:0.2rem;">Doctor & Specialty</div>
-            <div id="detailDoctorName" style="font-weight:600; color:#475569;">--</div>
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <img id="detailDoctorAvatar" src="/static/doctor_images/default_doctor.svg" class="doc-avatar-round doc-avatar-xs" alt="Doctor" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+              <span id="detailDoctorName" style="font-weight:600; color:#475569;">--</span>
+            </div>
           </div>
           <div>
             <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:0.2rem;">Date & Time</div>
@@ -3930,6 +3948,7 @@
         opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
         opt.dataset.docName = d.Name;
         opt.dataset.docSpec = d.Specialization;
+        opt.dataset.image = d.Image || '/static/doctor_images/default_doctor.svg';
         selectEl.appendChild(opt);
       });
       if (prevAdminDoc && Array.from(selectEl.options).some(o => o.value === prevAdminDoc)) {
@@ -3963,6 +3982,7 @@
           const daysArr = Array.isArray(d.Days) ? d.Days : (d.Days||'').split(',').map(x=>x.trim()).filter(Boolean);
           opt.dataset.days = daysArr.join(',');
           opt.dataset.dayTimes = JSON.stringify(d.DayTimes || {});
+          opt.dataset.image = d.Image || '/static/doctor_images/default_doctor.svg';
           doctorSelect.appendChild(opt);
 
           const spec = d.Specialization.trim();
@@ -4027,6 +4047,7 @@
         opt.dataset.phone = d.Phone_Number || '';
         opt.dataset.status = d.account_status || 'Invitation Pending';
         opt.dataset.docId = d.doctor_id || '';
+        opt.dataset.image = d.Image || '/static/doctor_images/default_doctor.svg';
 
         if (select) select.appendChild(opt.cloneNode(true));
         if (viewSelect) viewSelect.appendChild(opt.cloneNode(true));
@@ -5250,6 +5271,10 @@
 
       document.getElementById('previewDocName').textContent = docName;
       document.getElementById('previewDocSpec').textContent = docSpec;
+      const previewAvatar = document.getElementById('previewDocAvatar');
+      if (previewAvatar) {
+        previewAvatar.src = opt.dataset.image || '/static/doctor_images/default_doctor.svg';
+      }
 
       // Build Days list
       const daysStr = opt.dataset.days || '';
@@ -5362,8 +5387,8 @@
           }
 
           item.innerHTML = `
-            <div class="spec-doc-name-row">
-              <i data-lucide="user-round"></i>
+            <div class="spec-doc-name-row" style="display:flex; align-items:center; gap:0.55rem;">
+              <img src="${doc.Image || '/static/doctor_images/default_doctor.svg'}" class="doc-avatar-round doc-avatar-xs" alt="${doc.Name}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
               <span class="spec-doc-name">${doc.Name}</span>
             </div>
             <div class="spec-doc-timing-row">
@@ -5540,6 +5565,15 @@
     // ─── Edit doctor select ────────────────────────────────────
     document.getElementById('editDoctorSelect')?.addEventListener('change', function () {
       const selected = this.selectedOptions[0];
+      const editAvatar = document.getElementById('editDocAvatar');
+      if (editAvatar) {
+        if (selected && selected.value) {
+          editAvatar.src = selected.dataset.image || '/static/doctor_images/default_doctor.svg';
+          editAvatar.style.display = 'inline-block';
+        } else {
+          editAvatar.style.display = 'none';
+        }
+      }
       if (!selected) return;
       document.querySelectorAll('.day-check-edit').forEach(cb => cb.checked=false);
       document.querySelectorAll('.day-time-edit').forEach(div => div.style.display='none');
@@ -6038,11 +6072,20 @@
       const select = document.getElementById('adminBookDoc');
       const dateInput = document.getElementById('adminBookDate');
       const msgDiv = document.getElementById('adminBookDateMsg');
+      const avatarEl = document.getElementById('adminBookDocAvatar');
       if (!select || !dateInput) return;
       
       dateInput.value = '';
       if (msgDiv) { msgDiv.style.display = 'none'; msgDiv.textContent = ''; }
       const opt = select.options[select.selectedIndex];
+      if (avatarEl) {
+        if (opt && opt.value) {
+          avatarEl.src = opt.dataset.image || '/static/doctor_images/default_doctor.svg';
+          avatarEl.style.display = 'inline-block';
+        } else {
+          avatarEl.style.display = 'none';
+        }
+      }
       if (!opt || !opt.value) return;
       
       const today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'});
@@ -6680,7 +6723,18 @@
 
     // ─── Leave management ──────────────────────────────────────
     async function refreshLeaveListForCurrentDoctor() {
-      const combined=document.getElementById('leaveDoctorSelect').value;
+      const leaveSelect = document.getElementById('leaveDoctorSelect');
+      const combined = leaveSelect ? leaveSelect.value : '';
+      const leaveAvatar = document.getElementById('leaveDocAvatar');
+      if (leaveAvatar && leaveSelect) {
+        const selOpt = leaveSelect.selectedOptions[0];
+        if (selOpt && selOpt.value) {
+          leaveAvatar.src = selOpt.dataset.image || '/static/doctor_images/default_doctor.svg';
+          leaveAvatar.style.display = 'inline-block';
+        } else {
+          leaveAvatar.style.display = 'none';
+        }
+      }
       const tbody=document.getElementById('leaveTbody');
       const msgDiv=document.getElementById('leaveMsg');
       if(!tbody||!msgDiv)return;
@@ -6821,6 +6875,19 @@
           }
         }
       );
+    });
+
+    document.getElementById('viewBookingDoctorSelect')?.addEventListener('change', function() {
+      const avatarEl = document.getElementById('viewBookingDocAvatar');
+      const opt = this.selectedOptions[0];
+      if (avatarEl) {
+        if (opt && opt.value) {
+          avatarEl.src = opt.dataset.image || '/static/doctor_images/default_doctor.svg';
+          avatarEl.style.display = 'inline-block';
+        } else {
+          avatarEl.style.display = 'none';
+        }
+      }
     });
 
     // ─── Booking Viewer logic ──────────────────────────────────
@@ -6998,7 +7065,18 @@
     let currentCancelBookings = [];
 
     window.fetchCancelBookingsList = async function() {
-      const combined = document.getElementById('cancelBookingDoctorSelect').value;
+      const cancelDocSelect = document.getElementById('cancelBookingDoctorSelect');
+      const combined = cancelDocSelect ? cancelDocSelect.value : '';
+      const cancelAvatar = document.getElementById('cancelBookingDocAvatar');
+      if (cancelAvatar && cancelDocSelect) {
+        const selOpt = cancelDocSelect.selectedOptions[0];
+        if (selOpt && selOpt.value) {
+          cancelAvatar.src = selOpt.dataset.image || '/static/doctor_images/default_doctor.svg';
+          cancelAvatar.style.display = 'inline-block';
+        } else {
+          cancelAvatar.style.display = 'none';
+        }
+      }
       const date = document.getElementById('cancelBookingDate').value;
       const tokenSelect = document.getElementById('cancelTokenSelect');
       const tokenInput = document.getElementById('cancelTokenInput');
@@ -7165,6 +7243,10 @@
         document.getElementById('detailAgeGender').textContent = `${booking.age || '-'} / ${booking.gender || '-'}`;
         document.getElementById('detailPhone').textContent = booking.phone || '-';
         document.getElementById('detailDoctorName').textContent = doctorSelect.value;
+        const detailDocAvatar = document.getElementById('detailDoctorAvatar');
+        if (detailDocAvatar && doctorSelect.selectedOptions[0]) {
+          detailDocAvatar.src = doctorSelect.selectedOptions[0].dataset.image || '/static/doctor_images/default_doctor.svg';
+        }
         document.getElementById('detailDateTime').textContent = dateInput.value;
         document.getElementById('detailStatus').innerHTML = '<span style="color:#16a34a; background:rgba(22,163,74,0.1); padding:0.25rem 0.6rem; border-radius:6px; font-size:0.78rem; display:inline-flex; align-items:center; gap:0.25rem;"><span style="width:6px;height:6px;border-radius:50%;background:#16a34a;display:inline-block;"></span>Confirmed</span>';
         
@@ -7782,17 +7864,20 @@ function downloadPDF() {
         const daysDisplay = daysArr.length ? daysArr.join(', ') : 'No schedule set';
         return `
           <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0.9rem 1.15rem; border-radius:12px; border:1px solid #e2e8f0; font-size:0.85rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); flex-wrap:wrap; gap:0.75rem;">
-            <div>
-              <div style="font-weight:750; color:#0f172a; font-size:0.95rem; display:flex; align-items:center; gap:0.5rem;">
-                ${d.Name}
-                <span style="font-weight:600; color:#0284c7; font-size:0.8rem; background:rgba(2, 132, 199, 0.08); padding:2px 8px; border-radius:6px;">${d.Specialization}</span>
-              </div>
-              <div style="color:#475569; font-size:0.78rem; margin-top:4px; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-                <span><i data-lucide="phone" style="width:12px;height:12px;display:inline;vertical-align:middle;color:#0077b6;"></i> ${d.Phone_Number || '<span style="color:#ef4444;">No mobile</span>'}</span>
-                <span>&bull;</span>
-                <span><i data-lucide="mail" style="width:12px;height:12px;display:inline;vertical-align:middle;color:#0077b6;"></i> ${d.Email || 'No email'}</span>
-                <span>&bull;</span>
-                <span><i data-lucide="calendar" style="width:12px;height:12px;display:inline;vertical-align:middle;color:#0077b6;"></i> ${daysDisplay}</span>
+            <div style="display:flex; align-items:center; gap:0.85rem;">
+              <img src="${d.Image || '/static/doctor_images/default_doctor.svg'}" class="doc-avatar-round doc-avatar-md" alt="${d.Name}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+              <div>
+                <div style="font-weight:750; color:#0f172a; font-size:0.95rem; display:flex; align-items:center; gap:0.5rem;">
+                  ${d.Name}
+                  <span style="font-weight:600; color:#0284c7; font-size:0.8rem; background:rgba(2, 132, 199, 0.08); padding:2px 8px; border-radius:6px;">${d.Specialization}</span>
+                </div>
+                <div style="color:#475569; font-size:0.78rem; margin-top:4px; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                  <span><i data-lucide="phone" style="width:12px;height:12px;display:inline;vertical-align:middle;color:#0077b6;"></i> ${d.Phone_Number || '<span style="color:#ef4444;">No mobile</span>'}</span>
+                  <span>&bull;</span>
+                  <span><i data-lucide="mail" style="width:12px;height:12px;display:inline;vertical-align:middle;color:#0077b6;"></i> ${d.Email || 'No email'}</span>
+                  <span>&bull;</span>
+                  <span><i data-lucide="calendar" style="width:12px;height:12px;display:inline;vertical-align:middle;color:#0077b6;"></i> ${daysDisplay}</span>
+                </div>
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:0.6rem;">

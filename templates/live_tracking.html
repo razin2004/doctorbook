@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.2" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.6" />
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
   
@@ -1145,10 +1145,13 @@
             card.innerHTML = `
                 <div class="card-accent-line"></div>
                 <div class="card-top">
-                    <div class="card-doc-info">
-                        <span class="card-doc-name">${doc.doctor_name}</span>
-                        <span class="card-doc-spec">${doc.specialization}</span>
-                        <span class="card-doc-time"><i data-lucide="calendar"></i> ${doc.time}</span>
+                    <div style="display:flex; align-items:center; gap:0.75rem; min-width:0;">
+                        <img src="${doc.image_url || '/static/doctor_images/default_doctor.svg'}" class="doc-avatar-round doc-avatar-md" alt="${doc.doctor_name}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+                        <div class="card-doc-info">
+                            <span class="card-doc-name">${doc.doctor_name}</span>
+                            <span class="card-doc-spec">${doc.specialization}</span>
+                            <span class="card-doc-time"><i data-lucide="calendar"></i> ${doc.time}</span>
+                        </div>
                     </div>
                     <span class="card-badge ${badgeParams.class}">
                         <i data-lucide="${badgeParams.icon}" style="width:12px;height:12px;"></i>

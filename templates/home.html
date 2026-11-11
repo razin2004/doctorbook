@@ -1378,7 +1378,7 @@
     }
 
   </style>
-  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.5">
+  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.6">
 </head>
 
 <body>
@@ -1672,12 +1672,7 @@
 
                 <!-- Doctor image -->
                 <div class="doctor-img">
-                  {% if doc.Image %}
-                    <img src="{{ doc.Image }}" alt="{{ doc.Name }}" loading="lazy" decoding="async" />
-                  {% else %}
-                    <img src="{{ url_for('static', filename='doctor_images/default.png') }}"
-                         alt="No image" loading="lazy" decoding="async" />
-                  {% endif %}
+                  <img src="{{ doc.Image or (doc.Name | doctor_avatar) }}" alt="{{ doc.Name }}" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';" />
                 </div>
 
                 <!-- Doctor info -->
@@ -2786,7 +2781,10 @@
         <i data-lucide="radio" class="pulse"></i> 
         <span id="bannerStatusText">Live Status</span>
       </div>
-      <div class="banner-doctor" id="bannerDocName">--</div>
+      <div class="banner-doctor" id="bannerDocName" style="display:flex; align-items:center; gap:5px;">
+        <img id="bannerDocImg" src="/static/doctor_images/default_doctor.svg" class="doc-avatar-round doc-avatar-xs" style="width:20px;height:20px;" alt="Doctor" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+        <span id="bannerDocText">--</span>
+      </div>
     </div>
     <div class="banner-stats">
       <div class="banner-stat-item">
@@ -2982,7 +2980,13 @@
             // ── Render Banner ──
             if (bestForBanner) {
               hasNotification = true;
-              docName.textContent = bestForBanner.doctor_name;
+              const docTextEl = document.getElementById('bannerDocText');
+              if (docTextEl) docTextEl.textContent = bestForBanner.doctor_name;
+              else docName.textContent = bestForBanner.doctor_name;
+              const bannerDocImg = document.getElementById('bannerDocImg');
+              if (bannerDocImg && bestForBanner.image_url) {
+                bannerDocImg.src = bestForBanner.image_url;
+              }
               liveTokenEl.textContent = bestForBanner.current_token;
               yourTokenEl.textContent = bestForBanner.your_token;
 

@@ -1281,10 +1281,70 @@ def get_all_settings():
         
     return settings
 
+def resolve_doctor_image(doc_name: str, doc_email: str = None) -> str:
+    """
+    Resolves the profile image URL for a doctor by name or email.
+    Checks:
+    1. Database Doctor record image_url
+    2. Local static/doctor_images/{normalized_name}.jpg/png
+    3. Fallback to /static/doctor_images/default_doctor.svg
+    """
+    default_avatar = "/static/doctor_images/default_doctor.svg"
+    if not doc_name and not doc_email:
+        return default_avatar
+
+    clean_name = (doc_name or "").strip()
+
+    try:
+        query = Doctor.query
+        doc = None
+        if doc_email:
+            doc = query.filter(db.func.lower(Doctor.email) == doc_email.lower().strip()).first()
+        if not doc and clean_name:
+            doc = query.filter(db.func.lower(Doctor.name) == clean_name.lower()).first()
+            if not doc:
+                no_dr = clean_name.replace("Dr.", "").replace("Dr ", "").strip().lower()
+                doc = query.filter(db.func.lower(Doctor.name).like(f"%{no_dr}%")).first()
+
+        if doc and doc.image_url and doc.image_url.strip():
+            return doc.image_url.strip()
+    except Exception:
+        pass
+
+    # Check local static/doctor_images/ candidates
+    if clean_name:
+        try:
+            raw_no_dr = clean_name.replace("Dr.", "").replace("Dr ", "").strip()
+            candidates = [
+                clean_name.replace(" ", "_").replace(".", "") + ".jpg",
+                clean_name.replace(" ", "_").replace(".", "") + ".png",
+                "Dr_" + raw_no_dr.replace(" ", "_") + ".jpg",
+                "Dr_" + raw_no_dr.replace(" ", "_") + ".png",
+                raw_no_dr.replace(" ", "_") + ".jpg"
+            ]
+            app_dir = os.path.dirname(os.path.abspath(__file__))
+            for fname in candidates:
+                local_path = os.path.join(app_dir, "static", "doctor_images", fname)
+                if os.path.exists(local_path):
+                    return f"/static/doctor_images/{fname}"
+        except Exception:
+            pass
+
+    return default_avatar
+
+@app.template_filter('doctor_avatar')
+def doctor_avatar_filter(doc_name):
+    return resolve_doctor_image(doc_name)
+
 @app.context_processor
 def inject_settings():
     # Role switching strictly eliminated per role-based security requirements
-    return dict(settings=get_all_settings(), can_switch=False)
+    try:
+        from push_services import get_vapid_public_key
+        vapid_pub = get_vapid_public_key()
+    except Exception:
+        vapid_pub = ""
+    return dict(settings=get_all_settings(), can_switch=False, vapid_public_key=vapid_pub, resolve_doctor_image=resolve_doctor_image)
 
 
 # Email / admin config
@@ -1642,7 +1702,7 @@ def get_all_doctors(force_refresh=False):
                 "Days": days_list,
                 "DayTimes": day_times,
                 "Time": time_summary,
-                "Image": doc.image_url or "",
+                "Image": doc.image_url or resolve_doctor_image(doc.name, doc.email),
                 "Email": doc.email or "",
                 "Phone_Number": doc.phone_number or "",
                 "is_activated": is_activated,
@@ -2459,6 +2519,10 @@ def booking():
             # Sort: Upcoming (First coming first), Past (Most recent first)
             upcoming_bookings.sort(key=lambda x: (1 if x.status == 'cancelled' else 0, x.date or "", x.token or 0))
             past_bookings.sort(key=lambda x: (x.date or "", x.token or 0), reverse=True)
+            for b in upcoming_bookings:
+                b.doctor_image = resolve_doctor_image(b.doctor_name)
+            for b in past_bookings:
+                b.doctor_image = resolve_doctor_image(b.doctor_name)
         except Exception as e:
             print(f"[ERROR] Failed to fetch user bookings: {e}")
 
@@ -4017,8 +4081,10 @@ def patient_dashboard():
     
     for b in upcoming_bookings:
         b.referral = booking_referral_map.get(b.id)
+        b.doctor_image = resolve_doctor_image(b.doctor_name)
     for b in past_bookings:
         b.referral = booking_referral_map.get(b.id)
+        b.doctor_image = resolve_doctor_image(b.doctor_name)
 
     user_email = session.get('user_email')
     is_doctor = DoctorSession.query.filter_by(email=user_email).first() is not None
@@ -5810,10 +5876,12 @@ def confirmation_page():
     phone = request.args.get("phone")
 
     show_confetti = session.pop('justBooked', False)
+    doctor_image = resolve_doctor_image(doctor)
     return render_template(
         "confirmation.html",
         token=token,
         doctor=doctor,
+        doctor_image=doctor_image,
         specialization=specialization,
         date=date,
         time=time,
@@ -7148,8 +7216,11 @@ def doctor_dashboard():
     except Exception:
         pass
 
+    doctor_image = resolve_doctor_image(doc_session.doctor_name, doc_session.email)
+
     return render_template('doctor_dashboard.html',
                            doc=doc_session,
+                           doctor_image=doctor_image,
                            total_booked=total_booked,
                            empty_slots=empty_slots,
                            today_bookings=today_bookings,
@@ -7648,7 +7719,8 @@ def live_tokens():
                 "session_end": session_end,
                 "sched_start": sched_start,
                 "skipped_tokens": skipped_tokens,
-                "broadcast_message": broadcast_message
+                "broadcast_message": broadcast_message,
+                "image_url": d.get("Image") or resolve_doctor_image(doc_name)
             })
     except: pass
         
