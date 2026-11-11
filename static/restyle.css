@@ -3392,10 +3392,12 @@ body {
 }
 
 /* ─── DOCTOR CIRCULAR AVATARS ─── */
-.doc-avatar-round {
+.doc-avatar-round,
+img.doc-avatar-round {
   display: inline-block !important;
   border-radius: 50% !important;
   object-fit: cover !important;
+  object-position: top center !important;
   flex-shrink: 0 !important;
   vertical-align: middle !important;
   background: #f0f9ff !important;
