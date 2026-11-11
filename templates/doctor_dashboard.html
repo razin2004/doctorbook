@@ -1,672 +1,703 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-  <title>Doctor Console &mdash; PrimeCare Clinic</title>
-  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <title>Doctor Console — {{ doc.doctor_name }} | PrimeCare Clinic</title>
+  <meta name="theme-color" content="#0077b6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;850;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Toast & Modal System -->
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='doctor-dashboard.css') }}?v=1.0" />
+
+  <!-- Doctor Dashboard Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='doctor-dashboard.css') }}?v=1.1" />
 </head>
-<body class="dd-page">
-  <!-- PULL TO REFRESH INDICATOR -->
-  <div id="pullIndicator" aria-hidden="true">
-    <div class="pull-indicator-content"><i data-lucide="refresh-cw"></i></div>
+<body class="dd-body">
+
+  <!-- Pull to Refresh Indicator -->
+  <div id="pullIndicator" style="position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: center; z-index: 9999; pointer-events: none; transform: translateY(-100%); transition: transform 0.2s;">
+    <div style="background: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; color: #0077b6;">
+      <i data-lucide="refresh-cw" style="width: 20px; height: 20px;"></i>
+    </div>
   </div>
 
-  <!-- TOPBAR -->
-  <header class="dd-topbar">
-    <div class="dd-topbar-inner">
-      <div class="dd-topbar-left">
-        <button id="headerSidebarToggle" class="dd-sidebar-toggle-btn admin-sidebar-toggle-btn" onclick="toggleSidebar(true)" aria-label="Open Navigation Menu">
-          <i data-lucide="menu"></i>
+  <!-- TOP APP BAR -->
+  <header class="dd-appbar">
+    <div class="dd-appbar-inner">
+      <div class="dd-brand-group">
+        <button id="headerSidebarToggle" class="dd-menu-btn" onclick="toggleSidebar(true)" aria-label="Open navigation menu">
+          <i data-lucide="menu" style="width: 20px; height: 20px;"></i>
         </button>
-        <a href="/" class="dd-topbar-brand" title="PrimeCare Clinic Home">
-          <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
-               class="dd-brand-logo"
-               alt="PrimeCare Clinic Logo" />
-          <div style="display:flex; flex-direction:column; min-width:0;">
+        <a href="/" class="dd-brand" title="PrimeCare Clinic">
+          <img src="{{ url_for('static', filename='primecare-logo.svg') }}" class="dd-brand-logo" alt="PrimeCare Logo" />
+          <div class="dd-brand-text">
             <span class="dd-brand-title">PrimeCare Clinic</span>
-            <span class="dd-brand-sub">Clinical Practitioner Portal</span>
+            <span class="dd-brand-subtitle">Practitioner Portal</span>
           </div>
         </a>
       </div>
 
-      <nav class="dd-topbar-breadcrumb" aria-label="Breadcrumb">
-        <span class="dd-breadcrumb-root">Doctor Console</span>
-        <span class="dd-breadcrumb-separator"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></span>
-        <span class="dd-breadcrumb-active" id="currentBreadcrumbActive" aria-live="polite">Overview</span>
-      </nav>
-
-      <div class="dd-topbar-actions">
-        <button class="dd-home-btn" onclick="goHome()" title="Return to PrimeCare Homepage">
-          <i data-lucide="house" style="width:16px;height:16px;"></i>
+      <div class="dd-top-actions">
+        <button type="button" class="dd-home-btn" onclick="goHome()" title="Return to clinic homepage" aria-label="Home">
+          <i data-lucide="home" style="width: 17px; height: 17px;"></i>
           <span>Home</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- WORKSPACE WRAPPER -->
-  <div class="dd-workspace admin-workspace">
-    <!-- LEFT SIDEBAR -->
-    <aside class="dd-sidebar admin-sidebar" id="adminSidebar" aria-label="Practitioner Navigation">
-      <div class="dd-sidebar-top admin-sidebar-top">
-        <div class="dd-sidebar-header-mobile">
-          <div style="font-weight:800; font-size:1.05rem; color:var(--dd-slate-900);">Practitioner Menu</div>
-          <button class="dd-sidebar-close-btn admin-sidebar-close-btn" onclick="toggleSidebar(false)" aria-label="Close menu">
-            <i data-lucide="x"></i>
+  <!-- WORKSPACE LAYOUT -->
+  <div class="dd-layout">
+
+    <!-- DESKTOP / DRAWER SIDEBAR -->
+    <aside class="dd-sidebar" id="adminSidebar" aria-label="Dashboard Navigation">
+      <div class="dd-sidebar-top">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 4px;">
+          <span style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dd-slate-400);">Clinical Workspace</span>
+          <button type="button" class="dd-menu-btn" onclick="toggleSidebar(false)" aria-label="Close menu" style="display: none; width: 32px; height: 32px; min-width: 32px;">
+            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
           </button>
         </div>
 
-        <!-- Sidebar Doctor Profile Card -->
-        <div class="dd-doctor-profile-card">
-          <div class="dd-doctor-avatar-wrap">
-            <img src="{{ doctor_image }}" class="dd-doctor-avatar-img doc-avatar-round" alt="{{ doc.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+        <!-- Practitioner Profile Card -->
+        <div class="dd-sidebar-profile">
+          <div class="dd-sidebar-avatar-wrap">
+            <img src="{{ doctor_image }}" class="doc-avatar-round" style="width:100%; height:100%; object-fit:cover; object-position:top center;" alt="{{ doc.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';" />
           </div>
-          <div class="dd-doctor-profile-info">
-            <span class="dd-verified-pill"><i data-lucide="shield-check" style="width:10px;height:10px;"></i>Verified</span>
-            <h4 class="dd-doctor-name">{{ doc.doctor_name }}</h4>
-            <p class="dd-doctor-email">{{ session.get('user_email') }}</p>
+          <div class="dd-sidebar-info">
+            <span class="dd-badge-verified">
+              <i data-lucide="shield-check" style="width:10px;height:10px;"></i>
+              <span>Verified</span>
+            </span>
+            <h4 class="dd-sidebar-name" title="{{ doc.doctor_name }}">{{ doc.doctor_name }}</h4>
+            <p class="dd-sidebar-email" title="{{ session.get('user_email') }}">{{ session.get('user_email') }}</p>
           </div>
         </div>
 
-        <!-- Sidebar Nav Groups -->
-        <nav class="dd-nav-group" aria-label="Dashboard Panels">
-          <div class="dd-nav-group-title">Clinical Workspace</div>
-          <ul class="dd-nav-list admin-sidebar-nav-list">
+        <!-- Navigation Menu -->
+        <nav class="dd-nav-group" aria-label="Main Panels">
+          <span class="dd-nav-title">Menu Navigation</span>
+          <ul class="dd-nav-list">
             <li>
-              <div class="dd-nav-item admin-sidebar-nav-item active" data-panel="overview" onclick="showAdminPanel('overview', this)" role="button" tabindex="0">
-                <div class="dd-nav-item-left">
-                  <i data-lucide="layout-dashboard"></i>
-                  <span>Dashboard Overview</span>
-                </div>
+              <div class="dd-nav-item active admin-sidebar-nav-item" data-panel="overview" onclick="showAdminPanel('overview', this)" role="button" tabindex="0">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Overview</span>
               </div>
             </li>
             <li>
               <div class="dd-nav-item admin-sidebar-nav-item" data-panel="queue" onclick="showAdminPanel('queue', this)" role="button" tabindex="0">
-                <div class="dd-nav-item-left">
-                  <i data-lucide="list-ordered"></i>
-                  <span>Patient Queue</span>
-                </div>
-                <span class="dd-badge-count nav-badge-count" id="navBadgeQueue">{{ total_booked }}</span>
+                <i data-lucide="list-ordered"></i>
+                <span>Patient Queue</span>
+                <span class="dd-nav-badge nav-badge-count" id="navBadgeQueue">0</span>
               </div>
             </li>
             <li>
               <div class="dd-nav-item admin-sidebar-nav-item" data-panel="skipped" onclick="showAdminPanel('skipped', this)" role="button" tabindex="0">
-                <div class="dd-nav-item-left">
-                  <i data-lucide="user-x"></i>
-                  <span>Skipped Patients</span>
-                </div>
-                <span class="dd-badge-count nav-badge-count" id="navBadgeSkipped">0</span>
+                <i data-lucide="user-x"></i>
+                <span>Skipped Patients</span>
+                <span class="dd-nav-badge nav-badge-count" id="navBadgeSkipped">0</span>
               </div>
             </li>
             <li>
               <div class="dd-nav-item admin-sidebar-nav-item" data-panel="stats" onclick="showAdminPanel('stats', this)" role="button" tabindex="0">
-                <div class="dd-nav-item-left">
-                  <i data-lucide="bar-chart-2"></i>
-                  <span>My Statistics</span>
-                </div>
+                <i data-lucide="bar-chart-2"></i>
+                <span>My Statistics</span>
               </div>
             </li>
           </ul>
         </nav>
 
+        <!-- Operations Section -->
         <nav class="dd-nav-group" aria-label="Operations">
-          <div class="dd-nav-group-title">Live Tracking</div>
-          <ul class="dd-nav-list admin-sidebar-nav-list">
+          <span class="dd-nav-title">Operations</span>
+          <ul class="dd-nav-list">
             <li>
-              <a href="/live-tracking" class="dd-nav-item admin-sidebar-nav-item" style="text-decoration:none;">
-                <div class="dd-nav-item-left">
-                  <i data-lucide="radio"></i>
-                  <span>Live Token Track</span>
-                </div>
-                <i data-lucide="external-link" style="width:14px;height:14px;opacity:0.6;"></i>
+              <a href="/live-tracking" class="dd-nav-item" style="text-decoration:none;">
+                <i data-lucide="radio"></i>
+                <span>Live Token Track</span>
               </a>
             </li>
           </ul>
         </nav>
       </div>
 
-      <div class="dd-sidebar-footer admin-sidebar-footer">
-        <div class="dd-nav-item admin-sidebar-nav-item logout-item dd-logout-btn" onclick="confirmLogout()" role="button" tabindex="0">
-          <div class="dd-nav-item-left">
-            <i data-lucide="log-out"></i>
-            <span>Logout Account</span>
-          </div>
-        </div>
+      <!-- Logout Pinned to Bottom -->
+      <div class="dd-sidebar-footer">
+        <button type="button" class="dd-logout-btn" onclick="confirmLogout()">
+          <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
+          <span>Logout Portal</span>
+        </button>
       </div>
     </aside>
 
     <!-- Sidebar Mobile Backdrop -->
-    <div class="dd-sidebar-backdrop admin-sidebar-backdrop" id="adminSidebarBackdrop" onclick="toggleSidebar(false)" aria-hidden="true"></div>
+    <div class="dd-backdrop admin-sidebar-backdrop" id="adminSidebarBackdrop" onclick="toggleSidebar(false)"></div>
 
-    <!-- RIGHT CONTENT AREA -->
-    <main class="dd-main admin-content" id="mainContent">
+    <!-- MAIN DASHBOARD CONTENT -->
+    <main class="dd-main admin-content" id="mainContentArea">
+      <div class="dd-workspace-container">
 
-      <!-- WELCOME HERO CARD -->
-      <section class="dd-welcome-banner workspace-welcome-banner" aria-label="Doctor Profile Summary">
-        <div class="dd-welcome-left">
-          <img src="{{ doctor_image }}" class="dd-welcome-avatar doc-avatar-round" alt="{{ doc.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
-          <div class="dd-welcome-details">
-            <span class="dd-welcome-tag"><i data-lucide="shield-check" style="width:11px;height:11px;"></i>Verified Practitioner</span>
-            <h1 class="dd-welcome-title welcome-title">{{ doc.doctor_name }}</h1>
-            <p class="dd-welcome-sub welcome-subtitle">Specialization: {{ doc.specialization }}</p>
-          </div>
+        <!-- Breadcrumb Bar -->
+        <div class="dd-breadcrumb-bar">
+          <nav class="dd-breadcrumb" aria-label="Breadcrumb">
+            <span class="dd-breadcrumb-root">Doctor Console</span>
+            <i data-lucide="chevron-right" style="width: 13px; height: 13px; color: var(--dd-slate-400);"></i>
+            <span class="dd-breadcrumb-active" id="currentBreadcrumbActive">Overview</span>
+          </nav>
         </div>
-        <div class="dd-welcome-right">
-          <div class="dd-welcome-date">
-            <i data-lucide="calendar" style="width:14px;height:14px;"></i>
-            <span>{{ doc.session_date }}</span>
-          </div>
-        </div>
-      </section>
 
-      <!-- 4-CARD STATS GRID -->
-      <section class="dd-stats-grid stats-grid" aria-label="Session Quick Stats">
-        <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('overview')" role="button" tabindex="0" title="View Session Overview">
-          <div class="dd-stat-icon-tile stat-card-icon" style="background: rgba(0, 119, 182, 0.1); color: #0077b6;">
-            <i data-lucide="activity"></i>
+        <!-- 1. Welcome Card -->
+        <section class="dd-welcome-card" aria-label="Welcome practitioner">
+          <div class="dd-welcome-left">
+            <img src="{{ doctor_image }}" class="dd-welcome-avatar doc-avatar-round" alt="{{ doc.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';" />
+            <div class="dd-welcome-meta">
+              <span class="dd-welcome-eyebrow">
+                <i data-lucide="shield-check" style="width:12px;height:12px;"></i> Verified Practitioner
+              </span>
+              <h1 class="dd-welcome-title">{{ doc.doctor_name }}</h1>
+              <p class="dd-welcome-sub">Specialization: <strong>{{ doc.specialization }}</strong></p>
+            </div>
           </div>
-          <div class="dd-stat-info stat-card-info">
-            <span class="dd-stat-label stat-card-label">Session Status</span>
-            <span class="dd-stat-value stat-card-value" id="statsSessionStatus" aria-live="polite">
-              {{ "Awaiting" if doc.status == 'idle' else ("Live Now" if doc.status == 'active' else "Completed") }}
+          <div class="dd-welcome-right">
+            <span class="dd-badge-pill {% if doc.status == 'idle' %}status-idle{% elif doc.status == 'active' %}status-active{% elif doc.status == 'waiting_bookings' %}status-waiting-bookings{% else %}status-completed{% endif %}">
+              <i data-lucide="{% if doc.status == 'idle' %}clock{% elif doc.status == 'active' %}radio{% elif doc.status == 'waiting_bookings' %}clock{% else %}check-circle{% endif %}" style="width:14px;height:14px;"></i>
+              <span>{% if doc.status == 'idle' %}Awaiting Start{% elif doc.status == 'active' %}Live Session{% elif doc.status == 'waiting_bookings' %}Waiting for Bookings{% else %}Session Completed{% endif %}</span>
             </span>
-            <span class="dd-stat-sub stat-card-subtext" id="statsTimeline">Started: --:--</span>
           </div>
-        </div>
+        </section>
 
-        <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('overview')" role="button" tabindex="0" title="View Current Token">
-          <div class="dd-stat-icon-tile stat-card-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
-            <i data-lucide="hash"></i>
+        <!-- 2. Four Top Stat Cards -->
+        <section class="dd-stats-grid stats-grid" aria-label="Key consultation statistics">
+          <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('overview')" role="button" tabindex="0">
+            <div class="dd-stat-icon stat-card-icon" style="background: rgba(0, 119, 182, 0.1); color: var(--dd-primary);">
+              <i data-lucide="activity"></i>
+            </div>
+            <div class="dd-stat-content stat-card-info">
+              <span class="dd-stat-label stat-card-label">Session Status</span>
+              <span class="dd-stat-value stat-card-value" id="statsSessionStatus" style="font-size: 1.15rem; text-transform: uppercase;">
+                {{ "Awaiting" if doc.status == 'idle' else ("Live Now" if doc.status == 'active' else "Completed") }}
+              </span>
+              <span class="dd-stat-sub stat-card-subtext" id="statsTimeline">Started: --:--</span>
+            </div>
           </div>
-          <div class="dd-stat-info stat-card-info">
-            <span class="dd-stat-label stat-card-label">Current Token</span>
-            <span class="dd-stat-value stat-card-value" id="statsCurrentToken" aria-live="polite">
-              {% if doc.status == 'idle' %}--{% else %}#{{ doc.current_token }}{% endif %}
-            </span>
-            <span class="dd-stat-sub stat-card-subtext" id="statsTotalTokens">Up to Token #{{ doc.total_tokens }}</span>
-          </div>
-        </div>
 
-        <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('queue')" role="button" tabindex="0" title="View Patient Queue">
-          <div class="dd-stat-icon-tile stat-card-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
-            <i data-lucide="users"></i>
+          <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('overview')" role="button" tabindex="0">
+            <div class="dd-stat-icon stat-card-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--dd-success);">
+              <i data-lucide="hash"></i>
+            </div>
+            <div class="dd-stat-content stat-card-info">
+              <span class="dd-stat-label stat-card-label">Current Token</span>
+              <span class="dd-stat-value stat-card-value" id="statsCurrentToken">
+                {% if doc.status == 'idle' %}--{% else %}#{{ doc.current_token }}{% endif %}
+              </span>
+              <span class="dd-stat-sub stat-card-subtext" id="statsTotalTokens">Up to Token #{{ doc.total_tokens }}</span>
+            </div>
           </div>
-          <div class="dd-stat-info stat-card-info">
-            <span class="dd-stat-label stat-card-label">Patients Booked</span>
-            <span class="dd-stat-value stat-card-value" id="statsBookedCount">{{ total_booked }}</span>
-            <span class="dd-stat-sub stat-card-subtext">Active registrations</span>
-          </div>
-        </div>
 
-        <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('skipped')" role="button" tabindex="0" title="View Skipped Patients">
-          <div class="dd-stat-icon-tile stat-card-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
-            <i data-lucide="user-minus"></i>
+          <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('queue')" role="button" tabindex="0">
+            <div class="dd-stat-icon stat-card-icon" style="background: rgba(139, 92, 246, 0.1); color: var(--dd-violet);">
+              <i data-lucide="users"></i>
+            </div>
+            <div class="dd-stat-content stat-card-info">
+              <span class="dd-stat-label stat-card-label">Patients Booked</span>
+              <span class="dd-stat-value stat-card-value" id="statsBookedCount">{{ total_booked }}</span>
+              <span class="dd-stat-sub stat-card-subtext">Active registrations</span>
+            </div>
           </div>
-          <div class="dd-stat-info stat-card-info">
-            <span class="dd-stat-label stat-card-label">Skipped Count</span>
-            <span class="dd-stat-value stat-card-value" id="statsSkippedCount">0</span>
-            <span class="dd-stat-sub stat-card-subtext">Awaiting recall</span>
-          </div>
-        </div>
-      </section>
 
-      <!-- PANEL 1: OVERVIEW & SESSION CONTROL -->
-      <section id="overviewPanel" class="adminPanel active" aria-labelledby="overviewPanelHeading">
-        <div class="dd-hero-session-card session-box-premium">
-          <div class="dd-hero-header">
-            <div class="dd-hero-title-group">
-              <div class="dd-hero-icon-tile">
-                <i data-lucide="activity"></i>
+          <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('skipped')" role="button" tabindex="0">
+            <div class="dd-stat-icon stat-card-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--dd-warning);">
+              <i data-lucide="user-x"></i>
+            </div>
+            <div class="dd-stat-content stat-card-info">
+              <span class="dd-stat-label stat-card-label">Skipped Patients</span>
+              <span class="dd-stat-value stat-card-value" id="statsSkippedCount">0</span>
+              <span class="dd-stat-sub stat-card-subtext">Awaiting recall</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- PANEL 1: OVERVIEW & SESSION CONTROL -->
+        <section id="overviewPanel" class="dd-panel adminPanel active" aria-label="Session Overview and Control">
+          <div class="dd-card glass-card-premium">
+            <div class="dd-card-header section-header">
+              <h2 class="dd-card-title"><i data-lucide="activity"></i> Session Control</h2>
+              <span class="dd-session-date-tag">
+                <i data-lucide="calendar" style="width:14px;height:14px;color:var(--dd-primary);"></i>
+                <span>Today: {{ doc.session_date }}</span>
+              </span>
+            </div>
+
+            <div class="dd-session-hero">
+              <!-- Segmented Progress Bar -->
+              <div class="dd-progress-box">
+                <div class="dd-progress-head">
+                  <span class="dd-progress-title">Session Flow Progress</span>
+                  <span class="dd-progress-pct" id="progressPercentage">0%</span>
+                </div>
+                <div class="dd-progress-track progress-bar-container" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                  <div id="progressConsulted" class="dd-progress-seg" style="width:0%;" title="Consulted"></div>
+                  <div id="progressCalling" class="dd-progress-seg" style="width:0%;" title="Calling Now"></div>
+                  <div id="progressSkipped" class="dd-progress-seg" style="width:0%;" title="Skipped"></div>
+                  <div id="progressWaiting" class="dd-progress-seg" style="width:0%;" title="Waiting"></div>
+                </div>
+                <div class="dd-progress-legend progress-labels">
+                  <div class="dd-legend-chip">
+                    <span class="dd-legend-dot-label" style="color:var(--dd-success);">
+                      <span class="dd-dot" style="background:var(--dd-success);"></span> Consulted
+                    </span>
+                    <span class="dd-legend-val" id="labelConsulted">0</span>
+                  </div>
+                  <div class="dd-legend-chip">
+                    <span class="dd-legend-dot-label" style="color:var(--dd-primary);">
+                      <span class="dd-dot" style="background:var(--dd-primary);"></span> Calling
+                    </span>
+                    <span class="dd-legend-val" id="labelCalling">0</span>
+                  </div>
+                  <div class="dd-legend-chip">
+                    <span class="dd-legend-dot-label" style="color:var(--dd-warning);">
+                      <span class="dd-dot" style="background:var(--dd-warning);"></span> Skipped
+                    </span>
+                    <span class="dd-legend-val" id="labelSkipped">0</span>
+                  </div>
+                  <div class="dd-legend-chip">
+                    <span class="dd-legend-dot-label" style="color:var(--dd-slate-500);">
+                      <span class="dd-dot" style="background:var(--dd-slate-400);"></span> Waiting
+                    </span>
+                    <span class="dd-legend-val" id="labelWaiting">0</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Center Stage Token Display -->
+              <div class="dd-token-stage">
+                <!-- Session Timeline -->
+                <div class="dd-timeline-row session-timeline" id="sessionTimeline" style="display: {% if doc.status == 'idle' %}none{% else %}flex{% endif %};">
+                  <div class="dd-time-tile timeline-item">
+                    <span class="dd-time-label time-label">Started At</span>
+                    <span class="dd-time-val time-val" id="startTime">{{ doc.start_time or '--:--' }}</span>
+                  </div>
+                  <div class="dd-time-tile timeline-item" id="endTimeContainer" style="display: {% if doc.status == 'completed' %}flex{% else %}none{% endif %};">
+                    <span class="dd-time-label time-label">Ended At</span>
+                    <span class="dd-time-val time-val" id="endTime">{{ doc.end_time or '--:--' }}</span>
+                  </div>
+                </div>
+
+                <!-- Status Badge -->
+                <div id="statusBadge" class="dd-badge-pill status-badge {% if doc.status == 'idle' %}status-idle{% elif doc.status == 'active' %}status-active{% elif doc.status == 'waiting_bookings' %}status-waiting-bookings{% else %}status-completed{% endif %}" aria-live="polite">
+                  <i id="statusIcon" data-lucide="{% if doc.status == 'idle' %}clock{% elif doc.status == 'active' %}radio{% elif doc.status == 'waiting_bookings' %}clock{% else %}check-circle{% endif %}" style="width:15px;height:15px;"></i>
+                  <span id="statusText">{% if doc.status == 'idle' %}Awaiting Start{% elif doc.status == 'active' %}Live Now{% elif doc.status == 'waiting_bookings' %}Waiting for Bookings{% else %}Completed{% endif %}</span>
+                </div>
+
+                <!-- Big Token Display -->
+                <div class="dd-token-big token-display" id="tokenDisplay" aria-live="assertive">
+                  {% if doc.status == 'idle' %}--{% else %}#{{ doc.current_token }}{% endif %}
+                </div>
+
+                <!-- Token Subtitle -->
+                <div class="dd-token-subline" id="tokenSub">
+                  <div class="dd-token-booked-txt">
+                    <span id="bookedCount">{{ total_booked }}</span> Patients Booked Today
+                  </div>
+                  <div class="dd-token-seq-txt" id="totalTokensLine">
+                    Sequence goes up to Token #<span id="totalTokens">{{ doc.total_tokens }}</span>
+                  </div>
+                </div>
+
+                <!-- Action Buttons Stack (Desktop inline / Mobile sticky) -->
+                <div class="dd-actions-stack" id="sessionActionsStack">
+                  <button id="sessionBtn" type="button" class="dd-btn-primary-action control-btn {% if doc.status == 'idle' %}btn-start{% elif doc.status == 'active' %}btn-next{% else %}btn-disabled{% endif %}"
+                          {% if doc.status == 'completed' or doc.status == 'waiting_bookings' %}disabled{% endif %}
+                          aria-label="Advance consultation">
+                    {% if doc.status == 'idle' %}
+                      <i data-lucide="play"></i> <span>Start Session</span>
+                    {% elif doc.status == 'active' %}
+                      <i data-lucide="arrow-right"></i> <span>Next Patient</span>
+                    {% elif doc.status == 'waiting_bookings' %}
+                      <i data-lucide="hourglass"></i> <span>Waiting for Bookings</span>
+                    {% else %}
+                      <i data-lucide="check-circle"></i> <span>Session Completed</span>
+                    {% endif %}
+                  </button>
+
+                  <button id="completeSessionBtn" type="button" class="dd-btn-primary-action control-btn btn-complete"
+                          style="display: {% if doc.status == 'waiting_bookings' %}flex{% else %}none{% endif %};"
+                          aria-label="Complete current consultation session">
+                    <i data-lucide="power"></i> <span>Complete Session</span>
+                  </button>
+
+                  <button id="skipBtn" type="button" class="dd-btn-primary-action control-btn btn-skip"
+                          style="display: {% if doc.status == 'active' %}flex{% else %}none{% endif %};"
+                          aria-label="Skip absent patient">
+                    <i data-lucide="skip-forward"></i> <span>Patient Not Arrived? Skip</span>
+                  </button>
+
+                  {% if doc.total_tokens == 0 %}
+                  <p id="noBookingsMsg" style="color: var(--dd-danger); font-size: 0.85rem; font-weight: 600; margin: 4px 0 0;">No appointments found for today.</p>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Empty Slots Section -->
+              <div id="emptySection" class="dd-empty-slots-box" style="display: {% if empty_slots %}flex{% else %}none{% endif %};">
+                <div class="dd-slots-title-row">
+                  <i data-lucide="info" style="width:18px;height:18px;color:var(--dd-primary);"></i>
+                  <div>
+                    <h3 style="margin:0; font-size:0.95rem; font-weight:750; color:var(--dd-slate-900);">Empty Token Slots</h3>
+                    <p style="margin:0; font-size:0.75rem; color:var(--dd-slate-500); font-weight:500;">The following token numbers have no patients assigned.</p>
+                  </div>
+                </div>
+                <div class="dd-slots-grid" id="emptyGrid">
+                  {% for token in empty_slots %}
+                    <span class="dd-token-chip user-badge">#{{ token }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Doctor Registered Mobile Card -->
+          <div class="dd-contact-card">
+            <div class="dd-contact-meta">
+              <div class="dd-contact-icon">
+                <i data-lucide="phone-call" style="width:20px;height:20px;"></i>
               </div>
               <div>
-                <h2 class="dd-hero-title" id="overviewPanelHeading">Session Control Center</h2>
-                <p class="dd-hero-date-sub"><i data-lucide="calendar" style="width:13px;height:13px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> Today: {{ doc.session_date }}</p>
+                <div style="font-size:0.72rem; font-weight:750; color:var(--dd-slate-500); text-transform:uppercase; letter-spacing:0.05em;">Registered Mobile Number</div>
+                <div style="font-size:1.05rem; font-weight:800; color:var(--dd-slate-900); font-family:monospace;" id="docCurrentPhoneSpan">{{ doc.phone_number or 'No mobile number set' }}</div>
               </div>
             </div>
-
-            <!-- Dynamic Live Status Badge -->
-            <div id="statusBadge" class="status-badge {% if doc.status == 'idle' %}status-idle{% elif doc.status == 'active' %}status-active{% elif doc.status == 'waiting_bookings' %}status-waiting-bookings{% else %}status-completed{% endif %}" aria-live="polite">
-              <i id="statusIcon" data-lucide="{% if doc.status == 'idle' %}clock{% elif doc.status == 'active' %}radio{% elif doc.status == 'waiting_bookings' %}clock{% else %}check-circle{% endif %}"></i>
-              <span id="statusText">{% if doc.status == 'idle' %}Awaiting{% elif doc.status == 'active' %}Live Now{% elif doc.status == 'waiting_bookings' %}Waiting for Bookings{% else %}Completed{% endif %}</span>
-            </div>
-          </div>
-
-          <!-- Session Progress Bar -->
-          <div class="dd-progress-section progress-section">
-            <div class="dd-progress-top">
-              <span class="dd-progress-label">Session Progress</span>
-              <span id="progressPercentage" class="dd-progress-val">0%</span>
-            </div>
-            <div class="progress-bar-container">
-              <div id="progressConsulted" style="width:0%; background:linear-gradient(90deg, #10b981, #34d399);" title="Consulted"></div>
-              <div id="progressCalling" style="width:0%; background:linear-gradient(90deg, #0077b6, #00b4d8);" title="Calling"></div>
-              <div id="progressSkipped" style="width:0%; background:linear-gradient(90deg, #f59e0b, #fbbf24);" title="Skipped"></div>
-              <div id="progressWaiting" style="width:0%; background:linear-gradient(90deg, #94a3b8, #cbd5e1);" title="Waiting"></div>
-            </div>
-            <div class="progress-labels">
-              <div class="progress-label-chip">
-                <span class="chip-name" style="color:#10b981;"><i data-lucide="check" style="width:12px;height:12px;"></i> Consulted</span>
-                <span id="labelConsulted" class="chip-val">0</span>
-              </div>
-              <div class="progress-label-chip">
-                <span class="chip-name" style="color:#0077b6;"><i data-lucide="radio" style="width:12px;height:12px;"></i> Calling</span>
-                <span id="labelCalling" class="chip-val">0</span>
-              </div>
-              <div class="progress-label-chip">
-                <span class="chip-name" style="color:#d97706;"><i data-lucide="user-x" style="width:12px;height:12px;"></i> Skipped</span>
-                <span id="labelSkipped" class="chip-val">0</span>
-              </div>
-              <div class="progress-label-chip">
-                <span class="chip-name" style="color:#475569;"><i data-lucide="clock" style="width:12px;height:12px;"></i> Waiting</span>
-                <span id="labelWaiting" class="chip-val">0</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Big Token Box & Timeline -->
-          <div class="dd-token-hero-box">
-            <div class="session-timeline" id="sessionTimeline" style="display: {% if doc.status == 'idle' %}none{% else %}flex{% endif %};">
-              <div class="timeline-item">
-                <span class="time-label">Started At</span>
-                <span class="time-val" id="startTime">{{ doc.start_time or '--:--' }}</span>
-              </div>
-              <div class="timeline-item" id="endTimeContainer" style="display: {% if doc.status == 'completed' %}flex{% else %}none{% endif %};">
-                <span class="time-label">Ended At</span>
-                <span class="time-val" id="endTime">{{ doc.end_time or '--:--' }}</span>
-              </div>
-            </div>
-
-            <div class="token-display num-tabular" id="tokenDisplay" aria-live="assertive">
-              {% if doc.status == 'idle' %}--{% else %}#{{ doc.current_token }}{% endif %}
-            </div>
-
-            <div class="token-sub" id="tokenSub">
-              <div class="token-sub-highlight">
-                <span id="bookedCount" class="num-tabular">{{ total_booked }}</span> Patients Booked Today
-              </div>
-              <div class="token-sub-detail" id="totalTokensLine">
-                Sequence goes up to Token #<span id="totalTokens" class="num-tabular">{{ doc.total_tokens }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Sticky / Inline Action Controls Stack -->
-          <div class="session-actions-wrapper">
-            <button id="sessionBtn" class="control-btn {% if doc.status == 'idle' %}btn-start{% elif doc.status == 'active' %}btn-next{% else %}btn-disabled{% endif %}"
-                    {% if doc.status == 'completed' or doc.status == 'waiting_bookings' %}disabled{% endif %}>
-              {% if doc.status == 'idle' %}
-                <i data-lucide="play"></i> Start Session
-              {% elif doc.status == 'active' %}
-                <i data-lucide="arrow-right"></i> Next Patient
-              {% elif doc.status == 'waiting_bookings' %}
-                <i data-lucide="hourglass"></i> Waiting for Bookings
-              {% else %}
-                <i data-lucide="check-circle"></i> Session Completed
-              {% endif %}
+            <button type="button" onclick="openDoctorPhoneModal()" class="dd-btn-change-phone" aria-label="Change mobile number">
+              <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+              <span>Change Mobile Number</span>
             </button>
-
-            <button id="completeSessionBtn" class="control-btn btn-complete" style="display: {% if doc.status == 'waiting_bookings' %}flex{% else %}none{% endif %};">
-              <i data-lucide="power"></i> Complete Session
-            </button>
-
-            <button id="skipBtn" class="control-btn btn-skip" style="display: {% if doc.status == 'active' %}flex{% else %}none{% endif %};">
-              <i data-lucide="skip-forward"></i> Patient Not Arrived? Skip
-            </button>
-
-            {% if doc.total_tokens == 0 %}
-            <p id="noBookingsMsg" style="color:var(--dd-danger); font-size:0.85rem; font-weight:700; text-align:center; margin:4px 0 0;">No patient bookings found for today.</p>
-            {% endif %}
           </div>
-        </div>
+        </section>
 
-        <!-- Empty Slots Section -->
-        <div class="dd-empty-slots-card" id="emptySection" style="display: {% if empty_slots %}block{% else %}none{% endif %};">
-          <div class="dd-empty-header">
-            <div class="dd-empty-icon">
-              <i data-lucide="info" style="width:18px;height:18px;"></i>
+        <!-- PANEL 2: PATIENT QUEUE MANIFEST -->
+        <section id="queuePanel" class="dd-panel adminPanel" aria-label="Patient Queue Manifest">
+          <div class="dd-card glass-card-premium">
+            <div class="dd-card-header section-header">
+              <h2 class="dd-card-title"><i data-lucide="list-ordered"></i> Patient Queue Manifest</h2>
+              
+              <!-- Search Filter -->
+              <div class="dd-search-wrap search-container">
+                <i data-lucide="search" class="dd-search-icon"></i>
+                <input type="text" id="queueSearchInput" class="dd-search-input" placeholder="Search by name, token..." onkeyup="filterQueueTable()" aria-label="Search patient queue" />
+              </div>
             </div>
-            <div>
-              <h3 class="dd-empty-title">Unallocated Token Slots</h3>
-              <p class="dd-empty-desc">The following sequence tokens have no registered patients.</p>
-            </div>
-          </div>
-          <div class="dd-empty-grid" id="emptyGrid">
-            {% for token in empty_slots %}
-            <span class="dd-empty-chip user-badge">#{{ token }}</span>
-            {% endfor %}
-          </div>
-        </div>
 
-        <!-- Registered Contact Card -->
-        <div class="dd-contact-card">
-          <div class="dd-contact-left">
-            <div class="dd-contact-icon">
-              <i data-lucide="phone-call" style="width:20px;height:20px;"></i>
-            </div>
-            <div>
-              <div class="dd-contact-label">Registered Mobile Number</div>
-              <div class="dd-contact-val num-tabular" id="docCurrentPhoneSpan">{{ doc.phone_number or 'No mobile number set' }}</div>
+            <!-- Responsive Table Container -->
+            <div class="dd-table-container booking-table-wrapper">
+              <table class="dd-table booking-table" aria-label="Patient Queue">
+                <thead>
+                  <tr>
+                    <th style="width:90px;">Token</th>
+                    <th>Patient Name</th>
+                    <th class="desktop-only" style="width:110px;">Age</th>
+                    <th class="desktop-only" style="width:110px;">Gender</th>
+                    <th style="width:140px;">Status</th>
+                    <th style="width:120px; text-align:center;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="queueTableBody">
+                  <tr>
+                    <td colspan="6" style="text-align:center; padding:2.5rem 1rem; color:var(--dd-slate-500);">
+                      <i data-lucide="loader" class="spin-icon" style="margin:0 auto 0.5rem; width:22px; height:22px; color:var(--dd-primary);"></i>
+                      Loading patient queue...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-          <button type="button" onclick="openDoctorPhoneModal()" class="btn-outline-custom">
-            <i data-lucide="edit-3" style="width:15px;height:15px;"></i>
-            <span>Change Mobile Number</span>
-          </button>
-        </div>
-      </section>
+        </section>
 
-      <!-- PANEL 2: PATIENT QUEUE MANIFEST -->
-      <section id="queuePanel" class="adminPanel dd-panel-card" aria-labelledby="queuePanelHeading">
-        <div class="dd-panel-header">
-          <h2 class="dd-panel-title" id="queuePanelHeading">
-            <i data-lucide="list-ordered" style="width:20px;height:20px;color:var(--dd-primary);"></i>
-            <span>Patient Queue Manifest</span>
-          </h2>
-          
-          <div class="dd-search-box search-container">
-            <i data-lucide="search" class="dd-search-icon"></i>
-            <input type="text" id="queueSearchInput" class="dd-search-input" placeholder="Search by name, token..." onkeyup="filterQueueTable()" aria-label="Search patient queue" />
-          </div>
-        </div>
-
-        <div class="booking-table-wrapper">
-          <table class="booking-table">
-            <thead>
-              <tr>
-                <th style="width: 90px;">Token</th>
-                <th>Patient Name</th>
-                <th class="desktop-only" style="width: 110px;">Age</th>
-                <th class="desktop-only" style="width: 110px;">Gender</th>
-                <th style="width: 140px;">Status</th>
-                <th style="width: 120px; text-align: center;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="queueTableBody">
-              <tr>
-                <td colspan="6" style="text-align:center; padding:3rem 1rem; color:var(--dd-slate-500);">
-                  <i data-lucide="loader-circle" class="spin-icon" style="margin: 0 auto 0.5rem; width:26px; height:26px; color:var(--dd-primary);"></i>
-                  <div>Loading patient queue...</div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- PANEL 3: SKIPPED PATIENTS RECALL -->
-      <section id="skippedPanel" class="adminPanel dd-panel-card" aria-labelledby="skippedPanelHeading">
-        <div class="dd-panel-header">
-          <h2 class="dd-panel-title" id="skippedPanelHeading">
-            <i data-lucide="user-x" style="width:20px;height:20px;color:var(--dd-warning-dark);"></i>
-            <span>Skipped Patients Recall</span>
-          </h2>
-        </div>
-
-        <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem; color: var(--dd-slate-600); line-height: 1.5;">
-          Patients who did not answer when initially called. Tap <strong>Consult Now</strong> to recall a patient directly into the consultation room.
-        </p>
-
-        <div class="skipped-grid" id="skippedGrid">
-          <!-- Dynamically populated via JS -->
-        </div>
-
-        <div id="skippedEmptyState" style="display:none; text-align:center; padding:3.5rem 1.5rem; color:var(--dd-slate-400);">
-          <i data-lucide="check-check" style="width:40px; height:40px; color:var(--dd-success); margin:0 auto 0.75rem; display:block;"></i>
-          <div style="font-weight:800; color:var(--dd-slate-700); font-size:1.05rem;">No Skipped Patients</div>
-          <div style="font-size:0.85rem; color:var(--dd-slate-500); margin-top:3px;">All called patients were present in the clinic.</div>
-        </div>
-      </section>
-
-      <!-- PANEL 4: DOCTOR STATISTICS -->
-      <section id="statsPanel" class="adminPanel dd-panel-card" aria-labelledby="statsPanelHeading">
-        <div class="dd-panel-header">
-          <h2 class="dd-panel-title" id="statsPanelHeading">
-            <i data-lucide="bar-chart-2" style="width:20px;height:20px;color:var(--dd-primary);"></i>
-            <span>Practitioner Analytics</span>
-          </h2>
-          <button onclick="fetchDoctorStats(true)" class="stats-refresh-btn" title="Refresh Consultation Metrics">
-            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>
-            <span class="refresh-btn-text">Refresh Data</span>
-          </button>
-        </div>
-
-        <div id="statsLoadingState" style="text-align:center; padding:3.5rem 1rem; display:flex; flex-direction:column; align-items:center; gap:0.8rem;">
-          <i data-lucide="loader-circle" class="spin-icon" style="width:32px;height:32px;color:var(--dd-primary);"></i>
-          <span style="color:var(--dd-slate-600); font-size:0.9rem; font-weight:600;">Fetching your verified practice statistics…</span>
-        </div>
-
-        <div id="statsErrorState" style="display:none; text-align:center; padding:3rem 1rem;">
-          <i data-lucide="wifi-off" style="width:36px;height:36px;color:var(--dd-danger);margin:0 auto 0.6rem;display:block;"></i>
-          <div style="color:var(--dd-danger); font-weight:800; font-size:1rem;">Could not load analytics</div>
-          <div style="color:var(--dd-slate-500); font-size:0.85rem; margin-top:4px;">Please check your connection and refresh.</div>
-        </div>
-
-        <div id="statsContent" style="display:none;">
-          <!-- SECTION 1: Booking Summary -->
-          <div style="margin-bottom: 2rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
-              <span style="font-size:0.75rem; font-weight:800; color:var(--dd-slate-500); text-transform:uppercase; letter-spacing:0.06em;">Booking Summary (Excl. Cancelled)</span>
-              <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; font-weight:700; color:var(--dd-slate-600);">
-                <span>Sort by:</span>
-                <select id="bookingStatsSort" onchange="sortDoctorStats('booking')" style="padding:0.3rem 0.7rem; border-radius:8px; border:1.5px solid var(--dd-slate-300); font-size:0.78rem; background:#fff; cursor:pointer; color:var(--dd-slate-800); font-weight:600; outline:none;">
-                  <option value="default">Default Order</option>
-                  <option value="value-desc">Highest Count First</option>
-                  <option value="value-asc">Lowest Count First</option>
-                  <option value="name-asc">Alphabetical</option>
-                </select>
+        <!-- PANEL 3: SKIPPED PATIENTS RECALL -->
+        <section id="skippedPanel" class="dd-panel adminPanel" aria-label="Skipped Patients Recall">
+          <div class="dd-card glass-card-premium">
+            <div class="dd-card-header section-header">
+              <div>
+                <h2 class="dd-card-title" style="margin:0;"><i data-lucide="user-x"></i> Skipped Patients</h2>
+                <p style="margin:4px 0 0; font-size:0.78rem; color:var(--dd-slate-500); font-weight:500;">Patients who were absent when called can be consulted at any time.</p>
               </div>
             </div>
 
-            <div class="doc-stats-grid ds-grid-booking" id="bookingStatsGrid">
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(0,119,182,0.1);color:#0077b6;"><i data-lucide="calendar-check" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsTotalBookings">—</div>
-                <div class="doc-stat-label">Total Bookings</div>
-              </div>
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i data-lucide="sun" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsTodayBookings">—</div>
-                <div class="doc-stat-label">Today</div>
-              </div>
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;"><i data-lucide="calendar-days" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsWeekBookings">—</div>
-                <div class="doc-stat-label">This Week</div>
-              </div>
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i data-lucide="calendar" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsMonthBookings">—</div>
-                <div class="doc-stat-label">This Month</div>
-              </div>
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;"><i data-lucide="calendar-range" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsYearBookings">—</div>
-                <div class="doc-stat-label">This Year</div>
-              </div>
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(0,119,182,0.08);color:#0077b6;"><i data-lucide="clock-arrow-up" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsUpcoming">—</div>
-                <div class="doc-stat-label">Upcoming</div>
-              </div>
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(71,85,105,0.08);color:#475569;"><i data-lucide="history" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsPast">—</div>
-                <div class="doc-stat-label">Past Visits</div>
-              </div>
+            <div class="dd-skipped-grid skipped-grid" id="skippedGrid">
+              <!-- Rendered dynamically by JavaScript -->
+            </div>
+
+            <div id="skippedEmptyState" style="display:none; text-align:center; padding:3.5rem 1.5rem; color:var(--dd-slate-400);">
+              <i data-lucide="check-check" style="width:42px; height:42px; color:var(--dd-success); margin:0 auto 0.75rem; display:block;"></i>
+              <div style="font-weight:800; color:var(--dd-slate-700); font-size:1.05rem;">No Skipped Patients</div>
+              <div style="font-size:0.84rem; color:var(--dd-slate-500); margin-top:3px;">All called patients were present during consultation!</div>
             </div>
           </div>
+        </section>
 
-          <div style="border-top:1.5px dashed var(--dd-slate-200); margin:1.75rem 0;"></div>
-
-          <!-- SECTION 2: Consultation & Hours -->
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
-              <span style="font-size:0.75rem; font-weight:800; color:var(--dd-slate-500); text-transform:uppercase; letter-spacing:0.06em;">Consultation Metrics</span>
-              <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; font-weight:700; color:var(--dd-slate-600);">
-                <span>Sort by:</span>
-                <select id="metricsStatsSort" onchange="sortDoctorStats('metrics')" style="padding:0.3rem 0.7rem; border-radius:8px; border:1.5px solid var(--dd-slate-300); font-size:0.78rem; background:#fff; cursor:pointer; color:var(--dd-slate-800); font-weight:600; outline:none;">
-                  <option value="default">Default Order</option>
-                  <option value="value-desc">Highest Value First</option>
-                  <option value="value-asc">Lowest Value First</option>
-                  <option value="name-asc">Alphabetical</option>
-                </select>
-              </div>
+        <!-- PANEL 4: DOCTOR STATISTICS -->
+        <section id="statsPanel" class="dd-panel adminPanel" aria-label="Doctor Performance Statistics">
+          <div class="dd-card glass-card-premium">
+            <div class="dd-card-header section-header">
+              <h2 class="dd-card-title"><i data-lucide="bar-chart-2"></i> Performance &amp; Analytics</h2>
+              <button type="button" onclick="fetchDoctorStats(true)" class="dd-refresh-btn stats-refresh-btn" aria-label="Refresh statistics">
+                <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>
+                <span class="refresh-btn-text">Refresh Data</span>
+              </button>
             </div>
 
-            <div class="doc-stats-grid ds-grid-metrics" id="metricsStatsGrid">
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i data-lucide="stethoscope" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsCompleted">—</div>
-                <div class="doc-stat-label">Completed Consultations</div>
-              </div>
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(0,119,182,0.1);color:#0077b6;"><i data-lucide="clock" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsTotalHours">—</div>
-                <div class="doc-stat-label">Total Working Hours</div>
-              </div>
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;"><i data-lucide="briefcase" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsWorkingDays">—</div>
-                <div class="doc-stat-label">Working Days</div>
-              </div>
-              <div class="doc-stat-card">
-                <div class="doc-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i data-lucide="timer" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value num-tabular" id="dsAvgDuration">—</div>
-                <div class="doc-stat-label">Avg. Consult Duration</div>
-              </div>
+            <!-- Loading State -->
+            <div id="statsLoadingState" style="text-align:center; padding:3rem 1rem; display:flex; flex-direction:column; align-items:center; gap:0.6rem;">
+              <i data-lucide="loader" class="spin-icon" style="width:26px;height:26px;color:var(--dd-primary);"></i>
+              <span style="color:var(--dd-slate-600); font-size:0.9rem; font-weight:600;">Fetching clinical statistics…</span>
             </div>
 
-            <div id="dsNoTimesNote" style="display:none; margin-top:1.25rem; background:var(--dd-warning-soft); border:1px solid var(--dd-warning-border); border-radius:var(--dd-radius-md); padding:0.9rem 1.1rem; font-size:0.82rem; color:var(--dd-warning-dark); display:flex; align-items:flex-start; gap:0.6rem;">
-              <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;"></i>
-              <span>Working hours and average duration are computed from consultations with logged check-in and completion times.</span>
+            <!-- Error State -->
+            <div id="statsErrorState" style="display:none; text-align:center; padding:2.5rem 1rem;">
+              <i data-lucide="wifi-off" style="width:34px;height:34px;color:var(--dd-danger);margin:0 auto 0.6rem;display:block;"></i>
+              <div style="color:var(--dd-danger); font-weight:800; font-size:1rem;">Could not load statistics</div>
+              <div style="color:var(--dd-slate-500); font-size:0.82rem; margin-top:4px;">Please check your connection and tap Refresh.</div>
+            </div>
+
+            <!-- Stats Content -->
+            <div id="statsContent" style="display:none;">
+
+              <!-- SECTION 1: Booking Summary -->
+              <div style="margin-bottom:2rem;">
+                <div class="dd-stats-toolbar">
+                  <span class="dd-stats-section-title">Booking Summary (Excl. Cancelled)</span>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <label for="bookingStatsSort" style="font-size:0.75rem; font-weight:700; color:var(--dd-slate-500);">Sort:</label>
+                    <select id="bookingStatsSort" class="dd-sort-select" onchange="sortDoctorStats('booking')" aria-label="Sort booking statistics">
+                      <option value="default">Default Order</option>
+                      <option value="value-desc">Highest First</option>
+                      <option value="value-asc">Lowest First</option>
+                      <option value="name-asc">Alphabetical</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="doc-stats-grid ds-grid-booking" id="bookingStatsGrid">
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(0,119,182,0.1);color:#0077b6;"><i data-lucide="calendar-check" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsTotalBookings">—</div>
+                    <div class="doc-stat-label">Total Bookings</div>
+                  </div>
+
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i data-lucide="sun" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsTodayBookings">—</div>
+                    <div class="doc-stat-label">Today</div>
+                  </div>
+
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;"><i data-lucide="calendar-days" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsWeekBookings">—</div>
+                    <div class="doc-stat-label">This Week</div>
+                  </div>
+
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i data-lucide="calendar" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsMonthBookings">—</div>
+                    <div class="doc-stat-label">This Month</div>
+                  </div>
+
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;"><i data-lucide="calendar-range" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsYearBookings">—</div>
+                    <div class="doc-stat-label">This Year</div>
+                  </div>
+
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(0,119,182,0.08);color:#0077b6;"><i data-lucide="clock-arrow-up" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsUpcoming">—</div>
+                    <div class="doc-stat-label">Upcoming</div>
+                  </div>
+
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(71,85,105,0.08);color:#475569;"><i data-lucide="history" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsPast">—</div>
+                    <div class="doc-stat-label">Past Visits</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SECTION 2: Consultation Metrics -->
+              <div>
+                <div class="dd-stats-toolbar">
+                  <span class="dd-stats-section-title">Consultation Metrics</span>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <label for="metricsStatsSort" style="font-size:0.75rem; font-weight:700; color:var(--dd-slate-500);">Sort:</label>
+                    <select id="metricsStatsSort" class="dd-sort-select" onchange="sortDoctorStats('metrics')" aria-label="Sort consultation metrics">
+                      <option value="default">Default Order</option>
+                      <option value="value-desc">Highest First</option>
+                      <option value="value-asc">Lowest First</option>
+                      <option value="name-asc">Alphabetical</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="doc-stats-grid ds-grid-metrics" id="metricsStatsGrid">
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i data-lucide="stethoscope" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsCompleted">—</div>
+                    <div class="doc-stat-label">Completed Consultations</div>
+                  </div>
+
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(0,119,182,0.1);color:#0077b6;"><i data-lucide="clock" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsTotalHours">—</div>
+                    <div class="doc-stat-label">Total Working Hours</div>
+                  </div>
+
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;"><i data-lucide="briefcase" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsWorkingDays">—</div>
+                    <div class="doc-stat-label">Working Days</div>
+                  </div>
+
+                  <div class="doc-stat-card">
+                    <div class="doc-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i data-lucide="timer" style="width:18px;height:18px;"></i></div>
+                    <div class="doc-stat-value" id="dsAvgDuration">—</div>
+                    <div class="doc-stat-label">Avg. Consult Duration</div>
+                  </div>
+                </div>
+
+                <!-- Missing times note callout -->
+                <div id="dsNoTimesNote" style="display:none; background:var(--dd-warning-soft); border:1px solid var(--dd-warning-border); border-radius:var(--dd-radius-md); padding:12px 16px; font-size:0.82rem; color:#92400e; margin-top:1.5rem; align-items:flex-start; gap:8px;">
+                  <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;color:var(--dd-warning);margin-top:1px;"></i>
+                  <span>Working hours &amp; average duration are calculated only from consultations that have recorded start and end times. No such records found yet.</span>
+                </div>
+              </div>
+
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- SIMPLE FOOTER -->
-      <footer class="admin-footer">
-        <p class="admin-footer-copy">&copy; 2026 PrimeCare Clinic &middot; All rights reserved.</p>
-      </footer>
+        <!-- Footer -->
+        <footer style="text-align:center; padding:1.5rem 0; color:var(--dd-slate-400); font-size:0.8rem; border-top:1px solid var(--dd-slate-200); margin-top:1rem;">
+          <p style="margin:0;">&copy; 2026 PrimeCare Clinic. All rights reserved.</p>
+        </footer>
+
+      </div>
     </main>
   </div>
 
-  <!-- MOBILE BOTTOM TAB BAR (< 640px) -->
-  <nav class="dd-mobile-tab-bar" aria-label="Mobile Navigation">
-    <div class="dd-tab-items-grid">
-      <div class="dd-tab-item active" data-panel="overview" onclick="showAdminPanel('overview')" role="button" tabindex="0">
+  <!-- MOBILE BOTTOM TAB BAR -->
+  <nav class="dd-tabbar" aria-label="Bottom Navigation">
+    <div class="dd-tabbar-inner">
+      <div class="dd-tabbar-item active" data-panel="overview" onclick="showAdminPanel('overview', this)" role="button" tabindex="0">
         <i data-lucide="layout-dashboard"></i>
-        <span class="dd-tab-item-label">Overview</span>
+        <span class="dd-tabbar-label">Overview</span>
       </div>
-      <div class="dd-tab-item" data-panel="queue" onclick="showAdminPanel('queue')" role="button" tabindex="0">
+      <div class="dd-tabbar-item" data-panel="queue" onclick="showAdminPanel('queue', this)" role="button" tabindex="0">
         <i data-lucide="list-ordered"></i>
-        <span class="dd-tab-item-label">Queue</span>
-        <span class="dd-tab-badge" id="mobileNavBadgeQueue" style="display:none;">0</span>
+        <span class="dd-tabbar-label">Queue</span>
+        <span class="dd-tabbar-badge" id="tabBadgeQueue">0</span>
       </div>
-      <div class="dd-tab-item" data-panel="skipped" onclick="showAdminPanel('skipped')" role="button" tabindex="0">
+      <div class="dd-tabbar-item" data-panel="skipped" onclick="showAdminPanel('skipped', this)" role="button" tabindex="0">
         <i data-lucide="user-x"></i>
-        <span class="dd-tab-item-label">Skipped</span>
-        <span class="dd-tab-badge" id="mobileNavBadgeSkipped" style="display:none;">0</span>
+        <span class="dd-tabbar-label">Skipped</span>
+        <span class="dd-tabbar-badge" id="tabBadgeSkipped">0</span>
       </div>
-      <div class="dd-tab-item" data-panel="stats" onclick="showAdminPanel('stats')" role="button" tabindex="0">
+      <div class="dd-tabbar-item" data-panel="stats" onclick="showAdminPanel('stats', this)" role="button" tabindex="0">
         <i data-lucide="bar-chart-2"></i>
-        <span class="dd-tab-item-label">Stats</span>
+        <span class="dd-tabbar-label">Stats</span>
       </div>
     </div>
   </nav>
 
-  <!-- MODAL: CREATE SPECIALIST REFERRAL -->
-  <div class="modal-overlay" id="referralModal" role="dialog" aria-modal="true" aria-labelledby="referralModalTitle">
-    <div class="pres-modal-content dd-modal-box">
+  <!-- REFERRAL MODAL -->
+  <div class="modal-overlay" id="referralModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="referralModalTitle">
+    <div class="pres-modal-content">
       <div class="pres-modal-header">
         <div class="pres-modal-header-left">
           <div class="icon-circle">
-            <i data-lucide="send" style="width: 18px; height: 18px;"></i>
+            <i data-lucide="send" style="width:18px;height:18px;"></i>
           </div>
           <div>
             <h3 id="referralModalTitle">Create Specialist Referral</h3>
-            <p>Recommend another clinic department for this patient</p>
+            <p>Recommend another clinical department to this patient</p>
           </div>
         </div>
-        <button type="button" class="pres-close-btn" onclick="closeReferralModal()" aria-label="Close dialog">
-          <i data-lucide="x" style="width: 15px; height: 15px;"></i>
+        <button type="button" class="pres-close-btn" onclick="closeReferralModal()" title="Close" aria-label="Close referral dialog">
+          <i data-lucide="x" style="width:15px;height:15px;"></i>
         </button>
       </div>
       
-      <form id="referralForm" onsubmit="submitReferral(event)" style="padding: 1.25rem 1.5rem;">
-        <input type="hidden" id="referralToken" name="token">
+      <form id="referralForm" onsubmit="submitReferral(event)" style="padding:var(--dd-space-5);">
+        <input type="hidden" id="referralToken" name="token" />
         
-        <div style="margin-bottom: 1.2rem;">
-          <label style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">Patient Name</label>
-          <input type="text" id="referralPatientName" readonly style="width:100%; height:44px; padding:0 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-200); background:var(--dd-slate-50); color:var(--dd-slate-700); font-weight:700; font-size:16px;">
+        <div class="dd-form-group">
+          <label class="dd-label" for="referralPatientName">Patient Name</label>
+          <input type="text" id="referralPatientName" class="dd-input" readonly style="background:var(--dd-slate-100); color:var(--dd-slate-600); font-weight:700;" />
         </div>
         
-        <div style="margin-bottom: 1.2rem;">
-          <label for="referralSpecialization" style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">Refer to Department / Specialization</label>
-          <div style="position:relative;">
-            <select id="referralSpecialization" required style="width:100%; height:44px; padding:0 2.2rem 0 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-200); background:#fff; color:var(--dd-slate-900); font-weight:600; font-size:16px; appearance:none; -webkit-appearance:none;">
-              <option value="" disabled selected>Select specialization...</option>
-            </select>
-            <i data-lucide="chevron-down" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--dd-slate-400); pointer-events:none;"></i>
-          </div>
+        <div class="dd-form-group">
+          <label class="dd-label" for="referralSpecialization">Refer to Department / Specialization *</label>
+          <select id="referralSpecialization" class="dd-select" required>
+            <option value="" disabled selected>Select target specialization...</option>
+          </select>
         </div>
         
-        <div style="margin-bottom: 1.5rem;">
-          <label for="referralNotes" style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">Clinical Notes / Reason (Optional)</label>
-          <textarea id="referralNotes" rows="3" placeholder="Add clinical guidance or reason for referral..." style="width:100%; padding:0.75rem 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-200); background:#fff; color:var(--dd-slate-900); font-size:16px; resize:none; font-family:inherit;"></textarea>
+        <div class="dd-form-group">
+          <label class="dd-label" for="referralNotes">Clinical Notes / Reason (Optional)</label>
+          <textarea id="referralNotes" class="dd-textarea" placeholder="Add clinical recommendation or summary for specialist..."></textarea>
         </div>
         
-        <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
-          <button type="button" class="btn-outline-custom" onclick="closeReferralModal()">Cancel</button>
-          <button type="submit" class="control-btn btn-start" style="width:auto; padding:0 1.5rem; height:44px; font-size:0.92rem;">Send Referral</button>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:var(--dd-space-4);">
+          <button type="button" class="dd-btn-change-phone" onclick="closeReferralModal()">Cancel</button>
+          <button type="submit" class="dd-btn-primary-action btn-start" style="height:44px; width:auto; padding:0 22px; font-size:0.92rem;">Send Referral</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: CHANGE DOCTOR MOBILE NUMBER WITH WHATSAPP OTP -->
-  <div id="doctorPhoneModal" role="dialog" aria-modal="true" aria-labelledby="doctorPhoneModalTitle">
-    <div class="dd-modal-box" style="max-width:440px;">
-      <div class="pres-modal-header" style="background:linear-gradient(135deg, var(--dd-primary-dark), var(--dd-primary)); color:#ffffff;">
+  <!-- DOCTOR PHONE CHANGE MODAL (WhatsApp OTP) -->
+  <div id="doctorPhoneModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="docPhoneModalTitle">
+    <div>
+      <div class="pres-modal-header" style="background:linear-gradient(135deg, var(--dd-primary-dark), var(--dd-primary)); color:white; border-bottom:none;">
         <div class="pres-modal-header-left">
-          <div class="icon-circle" style="background:rgba(255,255,255,0.2); color:#ffffff;">
+          <div class="icon-circle" style="background:rgba(255,255,255,0.2); color:white;">
             <i data-lucide="phone-forwarded" style="width:18px;height:18px;"></i>
           </div>
           <div>
-            <h3 id="doctorPhoneModalTitle" style="color:#ffffff;">Update Mobile Number</h3>
+            <h3 id="docPhoneModalTitle" style="color:white;">Update Mobile Number</h3>
             <p style="color:rgba(255,255,255,0.9);">WhatsApp OTP Verification</p>
           </div>
         </div>
-        <button type="button" class="pres-close-btn doc-phone-close-btn" onclick="closeDoctorPhoneModal()" aria-label="Close dialog" style="background:rgba(255,255,255,0.2); color:#ffffff;">
+        <button type="button" class="doc-phone-close-btn" onclick="closeDoctorPhoneModal()" aria-label="Close dialog" style="background:rgba(255,255,255,0.2); color:white; border:none;">
           <i data-lucide="x" style="width:15px;height:15px;"></i>
         </button>
       </div>
 
-      <div style="padding:1.5rem;">
+      <div style="padding:var(--dd-space-5);">
         <!-- Step 1: Request OTP -->
         <div id="docPhoneStep1">
-          <p style="margin:0 0 1rem 0; font-size:0.85rem; color:var(--dd-slate-600); line-height:1.45;">
+          <p style="margin:0 0 1rem; font-size:0.85rem; color:var(--dd-slate-600); line-height:1.45;">
             Enter your new mobile number. A 6-digit verification code will be sent to your <strong>WhatsApp</strong>.
           </p>
 
-          <label style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">
-            New Mobile Number
-          </label>
-          <div style="position:relative; margin-bottom:1rem;">
-            <input type="tel" id="docNewPhoneInput" placeholder="e.g. 9876543210 or +919876543210" style="width:100%; height:44px; padding:0 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-300); font-size:16px; font-weight:700; color:var(--dd-slate-900); outline:none;" />
+          <div class="dd-form-group">
+            <label class="dd-label" for="docNewPhoneInput">New Mobile Number</label>
+            <input type="tel" id="docNewPhoneInput" class="dd-input" placeholder="e.g. 9876543210 or +919876543210" />
           </div>
 
-          <div id="docPhoneStep1Err" style="color:var(--dd-danger); font-size:0.8rem; font-weight:700; margin-bottom:0.75rem; display:none;"></div>
+          <div id="docPhoneStep1Err" style="color:var(--dd-danger); font-size:0.82rem; font-weight:700; margin-bottom:10px; display:none;"></div>
 
-          <button type="button" id="docSendPhoneOtpBtn" onclick="handleSendDoctorPhoneOtp()" class="control-btn btn-start" style="height:46px; font-size:0.95rem;">
+          <button type="button" id="docSendPhoneOtpBtn" class="dd-btn-primary-action btn-start" onclick="handleSendDoctorPhoneOtp()" style="height:46px; font-size:0.95rem;">
             <i data-lucide="send" style="width:16px;height:16px;"></i>
             <span>Send WhatsApp OTP</span>
           </button>
@@ -674,29 +705,29 @@
 
         <!-- Step 2: Verify OTP -->
         <div id="docPhoneStep2" style="display:none;">
-          <div style="background:var(--dd-success-soft); border:1px solid var(--dd-success-border); border-radius:var(--dd-radius-md); padding:0.75rem 1rem; margin-bottom:1.25rem;">
-            <p style="margin:0; font-size:0.82rem; color:var(--dd-success-dark); line-height:1.4;">
+          <div style="background:var(--dd-success-soft); border:1px solid var(--dd-success-border); border-radius:var(--dd-radius-md); padding:10px 14px; margin-bottom:1rem;">
+            <p style="margin:0; font-size:0.82rem; color:var(--dd-success-hover); font-weight:600;">
               OTP sent to WhatsApp: <strong id="docTargetPhoneDisplay"></strong>
             </p>
           </div>
 
-          <label style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">
-            Enter 6-Digit WhatsApp Code
-          </label>
-          <input type="text" id="docPhoneOtpInput" maxlength="6" inputmode="numeric" placeholder="123456" style="width:100%; height:48px; padding:0 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-300); font-size:1.4rem; font-weight:800; letter-spacing:6px; text-align:center; color:var(--dd-slate-900); outline:none; margin-bottom:1rem;" />
+          <div class="dd-form-group">
+            <label class="dd-label" for="docPhoneOtpInput">Enter 6-Digit WhatsApp Code</label>
+            <input type="text" id="docPhoneOtpInput" maxlength="6" class="dd-input" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" />
+          </div>
 
-          <div id="docPhoneStep2Err" style="color:var(--dd-danger); font-size:0.8rem; font-weight:700; margin-bottom:0.75rem; display:none;"></div>
+          <div id="docPhoneStep2Err" style="color:var(--dd-danger); font-size:0.82rem; font-weight:700; margin-bottom:10px; display:none;"></div>
 
-          <button type="button" id="docVerifyPhoneOtpBtn" onclick="handleVerifyDoctorPhoneOtp()" class="control-btn btn-next" style="height:46px; font-size:0.95rem; margin-bottom:0.75rem;">
+          <button type="button" id="docVerifyPhoneOtpBtn" class="dd-btn-primary-action btn-next" onclick="handleVerifyDoctorPhoneOtp()" style="height:46px; font-size:0.95rem; margin-bottom:12px;">
             <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
             <span>Verify &amp; Update Number</span>
           </button>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:var(--dd-slate-600);">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; color:var(--dd-slate-500);">
             <button type="button" onclick="docBackToStep1()" style="background:none; border:none; color:var(--dd-primary); cursor:pointer; font-weight:700; padding:0;">
               &larr; Change Number
             </button>
-            <span id="docOtpTimerSpan" style="color:var(--dd-slate-400);">Resend in 60s</span>
+            <span id="docOtpTimerSpan" style="color:var(--dd-slate-400); font-weight:600;">Resend in 60s</span>
             <button type="button" id="docResendOtpBtn" onclick="handleSendDoctorPhoneOtp(true)" style="background:none; border:none; color:var(--dd-primary); cursor:pointer; font-weight:750; display:none; padding:0;">
               Resend WhatsApp OTP
             </button>
@@ -708,9 +739,9 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
-    if (window.lucide) lucide.createIcons();
+    lucide.createIcons();
     
-    // Initial states compiled from Jinja
+    // Initial state compiled from Jinja
     let currentStatus = "{{ doc.status }}";
     let totalBooked = {{ total_booked }};
     let totalTokens = {{ doc.total_tokens }};
@@ -730,7 +761,7 @@
           const specs = await res.json();
           specializationsCache = specs;
           
-          select.innerHTML = '<option value="" disabled selected>Select specialization...</option>';
+          select.innerHTML = '<option value="" disabled selected>Select target specialization...</option>';
           specs.forEach(spec => {
             const opt = document.createElement('option');
             opt.value = spec;
@@ -742,7 +773,7 @@
           showToast('Failed to load specializations list.', 'error');
         }
       } else {
-        select.innerHTML = '<option value="" disabled selected>Select specialization...</option>';
+        select.innerHTML = '<option value="" disabled selected>Select target specialization...</option>';
         specializationsCache.forEach(spec => {
           const opt = document.createElement('option');
           opt.value = spec;
@@ -752,7 +783,7 @@
       }
       
       document.getElementById('referralModal').style.display = 'flex';
-      if (window.lucide) lucide.createIcons();
+      lucide.createIcons();
     }
     
     function closeReferralModal() {
@@ -802,7 +833,7 @@
       }, true);
     }
 
-    // ── Sidebar Toggle Mobile ──
+    // ── Sidebar Toggle Mobile / Drawer ──
     function toggleSidebar(isOpen) {
       const sidebar = document.getElementById('adminSidebar');
       const backdrop = document.getElementById('adminSidebarBackdrop');
@@ -820,28 +851,17 @@
     }
 
     // ── Switch Panels ──
-    function showAdminPanel(panelName, sidebarItem) {
-      document.querySelectorAll('.adminPanel').forEach(p => p.classList.remove('active'));
+    function showAdminPanel(panelName, activeElement) {
+      document.querySelectorAll('.adminPanel, .dd-panel').forEach(p => p.classList.remove('active'));
       
       const targetPanel = document.getElementById(panelName + 'Panel');
       if (targetPanel) {
         targetPanel.classList.add('active');
       }
       
-      if (panelName === 'overview') {
-        document.body.classList.remove('non-overview-active');
-      } else {
-        document.body.classList.add('non-overview-active');
-      }
-      
-      // Update both desktop sidebar items and mobile tab bar items
-      document.querySelectorAll('.admin-sidebar-nav-item, .dd-tab-item').forEach(item => {
-        if (item.getAttribute('data-panel') === panelName) {
-          item.classList.add('active');
-        } else {
-          item.classList.remove('active');
-        }
-      });
+      // Update both sidebar items and mobile tabbar items
+      document.querySelectorAll('.admin-sidebar-nav-item, .dd-tabbar-item').forEach(item => item.classList.remove('active'));
+      document.querySelectorAll(`[data-panel="${panelName}"]`).forEach(el => el.classList.add('active'));
       
       const breadcrumbActive = document.getElementById('currentBreadcrumbActive');
       if (breadcrumbActive) {
@@ -902,29 +922,24 @@
       
       rows.forEach(row => {
         if (row.cells.length === 1 && row.cells[0].colSpan === 6) return;
-        
         const text = row.innerText.toLowerCase();
-        if (text.includes(query)) {
-          row.style.display = '';
-        } else {
-          row.style.display = 'none';
-        }
+        row.style.display = text.includes(query) ? '' : 'none';
       });
     };
 
-    // ── Table and UI Rendering ──
+    // ── Table and Queue Rendering ──
     function renderQueueTable(bookings, currentToken, sessionStatus) {
         const tbody = document.getElementById('queueTableBody');
         if (!bookings || bookings.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" style="text-align:center; padding:3.5rem 1rem; color:var(--dd-slate-400); font-weight:600;">
+                    <td colspan="6" style="text-align:center; padding:3rem 1rem; color:var(--dd-slate-400); font-weight:600;">
                         <i data-lucide="calendar-x" style="width:36px; height:36px; margin:0 auto 0.5rem; color:var(--dd-slate-300); display:block;"></i>
                         No patient bookings found for today.
                     </td>
                 </tr>
             `;
-            if (window.lucide) lucide.createIcons(tbody);
+            lucide.createIcons();
             return;
         }
 
@@ -947,7 +962,7 @@
                 badgeText = 'Referred';
             } else if (b.status === 'skipped') {
                 badgeClass = 'status-skipped';
-                badgeIcon = 'user-minus';
+                badgeIcon = 'user-x';
                 badgeText = 'Skipped';
             } else {
                 badgeClass = 'status-waiting';
@@ -959,59 +974,62 @@
             let actionsHtml = '';
             if (b.status === 'skipped') {
                 actionsHtml = `
-                    <button class="btn btn-primary" onclick="consultSkipped('${b.token}')" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; border-radius: 8px; margin:0; min-width:auto; height:32px; background:var(--dd-primary); color:#fff; border:none; cursor:pointer;">
-                        <i data-lucide="check" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:3px;"></i> Consult
+                    <button class="dd-btn-consult-skipped btn-consult-skipped" onclick="consultSkipped('${b.token}')" style="margin:0; padding:6px 14px; width:auto; height:34px; font-size:0.78rem;">
+                        <i data-lucide="check" style="width:13px; height:13px; display:inline-block; vertical-align:middle; margin-right:3px;"></i> Consult
                     </button>
                 `;
             } else if (b.status === 'calling') {
                 actionsHtml = `
-                    <div style="display:flex; gap:0.4rem; justify-content:center;">
-                        <button class="btn btn-outline" onclick="triggerSkipAction()" style="padding: 0.35rem 0.6rem; border-radius: 8px; margin:0; border:1px solid #f59e0b; color:#d97706; background:#fffbeb; min-width:auto; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Skip Patient">
+                    <div style="display:flex; gap:6px; justify-content:center;">
+                        <button class="dd-btn-change-phone" onclick="triggerSkipAction()" style="height:34px; padding:0 10px; border-color:var(--dd-warning); color:var(--dd-warning-hover);" title="Skip Patient">
                             <i data-lucide="skip-forward" style="width:14px; height:14px;"></i>
+                            <span>Skip</span>
                         </button>
-                        <button class="btn btn-primary" onclick="triggerNextAction()" style="padding: 0.35rem 0.6rem; border-radius: 8px; margin:0; background:var(--dd-success); border:none; color:#fff; min-width:auto; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Consult & Next">
+                        <button class="dd-btn-primary-action btn-next" onclick="triggerNextAction()" style="height:34px; width:auto; padding:0 14px; font-size:0.82rem;" title="Consult & Next">
                             <i data-lucide="check" style="width:14px; height:14px; stroke-width:3px;"></i>
+                            <span>Done &amp; Next</span>
                         </button>
                     </div>
                 `;
             } else if (b.status === 'waiting') {
-                actionsHtml = `<span style="color:var(--dd-slate-400); font-size:0.75rem; font-weight:700;">Queue #${b.token}</span>`;
+                actionsHtml = `<span style="color:var(--dd-slate-400); font-size:0.75rem; font-weight:750;">Queue #${b.token}</span>`;
             } else if (b.status === 'referred') {
                 actionsHtml = `
-                    <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
+                    <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
                         <i data-lucide="arrow-up-right" style="color:var(--dd-violet); width:16px; height:16px;" title="Referred"></i>
-                        <button class="btn btn-outline" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:var(--dd-slate-200); color:var(--dd-slate-400); background:var(--dd-slate-100); cursor:not-allowed; min-width:auto; height:24px; display:flex; align-items:center; gap:3px;" title="Already Referred">
-                            <i data-lucide="send" style="width:10px; height:10px;"></i> Refer
+                        <button class="dd-btn-change-phone" disabled style="opacity:0.6; cursor:not-allowed; height:28px; padding:0 8px; font-size:0.72rem;" title="Already Referred">
+                            <span>Referred</span>
                         </button>
                     </div>
                 `;
             } else {
                 actionsHtml = `
-                    <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
+                    <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
                         <i data-lucide="check" style="color:var(--dd-success); width:16px; height:16px;" title="Consulted"></i>
-                        <button class="btn btn-outline" onclick="openReferralModal('${b.token}', '${(b.name || 'Patient').replace(/'/g, "\\'")}')" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:var(--dd-primary); color:var(--dd-primary); background:#fff; min-width:auto; height:24px; display:flex; align-items:center; gap:3px; cursor:pointer;" title="Refer Patient">
-                            <i data-lucide="send" style="width:10px; height:10px;"></i> Refer
+                        <button class="dd-btn-change-phone" onclick="openReferralModal('${b.token}', '${(b.name || 'Patient').replace(/'/g, "\\'")}')" style="height:28px; padding:0 10px; font-size:0.75rem; border-color:var(--dd-primary); color:var(--dd-primary);" title="Refer Patient">
+                            <i data-lucide="send" style="width:11px; height:11px;"></i>
+                            <span>Refer</span>
                         </button>
                     </div>
                 `;
             }
 
-            const isRowCalling = b.status === 'calling' ? 'background: rgba(16, 185, 129, 0.05); font-weight: 700;' : '';
-            const isRowSkipped = b.status === 'skipped' ? 'background: rgba(245, 158, 11, 0.03);' : '';
+            const rowCallingClass = b.status === 'calling' ? 'dd-row-calling' : '';
+            const rowSkippedClass = b.status === 'skipped' ? 'dd-row-skipped' : '';
 
             return `
-                <tr style="${isRowCalling} ${isRowSkipped}">
+                <tr class="${rowCallingClass} ${rowSkippedClass}">
                     <td>
-                        <span class="token-badge num-tabular" style="background: ${b.status === 'calling' ? 'var(--dd-success)' : 'var(--dd-primary)'}">#${b.token}</span>
+                        <span class="dd-token-chip user-badge" style="background:${b.status === 'calling' ? 'var(--dd-success)' : 'var(--dd-primary)'}; color:#fff; border:none; padding:3px 8px;">#${b.token}</span>
                     </td>
-                    <td style="font-weight: 750; color: var(--dd-slate-900);">
-                        ${b.name}
+                    <td>
+                        <div style="font-weight:750; color:var(--dd-slate-900); font-size:0.92rem;">${b.name}</div>
                         <div class="mobile-info-row">
-                            <span>Age: ${b.age ? b.age : '-'} &middot; ${b.gender ? b.gender : '-'}</span>
+                            <span>Age: ${b.age ? b.age : '-'} · ${b.gender ? b.gender : '-'}</span>
                         </div>
                     </td>
-                    <td class="desktop-only">${b.age ? b.age : '-'} y/o</td>
-                    <td class="desktop-only">${b.gender ? b.gender : '-'}</td>
+                    <td class="desktop-only" style="color:var(--dd-slate-600); font-weight:600;">${b.age ? b.age : '-'} y/o</td>
+                    <td class="desktop-only" style="color:var(--dd-slate-600); font-weight:600;">${b.gender ? b.gender : '-'}</td>
                     <td>
                         <span class="status-badge-inline ${badgeClass}">
                             <i data-lucide="${badgeIcon}" style="width:12px; height:12px;"></i>
@@ -1025,7 +1043,7 @@
             `;
         }).join('');
 
-        if (window.lucide) lucide.createIcons(tbody);
+        lucide.createIcons();
         filterQueueTable();
     }
 
@@ -1037,7 +1055,7 @@
         skippedTokensStr = data.skipped_tokens;
 
         // 1. Stats grid
-        let statusTextValue = "Awaiting";
+        let statusTextValue = "Awaiting Start";
         let badgeClass = "status-idle";
         let statusIconName = "clock";
         if (data.status === 'active') {
@@ -1065,23 +1083,15 @@
         const skippedCount = data.skipped_tokens ? data.skipped_tokens.split(',').filter(t => t.trim()).length : 0;
         document.getElementById('statsSkippedCount').textContent = skippedCount;
 
-        // 2. Sidebar & Mobile Badges
-        const qCount = data.total_booked || 0;
-        const navBadgeQ = document.getElementById('navBadgeQueue');
-        if (navBadgeQ) navBadgeQ.textContent = qCount;
-        const mobBadgeQ = document.getElementById('mobileNavBadgeQueue');
-        if (mobBadgeQ) {
-          mobBadgeQ.textContent = qCount;
-          mobBadgeQ.style.display = qCount > 0 ? 'inline-block' : 'none';
-        }
-
-        const navBadgeS = document.getElementById('navBadgeSkipped');
-        if (navBadgeS) navBadgeS.textContent = skippedCount;
-        const mobBadgeS = document.getElementById('mobileNavBadgeSkipped');
-        if (mobBadgeS) {
-          mobBadgeS.textContent = skippedCount;
-          mobBadgeS.style.display = skippedCount > 0 ? 'inline-block' : 'none';
-        }
+        // 2. Sidebar & Tabbar Badges
+        const navQ = document.getElementById('navBadgeQueue');
+        if (navQ) navQ.textContent = data.total_booked;
+        const navSk = document.getElementById('navBadgeSkipped');
+        if (navSk) navSk.textContent = skippedCount;
+        const tabQ = document.getElementById('tabBadgeQueue');
+        if (tabQ) tabQ.textContent = data.total_booked;
+        const tabSk = document.getElementById('tabBadgeSkipped');
+        if (tabSk) tabSk.textContent = skippedCount;
 
         // 3. Overview Panel
         document.getElementById('bookedCount').textContent = data.total_booked;
@@ -1104,34 +1114,34 @@
         }
 
         const badge = document.getElementById('statusBadge');
-        badge.className = `status-badge ${badgeClass}`;
-        badge.innerHTML = `<i id="statusIcon" data-lucide="${statusIconName}"></i><span id="statusText">${statusTextValue}</span>`;
+        badge.className = `dd-badge-pill status-badge ${badgeClass}`;
+        badge.innerHTML = `<i data-lucide="${statusIconName}" style="width:15px;height:15px;"></i><span id="statusText">${statusTextValue}</span>`;
 
         const sessionBtn = document.getElementById('sessionBtn');
         const skipBtn = document.getElementById('skipBtn');
         const completeSessionBtn = document.getElementById('completeSessionBtn');
         
         if (data.status === 'idle') {
-            sessionBtn.className = 'control-btn btn-start';
-            sessionBtn.innerHTML = '<i data-lucide="play"></i> Start Session';
+            sessionBtn.className = 'dd-btn-primary-action control-btn btn-start';
+            sessionBtn.innerHTML = '<i data-lucide="play"></i> <span>Start Session</span>';
             sessionBtn.disabled = false;
             skipBtn.style.display = 'none';
             if (completeSessionBtn) completeSessionBtn.style.display = 'none';
         } else if (data.status === 'active') {
-            sessionBtn.className = 'control-btn btn-next';
-            sessionBtn.innerHTML = '<i data-lucide="arrow-right"></i> Next Patient';
+            sessionBtn.className = 'dd-btn-primary-action control-btn btn-next';
+            sessionBtn.innerHTML = '<i data-lucide="arrow-right"></i> <span>Next Patient</span>';
             sessionBtn.disabled = false;
             skipBtn.style.display = 'flex';
             if (completeSessionBtn) completeSessionBtn.style.display = 'none';
         } else if (data.status === 'waiting_bookings') {
-            sessionBtn.className = 'control-btn btn-disabled';
-            sessionBtn.innerHTML = '<i data-lucide="hourglass"></i> Waiting for Bookings';
+            sessionBtn.className = 'dd-btn-primary-action control-btn btn-disabled';
+            sessionBtn.innerHTML = '<i data-lucide="hourglass"></i> <span>Waiting for Bookings</span>';
             sessionBtn.disabled = true;
             skipBtn.style.display = 'none';
             if (completeSessionBtn) completeSessionBtn.style.display = 'flex';
         } else {
-            sessionBtn.className = 'control-btn btn-disabled';
-            sessionBtn.innerHTML = '<i data-lucide="check-circle"></i> Session Completed';
+            sessionBtn.className = 'dd-btn-primary-action control-btn btn-disabled';
+            sessionBtn.innerHTML = '<i data-lucide="check-circle"></i> <span>Session Completed</span>';
             sessionBtn.disabled = true;
             skipBtn.style.display = 'none';
             if (completeSessionBtn) completeSessionBtn.style.display = 'none';
@@ -1141,9 +1151,9 @@
         const emptySection = document.getElementById('emptySection');
         const emptyGrid = document.getElementById('emptyGrid');
         if (data.empty_slots && data.empty_slots.length > 0) {
-            emptySection.style.display = 'block';
+            emptySection.style.display = 'flex';
             emptyGrid.innerHTML = data.empty_slots.map(t => `
-                <span class="dd-empty-chip user-badge">#${t}</span>
+                <span class="dd-token-chip user-badge">#${t}</span>
             `).join('');
         } else {
             emptySection.style.display = 'none';
@@ -1204,10 +1214,10 @@
                     const book = data.bookings.find(b => String(b.token) === String(t));
                     const pName = book ? book.name : "Patient";
                     return `
-                        <div class="skipped-card" id="skipped-${t}">
-                            <div class="skipped-token num-tabular">#${t}</div>
-                            <div class="skipped-patient-name" title="${pName}">${pName}</div>
-                            <button class="btn-consult-skipped" onclick="consultSkipped('${t}')">
+                        <div class="dd-skipped-card skipped-card" id="skipped-${t}">
+                            <div class="dd-skipped-token skipped-token">#${t}</div>
+                            <div class="dd-skipped-name skipped-patient-name" title="${pName}">${pName}</div>
+                            <button type="button" class="dd-btn-consult-skipped btn-consult-skipped" onclick="consultSkipped('${t}')">
                                 Consult Now
                             </button>
                         </div>
@@ -1222,7 +1232,7 @@
             skippedEmptyState.style.display = 'block';
         }
 
-        if (window.lucide) lucide.createIcons();
+        lucide.createIcons();
     }
 
     // ── Fetch and Poller Sync ──
@@ -1238,6 +1248,7 @@
         }
     }
 
+    // Poller interval (5s)
     setInterval(fetchStatsAndSync, 5000);
 
     // ── Doctor Start-Time Push Notification ──
@@ -1397,7 +1408,7 @@
         });
     };
 
-    // ─── Pull to Refresh Logic ───
+    // ── Pull to Refresh Logic ──
     (function initPullToRefresh() {
       let touchStart = 0;
       let touchMove = 0;
@@ -1433,7 +1444,7 @@
             window.location.reload();
           }, 800);
         } else {
-          indicator.style.transform = `translateY(0)`;
+          indicator.style.transform = `translateY(-100%)`;
         }
         body.classList.remove('pulling');
         touchStart = 0;
@@ -1451,7 +1462,7 @@
       loading.style.display = 'flex';
       error.style.display   = 'none';
       content.style.display = 'none';
-      if (window.lucide) lucide.createIcons();
+      lucide.createIcons();
 
       try {
         const res  = await fetch('/doctor/my_stats');
@@ -1474,7 +1485,6 @@
         const avgMin = data.avg_consultation_duration_mins;
         document.getElementById('dsAvgDuration').textContent = avgMin > 0 ? avgMin + ' min' : '—';
 
-        // Show/hide note about missing times
         const note = document.getElementById('dsNoTimesNote');
         if (note) {
           note.style.display = data.completed_consultations === 0 ? 'flex' : 'none';
@@ -1497,14 +1507,14 @@
         sortDoctorStats('booking');
         sortDoctorStats('metrics');
 
-        if (window.lucide) lucide.createIcons();
+        lucide.createIcons();
         if (isManual) {
           showToast('Statistics refreshed successfully.', 'success');
         }
       } catch (e) {
         loading.style.display = 'none';
         error.style.display   = 'block';
-        if (window.lucide) lucide.createIcons();
+        lucide.createIcons();
         if (isManual) {
           showToast(e.message || 'Failed to refresh statistics.', 'error');
         }
@@ -1559,7 +1569,7 @@
       cards.forEach(c => grid.appendChild(c));
     }
 
-    // ── Doctor Phone OTP Verification Logic ──
+    // ── Doctor Phone Change Logic ──
     let docPhoneCooldownInterval = null;
 
     function openDoctorPhoneModal() {
@@ -1569,7 +1579,7 @@
       document.getElementById('docPhoneStep2').style.display = 'none';
       document.getElementById('docNewPhoneInput').value = '';
       document.getElementById('docPhoneStep1Err').style.display = 'none';
-      if (window.lucide) lucide.createIcons();
+      lucide.createIcons();
     }
 
     function closeDoctorPhoneModal() {
@@ -1637,7 +1647,7 @@
           }
         }, 1000);
 
-        if (window.lucide) lucide.createIcons();
+        lucide.createIcons();
       } catch (err) {
         errDiv.textContent = 'Network error while requesting OTP.';
         errDiv.style.display = 'block';
