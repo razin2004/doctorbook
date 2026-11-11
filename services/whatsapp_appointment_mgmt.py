@@ -220,6 +220,14 @@ def handle_whatsapp_appointment_mgmt(
     # 3. Handle Active Cancel/Reschedule Session
     # -------------------------------------------------------------------------
     if active_session and active_session.action in ('cancel', 'reschedule'):
+        # If user chooses a main menu action, greeting, or language command, auto-cancel active session and release
+        from services.whatsapp_webhook_service import is_greeting_message
+        from services.whatsapp_localization import is_language_command
+        if text_lower.startswith("menu_") or is_greeting_message(text) or is_language_command(text):
+            active_session.cancel()
+            db.session.commit()
+            return {"handled": False}
+
         # Handle abort at any step
         if text_lower in ABORT_WORDS and active_session.step != 'CONFIRMATION':
             active_session.cancel()

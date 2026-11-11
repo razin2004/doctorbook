@@ -1120,6 +1120,13 @@ def handle_whatsapp_booking_flow(
     # -------------------------------------------------------------------------
     # 4. Handle Cancellation at Any Active Step
     # -------------------------------------------------------------------------
+    from services.whatsapp_webhook_service import is_greeting_message
+    from services.whatsapp_localization import is_language_command
+    if (text_lower.startswith("menu_") and text_lower != "menu_book") or is_greeting_message(text) or is_language_command(text):
+        active_session.cancel()
+        db.session.commit()
+        return {"handled": False}
+
     if text_lower in CANCEL_WORDS:
         active_session.cancel()
         db.session.commit()
