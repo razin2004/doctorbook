@@ -2,1484 +2,461 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Doctor Dashboard - PrimeCare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <title>Doctor Console &mdash; PrimeCare Clinic</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;850;900&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='restyle.css') }}?v=2.7" />
   <link rel="stylesheet" href="{{ url_for('static', filename='toast.css') }}" />
   <script src="{{ url_for('static', filename='toast.js') }}"></script>
-  
-  <style>
-    /* ── DOCTOR DASHBOARD PREMIUM SYSTEM ── */
-    :root {
-      --primary: #0077b6;
-      --primary-dark: #023e8a;
-      --primary-light: #0096c7;
-      --accent: #10b981;
-      --accent-light: #ecfdf5;
-      --danger: #e11d48;
-      --danger-light: #fff1f2;
-      --slate-50: #f8fafc;
-      --slate-100: #f1f5f9;
-      --slate-200: #e2e8f0;
-      --slate-300: #cbd5e1;
-      --slate-400: #94a3b8;
-      --slate-600: #475569;
-      --slate-700: #334155;
-      --slate-900: #0f172a;
-    }
-
-    body {
-      background-attachment: fixed;
-    }
-
-    /* Layout Wrapper */
-    .admin-workspace {
-      display: flex;
-      min-height: calc(100vh - 65px);
-      position: relative;
-    }
-
-    /* Glass Card Premium */
-    .glass-card-premium {
-      background: rgba(255, 255, 255, 0.55);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.75);
-      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.05);
-      border-radius: 24px;
-      padding: 1.8rem;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .glass-card-premium:hover {
-      border-color: rgba(0, 119, 182, 0.15);
-      box-shadow: 0 25px 55px rgba(0, 119, 182, 0.07);
-    }
-
-    /* Sidebar Navigation */
-    .top-bar {
-      z-index: 1000 !important;
-    }
-    .admin-sidebar {
-      width: 280px;
-      flex-shrink: 0;
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
-      border-right: 1px solid rgba(0, 119, 182, 0.08);
-      position: fixed;
-      top: 60px; /* Tuck neatly below header */
-      left: 0;
-      bottom: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 0.8rem 0.6rem;
-      padding-bottom: calc(0.8rem + env(safe-area-inset-bottom, 0px));
-      overflow-y: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-      z-index: 900 !important; /* Ensure it stays behind header (1000) on desktop */
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
-    }
-    .admin-sidebar::-webkit-scrollbar {
-      display: none;
-    }
-    .admin-sidebar-header {
-      display: none;
-    }
-    .admin-sidebar-logo-text {
-      font-size: 1.35rem;
-      font-weight: 800;
-      color: #0077b6;
-      font-family: inherit;
-    }
-    .admin-sidebar-close-btn {
-      display: none;
-    }
-
-    .sidebar-user-profile {
-      padding: 1rem 0.8rem;
-      background: linear-gradient(135deg, rgba(0, 119, 182, 0.06), rgba(0, 180, 216, 0.03));
-      border: 1px solid rgba(0, 119, 182, 0.08);
-      border-radius: 20px;
-      margin-bottom: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-    }
-    .sidebar-user-row {
-      display: flex;
-      align-items: center;
-      gap: 0.85rem;
-    }
-    .sidebar-user-avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), var(--primary-light));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
-    }
-    .sidebar-user-info {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .sidebar-user-info h4 {
-      margin: 0;
-      font-size: 0.95rem;
-      font-weight: 800;
-      color: var(--slate-900);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .sidebar-user-info p {
-      margin: 0;
-      font-size: 0.75rem;
-      color: var(--slate-600);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .sidebar-user-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: rgba(16, 185, 129, 0.1);
-      color: #047857;
-      padding: 0.2rem 0.6rem;
-      border-radius: 99px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      align-self: flex-start;
-    }
-
-    .admin-sidebar-nav {
-      display: flex;
-      flex-direction: column;
-      gap: 1.2rem;
-    }
-    .admin-sidebar-nav-group {
-      display: flex;
-      flex-direction: column;
-    }
-    .admin-sidebar-nav-title {
-      font-size: 0.72rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--primary-dark);
-      margin-bottom: 0.4rem;
-      padding-left: 0.5rem;
-    }
-    .admin-sidebar-nav-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      padding: 0;
-      margin: 0;
-    }
-    .admin-sidebar-nav-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.55rem 0.8rem;
-      border-radius: 12px;
-      color: var(--slate-900) !important;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      user-select: none;
-      background: transparent;
-      margin-top: 0;
-      box-shadow: none;
-    }
-    .admin-sidebar-nav-item i,
-    .admin-sidebar-nav-item svg {
-      width: 17px;
-      height: 17px;
-      opacity: 0.8;
-      transition: transform 0.2s;
-    }
-    .admin-sidebar-nav-item:hover {
-      background: rgba(0, 119, 182, 0.08) !important;
-      color: var(--primary) !important;
-      padding-left: 1.1rem;
-    }
-    .admin-sidebar-nav-item:hover i,
-    .admin-sidebar-nav-item:hover svg {
-      opacity: 1;
-      transform: scale(1.08);
-    }
-    .admin-sidebar-nav-item.active {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important;
-      color: #ffffff !important;
-      box-shadow: 0 4px 15px rgba(0, 119, 182, 0.18) !important;
-    }
-    .admin-sidebar-nav-item.active i,
-    .admin-sidebar-nav-item.active svg {
-      opacity: 1;
-    }
-    .admin-sidebar-nav-item.active:hover {
-      padding-left: 0.8rem;
-    }
-    .nav-badge-count {
-      margin-left: auto;
-      background: var(--slate-100);
-      color: var(--slate-600);
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 99px;
-      transition: all 0.2s;
-    }
-    .admin-sidebar-nav-item.active .nav-badge-count {
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-    }
-    .admin-sidebar-footer {
-      border-top: 1px solid rgba(0, 119, 182, 0.06);
-      padding-top: 0.8rem;
-    }
-    .logout-item {
-      color: var(--danger) !important;
-    }
-    .logout-item:hover {
-      background: rgba(225, 29, 72, 0.05) !important;
-      color: var(--danger) !important;
-    }
-    .admin-sidebar-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.2);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      z-index: 1050;
-      opacity: 0;
-      transition: opacity 0.25s ease;
-    }
-    .admin-sidebar-backdrop.open {
-      display: block;
-      opacity: 1;
-    }
-
-    /* Main Content Area */
-    .admin-content {
-      flex: 1;
-      padding: 2rem;
-      min-width: 0;
-      transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    @media (min-width: 992px) {
-      .admin-content {
-        margin-left: 280px;
-      }
-    }
-    .admin-topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-    }
-    .admin-sidebar-toggle-btn {
-      display: none;
-      background: rgba(0, 119, 182, 0.06);
-      color: var(--primary);
-      border: none;
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      padding: 0;
-      margin: 0;
-      box-shadow: none;
-      transition: all 0.2s;
-    }
-    .admin-sidebar-toggle-btn:hover {
-      background: rgba(0, 119, 182, 0.12);
-      color: var(--primary-light);
-      transform: scale(1.03);
-    }
-    .admin-sidebar-toggle-btn i,
-    .admin-sidebar-toggle-btn svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    /* Welcome Workspace Banner */
-    .workspace-welcome-banner {
-      background: linear-gradient(135deg, #023e8a 0%, #0077b6 100%);
-      color: white;
-      border-radius: 24px;
-      padding: 1.8rem;
-      position: relative;
-      overflow: hidden;
-      box-shadow: 0 15px 35px rgba(2, 62, 138, 0.2);
-      margin-bottom: 1.5rem;
-    }
-    .workspace-welcome-banner::after {
-      content: ''; position: absolute; right: -30px; top: -50px;
-      width: 180px; height: 180px; background: rgba(255,255,255,0.06);
-      border-radius: 50%; pointer-events: none;
-    }
-    .workspace-welcome-banner::before {
-      content: ''; position: absolute; left: -20px; bottom: -40px;
-      width: 120px; height: 120px; background: rgba(255,255,255,0.03);
-      border-radius: 50%; pointer-events: none;
-    }
-    .welcome-greet {
-      font-size: 0.85rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      opacity: 0.85;
-      margin-bottom: 0.3rem;
-    }
-    .welcome-title {
-      font-size: 1.6rem;
-      font-weight: 850;
-      margin: 0;
-      line-height: 1.25;
-      text-shadow: none;
-      color: white;
-      text-align: left;
-    }
-    .welcome-subtitle {
-      font-size: 0.85rem;
-      opacity: 0.85;
-      margin-top: 0.4rem;
-      margin-bottom: 0;
-      font-weight: 500;
-    }
-
-    /* Stats Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    .stat-card-premium {
-      background: rgba(255, 255, 255, 0.65);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.85);
-      border-radius: 20px;
-      padding: 1rem;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.02);
-      display: flex;
-      align-items: center;
-      gap: 0.8rem;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .stat-card-premium:hover {
-      transform: translateY(-4px);
-      background: white;
-      border-color: rgba(0, 119, 182, 0.2);
-      box-shadow: 0 15px 30px rgba(0, 119, 182, 0.08);
-    }
-    .stat-card-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .stat-card-info {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .stat-card-label {
-      font-size: 0.72rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--slate-400);
-    }
-    .stat-card-value {
-      font-size: 1.4rem;
-      font-weight: 850;
-      color: var(--slate-900);
-      line-height: 1.1;
-    }
-    .stat-card-subtext {
-      font-size: 0.72rem;
-      color: var(--slate-600);
-      font-weight: 500;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    /* Home Buttons styling */
-    .desktop-home-btn { display: inline-flex !important; }
-    .mobile-home-btn { display: none !important; }
-
-    /* Responsive adjustments */
-    @media (max-width: 991px) {
-      .admin-sidebar {
-        position: fixed;
-        left: -280px;
-        top: 0;
-        bottom: 0;
-        height: 100dvh;
-        z-index: 1100 !important;
-        box-shadow: 20px 0 45px rgba(0,0,0,0.12);
-        background: rgba(255, 255, 255, 0.98);
-        transform: translateX(0);
-        padding-bottom: calc(0.8rem + env(safe-area-inset-bottom, 1.5rem));
-        overflow-y: auto;
-        overflow-x: hidden;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-      }
-      .admin-sidebar.open {
-        transform: translateX(280px);
-      }
-      .admin-sidebar-header {
-        display: flex !important;
-        align-items: center;
-        justify-content: space-between !important;
-        width: 100%;
-        padding-bottom: 0.85rem;
-        border-bottom: 1px solid rgba(0, 119, 182, 0.08);
-        margin-bottom: 1.25rem;
-        position: sticky;
-        top: -0.8rem;
-        z-index: 10;
-        background: rgba(255, 255, 255, 0.98);
-        margin-top: -0.8rem;
-        padding-top: 0.8rem;
-      }
-      .admin-sidebar-logo-text {
-        font-size: 1.25rem !important;
-        font-weight: 800 !important;
-        color: #0077b6 !important;
-        letter-spacing: 0.02em !important;
-        background: none !important;
-        -webkit-text-fill-color: initial !important;
-        text-fill-color: initial !important;
-        white-space: nowrap;
-      }
-      .admin-sidebar-close-btn {
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-        background: transparent !important;
-        border: none !important;
-        color: #0077b6 !important;
-        cursor: pointer;
-        padding: 0 !important;
-        margin: 0 !important;
-        box-shadow: none !important;
-        width: auto !important;
-        height: auto !important;
-        transition: transform 0.2s;
-        -webkit-tap-highlight-color: transparent !important;
-        outline: none !important;
-      }
-      .admin-sidebar-close-btn:hover,
-      .admin-sidebar-close-btn:focus,
-      .admin-sidebar-close-btn:active {
-        background: transparent !important;
-        color: #0096c7 !important;
-        transform: scale(1.1);
-        box-shadow: none !important;
-        outline: none !important;
-      }
-      .admin-sidebar-close-btn svg,
-      .admin-sidebar-close-btn i {
-        width: 24px !important;
-        height: 24px !important;
-        stroke-width: 3px !important;
-      }
-      .admin-content {
-        max-width: 100%;
-        padding: 1rem 1.25rem;
-      }
-      .admin-sidebar-toggle-btn {
-        display: flex !important;
-      }
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 0.8rem;
-      }
-      .stat-card-premium {
-        padding: 0.8rem 1rem;
-        gap: 0.7rem;
-      }
-      .stat-card-value {
-        font-size: 1.25rem !important;
-      }
-    }
-
-    @media (max-width: 600px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 0.5rem !important;
-      }
-      .stat-card-premium {
-        padding: 0.7rem 0.6rem !important;
-        gap: 0.5rem !important;
-        border-radius: 14px !important;
-      }
-      .stat-card-icon {
-        width: 30px !important;
-        height: 30px !important;
-      }
-      .stat-card-icon svg {
-        width: 16px !important;
-        height: 16px !important;
-      }
-      .stat-card-label {
-        font-size: 0.65rem !important;
-        line-height: 1.2 !important;
-      }
-      .stat-card-value {
-        font-size: 1rem !important;
-      }
-      .stat-card-subtext {
-        font-size: 0.6rem !important;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-    }
-
-    @media (max-width: 520px) {
-      .top-bar-inner {
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        padding: 0.5rem 0.85rem !important;
-        gap: 0.5rem !important;
-      }
-      .brand {
-        align-items: flex-start !important;
-        flex-shrink: 1 !important;
-        min-width: 0 !important;
-      }
-      .brand-title {
-        font-size: 1.0rem !important;
-      }
-      .brand-sub {
-        display: block !important;
-        font-size: 0.65rem !important;
-      }
-      .top-actions {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-shrink: 0 !important;
-        gap: 0.28rem !important;
-        align-items: center !important;
-      }
-      .desktop-home-btn { display: none !important; }
-      .mobile-home-btn { 
-        display: flex !important;
-        border-radius: 10px !important;
-        background: rgba(0, 119, 182, 0.06) !important;
-        color: #0077b6 !important;
-        height: 36px !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border: none !important;
-        box-shadow: none !important;
-      }
-    }
-
-    @media (min-width: 992px) {
-      .admin-content {
-        margin-left: 280px;
-      }
-    }
-
-    .adminPanel {
-      display: none;
-      animation: panelFadeIn 0.4s ease;
-    }
-    .adminPanel.active {
-      display: block;
-    }
-    @keyframes panelFadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ── Doctor Stat Cards (My Statistics panel) ── */
-    .doc-stat-card {
-      background: rgba(255,255,255,0.7);
-      border: 1px solid rgba(255,255,255,0.9);
-      border-radius: 18px;
-      padding: 1rem 1.1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.45rem;
-      transition: all 0.25s ease;
-      cursor: default;
-    }
-    .doc-stat-card:hover {
-      border-color: rgba(var(--accent-c-rgb, 0,119,182), 0.25);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-      transform: translateY(-2px);
-    }
-    .doc-stat-icon {
-      width: 36px; height: 36px;
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .doc-stat-value {
-      font-size: 1.65rem;
-      font-weight: 900;
-      color: #0f172a;
-      line-height: 1;
-      letter-spacing: -0.5px;
-    }
-    .doc-stat-label {
-      font-size: 0.76rem;
-      font-weight: 700;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
-    /* ── Statistics Header & Refresh Button ── */
-    #statsPanel .section-header {
-      border-bottom: 2px solid rgba(0, 119, 182, 0.1);
-      padding-bottom: 0.8rem;
-      margin-bottom: 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.8rem;
-    }
-
-    .stats-refresh-btn {
-      background: rgba(0,119,182,0.08);
-      border: 1.5px solid rgba(0,119,182,0.18);
-      color: #0077b6;
-      border-radius: 8px;
-      padding: 0.25rem 0.6rem;
-      font-weight: 700;
-      font-size: 0.72rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      margin-top: 0;
-      box-shadow: none;
-      transition: all 0.2s ease;
-    }
-    .stats-refresh-btn:hover {
-      background: rgba(0,119,182,0.15);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 10px rgba(0, 119, 182, 0.15);
-    }
-
-    .doc-stats-grid {
-      display: grid;
-      gap: 0.9rem;
-    }
-    .ds-grid-booking {
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    }
-    .ds-grid-metrics {
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    }
-
-    @media (max-width: 991px) {
-      .refresh-btn-text {
-        display: none;
-      }
-      .stats-refresh-btn {
-        width: 36px !important;
-        height: 36px !important;
-        padding: 0 !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 10px !important;
-        background: rgba(0, 119, 182, 0.06) !important;
-        color: #0077b6 !important;
-        border: none !important;
-        box-shadow: none !important;
-      }
-
-      /* Statistics Cards Grid Mobile Inline Layout */
-      #statsPanel .doc-stat-card {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-template-areas:
-          "icon value"
-          "icon label";
-        align-items: center;
-        column-gap: 0.8rem;
-        row-gap: 0.15rem;
-        padding: 0.8rem 1rem;
-      }
-      #statsPanel .doc-stat-icon {
-        grid-area: icon;
-        align-self: center;
-      }
-      #statsPanel .doc-stat-value {
-        grid-area: value;
-        font-size: 1.15rem;
-        line-height: 1.2;
-      }
-      #statsPanel .doc-stat-label {
-        grid-area: label;
-        font-size: 0.62rem;
-        line-height: 1.2;
-      }
-
-      /* Booking Summary always has 2 cards in a row in mobile view */
-      .ds-grid-booking {
-        grid-template-columns: repeat(2, 1fr) !important;
-      }
-      .ds-grid-metrics {
-        grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)) !important;
-      }
-
-      /* Hide welcome banner and stats grid when selecting other panels in mobile view */
-      body.non-overview-active .workspace-welcome-banner,
-      body.non-overview-active .stats-grid {
-        display: none !important;
-      }
-    }
-    @media (max-width: 480px) {
-      .ds-grid-metrics {
-        grid-template-columns: 1fr !important;
-      }
-    }
-
-    /* Session timeline items */
-    .status-idle { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
-    .status-active { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
-    .status-completed { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
-    .status-waiting-bookings { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); }
-
-    /* Control Button System */
-    .control-btn {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .btn-start { 
-      background: linear-gradient(135deg, #0077b6, #0096c7); 
-      box-shadow: 0 8px 25px rgba(0,119,182,0.3); 
-    }
-    .btn-start:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 30px rgba(0,119,182,0.4);
-    }
-    .btn-next { 
-      background: linear-gradient(135deg, #10b981, #34d399); 
-      box-shadow: 0 8px 25px rgba(16,185,129,0.3); 
-    }
-    .btn-next:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 30px rgba(16,185,129,0.4);
-    }
-    .btn-skip:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 30px rgba(245,158,11,0.4);
-    }
-    .btn-complete {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      box-shadow: 0 8px 25px rgba(239,68,68,0.3);
-    }
-    .btn-complete:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 30px rgba(239,68,68,0.4);
-    }
-    .btn-disabled { 
-      background: #cbd5e1 !important; 
-      cursor: not-allowed !important; 
-      box-shadow: none !important;
-      opacity: 0.7;
-    }
-
-    /* Skipped list grid styling */
-    .skipped-card {
-      background: rgba(255, 255, 255, 0.8);
-      padding: 1.2rem 1rem;
-      border-radius: 20px;
-      border: 1px solid rgba(0, 119, 182, 0.08);
-      text-align: center;
-      box-shadow: 0 6px 15px rgba(0,0,0,0.02);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .skipped-card:hover {
-      transform: translateY(-4px);
-      background: #fff;
-      border-color: rgba(0, 119, 182, 0.2);
-      box-shadow: 0 12px 28px rgba(0,119,182,0.08);
-    }
-    .skipped-token {
-      font-size: 1.8rem;
-      font-weight: 850;
-      color: #0077b6;
-      margin-bottom: 0.4rem;
-    }
-    .skipped-patient-name {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: #334155;
-      margin-bottom: 0.8rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .btn-consult-skipped {
-      width: 100%;
-      padding: 0.55rem;
-      border-radius: 12px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      background: #0077b6;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-consult-skipped:hover {
-      background: #023e8a;
-      transform: scale(1.02);
-    }
-
-    /* Pull to Refresh */
-    #pullIndicator {
-      position: fixed; top: -60px; left: 0; width: 100%; height: 60px;
-      display: flex; align-items: center; justify-content: center;
-      z-index: 10001; pointer-events: none; transition: transform 0.2s ease, opacity 0.2s ease;
-      opacity: 0;
-    }
-    .pull-indicator-content {
-      background: white; width: 40px; height: 40px; border-radius: 50%;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-      display: flex; align-items: center; justify-content: center;
-      color: #0077b6;
-    }
-    .pull-indicator-content svg { width: 20px; height: 20px; animation: spin 1.5s linear infinite; animation-play-state: paused; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    body.pulling #pullIndicator { opacity: 1; }
-    body.refreshing .pull-indicator-content svg { animation-play-state: running; }
-
-    /* Modals & Toasts */
-    .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px);
-      z-index: 10000; align-items: center; justify-content: center;
-      padding: 1.2rem;
-    }
-    .modal-content {
-      background: #fff; padding: 2.2rem 2rem; border-radius: 24px;
-      max-width: 420px; width: 100%; box-shadow: 0 32px 64px rgba(15, 23, 42, 0.25);
-      border: 1px solid rgba(255,255,255,1); position: relative;
-      animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    @keyframes modalPop {
-      from { transform: scale(0.9) translateY(20px); opacity: 0; }
-      to { transform: scale(1) translateY(0); opacity: 1; }
-    }
-    .modal-btns { display: flex; gap: 1rem; margin-top: 2rem; width: 100%; }
-    .modal-btns button { flex: 1; margin-top: 0 !important; }
-
-    .pres-close-btn {
-      position: static; flex-shrink: 0;
-      background: #f1f5f9; border: 1px solid #e2e8f0; width: 26px; height: 26px;
-      border-radius: 8px; display: flex; align-items: center; justify-content: center;
-      cursor: pointer; color: #64748b; transition: all 0.18s; padding: 0;
-    }
-    .pres-close-btn:hover { background: #fee2e2; color: #e11d48; border-color: #fecada; }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .pres-modal-content {
-      background: #fff; border-radius: 24px; padding: 2rem 1.8rem;
-      max-width: 480px; width: 92%; position: relative;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.15);
-      animation: slideUp 0.35s ease;
-    }
-    .pres-modal-header {
-      display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 1rem;
-      border-bottom: 2px solid #f1f5f9; width: 100%;
-    }
-    .pres-modal-header-left {
-      display: flex; align-items: center; gap: 0.65rem; min-width: 0; flex: 1;
-    }
-    .pres-modal-header .icon-circle {
-      width: 38px; height: 38px; border-radius: 10px;
-      background: linear-gradient(135deg, #0077b6, #0096c7);
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; flex-shrink: 0;
-    }
-    .pres-modal-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: #0f172a; line-height: 1.3; }
-    .pres-modal-header p { margin: 0.1rem 0 0; font-size: 0.72rem; color: #94a3b8; font-weight: 500; line-height: 1.3; }
-
-
-    /* Spin icons animation */
-    .spin-icon {
-      animation: spin 1s linear infinite !important;
-      animation-play-state: running !important;
-    }
-
-    /* Queue Table Formatting */
-    .booking-table-wrapper {
-      overflow-x: auto;
-      margin-top: 1rem;
-      border-radius: 16px;
-      border: 1px solid rgba(0, 119, 182, 0.15);
-      background: rgba(255, 255, 255, 0.4);
-      backdrop-filter: blur(8px);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    }
-    .booking-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.88rem;
-    }
-    .booking-table th {
-      background: rgba(0, 119, 182, 0.06);
-      color: #024b80;
-      font-weight: 700;
-      text-align: left;
-      padding: 1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      font-size: 0.75rem;
-      border-bottom: 2px solid rgba(0, 119, 182, 0.1);
-    }
-    .booking-table td {
-      padding: 1rem;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.03);
-      color: #364354;
-      font-weight: 500;
-    }
-    .booking-table tr:last-child td { border-bottom: none; }
-    .booking-table tr:hover { background: rgba(0, 119, 182, 0.04); }
-    
-    .token-badge {
-      background: #0077b6;
-      color: white;
-      padding: 0.25rem 0.6rem;
-      border-radius: 8px;
-      font-weight: 800;
-      font-family: inherit;
-      box-shadow: 0 2px 8px rgba(0, 119, 182, 0.2);
-    }
-
-    .status-badge-inline {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      padding: 0.25rem 0.6rem;
-      border-radius: 8px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .status-calling { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
-    .status-consulted { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
-    .status-referred { background: #e0e7ff; color: #4f46e5; border: 1px solid #c7d2fe; }
-    .status-skipped { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
-    .status-waiting { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-
-    /* Responsive Table Styles */
-    @media (max-width: 768px) {
-      .desktop-only {
-        display: none !important;
-      }
-      .mobile-info-row {
-        display: block !important;
-        font-size: 0.75rem;
-        color: #64748b;
-        margin-top: 0.25rem;
-        font-weight: 500;
-      }
-      .booking-table th, .booking-table td {
-        padding: 0.75rem 0.5rem !important;
-      }
-      .booking-table-wrapper {
-        border-radius: 12px !important;
-      }
-    }
-    
-    .mobile-info-row {
-      display: none;
-    }
-
-    /* Admin Footer */
-    .admin-footer {
-      margin-top: auto;
-      padding: 2.5rem 0 1.5rem;
-      border-top: 1px solid rgba(0, 119, 182, 0.06);
-      width: 100%;
-      text-align: center;
-    }
-    .admin-footer-copy {
-      font-size: 0.82rem;
-      color: #94a3b8;
-      font-weight: 500;
-      letter-spacing: 0.01em;
-      margin: 0;
-    }
-  
-    .doc-phone-close-btn svg {
-      width: 16px !important;
-      height: 16px !important;
-      stroke-width: 2.5px !important;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='doctor-dashboard.css') }}?v=1.0" />
 </head>
-<body>
-  <div id="pullIndicator">
+<body class="dd-page">
+  <!-- PULL TO REFRESH INDICATOR -->
+  <div id="pullIndicator" aria-hidden="true">
     <div class="pull-indicator-content"><i data-lucide="refresh-cw"></i></div>
   </div>
-  <div class="bg-image"></div>
-  <div class="bg-blur"></div>
-  <div class="bg-overlay"></div>
 
-  <!-- HEADER -->
-  <header class="top-bar">
-    <div class="top-bar-inner">
-      <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex-shrink:1;">
-        <button id="headerSidebarToggle" class="admin-sidebar-toggle-btn" onclick="toggleSidebar(true)" aria-label="Toggle Sidebar" style="margin-top:0;">
+  <!-- TOPBAR -->
+  <header class="dd-topbar">
+    <div class="dd-topbar-inner">
+      <div class="dd-topbar-left">
+        <button id="headerSidebarToggle" class="dd-sidebar-toggle-btn admin-sidebar-toggle-btn" onclick="toggleSidebar(true)" aria-label="Open Navigation Menu">
           <i data-lucide="menu"></i>
         </button>
-        <div class="brand" style="display:flex;flex-direction:row;align-items:center;gap:0.45rem;flex-shrink:1;min-width:0; text-decoration: none;">
+        <a href="/" class="dd-topbar-brand" title="PrimeCare Clinic Home">
           <img src="{{ url_for('static', filename='primecare-logo.svg') }}"
-               style="width:34px;height:34px;object-fit:contain;flex-shrink:0;"
-               alt="PrimeCare Logo" />
-          <div style="display:flex;flex-direction:column;gap:1px;min-width:0;">
-            <div class="brand-title">PrimeCare Clinic</div>
-            <div class="brand-sub">Care you can trust, close to home</div>
+               class="dd-brand-logo"
+               alt="PrimeCare Clinic Logo" />
+          <div style="display:flex; flex-direction:column; min-width:0;">
+            <span class="dd-brand-title">PrimeCare Clinic</span>
+            <span class="dd-brand-sub">Clinical Practitioner Portal</span>
           </div>
-        </div>
+        </a>
       </div>
-      <div class="top-actions" style="margin-left:auto;">
-        <button class="btn btn-outline desktop-home-btn" onclick="goHome()" style="margin-top:0;" title="Go Home">
-          <i data-lucide="house"></i>
+
+      <nav class="dd-topbar-breadcrumb" aria-label="Breadcrumb">
+        <span class="dd-breadcrumb-root">Doctor Console</span>
+        <span class="dd-breadcrumb-separator"><i data-lucide="chevron-right" style="width:14px;height:14px;"></i></span>
+        <span class="dd-breadcrumb-active" id="currentBreadcrumbActive" aria-live="polite">Overview</span>
+      </nav>
+
+      <div class="dd-topbar-actions">
+        <button class="dd-home-btn" onclick="goHome()" title="Return to PrimeCare Homepage">
+          <i data-lucide="house" style="width:16px;height:16px;"></i>
           <span>Home</span>
-        </button>
-        <button class="admin-sidebar-toggle-btn mobile-home-btn" onclick="goHome()" style="margin-top:0; width:auto; padding:0 8px; gap:2px;">
-          <i data-lucide="arrow-left" style="width:18px;height:18px; stroke-width:3px;"></i>
-          <i data-lucide="house" style="width:18px;height:18px; stroke-width:3px;"></i>
         </button>
       </div>
     </div>
   </header>
 
   <!-- WORKSPACE WRAPPER -->
-  <div class="admin-workspace">
+  <div class="dd-workspace admin-workspace">
     <!-- LEFT SIDEBAR -->
-    <aside class="admin-sidebar" id="adminSidebar">
-      <div class="admin-sidebar-top">
-        <div class="admin-sidebar-header">
-          <div class="admin-sidebar-logo-text">PrimeCare Clinic</div>
-          <button class="admin-sidebar-close-btn" onclick="toggleSidebar(false)" aria-label="Close sidebar">
-            <i data-lucide="chevron-left"></i>
+    <aside class="dd-sidebar admin-sidebar" id="adminSidebar" aria-label="Practitioner Navigation">
+      <div class="dd-sidebar-top admin-sidebar-top">
+        <div class="dd-sidebar-header-mobile">
+          <div style="font-weight:800; font-size:1.05rem; color:var(--dd-slate-900);">Practitioner Menu</div>
+          <button class="dd-sidebar-close-btn admin-sidebar-close-btn" onclick="toggleSidebar(false)" aria-label="Close menu">
+            <i data-lucide="x"></i>
           </button>
         </div>
-        
-        <!-- Sidebar Doctor Profile -->
-        <div class="sidebar-user-profile">
-          <div class="sidebar-user-row">
-            <div class="sidebar-user-avatar" style="overflow:hidden; padding:0; display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:50%;">
-              <img src="{{ doctor_image }}" class="doc-avatar-round" style="width:100%; height:100%; object-fit:cover; object-position:top center;" alt="{{ doc.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
-            </div>
-            <div class="sidebar-user-info">
-              <span class="sidebar-user-badge"><i data-lucide="shield-check" style="width:10px;height:10px;"></i>Verified Practitioner</span>
-              <h4>{{ doc.doctor_name }}</h4>
-              <p>{{ session.get('user_email') }}</p>
-            </div>
+
+        <!-- Sidebar Doctor Profile Card -->
+        <div class="dd-doctor-profile-card">
+          <div class="dd-doctor-avatar-wrap">
+            <img src="{{ doctor_image }}" class="dd-doctor-avatar-img doc-avatar-round" alt="{{ doc.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+          </div>
+          <div class="dd-doctor-profile-info">
+            <span class="dd-verified-pill"><i data-lucide="shield-check" style="width:10px;height:10px;"></i>Verified</span>
+            <h4 class="dd-doctor-name">{{ doc.doctor_name }}</h4>
+            <p class="dd-doctor-email">{{ session.get('user_email') }}</p>
           </div>
         </div>
-        
-        <!-- Sidebar Navigation -->
-        <div class="admin-sidebar-nav">
-          <div class="admin-sidebar-nav-group">
-            <div class="admin-sidebar-nav-title">Menu Navigation</div>
-            <ul class="admin-sidebar-nav-list">
-              <li>
-                <div class="admin-sidebar-nav-item active" data-panel="overview" onclick="showAdminPanel('overview', this)">
+
+        <!-- Sidebar Nav Groups -->
+        <nav class="dd-nav-group" aria-label="Dashboard Panels">
+          <div class="dd-nav-group-title">Clinical Workspace</div>
+          <ul class="dd-nav-list admin-sidebar-nav-list">
+            <li>
+              <div class="dd-nav-item admin-sidebar-nav-item active" data-panel="overview" onclick="showAdminPanel('overview', this)" role="button" tabindex="0">
+                <div class="dd-nav-item-left">
                   <i data-lucide="layout-dashboard"></i>
                   <span>Dashboard Overview</span>
                 </div>
-              </li>
-              <li>
-                <div class="admin-sidebar-nav-item" data-panel="queue" onclick="showAdminPanel('queue', this)">
+              </div>
+            </li>
+            <li>
+              <div class="dd-nav-item admin-sidebar-nav-item" data-panel="queue" onclick="showAdminPanel('queue', this)" role="button" tabindex="0">
+                <div class="dd-nav-item-left">
                   <i data-lucide="list-ordered"></i>
                   <span>Patient Queue</span>
-                  <span class="nav-badge-count" id="navBadgeQueue">0</span>
                 </div>
-              </li>
-              <li>
-                <div class="admin-sidebar-nav-item" data-panel="skipped" onclick="showAdminPanel('skipped', this)">
+                <span class="dd-badge-count nav-badge-count" id="navBadgeQueue">{{ total_booked }}</span>
+              </div>
+            </li>
+            <li>
+              <div class="dd-nav-item admin-sidebar-nav-item" data-panel="skipped" onclick="showAdminPanel('skipped', this)" role="button" tabindex="0">
+                <div class="dd-nav-item-left">
                   <i data-lucide="user-x"></i>
                   <span>Skipped Patients</span>
-                  <span class="nav-badge-count" id="navBadgeSkipped">0</span>
                 </div>
-              </li>
-              <li>
-                <div class="admin-sidebar-nav-item" data-panel="stats" onclick="showAdminPanel('stats', this)">
+                <span class="dd-badge-count nav-badge-count" id="navBadgeSkipped">0</span>
+              </div>
+            </li>
+            <li>
+              <div class="dd-nav-item admin-sidebar-nav-item" data-panel="stats" onclick="showAdminPanel('stats', this)" role="button" tabindex="0">
+                <div class="dd-nav-item-left">
                   <i data-lucide="bar-chart-2"></i>
                   <span>My Statistics</span>
                 </div>
-              </li>
-            </ul>
-          </div>
-          
-          <div class="admin-sidebar-nav-group">
-            <div class="admin-sidebar-nav-title">Operations</div>
-            <ul class="admin-sidebar-nav-list">
-              <li>
-                <a href="/live-tracking" class="admin-sidebar-nav-item" style="text-decoration:none;">
+              </div>
+            </li>
+          </ul>
+        </nav>
+
+        <nav class="dd-nav-group" aria-label="Operations">
+          <div class="dd-nav-group-title">Live Tracking</div>
+          <ul class="dd-nav-list admin-sidebar-nav-list">
+            <li>
+              <a href="/live-tracking" class="dd-nav-item admin-sidebar-nav-item" style="text-decoration:none;">
+                <div class="dd-nav-item-left">
                   <i data-lucide="radio"></i>
                   <span>Live Token Track</span>
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
+                </div>
+                <i data-lucide="external-link" style="width:14px;height:14px;opacity:0.6;"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
-      
-      <div class="admin-sidebar-footer">
-        <div class="admin-sidebar-nav-item logout-item" onclick="confirmLogout()">
-          <i data-lucide="log-out" style=""></i>
-          <span>Logout Account</span>
+
+      <div class="dd-sidebar-footer admin-sidebar-footer">
+        <div class="dd-nav-item admin-sidebar-nav-item logout-item dd-logout-btn" onclick="confirmLogout()" role="button" tabindex="0">
+          <div class="dd-nav-item-left">
+            <i data-lucide="log-out"></i>
+            <span>Logout Account</span>
+          </div>
         </div>
       </div>
     </aside>
 
     <!-- Sidebar Mobile Backdrop -->
-    <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop" onclick="toggleSidebar(false)"></div>
+    <div class="dd-sidebar-backdrop admin-sidebar-backdrop" id="adminSidebarBackdrop" onclick="toggleSidebar(false)" aria-hidden="true"></div>
 
     <!-- RIGHT CONTENT AREA -->
-    <main class="admin-content">
-      <!-- Content Topbar -->
-      <div class="admin-topbar">
-        <div class="admin-breadcrumb">
-          <span class="breadcrumb-root">Doctor Console</span>
-          <span class="breadcrumb-separator"><i data-lucide="chevron-right"></i></span>
-          <span class="breadcrumb-active" id="currentBreadcrumbActive">Overview</span>
-        </div>
-      </div>
+    <main class="dd-main admin-content" id="mainContent">
 
-      <!-- Welcome Workspace Banner -->
-      <div class="workspace-welcome-banner" style="display:flex; align-items:center; gap:18px;">
-        <img src="{{ doctor_image }}" class="doc-avatar-round doc-avatar-lg" style="border: 2.5px solid #fff; box-shadow: 0 4px 14px rgba(0,0,0,0.12);" alt="{{ doc.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
-        <div>
-          <div class="welcome-greet">Verified Practitioner</div>
-          <h1 class="welcome-title" style="margin:2px 0 4px;">{{ doc.doctor_name }}</h1>
-          <p class="welcome-subtitle" style="margin:0;">Specialization: {{ doc.specialization }}</p>
+      <!-- WELCOME HERO CARD -->
+      <section class="dd-welcome-banner workspace-welcome-banner" aria-label="Doctor Profile Summary">
+        <div class="dd-welcome-left">
+          <img src="{{ doctor_image }}" class="dd-welcome-avatar doc-avatar-round" alt="{{ doc.doctor_name }}" onerror="this.onerror=null; this.src='/static/doctor_images/default_doctor.svg';">
+          <div class="dd-welcome-details">
+            <span class="dd-welcome-tag"><i data-lucide="shield-check" style="width:11px;height:11px;"></i>Verified Practitioner</span>
+            <h1 class="dd-welcome-title welcome-title">{{ doc.doctor_name }}</h1>
+            <p class="dd-welcome-sub welcome-subtitle">Specialization: {{ doc.specialization }}</p>
+          </div>
         </div>
-      </div>
+        <div class="dd-welcome-right">
+          <div class="dd-welcome-date">
+            <i data-lucide="calendar" style="width:14px;height:14px;"></i>
+            <span>{{ doc.session_date }}</span>
+          </div>
+        </div>
+      </section>
 
-      <!-- Stats Grid -->
-      <div class="stats-grid">
-        <div class="stat-card-premium" onclick="showAdminPanel('overview')">
-          <div class="stat-card-icon" style="background: rgba(0, 119, 182, 0.1); color: #0077b6;">
+      <!-- 4-CARD STATS GRID -->
+      <section class="dd-stats-grid stats-grid" aria-label="Session Quick Stats">
+        <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('overview')" role="button" tabindex="0" title="View Session Overview">
+          <div class="dd-stat-icon-tile stat-card-icon" style="background: rgba(0, 119, 182, 0.1); color: #0077b6;">
             <i data-lucide="activity"></i>
           </div>
-          <div class="stat-card-info">
-            <span class="stat-card-label">Session Status</span>
-            <span class="stat-card-value" id="statsSessionStatus" style="font-size:1rem; font-weight:800; text-transform:uppercase;">
+          <div class="dd-stat-info stat-card-info">
+            <span class="dd-stat-label stat-card-label">Session Status</span>
+            <span class="dd-stat-value stat-card-value" id="statsSessionStatus" aria-live="polite">
               {{ "Awaiting" if doc.status == 'idle' else ("Live Now" if doc.status == 'active' else "Completed") }}
             </span>
-            <span class="stat-card-subtext" id="statsTimeline">Started: --:--</span>
+            <span class="dd-stat-sub stat-card-subtext" id="statsTimeline">Started: --:--</span>
           </div>
         </div>
 
-        <div class="stat-card-premium" onclick="showAdminPanel('overview')">
-          <div class="stat-card-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+        <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('overview')" role="button" tabindex="0" title="View Current Token">
+          <div class="dd-stat-icon-tile stat-card-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
             <i data-lucide="hash"></i>
           </div>
-          <div class="stat-card-info">
-            <span class="stat-card-label">Current Token</span>
-            <span class="stat-card-value" id="statsCurrentToken">
+          <div class="dd-stat-info stat-card-info">
+            <span class="dd-stat-label stat-card-label">Current Token</span>
+            <span class="dd-stat-value stat-card-value" id="statsCurrentToken" aria-live="polite">
               {% if doc.status == 'idle' %}--{% else %}#{{ doc.current_token }}{% endif %}
             </span>
-            <span class="stat-card-subtext" id="statsTotalTokens">Up to Token #{{ doc.total_tokens }}</span>
+            <span class="dd-stat-sub stat-card-subtext" id="statsTotalTokens">Up to Token #{{ doc.total_tokens }}</span>
           </div>
         </div>
 
-        <div class="stat-card-premium" onclick="showAdminPanel('queue')">
-          <div class="stat-card-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
+        <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('queue')" role="button" tabindex="0" title="View Patient Queue">
+          <div class="dd-stat-icon-tile stat-card-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
             <i data-lucide="users"></i>
           </div>
-          <div class="stat-card-info">
-            <span class="stat-card-label">Patients Booked</span>
-            <span class="stat-card-value" id="statsBookedCount">{{ total_booked }}</span>
-            <span class="stat-card-subtext">Active registrations</span>
+          <div class="dd-stat-info stat-card-info">
+            <span class="dd-stat-label stat-card-label">Patients Booked</span>
+            <span class="dd-stat-value stat-card-value" id="statsBookedCount">{{ total_booked }}</span>
+            <span class="dd-stat-sub stat-card-subtext">Active registrations</span>
           </div>
         </div>
 
-        <div class="stat-card-premium" onclick="showAdminPanel('skipped')">
-          <div class="stat-card-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+        <div class="dd-stat-card stat-card-premium" onclick="showAdminPanel('skipped')" role="button" tabindex="0" title="View Skipped Patients">
+          <div class="dd-stat-icon-tile stat-card-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
             <i data-lucide="user-minus"></i>
           </div>
-          <div class="stat-card-info">
-            <span class="stat-card-label">Skipped Count</span>
-            <span class="stat-card-value" id="statsSkippedCount">0</span>
-            <span class="stat-card-subtext">Awaiting recall</span>
+          <div class="dd-stat-info stat-card-info">
+            <span class="dd-stat-label stat-card-label">Skipped Count</span>
+            <span class="dd-stat-value stat-card-value" id="statsSkippedCount">0</span>
+            <span class="dd-stat-sub stat-card-subtext">Awaiting recall</span>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- PANEL 1: OVERVIEW & SESSION CONTROL -->
-      <div id="overviewPanel" class="adminPanel active">
-        <div class="section-header" style="border-bottom: 2px solid rgba(0,119,182,0.1); padding-bottom: 0.8rem; margin-bottom: 1.5rem;">
-          <h2 style="margin:0; text-align:left; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="activity" style="width:18px;height:18px;"></i> Session Control</h2>
-        </div>
-
-        <!-- Dynamic Visual Progress bar -->
-        <div class="progress-section" style="margin-bottom: 2rem; background: rgba(0,0,0,0.02); padding: 1.2rem; border-radius: 16px; border: 1px solid rgba(0,0,0,0.03);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-            <span style="font-size:0.85rem; font-weight:800; color:#334155; text-transform:uppercase; letter-spacing:0.5px;">Session Progress</span>
-            <span id="progressPercentage" style="font-size:0.85rem; font-weight:800; color:#0077b6;">0%</span>
-          </div>
-          <div class="progress-bar-container" style="display:flex; height:10px; border-radius:999px; overflow:hidden; background:#e2e8f0; margin-bottom:0.8rem; border: 1px solid rgba(0,0,0,0.05);">
-             <div id="progressConsulted" style="width:0%; background:linear-gradient(90deg, #10b981, #34d399); transition:width-out 0.4s ease;" title="Consulted"></div>
-             <div id="progressCalling" style="width:0%; background:linear-gradient(90deg, #0077b6, #00b4d8); transition:width 0.4s ease;" title="Calling"></div>
-             <div id="progressSkipped" style="width:0%; background:linear-gradient(90deg, #f59e0b, #fbbf24); transition:width 0.4s ease;" title="Skipped"></div>
-             <div id="progressWaiting" style="width:0%; background:linear-gradient(90deg, #94a3b8, #cbd5e1); transition:width 0.4s ease;" title="Waiting"></div>
-          </div>
-          <div class="progress-labels" style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align:center; font-size:0.75rem; color:#64748b; font-weight:600;">
-             <div style="display:flex; flex-direction:column; align-items:center;">
-               <span style="color:#10b981; display:flex; align-items:center; gap:2px; justify-content:center;"><span style="width:6px; height:6px; background:#10b981; border-radius:50%; display:inline-block;"></span> Consulted</span>
-               <span id="labelConsulted" style="font-size:0.9rem; font-weight:800; color:#0f172a;">0</span>
-             </div>
-             <div style="display:flex; flex-direction:column; align-items:center;">
-               <span style="color:#0077b6; display:flex; align-items:center; gap:2px; justify-content:center;"><span style="width:6px; height:6px; background:#0077b6; border-radius:50%; display:inline-block;"></span> Calling</span>
-               <span id="labelCalling" style="font-size:0.9rem; font-weight:800; color:#0f172a;">0</span>
-             </div>
-             <div style="display:flex; flex-direction:column; align-items:center;">
-               <span style="color:#d97706; display:flex; align-items:center; gap:2px; justify-content:center;"><span style="width:6px; height:6px; background:#d97706; border-radius:50%; display:inline-block;"></span> Skipped</span>
-               <span id="labelSkipped" style="font-size:0.9rem; font-weight:800; color:#0f172a;">0</span>
-             </div>
-             <div style="display:flex; flex-direction:column; align-items:center;">
-               <span style="color:#475569; display:flex; align-items:center; gap:2px; justify-content:center;"><span style="width:6px; height:6px; background:#475569; border-radius:50%; display:inline-block;"></span> Waiting</span>
-               <span id="labelWaiting" style="font-size:0.9rem; font-weight:800; color:#0f172a;">0</span>
-             </div>
-          </div>
-        </div>
-
-        <div class="session-box-premium" style="text-align: center; padding: 1.5rem 1rem; display: flex; flex-direction: column; align-items: center;">
-          <p style="color:#64748b; font-weight: 500; margin-bottom: 1rem;"><i data-lucide="calendar" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i> Today's Session: {{ doc.session_date }}</p>
-          
-          <div class="session-timeline" id="sessionTimeline" style="display: {% if doc.status == 'idle' %}none{% else %}flex{% endif %}; justify-content: center; gap: 2rem; margin-bottom: 1.5rem; padding: 0.8rem; background: rgba(0,0,0,0.03); border-radius: 16px; width: 100%;">
-              <div class="timeline-item" style="display: flex; flex-direction: column; gap: 0.2rem;">
-                  <span class="time-label" style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Started At</span>
-                  <span class="time-val" id="startTime" style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">{{ doc.start_time or '--:--' }}</span>
+      <section id="overviewPanel" class="adminPanel active" aria-labelledby="overviewPanelHeading">
+        <div class="dd-hero-session-card session-box-premium">
+          <div class="dd-hero-header">
+            <div class="dd-hero-title-group">
+              <div class="dd-hero-icon-tile">
+                <i data-lucide="activity"></i>
               </div>
-              <div class="timeline-item" id="endTimeContainer" style="display: {% if doc.status == 'completed' %}flex{% else %}none{% endif %}; flex-direction: column; gap: 0.2rem;">
-                  <span class="time-label" style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Ended At</span>
-                  <span class="time-val" id="endTime" style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">{{ doc.end_time or '--:--' }}</span>
+              <div>
+                <h2 class="dd-hero-title" id="overviewPanelHeading">Session Control Center</h2>
+                <p class="dd-hero-date-sub"><i data-lucide="calendar" style="width:13px;height:13px;display:inline-block;vertical-align:middle;margin-right:2px;"></i> Today: {{ doc.session_date }}</p>
               </div>
-          </div>
+            </div>
 
-          <div id="statusBadge" class="status-badge {% if doc.status == 'idle' %}status-idle{% elif doc.status == 'active' %}status-active{% elif doc.status == 'waiting_bookings' %}status-waiting-bookings{% else %}status-completed{% endif %}" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 1rem; border-radius: 999px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem;">
-              <i id="statusIcon" data-lucide="{% if doc.status == 'idle' %}clock{% elif doc.status == 'active' %}radio{% elif doc.status == 'waiting_bookings' %}clock{% else %}check-circle{% endif %}" style="width:16px;height:16px;"></i>
+            <!-- Dynamic Live Status Badge -->
+            <div id="statusBadge" class="status-badge {% if doc.status == 'idle' %}status-idle{% elif doc.status == 'active' %}status-active{% elif doc.status == 'waiting_bookings' %}status-waiting-bookings{% else %}status-completed{% endif %}" aria-live="polite">
+              <i id="statusIcon" data-lucide="{% if doc.status == 'idle' %}clock{% elif doc.status == 'active' %}radio{% elif doc.status == 'waiting_bookings' %}clock{% else %}check-circle{% endif %}"></i>
               <span id="statusText">{% if doc.status == 'idle' %}Awaiting{% elif doc.status == 'active' %}Live Now{% elif doc.status == 'waiting_bookings' %}Waiting for Bookings{% else %}Completed{% endif %}</span>
+            </div>
           </div>
-          
-          <div class="token-display" id="tokenDisplay" style="font-size: 5.5rem; font-weight: 850; color: #0077b6; line-height: 1; margin: 1rem 0; text-shadow: 0 4px 20px rgba(0, 119, 182, 0.15);">
-              {% if doc.status == 'idle' %}--{% else %}#{{ doc.current_token }}{% endif %}
-          </div>
-          
-          <div class="token-sub" id="tokenSub" style="font-size: 1rem; color: #64748b; font-weight: 600; margin-bottom: 2rem;">
-              <div style="font-size: 1.1rem; color: #023e8a; margin-bottom: 0.3rem;">
-                  <span id="bookedCount">{{ total_booked }}</span> Patients Booked today
-              </div>
-              <div id="totalTokensLine" style="font-size: 0.85rem; color: #64748b; font-weight: 500;">
-                  Sequence goes up to Token #<span id="totalTokens">{{ doc.total_tokens }}</span>
-              </div>
-          </div>
-          
-          <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; max-width: 400px; width: 100%; margin-left: auto; margin-right: auto; align-items: stretch;">
-              <button id="sessionBtn" class="control-btn {% if doc.status == 'idle' %}btn-start{% elif doc.status == 'active' %}btn-next{% else %}btn-disabled{% endif %}"
-                  {% if doc.status == 'completed' or doc.status == 'waiting_bookings' %}disabled{% endif %} style="width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff;">
-                  
-                  {% if doc.status == 'idle' %}
-                      <i data-lucide="play"></i> Start Session
-                  {% elif doc.status == 'active' %}
-                      <i data-lucide="arrow-right"></i> Next Patient
-                  {% elif doc.status == 'waiting_bookings' %}
-                      <i data-lucide="hourglass"></i> Waiting for Bookings
-                  {% else %}
-                      <i data-lucide="check-circle"></i> Session Completed
-                  {% endif %}
-              </button>
-              
-              <button id="completeSessionBtn" class="control-btn btn-complete" style="display: {% if doc.status == 'waiting_bookings' %}flex{% else %}none{% endif %}; width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff;">
-                  <i data-lucide="power"></i> Complete Session
-              </button>
-              
-              <button id="skipBtn" class="control-btn btn-skip" style="display: {% if doc.status == 'active' %}flex{% else %}none{% endif %}; width: 100%; padding: 1rem; border-radius: 16px; font-size: 1.1rem; font-weight: 700; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; color: #fff; background: #f59e0b; box-shadow: 0 8px 25px rgba(245,158,11,0.3);">
-                  <i data-lucide="skip-forward"></i> Patient Not Arrived? Skip
-              </button>
 
-              {% if doc.total_tokens == 0 %}
-              <p id="noBookingsMsg" style="color: #e11d48; font-size: 0.85rem; font-weight: 600; margin-top: 10px;">No bookings found for today.</p>
+          <!-- Session Progress Bar -->
+          <div class="dd-progress-section progress-section">
+            <div class="dd-progress-top">
+              <span class="dd-progress-label">Session Progress</span>
+              <span id="progressPercentage" class="dd-progress-val">0%</span>
+            </div>
+            <div class="progress-bar-container">
+              <div id="progressConsulted" style="width:0%; background:linear-gradient(90deg, #10b981, #34d399);" title="Consulted"></div>
+              <div id="progressCalling" style="width:0%; background:linear-gradient(90deg, #0077b6, #00b4d8);" title="Calling"></div>
+              <div id="progressSkipped" style="width:0%; background:linear-gradient(90deg, #f59e0b, #fbbf24);" title="Skipped"></div>
+              <div id="progressWaiting" style="width:0%; background:linear-gradient(90deg, #94a3b8, #cbd5e1);" title="Waiting"></div>
+            </div>
+            <div class="progress-labels">
+              <div class="progress-label-chip">
+                <span class="chip-name" style="color:#10b981;"><i data-lucide="check" style="width:12px;height:12px;"></i> Consulted</span>
+                <span id="labelConsulted" class="chip-val">0</span>
+              </div>
+              <div class="progress-label-chip">
+                <span class="chip-name" style="color:#0077b6;"><i data-lucide="radio" style="width:12px;height:12px;"></i> Calling</span>
+                <span id="labelCalling" class="chip-val">0</span>
+              </div>
+              <div class="progress-label-chip">
+                <span class="chip-name" style="color:#d97706;"><i data-lucide="user-x" style="width:12px;height:12px;"></i> Skipped</span>
+                <span id="labelSkipped" class="chip-val">0</span>
+              </div>
+              <div class="progress-label-chip">
+                <span class="chip-name" style="color:#475569;"><i data-lucide="clock" style="width:12px;height:12px;"></i> Waiting</span>
+                <span id="labelWaiting" class="chip-val">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Big Token Box & Timeline -->
+          <div class="dd-token-hero-box">
+            <div class="session-timeline" id="sessionTimeline" style="display: {% if doc.status == 'idle' %}none{% else %}flex{% endif %};">
+              <div class="timeline-item">
+                <span class="time-label">Started At</span>
+                <span class="time-val" id="startTime">{{ doc.start_time or '--:--' }}</span>
+              </div>
+              <div class="timeline-item" id="endTimeContainer" style="display: {% if doc.status == 'completed' %}flex{% else %}none{% endif %};">
+                <span class="time-label">Ended At</span>
+                <span class="time-val" id="endTime">{{ doc.end_time or '--:--' }}</span>
+              </div>
+            </div>
+
+            <div class="token-display num-tabular" id="tokenDisplay" aria-live="assertive">
+              {% if doc.status == 'idle' %}--{% else %}#{{ doc.current_token }}{% endif %}
+            </div>
+
+            <div class="token-sub" id="tokenSub">
+              <div class="token-sub-highlight">
+                <span id="bookedCount" class="num-tabular">{{ total_booked }}</span> Patients Booked Today
+              </div>
+              <div class="token-sub-detail" id="totalTokensLine">
+                Sequence goes up to Token #<span id="totalTokens" class="num-tabular">{{ doc.total_tokens }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sticky / Inline Action Controls Stack -->
+          <div class="session-actions-wrapper">
+            <button id="sessionBtn" class="control-btn {% if doc.status == 'idle' %}btn-start{% elif doc.status == 'active' %}btn-next{% else %}btn-disabled{% endif %}"
+                    {% if doc.status == 'completed' or doc.status == 'waiting_bookings' %}disabled{% endif %}>
+              {% if doc.status == 'idle' %}
+                <i data-lucide="play"></i> Start Session
+              {% elif doc.status == 'active' %}
+                <i data-lucide="arrow-right"></i> Next Patient
+              {% elif doc.status == 'waiting_bookings' %}
+                <i data-lucide="hourglass"></i> Waiting for Bookings
+              {% else %}
+                <i data-lucide="check-circle"></i> Session Completed
               {% endif %}
+            </button>
+
+            <button id="completeSessionBtn" class="control-btn btn-complete" style="display: {% if doc.status == 'waiting_bookings' %}flex{% else %}none{% endif %};">
+              <i data-lucide="power"></i> Complete Session
+            </button>
+
+            <button id="skipBtn" class="control-btn btn-skip" style="display: {% if doc.status == 'active' %}flex{% else %}none{% endif %};">
+              <i data-lucide="skip-forward"></i> Patient Not Arrived? Skip
+            </button>
+
+            {% if doc.total_tokens == 0 %}
+            <p id="noBookingsMsg" style="color:var(--dd-danger); font-size:0.85rem; font-weight:700; text-align:center; margin:4px 0 0;">No patient bookings found for today.</p>
+            {% endif %}
           </div>
         </div>
 
         <!-- Empty Slots Section -->
-        <div id="emptySection" style="display: {% if empty_slots %}block{% else %}none{% endif %}; margin-top: 2rem; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 1.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
-                <div style="background: rgba(0,119,182,0.08); color: #0077b6; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                    <i data-lucide="info" style="width:18px;height:18px;"></i>
-                </div>
-                <div>
-                    <h3 style="margin:0; font-size: 1.1rem; font-weight: 800; color: #0f172a;">Empty Token Slots</h3>
-                    <p style="margin:0; font-size: 0.75rem; color: #64748b; font-weight: 600;">The following token numbers have no patients assigned.</p>
-                </div>
-            </div>
-            <div id="emptyGrid" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                {% for token in empty_slots %}
-                    <span class="user-badge" style="background: #f1f5f9; color: #475569; padding: 0.4rem 0.8rem; font-size: 0.85rem; border: 1px solid #e2e8f0; border-radius:999px;">#{{ token }}</span>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Practitioner Profile & Contact Card -->
-        <div style="margin-top: 2rem; background: white; border: 1px solid #e2e8f0; border-radius: 18px; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
-          <div style="display: flex; align-items: center; gap: 0.9rem;">
-            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(0,119,182,0.1); color: #0077b6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              <i data-lucide="phone-call" style="width: 22px; height: 22px;"></i>
+        <div class="dd-empty-slots-card" id="emptySection" style="display: {% if empty_slots %}block{% else %}none{% endif %};">
+          <div class="dd-empty-header">
+            <div class="dd-empty-icon">
+              <i data-lucide="info" style="width:18px;height:18px;"></i>
             </div>
             <div>
-              <div style="font-size: 0.78rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Registered Mobile Number</div>
-              <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-top: 1px;" id="docCurrentPhoneSpan">{{ doc.phone_number or 'No mobile number set' }}</div>
+              <h3 class="dd-empty-title">Unallocated Token Slots</h3>
+              <p class="dd-empty-desc">The following sequence tokens have no registered patients.</p>
             </div>
           </div>
-          <button type="button" onclick="openDoctorPhoneModal()" class="btn btn-outline" style="padding: 0.6rem 1.2rem; border-radius: 12px; font-size: 0.88rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; margin: 0;">
-            <i data-lucide="edit-3" style="width: 15px; height: 15px;"></i>
+          <div class="dd-empty-grid" id="emptyGrid">
+            {% for token in empty_slots %}
+            <span class="dd-empty-chip user-badge">#{{ token }}</span>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Registered Contact Card -->
+        <div class="dd-contact-card">
+          <div class="dd-contact-left">
+            <div class="dd-contact-icon">
+              <i data-lucide="phone-call" style="width:20px;height:20px;"></i>
+            </div>
+            <div>
+              <div class="dd-contact-label">Registered Mobile Number</div>
+              <div class="dd-contact-val num-tabular" id="docCurrentPhoneSpan">{{ doc.phone_number or 'No mobile number set' }}</div>
+            </div>
+          </div>
+          <button type="button" onclick="openDoctorPhoneModal()" class="btn-outline-custom">
+            <i data-lucide="edit-3" style="width:15px;height:15px;"></i>
             <span>Change Mobile Number</span>
           </button>
         </div>
-      </div>
+      </section>
 
       <!-- PANEL 2: PATIENT QUEUE MANIFEST -->
-      <div id="queuePanel" class="adminPanel glass-card-premium">
-        <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid rgba(0,119,182,0.1); padding-bottom: 0.8rem; margin-bottom: 1.2rem; flex-wrap:wrap; gap: 0.8rem;">
-          <h2 style="margin:0; text-align:left; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="list-ordered" style="width:18px;height:18px;"></i> Patient Queue Manifest</h2>
+      <section id="queuePanel" class="adminPanel dd-panel-card" aria-labelledby="queuePanelHeading">
+        <div class="dd-panel-header">
+          <h2 class="dd-panel-title" id="queuePanelHeading">
+            <i data-lucide="list-ordered" style="width:20px;height:20px;color:var(--dd-primary);"></i>
+            <span>Patient Queue Manifest</span>
+          </h2>
           
-          <!-- Search Input Container -->
-          <div class="search-container" style="position:relative; width: 100%; max-width: 300px;">
-            <input type="text" id="queueSearchInput" placeholder="Search by name, token..." onkeyup="filterQueueTable()" style="width:100%; padding:0.5rem 0.8rem 0.5rem 2.2rem; border-radius:12px; border: 1.5px solid #e2e8f0; font-size:0.85rem; outline:none; transition:border-color 0.2s;" />
-            <i data-lucide="search" style="position:absolute; left:0.8rem; top:50%; transform:translateY(-50%); width:14px; height:14px; color:#94a3b8; pointer-events:none;"></i>
+          <div class="dd-search-box search-container">
+            <i data-lucide="search" class="dd-search-icon"></i>
+            <input type="text" id="queueSearchInput" class="dd-search-input" placeholder="Search by name, token..." onkeyup="filterQueueTable()" aria-label="Search patient queue" />
           </div>
         </div>
 
-        <!-- Responsive Table Container -->
         <div class="booking-table-wrapper">
           <table class="booking-table">
             <thead>
               <tr>
-                <th style="width: 80px;">Token</th>
-                <th>Name</th>
-                <th class="desktop-only" style="width: 100px;">Age</th>
-                <th class="desktop-only" style="width: 100px;">Gender</th>
-                <th style="width: 130px;">Status</th>
-                <th style="width: 100px; text-align: center;">Actions</th>
+                <th style="width: 90px;">Token</th>
+                <th>Patient Name</th>
+                <th class="desktop-only" style="width: 110px;">Age</th>
+                <th class="desktop-only" style="width: 110px;">Gender</th>
+                <th style="width: 140px;">Status</th>
+                <th style="width: 120px; text-align: center;">Actions</th>
               </tr>
             </thead>
             <tbody id="queueTableBody">
               <tr>
-                <td colspan="6" style="text-align:center; padding:2rem; color:#64748b;">
-                  <i data-lucide="loader" class="spin-icon" style="margin: 0 auto 0.5rem; width:24px; height:24px; color:#0077b6;"></i>
-                  Loading patient queue...
+                <td colspan="6" style="text-align:center; padding:3rem 1rem; color:var(--dd-slate-500);">
+                  <i data-lucide="loader-circle" class="spin-icon" style="margin: 0 auto 0.5rem; width:26px; height:26px; color:var(--dd-primary);"></i>
+                  <div>Loading patient queue...</div>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
       <!-- PANEL 3: SKIPPED PATIENTS RECALL -->
-      <div id="skippedPanel" class="adminPanel glass-card-premium">
-        <div class="section-header" style="border-bottom: 2px solid rgba(0,119,182,0.1); padding-bottom: 0.8rem; margin-bottom: 1.5rem;">
-          <h2 style="margin:0; text-align:left; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="user-x" style="width:18px;height:18px;"></i> Skipped Patients</h2>
+      <section id="skippedPanel" class="adminPanel dd-panel-card" aria-labelledby="skippedPanelHeading">
+        <div class="dd-panel-header">
+          <h2 class="dd-panel-title" id="skippedPanelHeading">
+            <i data-lucide="user-x" style="width:20px;height:20px;color:var(--dd-warning-dark);"></i>
+            <span>Skipped Patients Recall</span>
+          </h2>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.2rem;">
-            <div style="background: #fef3c7; color: #d97706; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                <i data-lucide="users" style="width:18px;height:18px;"></i>
-            </div>
-            <div>
-                <p style="margin:0; font-size: 0.85rem; color: #475569; font-weight: 600;">Recall skipped patients</p>
-                <p style="margin:0; font-size: 0.72rem; color: #64748b; font-weight: 500;">These patients were skipped because they were not present when called.</p>
-            </div>
-        </div>
-        
+        <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem; color: var(--dd-slate-600); line-height: 1.5;">
+          Patients who did not answer when initially called. Tap <strong>Consult Now</strong> to recall a patient directly into the consultation room.
+        </p>
+
         <div class="skipped-grid" id="skippedGrid">
-            <!-- Rendered dynamically by JavaScript -->
+          <!-- Dynamically populated via JS -->
         </div>
-        
-        <div id="skippedEmptyState" style="display:none; text-align:center; padding:3rem 1.5rem; color:#94a3b8;">
-          <i data-lucide="check-check" style="width:36px; height:36px; color:#10b981; margin:0 auto 0.75rem;"></i>
-          <div style="font-weight:700; color:#475569; font-size:0.95rem;">No Skipped Patients</div>
-          <div style="font-size:0.8rem; color:#94a3b8; font-weight:500; margin-top:2px;">All called patients were present!</div>
+
+        <div id="skippedEmptyState" style="display:none; text-align:center; padding:3.5rem 1.5rem; color:var(--dd-slate-400);">
+          <i data-lucide="check-check" style="width:40px; height:40px; color:var(--dd-success); margin:0 auto 0.75rem; display:block;"></i>
+          <div style="font-weight:800; color:var(--dd-slate-700); font-size:1.05rem;">No Skipped Patients</div>
+          <div style="font-size:0.85rem; color:var(--dd-slate-500); margin-top:3px;">All called patients were present in the clinic.</div>
         </div>
-      </div>
+      </section>
+
       <!-- PANEL 4: DOCTOR STATISTICS -->
-      <div id="statsPanel" class="adminPanel glass-card-premium">
-        <div class="section-header">
-          <h2 style="margin:0; text-align:left; display:flex; align-items:center; gap:0.5rem;">
-            <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i> My Statistics
+      <section id="statsPanel" class="adminPanel dd-panel-card" aria-labelledby="statsPanelHeading">
+        <div class="dd-panel-header">
+          <h2 class="dd-panel-title" id="statsPanelHeading">
+            <i data-lucide="bar-chart-2" style="width:20px;height:20px;color:var(--dd-primary);"></i>
+            <span>Practitioner Analytics</span>
           </h2>
-          <button onclick="fetchDoctorStats(true)" class="stats-refresh-btn">
-            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> <span class="refresh-btn-text">Refresh</span>
+          <button onclick="fetchDoctorStats(true)" class="stats-refresh-btn" title="Refresh Consultation Metrics">
+            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>
+            <span class="refresh-btn-text">Refresh Data</span>
           </button>
         </div>
 
-        <!-- Loading / Error State -->
-        <div id="statsLoadingState" style="text-align:center; padding:3rem 1rem; display:flex; flex-direction:column; align-items:center; gap:0.8rem;">
-          <i data-lucide="loader" class="spin-icon" style="width:28px;height:28px;color:#0077b6;"></i>
-          <span style="color:#64748b; font-size:0.9rem; font-weight:600;">Fetching your statistics…</span>
-        </div>
-        <div id="statsErrorState" style="display:none; text-align:center; padding:2.5rem 1rem;">
-          <i data-lucide="wifi-off" style="width:32px;height:32px;color:#e11d48;margin:0 auto 0.6rem;"></i>
-          <div style="color:#e11d48; font-weight:700; font-size:0.95rem;">Could not load statistics</div>
-          <div style="color:#64748b; font-size:0.82rem; margin-top:4px;">Please try refreshing.</div>
+        <div id="statsLoadingState" style="text-align:center; padding:3.5rem 1rem; display:flex; flex-direction:column; align-items:center; gap:0.8rem;">
+          <i data-lucide="loader-circle" class="spin-icon" style="width:32px;height:32px;color:var(--dd-primary);"></i>
+          <span style="color:var(--dd-slate-600); font-size:0.9rem; font-weight:600;">Fetching your verified practice statistics…</span>
         </div>
 
-        <!-- Stats Content (hidden until loaded) -->
+        <div id="statsErrorState" style="display:none; text-align:center; padding:3rem 1rem;">
+          <i data-lucide="wifi-off" style="width:36px;height:36px;color:var(--dd-danger);margin:0 auto 0.6rem;display:block;"></i>
+          <div style="color:var(--dd-danger); font-weight:800; font-size:1rem;">Could not load analytics</div>
+          <div style="color:var(--dd-slate-500); font-size:0.85rem; margin-top:4px;">Please check your connection and refresh.</div>
+        </div>
+
         <div id="statsContent" style="display:none;">
-
           <!-- SECTION 1: Booking Summary -->
-          <div style="margin-bottom:1.8rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:1rem; flex-wrap: wrap; gap: 0.5rem;">
-              <div style="font-size:0.72rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Booking Summary (Excl. Cancelled)</div>
-              <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; color: #64748b;">
+          <div style="margin-bottom: 2rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+              <span style="font-size:0.75rem; font-weight:800; color:var(--dd-slate-500); text-transform:uppercase; letter-spacing:0.06em;">Booking Summary (Excl. Cancelled)</span>
+              <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; font-weight:700; color:var(--dd-slate-600);">
                 <span>Sort by:</span>
-                <select id="bookingStatsSort" onchange="sortDoctorStats('booking')" style="padding: 0.25rem 0.6rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.75rem; background: #fff; cursor: pointer; color: #475569; font-weight: 600; outline: none;">
+                <select id="bookingStatsSort" onchange="sortDoctorStats('booking')" style="padding:0.3rem 0.7rem; border-radius:8px; border:1.5px solid var(--dd-slate-300); font-size:0.78rem; background:#fff; cursor:pointer; color:var(--dd-slate-800); font-weight:600; outline:none;">
                   <option value="default">Default Order</option>
                   <option value="value-desc">Highest Count First</option>
                   <option value="value-asc">Lowest Count First</option>
@@ -1487,63 +464,55 @@
                 </select>
               </div>
             </div>
-            <div class="doc-stats-grid ds-grid-booking" id="bookingStatsGrid">
 
-              <div class="doc-stat-card" style="--accent-c:#0077b6;">
+            <div class="doc-stats-grid ds-grid-booking" id="bookingStatsGrid">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(0,119,182,0.1);color:#0077b6;"><i data-lucide="calendar-check" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsTotalBookings">—</div>
+                <div class="doc-stat-value num-tabular" id="dsTotalBookings">—</div>
                 <div class="doc-stat-label">Total Bookings</div>
               </div>
-
-              <div class="doc-stat-card" style="--accent-c:#10b981;">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i data-lucide="sun" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsTodayBookings">—</div>
+                <div class="doc-stat-value num-tabular" id="dsTodayBookings">—</div>
                 <div class="doc-stat-label">Today</div>
               </div>
-
-              <div class="doc-stat-card" style="--accent-c:#8b5cf6;">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;"><i data-lucide="calendar-days" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsWeekBookings">—</div>
+                <div class="doc-stat-value num-tabular" id="dsWeekBookings">—</div>
                 <div class="doc-stat-label">This Week</div>
               </div>
-
-              <div class="doc-stat-card" style="--accent-c:#f59e0b;">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i data-lucide="calendar" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsMonthBookings">—</div>
+                <div class="doc-stat-value num-tabular" id="dsMonthBookings">—</div>
                 <div class="doc-stat-label">This Month</div>
               </div>
-
-              <div class="doc-stat-card" style="--accent-c:#06b6d4;">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;"><i data-lucide="calendar-range" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsYearBookings">—</div>
+                <div class="doc-stat-value num-tabular" id="dsYearBookings">—</div>
                 <div class="doc-stat-label">This Year</div>
               </div>
-
-              <div class="doc-stat-card" style="--accent-c:#0077b6;">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(0,119,182,0.08);color:#0077b6;"><i data-lucide="clock-arrow-up" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsUpcoming">—</div>
+                <div class="doc-stat-value num-tabular" id="dsUpcoming">—</div>
                 <div class="doc-stat-label">Upcoming</div>
               </div>
-
-              <div class="doc-stat-card" style="--accent-c:#475569;">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(71,85,105,0.08);color:#475569;"><i data-lucide="history" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsPast">—</div>
+                <div class="doc-stat-value num-tabular" id="dsPast">—</div>
                 <div class="doc-stat-label">Past Visits</div>
               </div>
-
             </div>
           </div>
 
-          <!-- Divider -->
-          <div style="border-top:1.5px dashed rgba(0,119,182,0.1); margin:1.4rem 0;"></div>
+          <div style="border-top:1.5px dashed var(--dd-slate-200); margin:1.75rem 0;"></div>
 
           <!-- SECTION 2: Consultation & Hours -->
-          <div style="margin-bottom:1.8rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:1rem; flex-wrap: wrap; gap: 0.5rem;">
-              <div style="font-size:0.72rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Consultation Metrics</div>
-              <div style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 700; color: #64748b;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+              <span style="font-size:0.75rem; font-weight:800; color:var(--dd-slate-500); text-transform:uppercase; letter-spacing:0.06em;">Consultation Metrics</span>
+              <div style="display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; font-weight:700; color:var(--dd-slate-600);">
                 <span>Sort by:</span>
-                <select id="metricsStatsSort" onchange="sortDoctorStats('metrics')" style="padding: 0.25rem 0.6rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.75rem; background: #fff; cursor: pointer; color: #475569; font-weight: 600; outline: none;">
+                <select id="metricsStatsSort" onchange="sortDoctorStats('metrics')" style="padding:0.3rem 0.7rem; border-radius:8px; border:1.5px solid var(--dd-slate-300); font-size:0.78rem; background:#fff; cursor:pointer; color:var(--dd-slate-800); font-weight:600; outline:none;">
                   <option value="default">Default Order</option>
                   <option value="value-desc">Highest Value First</option>
                   <option value="value-asc">Lowest Value First</option>
@@ -1551,115 +520,201 @@
                 </select>
               </div>
             </div>
-            <div class="doc-stats-grid ds-grid-metrics" id="metricsStatsGrid">
 
-              <div class="doc-stat-card" style="--accent-c:#10b981;">
+            <div class="doc-stats-grid ds-grid-metrics" id="metricsStatsGrid">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i data-lucide="stethoscope" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsCompleted">—</div>
+                <div class="doc-stat-value num-tabular" id="dsCompleted">—</div>
                 <div class="doc-stat-label">Completed Consultations</div>
               </div>
-
-              <div class="doc-stat-card" style="--accent-c:#0077b6;">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(0,119,182,0.1);color:#0077b6;"><i data-lucide="clock" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsTotalHours">—</div>
+                <div class="doc-stat-value num-tabular" id="dsTotalHours">—</div>
                 <div class="doc-stat-label">Total Working Hours</div>
               </div>
-
-              <div class="doc-stat-card" style="--accent-c:#8b5cf6;">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;"><i data-lucide="briefcase" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsWorkingDays">—</div>
+                <div class="doc-stat-value num-tabular" id="dsWorkingDays">—</div>
                 <div class="doc-stat-label">Working Days</div>
               </div>
-
-              <div class="doc-stat-card" style="--accent-c:#f59e0b;">
+              <div class="doc-stat-card">
                 <div class="doc-stat-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i data-lucide="timer" style="width:18px;height:18px;"></i></div>
-                <div class="doc-stat-value" id="dsAvgDuration">—</div>
+                <div class="doc-stat-value num-tabular" id="dsAvgDuration">—</div>
                 <div class="doc-stat-label">Avg. Consult Duration</div>
               </div>
+            </div>
 
+            <div id="dsNoTimesNote" style="display:none; margin-top:1.25rem; background:var(--dd-warning-soft); border:1px solid var(--dd-warning-border); border-radius:var(--dd-radius-md); padding:0.9rem 1.1rem; font-size:0.82rem; color:var(--dd-warning-dark); display:flex; align-items:flex-start; gap:0.6rem;">
+              <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;margin-top:1px;"></i>
+              <span>Working hours and average duration are computed from consultations with logged check-in and completion times.</span>
             </div>
           </div>
-
-
-          <!-- Note if no consultation times recorded -->
-          <div id="dsNoTimesNote" style="display:none; background:rgba(245,158,11,0.07); border:1px solid rgba(245,158,11,0.2); border-radius:14px; padding:0.9rem 1.1rem; font-size:0.82rem; color:#92400e; display:flex; align-items:flex-start; gap:0.6rem;">
-            <i data-lucide="info" style="width:15px;height:15px;flex-shrink:0;margin-top:1px;color:#d97706;"></i>
-            <span>Working hours &amp; average duration are calculated only from consultations that have recorded start and end times. No such records found yet.</span>
-          </div>
-
         </div>
-      </div>
+      </section>
 
-      <!-- CENTERED SIMPLE COPYRIGHT FOOTER -->
+      <!-- SIMPLE FOOTER -->
       <footer class="admin-footer">
-        <p class="admin-footer-copy">&copy; 2026 PrimeCare Clinic. All rights reserved.</p>
+        <p class="admin-footer-copy">&copy; 2026 PrimeCare Clinic &middot; All rights reserved.</p>
       </footer>
     </main>
   </div>
 
+  <!-- MOBILE BOTTOM TAB BAR (< 640px) -->
+  <nav class="dd-mobile-tab-bar" aria-label="Mobile Navigation">
+    <div class="dd-tab-items-grid">
+      <div class="dd-tab-item active" data-panel="overview" onclick="showAdminPanel('overview')" role="button" tabindex="0">
+        <i data-lucide="layout-dashboard"></i>
+        <span class="dd-tab-item-label">Overview</span>
+      </div>
+      <div class="dd-tab-item" data-panel="queue" onclick="showAdminPanel('queue')" role="button" tabindex="0">
+        <i data-lucide="list-ordered"></i>
+        <span class="dd-tab-item-label">Queue</span>
+        <span class="dd-tab-badge" id="mobileNavBadgeQueue" style="display:none;">0</span>
+      </div>
+      <div class="dd-tab-item" data-panel="skipped" onclick="showAdminPanel('skipped')" role="button" tabindex="0">
+        <i data-lucide="user-x"></i>
+        <span class="dd-tab-item-label">Skipped</span>
+        <span class="dd-tab-badge" id="mobileNavBadgeSkipped" style="display:none;">0</span>
+      </div>
+      <div class="dd-tab-item" data-panel="stats" onclick="showAdminPanel('stats')" role="button" tabindex="0">
+        <i data-lucide="bar-chart-2"></i>
+        <span class="dd-tab-item-label">Stats</span>
+      </div>
+    </div>
+  </nav>
 
-
-  <!-- Referral Modal -->
-  <div class="modal-overlay" id="referralModal">
-    <div class="pres-modal-content" style="max-width: 480px; width: 92%; padding: 1.8rem 1.6rem;">
+  <!-- MODAL: CREATE SPECIALIST REFERRAL -->
+  <div class="modal-overlay" id="referralModal" role="dialog" aria-modal="true" aria-labelledby="referralModalTitle">
+    <div class="pres-modal-content dd-modal-box">
       <div class="pres-modal-header">
         <div class="pres-modal-header-left">
           <div class="icon-circle">
             <i data-lucide="send" style="width: 18px; height: 18px;"></i>
           </div>
-          <div style="min-width: 0;">
-            <h3>Create Specialist Referral</h3>
-            <p>Recommend another department to this patient</p>
+          <div>
+            <h3 id="referralModalTitle">Create Specialist Referral</h3>
+            <p>Recommend another clinic department for this patient</p>
           </div>
         </div>
-        <button type="button" class="pres-close-btn" onclick="closeReferralModal()" title="Close">
-          <i data-lucide="x" style="width: 13px; height: 13px; stroke-width: 2.5px;"></i>
+        <button type="button" class="pres-close-btn" onclick="closeReferralModal()" aria-label="Close dialog">
+          <i data-lucide="x" style="width: 15px; height: 15px;"></i>
         </button>
       </div>
       
-      <form id="referralForm" onsubmit="submitReferral(event)">
+      <form id="referralForm" onsubmit="submitReferral(event)" style="padding: 1.25rem 1.5rem;">
         <input type="hidden" id="referralToken" name="token">
         
-        <div style="margin-bottom: 1.25rem;">
-          <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem;">Patient Name</label>
-          <input type="text" id="referralPatientName" readonly style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 0.95rem;">
+        <div style="margin-bottom: 1.2rem;">
+          <label style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">Patient Name</label>
+          <input type="text" id="referralPatientName" readonly style="width:100%; height:44px; padding:0 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-200); background:var(--dd-slate-50); color:var(--dd-slate-700); font-weight:700; font-size:16px;">
         </div>
         
-        <div style="margin-bottom: 1.25rem;">
-          <label for="referralSpecialization" style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem;">Refer to Department / Specialization</label>
-          <div style="position: relative;">
-            <select id="referralSpecialization" required style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; font-weight: 600; font-size: 0.95rem; appearance: none; -webkit-appearance: none;">
+        <div style="margin-bottom: 1.2rem;">
+          <label for="referralSpecialization" style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">Refer to Department / Specialization</label>
+          <div style="position:relative;">
+            <select id="referralSpecialization" required style="width:100%; height:44px; padding:0 2.2rem 0 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-200); background:#fff; color:var(--dd-slate-900); font-weight:600; font-size:16px; appearance:none; -webkit-appearance:none;">
               <option value="" disabled selected>Select specialization...</option>
             </select>
-            <i data-lucide="chevron-down" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #94a3b8; pointer-events: none;"></i>
+            <i data-lucide="chevron-down" style="position:absolute; right:1rem; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--dd-slate-400); pointer-events:none;"></i>
           </div>
         </div>
         
         <div style="margin-bottom: 1.5rem;">
-          <label for="referralNotes" style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 0.5rem;">Prescription Notes / Reason (Optional)</label>
-          <textarea id="referralNotes" rows="3" placeholder="Add clinical reason or recommendation notes for the specialist..." style="width: 100%; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; font-size: 0.95rem; resize: none; font-family: inherit;"></textarea>
+          <label for="referralNotes" style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">Clinical Notes / Reason (Optional)</label>
+          <textarea id="referralNotes" rows="3" placeholder="Add clinical guidance or reason for referral..." style="width:100%; padding:0.75rem 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-200); background:#fff; color:var(--dd-slate-900); font-size:16px; resize:none; font-family:inherit;"></textarea>
         </div>
         
-        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-          <button type="button" class="btn btn-outline" onclick="closeReferralModal()" style="border-radius: 12px; padding: 0.7rem 1.4rem; margin: 0; min-width: auto; height: auto;">Cancel</button>
-          <button type="submit" class="btn btn-primary" style="background: #0284c7; border: none; border-radius: 12px; padding: 0.7rem 1.4rem; margin: 0; min-width: auto; height: auto; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);">Send Referral</button>
+        <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+          <button type="button" class="btn-outline-custom" onclick="closeReferralModal()">Cancel</button>
+          <button type="submit" class="control-btn btn-start" style="width:auto; padding:0 1.5rem; height:44px; font-size:0.92rem;">Send Referral</button>
         </div>
       </form>
     </div>
   </div>
 
+  <!-- MODAL: CHANGE DOCTOR MOBILE NUMBER WITH WHATSAPP OTP -->
+  <div id="doctorPhoneModal" role="dialog" aria-modal="true" aria-labelledby="doctorPhoneModalTitle">
+    <div class="dd-modal-box" style="max-width:440px;">
+      <div class="pres-modal-header" style="background:linear-gradient(135deg, var(--dd-primary-dark), var(--dd-primary)); color:#ffffff;">
+        <div class="pres-modal-header-left">
+          <div class="icon-circle" style="background:rgba(255,255,255,0.2); color:#ffffff;">
+            <i data-lucide="phone-forwarded" style="width:18px;height:18px;"></i>
+          </div>
+          <div>
+            <h3 id="doctorPhoneModalTitle" style="color:#ffffff;">Update Mobile Number</h3>
+            <p style="color:rgba(255,255,255,0.9);">WhatsApp OTP Verification</p>
+          </div>
+        </div>
+        <button type="button" class="pres-close-btn doc-phone-close-btn" onclick="closeDoctorPhoneModal()" aria-label="Close dialog" style="background:rgba(255,255,255,0.2); color:#ffffff;">
+          <i data-lucide="x" style="width:15px;height:15px;"></i>
+        </button>
+      </div>
+
+      <div style="padding:1.5rem;">
+        <!-- Step 1: Request OTP -->
+        <div id="docPhoneStep1">
+          <p style="margin:0 0 1rem 0; font-size:0.85rem; color:var(--dd-slate-600); line-height:1.45;">
+            Enter your new mobile number. A 6-digit verification code will be sent to your <strong>WhatsApp</strong>.
+          </p>
+
+          <label style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">
+            New Mobile Number
+          </label>
+          <div style="position:relative; margin-bottom:1rem;">
+            <input type="tel" id="docNewPhoneInput" placeholder="e.g. 9876543210 or +919876543210" style="width:100%; height:44px; padding:0 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-300); font-size:16px; font-weight:700; color:var(--dd-slate-900); outline:none;" />
+          </div>
+
+          <div id="docPhoneStep1Err" style="color:var(--dd-danger); font-size:0.8rem; font-weight:700; margin-bottom:0.75rem; display:none;"></div>
+
+          <button type="button" id="docSendPhoneOtpBtn" onclick="handleSendDoctorPhoneOtp()" class="control-btn btn-start" style="height:46px; font-size:0.95rem;">
+            <i data-lucide="send" style="width:16px;height:16px;"></i>
+            <span>Send WhatsApp OTP</span>
+          </button>
+        </div>
+
+        <!-- Step 2: Verify OTP -->
+        <div id="docPhoneStep2" style="display:none;">
+          <div style="background:var(--dd-success-soft); border:1px solid var(--dd-success-border); border-radius:var(--dd-radius-md); padding:0.75rem 1rem; margin-bottom:1.25rem;">
+            <p style="margin:0; font-size:0.82rem; color:var(--dd-success-dark); line-height:1.4;">
+              OTP sent to WhatsApp: <strong id="docTargetPhoneDisplay"></strong>
+            </p>
+          </div>
+
+          <label style="display:block; font-size:0.82rem; font-weight:700; color:var(--dd-slate-700); margin-bottom:0.4rem;">
+            Enter 6-Digit WhatsApp Code
+          </label>
+          <input type="text" id="docPhoneOtpInput" maxlength="6" inputmode="numeric" placeholder="123456" style="width:100%; height:48px; padding:0 1rem; border-radius:var(--dd-radius-md); border:1.5px solid var(--dd-slate-300); font-size:1.4rem; font-weight:800; letter-spacing:6px; text-align:center; color:var(--dd-slate-900); outline:none; margin-bottom:1rem;" />
+
+          <div id="docPhoneStep2Err" style="color:var(--dd-danger); font-size:0.8rem; font-weight:700; margin-bottom:0.75rem; display:none;"></div>
+
+          <button type="button" id="docVerifyPhoneOtpBtn" onclick="handleVerifyDoctorPhoneOtp()" class="control-btn btn-next" style="height:46px; font-size:0.95rem; margin-bottom:0.75rem;">
+            <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+            <span>Verify &amp; Update Number</span>
+          </button>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:var(--dd-slate-600);">
+            <button type="button" onclick="docBackToStep1()" style="background:none; border:none; color:var(--dd-primary); cursor:pointer; font-weight:700; padding:0;">
+              &larr; Change Number
+            </button>
+            <span id="docOtpTimerSpan" style="color:var(--dd-slate-400);">Resend in 60s</span>
+            <button type="button" id="docResendOtpBtn" onclick="handleSendDoctorPhoneOtp(true)" style="background:none; border:none; color:var(--dd-primary); cursor:pointer; font-weight:750; display:none; padding:0;">
+              Resend WhatsApp OTP
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
   <script>
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
     
     // Initial states compiled from Jinja
     let currentStatus = "{{ doc.status }}";
     let totalBooked = {{ total_booked }};
     let totalTokens = {{ doc.total_tokens }};
     let skippedTokensStr = "{{ doc.skipped_tokens }}";
-    
-
-    
-
 
     // ── Referral Modal Logic ──
     let specializationsCache = [];
@@ -1697,7 +752,7 @@
       }
       
       document.getElementById('referralModal').style.display = 'flex';
-      lucide.createIcons(select);
+      if (window.lucide) lucide.createIcons();
     }
     
     function closeReferralModal() {
@@ -1735,8 +790,6 @@
         showToast('Connection error. Please try again.', 'error');
       }
     }
-    
-    // unvConfirmBtn click event is already handled in toast.js
 
     function goHome() {
       window.location.href = '/';
@@ -1781,14 +834,14 @@
         document.body.classList.add('non-overview-active');
       }
       
-      document.querySelectorAll('.admin-sidebar-nav-item').forEach(item => item.classList.remove('active'));
-      
-      if (sidebarItem) {
-        sidebarItem.classList.add('active');
-      } else {
-        const match = document.querySelector(`.admin-sidebar-nav-item[data-panel="${panelName}"]`);
-        if (match) match.classList.add('active');
-      }
+      // Update both desktop sidebar items and mobile tab bar items
+      document.querySelectorAll('.admin-sidebar-nav-item, .dd-tab-item').forEach(item => {
+        if (item.getAttribute('data-panel') === panelName) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
       
       const breadcrumbActive = document.getElementById('currentBreadcrumbActive');
       if (breadcrumbActive) {
@@ -1814,7 +867,6 @@
         history.replaceState(null, null, '#' + panelName);
       }
       
-      // Smooth scroll to top of window
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -1827,6 +879,8 @@
         showAdminPanel('queue');
       } else if (hash === 'skipped') {
         showAdminPanel('skipped');
+      } else if (hash === 'stats') {
+        showAdminPanel('stats');
       } else if (hash === 'overview') {
         showAdminPanel('overview');
       } else if (savedPanel) {
@@ -1838,7 +892,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       handleHashRouting();
-      fetchStatsAndSync(); // Immediate fetch on load
+      fetchStatsAndSync();
     });
 
     // ── Search Filtering ──
@@ -1847,7 +901,6 @@
       const rows = document.querySelectorAll('#queueTableBody tr');
       
       rows.forEach(row => {
-        // Skip if empty state row
         if (row.cells.length === 1 && row.cells[0].colSpan === 6) return;
         
         const text = row.innerText.toLowerCase();
@@ -1865,13 +918,13 @@
         if (!bookings || bookings.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" style="text-align:center; padding:3rem 1rem; color:#94a3b8; font-weight:600;">
-                        <i data-lucide="calendar-x" style="width:32px; height:32px; margin:0 auto 0.5rem; color:#cbd5e1; display:block;"></i>
+                    <td colspan="6" style="text-align:center; padding:3.5rem 1rem; color:var(--dd-slate-400); font-weight:600;">
+                        <i data-lucide="calendar-x" style="width:36px; height:36px; margin:0 auto 0.5rem; color:var(--dd-slate-300); display:block;"></i>
                         No patient bookings found for today.
                     </td>
                 </tr>
             `;
-            lucide.createIcons(tbody);
+            if (window.lucide) lucide.createIcons(tbody);
             return;
         }
 
@@ -1906,28 +959,28 @@
             let actionsHtml = '';
             if (b.status === 'skipped') {
                 actionsHtml = `
-                    <button class="btn btn-primary" onclick="consultSkipped('${b.token}')" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; border-radius: 8px; margin:0; min-width:auto;">
+                    <button class="btn btn-primary" onclick="consultSkipped('${b.token}')" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; border-radius: 8px; margin:0; min-width:auto; height:32px; background:var(--dd-primary); color:#fff; border:none; cursor:pointer;">
                         <i data-lucide="check" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:3px;"></i> Consult
                     </button>
                 `;
             } else if (b.status === 'calling') {
                 actionsHtml = `
-                    <div style="display:flex; gap:0.35rem; justify-content:center;">
-                        <button class="btn btn-outline" onclick="triggerSkipAction()" style="padding: 0.35rem; border-radius: 8px; margin:0; border-color:#f59e0b; color:#d97706; min-width:auto; height:32px; display:flex; align-items:center; justify-content:center;" title="Skip Patient">
+                    <div style="display:flex; gap:0.4rem; justify-content:center;">
+                        <button class="btn btn-outline" onclick="triggerSkipAction()" style="padding: 0.35rem 0.6rem; border-radius: 8px; margin:0; border:1px solid #f59e0b; color:#d97706; background:#fffbeb; min-width:auto; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Skip Patient">
                             <i data-lucide="skip-forward" style="width:14px; height:14px;"></i>
                         </button>
-                        <button class="btn btn-primary" onclick="triggerNextAction()" style="padding: 0.35rem; border-radius: 8px; margin:0; background:#10b981; border:none; min-width:auto; height:32px; display:flex; align-items:center; justify-content:center;" title="Consult & Next">
+                        <button class="btn btn-primary" onclick="triggerNextAction()" style="padding: 0.35rem 0.6rem; border-radius: 8px; margin:0; background:var(--dd-success); border:none; color:#fff; min-width:auto; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Consult & Next">
                             <i data-lucide="check" style="width:14px; height:14px; stroke-width:3px;"></i>
                         </button>
                     </div>
                 `;
             } else if (b.status === 'waiting') {
-                actionsHtml = `<span style="color:#94a3b8; font-size:0.75rem; font-weight:700;">Queue #${b.token}</span>`;
+                actionsHtml = `<span style="color:var(--dd-slate-400); font-size:0.75rem; font-weight:700;">Queue #${b.token}</span>`;
             } else if (b.status === 'referred') {
                 actionsHtml = `
                     <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
-                        <i data-lucide="arrow-up-right" style="color:#4f46e5; width:16px; height:16px;" title="Referred"></i>
-                        <button class="btn btn-outline" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:#cbd5e1; color:#94a3b8; background:#f1f5f9; cursor:not-allowed; min-width:auto; height:24px; display:flex; align-items:center; gap:3px;" title="Already Referred">
+                        <i data-lucide="arrow-up-right" style="color:var(--dd-violet); width:16px; height:16px;" title="Referred"></i>
+                        <button class="btn btn-outline" disabled style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:var(--dd-slate-200); color:var(--dd-slate-400); background:var(--dd-slate-100); cursor:not-allowed; min-width:auto; height:24px; display:flex; align-items:center; gap:3px;" title="Already Referred">
                             <i data-lucide="send" style="width:10px; height:10px;"></i> Refer
                         </button>
                     </div>
@@ -1935,26 +988,26 @@
             } else {
                 actionsHtml = `
                     <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
-                        <i data-lucide="check" style="color:#10b981; width:16px; height:16px;" title="Consulted"></i>
-                        <button class="btn btn-outline" onclick="openReferralModal('${b.token}', '${(b.name || 'Patient').replace(/'/g, "\\'")}')" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:#0284c7; color:#0284c7; min-width:auto; height:24px; display:flex; align-items:center; gap:3px;" title="Refer Patient">
+                        <i data-lucide="check" style="color:var(--dd-success); width:16px; height:16px;" title="Consulted"></i>
+                        <button class="btn btn-outline" onclick="openReferralModal('${b.token}', '${(b.name || 'Patient').replace(/'/g, "\\'")}')" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 6px; margin:0; border-color:var(--dd-primary); color:var(--dd-primary); background:#fff; min-width:auto; height:24px; display:flex; align-items:center; gap:3px; cursor:pointer;" title="Refer Patient">
                             <i data-lucide="send" style="width:10px; height:10px;"></i> Refer
                         </button>
                     </div>
                 `;
             }
 
-            const isRowCalling = b.status === 'calling' ? 'background: rgba(16, 185, 129, 0.04); font-weight: 700;' : '';
-            const isRowSkipped = b.status === 'skipped' ? 'background: rgba(245, 158, 11, 0.02);' : '';
+            const isRowCalling = b.status === 'calling' ? 'background: rgba(16, 185, 129, 0.05); font-weight: 700;' : '';
+            const isRowSkipped = b.status === 'skipped' ? 'background: rgba(245, 158, 11, 0.03);' : '';
 
             return `
                 <tr style="${isRowCalling} ${isRowSkipped}">
                     <td>
-                        <span class="token-badge" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background: ${b.status === 'calling' ? '#10b981' : '#0077b6'}">#${b.token}</span>
+                        <span class="token-badge num-tabular" style="background: ${b.status === 'calling' ? 'var(--dd-success)' : 'var(--dd-primary)'}">#${b.token}</span>
                     </td>
-                    <td style="font-weight: 700; color: #0f172a;">
+                    <td style="font-weight: 750; color: var(--dd-slate-900);">
                         ${b.name}
                         <div class="mobile-info-row">
-                            <span>Age: ${b.age ? b.age : '-'} · ${b.gender ? b.gender : '-'}</span>
+                            <span>Age: ${b.age ? b.age : '-'} &middot; ${b.gender ? b.gender : '-'}</span>
                         </div>
                     </td>
                     <td class="desktop-only">${b.age ? b.age : '-'} y/o</td>
@@ -1972,8 +1025,8 @@
             `;
         }).join('');
 
-        lucide.createIcons(tbody);
-        filterQueueTable(); // Apply active search query filter
+        if (window.lucide) lucide.createIcons(tbody);
+        filterQueueTable();
     }
 
     // ── Update Dashboard Elements ──
@@ -2012,9 +1065,23 @@
         const skippedCount = data.skipped_tokens ? data.skipped_tokens.split(',').filter(t => t.trim()).length : 0;
         document.getElementById('statsSkippedCount').textContent = skippedCount;
 
-        // 2. Sidebar Badges
-        document.getElementById('navBadgeQueue').textContent = data.total_booked;
-        document.getElementById('navBadgeSkipped').textContent = skippedCount;
+        // 2. Sidebar & Mobile Badges
+        const qCount = data.total_booked || 0;
+        const navBadgeQ = document.getElementById('navBadgeQueue');
+        if (navBadgeQ) navBadgeQ.textContent = qCount;
+        const mobBadgeQ = document.getElementById('mobileNavBadgeQueue');
+        if (mobBadgeQ) {
+          mobBadgeQ.textContent = qCount;
+          mobBadgeQ.style.display = qCount > 0 ? 'inline-block' : 'none';
+        }
+
+        const navBadgeS = document.getElementById('navBadgeSkipped');
+        if (navBadgeS) navBadgeS.textContent = skippedCount;
+        const mobBadgeS = document.getElementById('mobileNavBadgeSkipped');
+        if (mobBadgeS) {
+          mobBadgeS.textContent = skippedCount;
+          mobBadgeS.style.display = skippedCount > 0 ? 'inline-block' : 'none';
+        }
 
         // 3. Overview Panel
         document.getElementById('bookedCount').textContent = data.total_booked;
@@ -2038,7 +1105,7 @@
 
         const badge = document.getElementById('statusBadge');
         badge.className = `status-badge ${badgeClass}`;
-        badge.innerHTML = `<i data-lucide="${statusIconName}" style="width:16px;height:16px;"></i><span id="statusText">${statusTextValue}</span>`;
+        badge.innerHTML = `<i id="statusIcon" data-lucide="${statusIconName}"></i><span id="statusText">${statusTextValue}</span>`;
 
         const sessionBtn = document.getElementById('sessionBtn');
         const skipBtn = document.getElementById('skipBtn');
@@ -2076,7 +1143,7 @@
         if (data.empty_slots && data.empty_slots.length > 0) {
             emptySection.style.display = 'block';
             emptyGrid.innerHTML = data.empty_slots.map(t => `
-                <span class="user-badge" style="background: #f1f5f9; color: #475569; padding: 0.4rem 0.8rem; font-size: 0.85rem; border: 1px solid #e2e8f0; border-radius:999px;">#${t}</span>
+                <span class="dd-empty-chip user-badge">#${t}</span>
             `).join('');
         } else {
             emptySection.style.display = 'none';
@@ -2134,12 +1201,11 @@
                 skippedEmptyState.style.display = 'none';
                 
                 skippedGrid.innerHTML = skippedTokens.map(t => {
-                    // Try to find the skipped patient's name from bookings
                     const book = data.bookings.find(b => String(b.token) === String(t));
                     const pName = book ? book.name : "Patient";
                     return `
                         <div class="skipped-card" id="skipped-${t}">
-                            <div class="skipped-token">#${t}</div>
+                            <div class="skipped-token num-tabular">#${t}</div>
                             <div class="skipped-patient-name" title="${pName}">${pName}</div>
                             <button class="btn-consult-skipped" onclick="consultSkipped('${t}')">
                                 Consult Now
@@ -2156,7 +1222,7 @@
             skippedEmptyState.style.display = 'block';
         }
 
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     }
 
     // ── Fetch and Poller Sync ──
@@ -2172,22 +1238,20 @@
         }
     }
 
-    // Live poller interval (5s)
     setInterval(fetchStatsAndSync, 5000);
 
     // ── Doctor Start-Time Push Notification ──
     (function initDoctorStartNotif() {
-      const schedStart = "{{ sched_start }}";   // e.g. "09:00" from Jinja
+      const schedStart = "{{ sched_start }}";
       if (!schedStart || currentStatus !== 'idle') return;
 
       const notifKey = `doc_start_notif_{{ doc.session_date }}`;
 
       function sendDoctorStartNotif() {
-        if (sessionStorage.getItem(notifKey)) return;   // already fired today
+        if (sessionStorage.getItem(notifKey)) return;
 
         const body = `Your consultation was scheduled to start at ${schedStart}. Please start the session now.`;
 
-        // Try Service Worker push first (works on Android PWA / installed)
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: 'SHOW_NOTIFICATION',
@@ -2202,7 +1266,6 @@
           return;
         }
 
-        // Fallback: native Notification API
         if (typeof Notification !== 'undefined') {
           if (Notification.permission === 'granted') {
             new Notification('⏰ Time to Start Consultation', { body, icon: '/static/android-chrome-192x192.png', tag: 'doctor-start-reminder' });
@@ -2219,7 +1282,6 @@
       }
 
       function checkAndNotify() {
-        // Re-read current status — if already started, stop checking
         if (currentStatus !== 'idle') return;
         if (!schedStart) return;
 
@@ -2230,7 +1292,6 @@
         }
       }
 
-      // Check immediately + every 30 s
       checkAndNotify();
       setInterval(checkAndNotify, 30000);
     })();
@@ -2242,7 +1303,7 @@
             const data = await res.json();
             if (data.success) {
                 showToast('Patient skipped successfully.', 'success');
-                await fetchStatsAndSync(); // Sync right away
+                await fetchStatsAndSync();
             } else {
                 showToast(data.msg, 'error');
             }
@@ -2326,7 +1387,7 @@
                 const data = await res.json();
                 if (data.success) {
                     showToast(`Token #${token} recalled and consulted!`, 'success');
-                    await fetchStatsAndSync(); // Sync right away
+                    await fetchStatsAndSync();
                 } else {
                     showToast(data.msg, 'error');
                 }
@@ -2390,7 +1451,7 @@
       loading.style.display = 'flex';
       error.style.display   = 'none';
       content.style.display = 'none';
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
 
       try {
         const res  = await fetch('/doctor/my_stats');
@@ -2422,7 +1483,6 @@
         loading.style.display = 'none';
         content.style.display = 'block';
 
-        // Reset stored original card order caches
         const bookingGrid = document.getElementById('bookingStatsGrid');
         if (bookingGrid) {
           bookingGrid.dataset.originalOrder = "";
@@ -2434,18 +1494,17 @@
           metricsGrid.originalCards = null;
         }
 
-        // Apply current sorting choice
         sortDoctorStats('booking');
         sortDoctorStats('metrics');
 
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
         if (isManual) {
           showToast('Statistics refreshed successfully.', 'success');
         }
       } catch (e) {
         loading.style.display = 'none';
         error.style.display   = 'block';
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
         if (isManual) {
           showToast(e.message || 'Failed to refresh statistics.', 'error');
         }
@@ -2499,85 +1558,8 @@
       grid.innerHTML = '';
       cards.forEach(c => grid.appendChild(c));
     }
-  </script>
 
-  <!-- Modal: Change Doctor Mobile Number with WhatsApp OTP -->
-  <div id="doctorPhoneModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:1rem;">
-    <div style="background:white; border-radius:24px; max-width:440px; width:100%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid #e2e8f0; overflow:hidden;">
-      <!-- Modal Header -->
-      <div style="background:linear-gradient(135deg, #0077b6, #0096c7); padding:0.95rem 1.15rem; color:white; display:flex; justify-content:space-between; align-items:center; gap:0.6rem;">
-        <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex:1;">
-          <div style="background:rgba(255,255,255,0.2); width:32px; height:32px; min-width:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-            <i data-lucide="phone-forwarded" style="width:16px;height:16px;"></i>
-          </div>
-          <div style="min-width:0;">
-            <h4 style="margin:0; font-size:0.96rem; font-weight:700; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Update Mobile Number</h4>
-            <p style="margin:0; font-size:0.72rem; opacity:0.9; color:rgba(255,255,255,0.95);">WhatsApp OTP Verification</p>
-          </div>
-        </div>
-        <button type="button" class="doc-phone-close-btn" onclick="closeDoctorPhoneModal()" aria-label="Close" style="width:30px !important; height:30px !important; min-width:30px !important; max-width:30px !important; border-radius:50% !important; background:rgba(255,255,255,0.2) !important; border:none !important; color:white !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:0 !important; cursor:pointer !important; flex-shrink:0 !important; margin:0 !important;">
-          <i data-lucide="x" style="width:16px !important; height:16px !important; stroke-width:2.5px !important;"></i>
-        </button>
-      </div>
-
-      <!-- Modal Body -->
-      <div style="padding:1.5rem;">
-        <!-- Step 1: Request OTP -->
-        <div id="docPhoneStep1">
-          <p style="margin:0 0 1rem 0; font-size:0.85rem; color:#64748b; line-height:1.4;">
-            Enter your new mobile number. A 6-digit verification code will be sent to your <strong>WhatsApp</strong>.
-          </p>
-
-          <label style="display:block; font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:0.4rem;">
-            New Mobile Number
-          </label>
-          <div style="position:relative; margin-bottom:1rem;">
-            <input type="tel" id="docNewPhoneInput" placeholder="e.g. 9876543210 or +919876543210" style="width:100%; box-sizing:border-box; padding:0.75rem 1rem; border-radius:12px; border:1.5px solid #cbd5e1; font-size:0.95rem; font-weight:600; color:#0f172a; outline:none;" />
-          </div>
-
-          <div id="docPhoneStep1Err" style="color:#e11d48; font-size:0.8rem; font-weight:600; margin-bottom:0.75rem; display:none;"></div>
-
-          <button type="button" id="docSendPhoneOtpBtn" onclick="handleSendDoctorPhoneOtp()" style="width:100%; background:#0077b6; color:white; border:none; padding:0.75rem; border-radius:12px; font-weight:700; font-size:0.92rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
-            <i data-lucide="send" style="width:16px;height:16px;"></i>
-            <span>Send WhatsApp OTP</span>
-          </button>
-        </div>
-
-        <!-- Step 2: Verify OTP -->
-        <div id="docPhoneStep2" style="display:none;">
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:0.75rem 1rem; margin-bottom:1.25rem;">
-            <p style="margin:0; font-size:0.82rem; color:#15803d; line-height:1.4;">
-              OTP sent to WhatsApp: <strong id="docTargetPhoneDisplay"></strong>
-            </p>
-          </div>
-
-          <label style="display:block; font-size:0.8rem; font-weight:600; color:#334155; margin-bottom:0.4rem;">
-            Enter 6-Digit WhatsApp Code
-          </label>
-          <input type="text" id="docPhoneOtpInput" maxlength="6" placeholder="123456" style="width:100%; box-sizing:border-box; padding:0.75rem 1rem; border-radius:12px; border:1.5px solid #cbd5e1; font-size:1.3rem; font-weight:800; letter-spacing:6px; text-align:center; color:#0f172a; outline:none; margin-bottom:1rem;" />
-
-          <div id="docPhoneStep2Err" style="color:#e11d48; font-size:0.8rem; font-weight:600; margin-bottom:0.75rem; display:none;"></div>
-
-          <button type="button" id="docVerifyPhoneOtpBtn" onclick="handleVerifyDoctorPhoneOtp()" style="width:100%; background:#16a34a; color:white; border:none; padding:0.75rem; border-radius:12px; font-weight:700; font-size:0.92rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-bottom:0.75rem;">
-            <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
-            <span>Verify & Update Number</span>
-          </button>
-
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; color:#64748b;">
-            <button type="button" onclick="docBackToStep1()" style="background:none; border:none; color:#0284c7; cursor:pointer; font-weight:600; padding:0;">
-              ← Change Number
-            </button>
-            <span id="docOtpTimerSpan" style="color:#94a3b8;">Resend in 60s</span>
-            <button type="button" id="docResendOtpBtn" onclick="handleSendDoctorPhoneOtp(true)" style="background:none; border:none; color:#0077b6; cursor:pointer; font-weight:700; display:none; padding:0;">
-              Resend WhatsApp OTP
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
+    // ── Doctor Phone OTP Verification Logic ──
     let docPhoneCooldownInterval = null;
 
     function openDoctorPhoneModal() {
@@ -2636,7 +1618,6 @@
         document.getElementById('docPhoneOtpInput').value = '';
         document.getElementById('docPhoneStep2Err').style.display = 'none';
 
-        // 60s cooldown timer
         let remaining = 60;
         const timerSpan = document.getElementById('docOtpTimerSpan');
         const resendBtn = document.getElementById('docResendOtpBtn');
@@ -2695,7 +1676,7 @@
         const span = document.getElementById('docCurrentPhoneSpan');
         if (span) span.textContent = data.new_phone;
         closeDoctorPhoneModal();
-        alert('Mobile number updated and verified successfully via WhatsApp!');
+        showToast('Mobile number updated and verified successfully via WhatsApp!', 'success');
       } catch (err) {
         errDiv.textContent = 'Network error during verification.';
         errDiv.style.display = 'block';
@@ -2703,6 +1684,5 @@
       }
     }
   </script>
-
 </body>
 </html>
