@@ -876,7 +876,7 @@ def get_whatsapp_user_language(sender_phone: Optional[str]) -> str:
         if pref and pref.language in ('en', 'ml'):
             return pref.language
     except Exception as e:
-        logger.warning(f"Error querying WhatsAppUserPreference: {e}")
+        app.logger.warning(f"Error querying WhatsAppUserPreference: {e}")
     return 'en'
 
 
@@ -906,7 +906,7 @@ def set_whatsapp_user_language(sender_phone: Optional[str], lang: str) -> str:
         return norm_lang
     except Exception as e:
         db.session.rollback()
-        logger.warning(f"Error saving WhatsAppUserPreference: {e}")
+        app.logger.warning(f"Error saving WhatsAppUserPreference: {e}")
         return norm_lang
 
 

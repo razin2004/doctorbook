@@ -778,3 +778,4 @@ def format_patient_details_prompt(
         f"*'Rahul Sharma, 28, Male, SAME'*\n\n"
         "_Reply CANCEL to exit._"
     )
+
