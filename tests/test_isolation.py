@@ -99,7 +99,8 @@ def initialize_test_database(app, db):
             try:
                 from app import (
                     AdminOTPChallenge, BookingSyncOutbox, DailyTokenAllocation,
-                    WhatsAppMessage, WhatsAppConversation, WhatsAppWebhookEvent
+                    WhatsAppMessage, WhatsAppConversation, WhatsAppWebhookEvent,
+                    WhatsAppUserPreference
                 )
                 AdminOTPChallenge.query.delete()
                 BookingSyncOutbox.query.delete()
@@ -107,6 +108,10 @@ def initialize_test_database(app, db):
                 WhatsAppMessage.query.delete()
                 WhatsAppConversation.query.delete()
                 WhatsAppWebhookEvent.query.delete()
+                try:
+                    WhatsAppUserPreference.query.delete()
+                except Exception:
+                    pass
             except Exception:
                 pass
             db.session.commit()

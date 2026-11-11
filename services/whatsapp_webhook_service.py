@@ -114,78 +114,44 @@ def is_greeting_message(text: str) -> bool:
     return bool(GREETING_PATTERN.match(clean))
 
 
-def build_main_menu_interactive_payload() -> Dict[str, Any]:
+def build_main_menu_interactive_payload(lang: str = "en") -> Dict[str, Any]:
     """
-    Returns the interactive list payload for PrimeCare Clinic Main Menu popup.
+    Returns the interactive list payload for PrimeCare Clinic Main Menu popup in English or Malayalam.
     """
-    return {
-        "header_text": "PrimeCare Clinic",
-        "body_text": "Hello! Welcome to PrimeCare Clinic WhatsApp Portal. How can we help you today? Please choose an option below:",
-        "button_text": "Main Menu",
-        "footer_text": "PrimeCare Clinic • Koorachundu",
-        "sections": [
-            {
-                "title": "Appointments",
-                "rows": [
-                    {
-                        "id": "menu_book",
-                        "title": "📅 Book Appointment",
-                        "description": "Consult with a specialist doctor"
-                    },
-                    {
-                        "id": "menu_my_bookings",
-                        "title": "📋 My Appointments",
-                        "description": "View your active tokens & status"
-                    },
-                    {
-                        "id": "menu_cancel",
-                        "title": "❌ Cancel Booking",
-                        "description": "Cancel an existing appointment"
-                    }
-                ]
-            },
-            {
-                "title": "Clinic Info",
-                "rows": [
-                    {
-                        "id": "menu_doctors",
-                        "title": "👨‍⚕️ Doctors & Timings",
-                        "description": "View doctor schedules & roster"
-                    },
-                    {
-                        "id": "menu_location",
-                        "title": "📍 Location & Contact",
-                        "description": "Address, directions & phone"
-                    }
-                ]
-            }
-        ]
-    }
+    from services.whatsapp_localization import build_main_menu_interactive_payload as _build_menu
+    return _build_menu(lang=lang)
 
 
-def format_main_menu_text() -> str:
+def format_main_menu_text(lang: str = "en") -> str:
     """
-    Plain text fallback for Main Menu when interactive messages are not supported.
+    Plain text fallback for Main Menu in English or Malayalam.
     """
-    return (
-        "🏥 *Welcome to PrimeCare Clinic*\n\n"
-        "How can we help you today? Please reply with an option number or keyword:\n\n"
-        "*1.* 📅 *Book Appointment* (reply *1* or *Book*)\n"
-        "*2.* 📋 *My Appointments* (reply *2* or *My Appointments*)\n"
-        "*3.* ❌ *Cancel Booking* (reply *3* or *Cancel*)\n"
-        "*4.* 👨‍⚕️ *Doctors & Timings* (reply *4* or *Doctors*)\n"
-        "*5.* 📍 *Location & Contact* (reply *5* or *Location*)\n\n"
-        "_You can also ask any question directly, such as 'Which doctor is available today?'_"
-    )
+    from services.whatsapp_localization import format_main_menu_text as _format_menu
+    return _format_menu(lang=lang)
 
 
-def handle_menu_doctors() -> str:
+def handle_menu_doctors(lang: str = "en") -> str:
     """Returns formatted roster of all active doctors and duty hours."""
     from services.whatsapp_booking_flow import get_active_doctors_list, format_doctor_schedule_summary
     from app import DoctorSchedule
     doctors = get_active_doctors_list()
     if not doctors:
+        if lang == "ml":
+            return "പ്രൈംകെയർ ക്ലിനിക്ക് ഡോക്ടർമാരുടെ വിവരങ്ങൾ ലഭ്യമാക്കുകയാണ്. ദയവായി +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
         return "PrimeCare Clinic doctors directory is currently being updated. Please call +91 85920 31725."
+
+    if lang == "ml":
+        lines = ["👨‍⚕️ *പ്രൈംകെയർ ക്ലിനിക്ക് — ഡോക്ടർമാരുടെ സമയക്രമം*\n"]
+        for d in doctors:
+            schedules = DoctorSchedule.query.filter_by(doctor_id=d.id, is_available=True).all()
+            sched_text = format_doctor_schedule_summary(schedules)
+            lines.append(f"• *{d.name}* — _{d.specialization}_")
+            for sl in sched_text.split("\n"):
+                lines.append(f"  {sl}")
+            lines.append("")
+        lines.append("അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ *Book* അല്ലെങ്കിൽ *ബുക്കിംഗ്* എന്ന് മറുപടി നൽകുക.")
+        return "\n".join(lines).strip()
+
     lines = ["👨‍⚕️ *PrimeCare Clinic — Doctors & Timings*\n"]
     for d in doctors:
         schedules = DoctorSchedule.query.filter_by(doctor_id=d.id, is_available=True).all()
@@ -198,17 +164,10 @@ def handle_menu_doctors() -> str:
     return "\n".join(lines).strip()
 
 
-def handle_menu_location() -> str:
-    """Returns clinic location, Google maps URL, phone, and hours."""
-    return (
-        "📍 *PrimeCare Clinic — Location & Contact*\n\n"
-        "🏥 *Address:* Koorachundu, Kozhikode, Kerala\n"
-        "🗺️ *Google Maps:* https://www.google.com/maps/place/7J3QGRQW%2B96J/@11.5384625,75.8429407,17z\n"
-        "📞 *Phone / WhatsApp:* +91 85920 31725\n"
-        "⏰ *OP Hours:* Monday to Saturday (09:00 AM – 05:00 PM)\n"
-        "🚨 *Emergency:* 108 / 112\n\n"
-        "To book an appointment, reply *Book*."
-    )
+def handle_menu_location(lang: str = "en") -> str:
+    """Returns clinic location, Google maps URL, phone, and hours in English or Malayalam."""
+    from services.whatsapp_localization import format_location_text
+    return format_location_text(lang=lang)
 
 
 def dispatch_inbound_message_reply(
@@ -490,6 +449,121 @@ def dispatch_inbound_message_reply(
                 }
 
         # -------------------------------------------------------------
+        # Branch 3-Lang: Patient & Guest Bilingual Language Selection
+        # -------------------------------------------------------------
+        user_lang = "en"
+        if sender_role in ('guest', 'patient'):
+            from app import get_whatsapp_user_language, set_whatsapp_user_language
+            from services.whatsapp_localization import (
+                is_language_command,
+                parse_language_choice,
+                build_language_selection_payload,
+                format_language_selection_text,
+                format_language_changed_confirmation
+            )
+            user_lang = get_whatsapp_user_language(sender_phone)
+            clean_inbound = (inbound_body or "").strip()
+
+            # A. Explicit Language Command Trigger
+            if is_language_command(clean_inbound) or clean_inbound.lower() == "menu_language":
+                lang_payload = build_language_selection_payload()
+                lang_fallback = format_language_selection_text()
+                dispatch_res = active_client.send_interactive_list_message(
+                    recipient_phone=sender_phone,
+                    body_text=lang_payload.get("body_text", lang_fallback),
+                    button_text=lang_payload.get("button_text", "Select Language / ഭാഷ"),
+                    sections=lang_payload.get("sections"),
+                    header_text=lang_payload.get("header_text"),
+                    footer_text=lang_payload.get("footer_text"),
+                    bsuid=scoped_user_id,
+                    fallback_text=lang_fallback
+                )
+                out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+                out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+                out_msg_type = "interactive" if (dispatch_res.get("success") and dispatch_res.get("status") == "accepted") else "text"
+
+                outbound_msg = WhatsAppMessage(
+                    conversation_id=conversation.id,
+                    wamid=out_wamid,
+                    direction="outbound",
+                    message_type=out_msg_type,
+                    content=lang_fallback,
+                    status=out_status
+                )
+                db.session.add(outbound_msg)
+
+                if webhook_event:
+                    webhook_event.status = "processed"
+                    webhook_event.processed_at = datetime.utcnow()
+                db.session.commit()
+
+                return {
+                    "conversation_uuid": conversation.conversation_uuid,
+                    "sender_role": sender_role,
+                    "reply": lang_fallback,
+                    "language_prompted": True,
+                    "scoped_user_id": scoped_user_id
+                }
+
+            # B. Language Choice Reply Selection
+            from app import WhatsAppBookingSession
+            active_session_check = WhatsAppBookingSession.query.filter_by(
+                conversation_id=conversation.id,
+                status='in_progress'
+            ).first()
+
+            explicit_lang_tokens = {'lang_en', 'lang_ml', 'english', 'malayalam', 'മലയാളം', 'ഇംഗ്ലീഷ്'}
+            is_explicit = clean_inbound.lower() in explicit_lang_tokens
+            is_numeric_switch = clean_inbound in ('1', '2') and not active_session_check
+
+            if is_explicit or is_numeric_switch:
+                chosen_lang = parse_language_choice(clean_inbound)
+                if chosen_lang:
+                    user_lang = set_whatsapp_user_language(sender_phone, chosen_lang)
+                    confirm_msg = format_language_changed_confirmation(user_lang)
+
+                    interactive_menu = build_main_menu_interactive_payload(lang=user_lang)
+                    fallback_menu = format_main_menu_text(lang=user_lang)
+                    full_reply = f"{confirm_msg}\n\n{fallback_menu}"
+
+                    dispatch_res = active_client.send_interactive_list_message(
+                        recipient_phone=sender_phone,
+                        body_text=f"{confirm_msg}\n\n{interactive_menu.get('body_text', '')}",
+                        button_text=interactive_menu.get("button_text", "Main Menu"),
+                        sections=interactive_menu.get("sections"),
+                        header_text=interactive_menu.get("header_text"),
+                        footer_text=interactive_menu.get("footer_text"),
+                        bsuid=scoped_user_id,
+                        fallback_text=full_reply
+                    )
+                    out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+                    out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+                    out_msg_type = "interactive" if (dispatch_res.get("success") and dispatch_res.get("status") == "accepted") else "text"
+
+                    outbound_msg = WhatsAppMessage(
+                        conversation_id=conversation.id,
+                        wamid=out_wamid,
+                        direction="outbound",
+                        message_type=out_msg_type,
+                        content=full_reply,
+                        status=out_status
+                    )
+                    db.session.add(outbound_msg)
+
+                    if webhook_event:
+                        webhook_event.status = "processed"
+                        webhook_event.processed_at = datetime.utcnow()
+                    db.session.commit()
+
+                    return {
+                        "conversation_uuid": conversation.conversation_uuid,
+                        "sender_role": sender_role,
+                        "reply": full_reply,
+                        "language_set": user_lang,
+                        "scoped_user_id": scoped_user_id
+                    }
+
+        # -------------------------------------------------------------
         # Branch 3A-bis: WhatsApp Appointment Management (Phase 4B)
         # Runs BEFORE booking flow so cancel/reschedule intents are
         # intercepted before booking intent detection.
@@ -501,7 +575,8 @@ def dispatch_inbound_message_reply(
             sender_phone=sender_phone,
             sender_role=sender_role,
             user_id=user_id,
-            display_name=display_name
+            display_name=display_name,
+            user_lang=user_lang
         )
 
         if mgmt_result.get("handled"):
@@ -559,7 +634,8 @@ def dispatch_inbound_message_reply(
             sender_role=sender_role,
             user_id=user_id,
             display_name=display_name,
-            groq_client=groq_client
+            groq_client=groq_client,
+            user_lang=user_lang
         )
 
         if booking_flow_result.get("handled"):
@@ -617,8 +693,8 @@ def dispatch_inbound_message_reply(
         clean_inbound_lower = (inbound_body or "").strip().lower()
 
         # Menu Action: Doctors & Timings
-        if clean_inbound_lower in ("menu_doctors", "4", "doctors", "doctor list", "doctor timings", "timings"):
-            doc_reply = handle_menu_doctors()
+        if clean_inbound_lower in ("menu_doctors", "4", "doctors", "doctor list", "doctor timings", "timings", "ഡോക്ടർമാർ", "ഡോക്ടർമാരുടെ സമയം"):
+            doc_reply = handle_menu_doctors(lang=user_lang)
             dispatch_res = active_client.send_text_message(
                 recipient_phone=sender_phone,
                 bsuid=scoped_user_id,
@@ -651,8 +727,8 @@ def dispatch_inbound_message_reply(
             }
 
         # Menu Action: Location & Contact
-        if clean_inbound_lower in ("menu_location", "5", "location", "address", "directions", "map", "clinic location"):
-            loc_reply = handle_menu_location()
+        if clean_inbound_lower in ("menu_location", "5", "location", "address", "directions", "map", "clinic location", "വിലാസം", "ക്ലിനിക്ക് വിലാസം"):
+            loc_reply = handle_menu_location(lang=user_lang)
             dispatch_res = active_client.send_text_message(
                 recipient_phone=sender_phone,
                 bsuid=scoped_user_id,
@@ -697,9 +773,9 @@ def dispatch_inbound_message_reply(
                 fallback_text = format_doctor_menu_text(display_name)
                 btn_label = "Doctor Menu"
             else:
-                interactive_menu = build_main_menu_interactive_payload()
-                fallback_text = format_main_menu_text()
-                btn_label = "Main Menu"
+                interactive_menu = build_main_menu_interactive_payload(lang=user_lang)
+                fallback_text = format_main_menu_text(lang=user_lang)
+                btn_label = "Main Menu" if user_lang == "en" else "പ്രധാന മെനു"
 
             dispatch_res = active_client.send_interactive_list_message(
                 recipient_phone=sender_phone,
@@ -817,7 +893,8 @@ def dispatch_inbound_message_reply(
             clinic_context=live_clinic_context,
             conversation_history=conversation_history,
             sender_display_name=display_name,
-            client=groq_client
+            client=groq_client,
+            language=user_lang
         )
 
         dispatch_res = active_client.send_text_message(

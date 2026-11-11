@@ -31,7 +31,8 @@ LOOKUP_INTENT_PATTERNS = [
     re.compile(r'\b(do\s+i\s+have\s+an?\s+(upcoming\s+)?appointment|appointment\s+status|my\s+booking|show\s+my\s+booking)s?\b', re.IGNORECASE),
     re.compile(r'\b(what\s+is\s+my\s+appointment|check\s+my\s+booking|view\s+my\s+booking|my\s+appointments?)s?\b', re.IGNORECASE),
     re.compile(r'^(my\s+appointments?|appointments?|bookings?|show\s+bookings?|menu_my_bookings|2)$', re.IGNORECASE),
-    re.compile(r'\b(upcoming\s+appointment|list\s+my\s+appointment|see\s+my\s+appointment)s?\b', re.IGNORECASE),
+    re.compile(r'\b(upcoming\s+appointment|list\s+my\s+appointment|see\s+my\s+appointment)\b', re.IGNORECASE),
+    re.compile(r'(?:^|\s|[.,!?])(എന്റെ\s*ബുക്കിംഗ്|എന്റെ\s*അപ്പോയിന്റ്മെന്റ്|ടോക്കൺ\s*വിവരങ്ങൾ|ബുക്കിംഗുകൾ)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
 
 CANCEL_INTENT_PATTERNS = [
@@ -41,6 +42,7 @@ CANCEL_INTENT_PATTERNS = [
     re.compile(r'\b(cancel|delete|remove)\s*(booking|appointment|token)?\s*#?\d+\b', re.IGNORECASE),
     re.compile(r'\b(cancelling|canceling|cancellation|deleting)\s*(#\d+|booking|appointment)?\b', re.IGNORECASE),
     re.compile(r'^(cancel\s+appointment|cancel\s+booking|delete\s+booking|cancel\s+my\s+appointment|menu_cancel|3)$', re.IGNORECASE),
+    re.compile(r'(?:^|\s|[.,!?])(റദ്ദാക്കുക|റദ്ദാക്കണം|ക്യാൻസൽ|ഒഴിവാക്കുക|ബുക്കിംഗ്\s*റദ്ദാക്കുക)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
 
 RESCHEDULE_INTENT_PATTERNS = [
@@ -48,10 +50,11 @@ RESCHEDULE_INTENT_PATTERNS = [
     re.compile(r'\b(i\s+want\s+to\s+(reschedule|re-schedule)|need\s+to\s+(reschedule|re-schedule)|change\s+(my\s+)?appointment\s+date)\b', re.IGNORECASE),
     re.compile(r'^(reschedule|re-schedule|reschedule\s+appointment|reschedule\s+booking)$', re.IGNORECASE),
     re.compile(r'\b(move\s+my\s+appointment|change\s+my\s+booking\s+date)\b', re.IGNORECASE),
+    re.compile(r'(?:^|\s|[.,!?])(തീയതി\s*മാറ്റുക|മാറ്റിവെക്കുക|റീഷെഡ്യൂൾ)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
 
-ABORT_WORDS = {'cancel', 'abort', 'stop', 'exit', 'quit', 'back', 'no', 'nevermind', 'never mind'}
-CONFIRM_WORDS = {'confirm', 'yes', 'ok', 'okay', 'proceed', 'yep', 'yeah', 'y', 'sure'}
+ABORT_WORDS = {'cancel', 'abort', 'stop', 'exit', 'quit', 'back', 'no', 'nevermind', 'never mind', 'വേണ്ട', 'റദ്ദാക്കുക', 'നോ', 'venda'}
+CONFIRM_WORDS = {'confirm', 'yes', 'ok', 'okay', 'proceed', 'yep', 'yeah', 'y', 'sure', 'ശരി', 'അതെ', 'യെസ്', 'തീർച്ചയായും', 'athe', 'sari'}
 
 
 def is_cancel_intent(message_text: str) -> bool:
@@ -146,7 +149,8 @@ def handle_whatsapp_appointment_mgmt(
     sender_phone: str | None,
     sender_role: str,
     user_id: int | None = None,
-    display_name: str | None = None
+    display_name: str | None = None,
+    user_lang: str = "en"
 ) -> dict:
     """
     Main handler for WhatsApp appointment management (lookup, cancel, reschedule).
@@ -163,6 +167,13 @@ def handle_whatsapp_appointment_mgmt(
         get_patient_bookings_service, check_availability_service
     )
     from services.whatsapp_booking_flow import parse_booking_date, get_clinic_portal_url
+
+    if user_lang == "en" and sender_phone and sender_role in ('guest', 'patient'):
+        try:
+            from app import get_whatsapp_user_language
+            user_lang = get_whatsapp_user_language(sender_phone)
+        except Exception:
+            user_lang = "en"
 
     text = (message_body or "").strip()
     text_lower = text.lower()

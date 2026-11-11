@@ -7,6 +7,7 @@ if __name__ == '__main__' and 'app' not in sys.modules:
 
 from flask import Flask, render_template, request, redirect, session, jsonify, url_for, send_from_directory, make_response
 from datetime import datetime, timedelta, timezone
+from typing import Optional, List, Dict, Any, Tuple
 import pytz
 import os
 import re
@@ -836,6 +837,77 @@ class WhatsAppBookingSession(db.Model):
     def expire(self) -> None:
         self.status = 'expired'
         self.updated_at = datetime.utcnow()
+
+
+class WhatsAppUserPreference(db.Model):
+    """
+    Stores persistent preferences for a WhatsApp user (e.g. language).
+    Keyed by normalized phone number (E.164) or sender identifier.
+    Guarantees persistence across conversation resets, dyno restarts, and sessions.
+    """
+    __tablename__ = 'whatsapp_user_preference'
+
+    id = db.Column(db.Integer, primary_key=True)
+    sender_phone = db.Column(db.String(30), unique=True, nullable=False, index=True)
+    language = db.Column(db.String(10), default='en', nullable=False)  # 'en' or 'ml'
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+
+    VALID_LANGUAGES = {'en', 'ml'}
+
+    @validates('language')
+    def validate_language(self, key, value):
+        val = str(value or 'en').strip().lower()
+        if val not in self.VALID_LANGUAGES:
+            return 'en'
+        return val
+
+
+def get_whatsapp_user_language(sender_phone: Optional[str]) -> str:
+    """
+    Retrieves the persisted language preference for a WhatsApp user ('en' or 'ml').
+    Defaults to 'en' (English).
+    """
+    if not sender_phone:
+        return 'en'
+    try:
+        norm_phone = normalize_phone_number(sender_phone) or sender_phone.strip()
+        pref = WhatsAppUserPreference.query.filter_by(sender_phone=norm_phone).first()
+        if pref and pref.language in ('en', 'ml'):
+            return pref.language
+    except Exception as e:
+        logger.warning(f"Error querying WhatsAppUserPreference: {e}")
+    return 'en'
+
+
+def set_whatsapp_user_language(sender_phone: Optional[str], lang: str) -> str:
+    """
+    Persists the language preference ('en' or 'ml') for a WhatsApp user.
+    """
+    if not sender_phone:
+        return 'en'
+    norm_lang = 'ml' if str(lang).strip().lower() in ('ml', 'malayalam', '2') else 'en'
+    try:
+        norm_phone = normalize_phone_number(sender_phone) or sender_phone.strip()
+        pref = WhatsAppUserPreference.query.filter_by(sender_phone=norm_phone).first()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        if pref:
+            pref.language = norm_lang
+            pref.updated_at = now
+        else:
+            pref = WhatsAppUserPreference(
+                sender_phone=norm_phone,
+                language=norm_lang,
+                created_at=now,
+                updated_at=now
+            )
+            db.session.add(pref)
+        db.session.commit()
+        return norm_lang
+    except Exception as e:
+        db.session.rollback()
+        logger.warning(f"Error saving WhatsAppUserPreference: {e}")
+        return norm_lang
 
 
 # Database-level triggers ensuring permanent immutability of retired outbox events

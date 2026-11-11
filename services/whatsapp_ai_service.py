@@ -213,7 +213,8 @@ def build_sanitized_whatsapp_clinic_context(role: str = "guest") -> str:
 def get_system_prompt_for_role(
     role: str,
     clinic_context: Optional[str] = None,
-    sender_display_name: Optional[str] = None
+    sender_display_name: Optional[str] = None,
+    language: str = "en"
 ) -> str:
     """
     Generates tailored, security-hardened system instructions for the given role.
@@ -241,6 +242,15 @@ def get_system_prompt_for_role(
         "• Support natural Malayalam script and Manglish (Malayalam written in English letters).\n"
         "• Always reply in the same language or style the user used (clear English, polite Malayalam, or simple Manglish).\n\n"
     )
+
+    if valid_role in ("guest", "patient") and language == "ml":
+        base_guidelines += (
+            "PREFERRED LANGUAGE: MALAYALAM (മലയാളം)\n"
+            "• The patient has chosen Malayalam as their preferred language.\n"
+            "• You MUST formulate your entire response in clear, polite, natural Malayalam script (മലയാളം ലിപിയിൽ).\n"
+            "• Do not use English unless the patient explicitly requests English in their query.\n"
+            "• Keep common healthcare terms familiar in Kerala (e.g. ഡോക്ടർ, അപ്പോയിന്റ്മെന്റ്, ടോക്കൺ, ഒ.പി).\n\n"
+        )
 
     if valid_role in ("guest", "patient"):
         role_instructions = (
@@ -368,7 +378,8 @@ def generate_whatsapp_ai_response(
     conversation_history: Optional[List[Dict[str, Any]]] = None,
     clinic_context: Optional[str] = None,
     sender_display_name: Optional[str] = None,
-    client: Optional[GroqClient] = None
+    client: Optional[GroqClient] = None,
+    language: str = "en"
 ) -> str:
     """
     Generates a WhatsApp AI response using the independent Groq conversational engine.
@@ -380,6 +391,7 @@ def generate_whatsapp_ai_response(
         clinic_context: Optional raw or formatted clinic context string.
         sender_display_name: Optional display name (e.g. "Dr. Sarah", "Rahim").
         client: Optional GroqClient instance (for dependency injection or testing).
+        language: 'en' (English) or 'ml' (Malayalam).
 
     Returns:
         String response ready for WhatsApp dispatch.
@@ -390,6 +402,11 @@ def generate_whatsapp_ai_response(
     # 2. Message validation
     clean_user_message = str(user_message).strip() if user_message else ""
     if not clean_user_message:
+        if language == "ml":
+            return (
+                "നമസ്കാരം! പ്രൈംകെയർ ക്ലിനിക്ക് വാട്ട്‌സ്ആപ്പ് അസിസ്റ്റന്റിലേക്ക് സ്വാഗതം. "
+                "ഞങ്ങളുടെ ഡോക്ടർമാരെക്കുറിച്ചോ ക്ലിനിക്ക് സമയത്തെക്കുറിച്ചോ അറിയാൻ ഞങ്ങൾ എങ്ങനെ സഹായിക്കണം?"
+            )
         return (
             "Hello! Welcome to PrimeCare Clinic WhatsApp Assistant. "
             "How can we help you with our doctors, departments, or clinic timings today?"
@@ -404,7 +421,8 @@ def generate_whatsapp_ai_response(
     system_prompt = get_system_prompt_for_role(
         role=valid_role,
         clinic_context=clinic_context,
-        sender_display_name=sender_display_name
+        sender_display_name=sender_display_name,
+        language=language
     )
 
     # 5. Format and bound conversation history

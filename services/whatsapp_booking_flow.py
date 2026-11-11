@@ -42,6 +42,7 @@ BOOKING_INTENT_PATTERNS = [
     re.compile(r'\b(schedule\s+(an\s+)?appointment|take\s+(an\s+)?appointment|doctor\s+appointment|appointment\s+booking)\b', re.IGNORECASE),
     re.compile(r'\b(book\s+(with\s+)?(dr|doctor))\b', re.IGNORECASE),
     re.compile(r'^(book|book appointment|new booking|new appointment|book doctor|menu_book|1)$', re.IGNORECASE),
+    re.compile(r'(?:^|\s|[.,!?])(ബുക്കിംഗ്|ബുക്ക്|അപ്പോയിന്റ്മെന്റ്|ഡോക്ടറെ\s+കാണണം|സമയം\s+വേണം)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
 
 EXCLUSION_PATTERNS = [
@@ -52,8 +53,14 @@ EXCLUSION_PATTERNS = [
     re.compile(r'\b(my\s+booking|show\s+my\s+booking|upcoming\s+appointment|list\s+my\s+appointment)s?\b', re.IGNORECASE),
 ]
 
-CANCEL_WORDS = {'cancel', 'abort', 'stop', 'exit', 'quit', 'cancel booking', 'cancel appointment', 'back', 'menu', 'reset', '0'}
-CONFIRM_WORDS = {'confirm', 'yes', 'ok', 'okay', 'proceed', 'yep', 'yeah', 'confirm booking', '1'}
+CANCEL_WORDS = {
+    'cancel', 'abort', 'stop', 'exit', 'quit', 'cancel booking', 'cancel appointment',
+    'back', 'menu', 'reset', '0', 'വേണ്ട', 'റദ്ദാക്കുക', 'നോ', 'ക്യാൻസൽ', 'venda', 'raddakkuka'
+}
+CONFIRM_WORDS = {
+    'confirm', 'yes', 'ok', 'okay', 'proceed', 'yep', 'yeah', 'confirm booking', '1',
+    'ശരി', 'അതെ', 'യെസ്', 'തീർച്ചയായും', 'ഉറപ്പിക്കുക', 'ബുക്ക് ചെയ്യുക', 'sari', 'athe'
+}
 
 
 def get_clinic_portal_url(endpoint: str = "") -> str:
@@ -617,25 +624,25 @@ def parse_booking_date(date_input: str) -> Optional[str]:
     ist = pytz.timezone('Asia/Kolkata')
     today = datetime.now(ist).date()
 
-    if clean in ('today',):
+    if clean in ('today', 'ഇന്ന്', 'innu'):
         return today.strftime('%Y-%m-%d')
-    if clean in ('tomorrow', 'tmrw'):
+    if clean in ('tomorrow', 'tmrw', 'നാളെ', 'naale'):
         return (today + timedelta(days=1)).strftime('%Y-%m-%d')
-    if clean in ('day after tomorrow', 'day after tmrw'):
+    if clean in ('day after tomorrow', 'day after tmrw', 'മറ്റന്നാൾ', 'mattannaal'):
         return (today + timedelta(days=2)).strftime('%Y-%m-%d')
 
-    # Weekday parsing
+    # Weekday parsing (English & Malayalam)
     weekdays = {
-        'monday': 0, 'mon': 0,
-        'tuesday': 1, 'tue': 1, 'tues': 1,
-        'wednesday': 2, 'wed': 2,
-        'thursday': 3, 'thu': 3, 'thur': 3, 'thurs': 3,
-        'friday': 4, 'fri': 4,
-        'saturday': 5, 'sat': 5,
-        'sunday': 6, 'sun': 6
+        'monday': 0, 'mon': 0, 'തിങ്കൾ': 0, 'തിങ്കളാഴ്ച': 0,
+        'tuesday': 1, 'tue': 1, 'tues': 1, 'ചൊവ്വ': 1, 'ചൊവ്വാഴ്ച': 1,
+        'wednesday': 2, 'wed': 2, 'ബുധൻ': 2, 'ബുധനാഴ്ച': 2,
+        'thursday': 3, 'thu': 3, 'thur': 3, 'thurs': 3, 'വ്യാഴം': 3, 'വ്യാഴാഴ്ച': 3,
+        'friday': 4, 'fri': 4, 'വെള്ളി': 4, 'വെള്ളിയാഴ്ച': 4,
+        'saturday': 5, 'sat': 5, 'ശനി': 5, 'ശനിയാഴ്ച': 5,
+        'sunday': 6, 'sun': 6, 'ഞായർ': 6, 'ഞായറാഴ്ച': 6
     }
     for day_name, day_num in weekdays.items():
-        if re.search(rf'\b{day_name}\b', clean):
+        if day_name in clean:
             days_ahead = (day_num - today.weekday()) % 7
             if days_ahead == 0:
                 days_ahead = 7
@@ -678,8 +685,11 @@ def parse_patient_and_phone(
 ) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
     """
     Extracts (patient_name, age, gender, contact_phone) from user input.
+    Guarantees that all extracted names and genders are strictly converted
+    into pure English for database storage.
     Supports:
       - 'Rahul Sharma, 28, Male, SAME' -> uses sender_phone
+      - 'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, SAME' -> transliterates name to 'Rahul Sharma', gender to 'Male'
       - 'Rahul Sharma, 28, Male' -> defaults to sender_phone
       - 'Rahul Sharma, 28, Male, 9876543210' -> parses explicit phone
       - Registered patient defaults name to default_name
@@ -687,11 +697,13 @@ def parse_patient_and_phone(
     if not input_text:
         return None, None, None, None
 
+    from services.whatsapp_localization import normalize_gender_to_english, transliterate_malayalam_name_to_english
+
     text = input_text.strip()
 
     # 1. Phone extraction
     phone = None
-    if re.search(r'\b(same|this\s+number|my\s+number|same\s+number|whatsapp)\b', text, re.IGNORECASE):
+    if re.search(r'\b(same|this\s+number|my\s+number|same\s+number|whatsapp|ഇതേ\s*നമ്പർ|ഇതേ\s*ഫോൺ|ഇതേ\s*വാട്ട്‌സ്ആപ്പ്)\b', text, re.IGNORECASE):
         phone = normalize_phone_number(sender_phone) if sender_phone else None
     else:
         m = re.search(r'(\+?\d{1,3}[-.\s]?)?(\d{10})\b', text)
@@ -704,36 +716,47 @@ def parse_patient_and_phone(
     age_match = re.search(r'\b(1[0-1][0-9]|[1-9][0-9]|[0-9])\b', text)
     age = age_match.group(1) if age_match else None
 
-    # 3. Gender extraction
+    # 3. Gender extraction (English & Malayalam normalized to English)
     gender = None
-    gender_match = re.search(r'\b(female|male|other|m|f)\b', text, re.IGNORECASE)
+    gender_pattern = re.compile(
+        r'(\b(?:female|male|other|\bf\b|\bm\b|\bo\b|sthree|pennu|pen|purushan|aan|aanu)\b|(?:സ്ത്രീ|പെണ്ണ്|പെൺ|പുരുഷൻ|ആണ്|ആൺ|മറ്റുള്ളവ|മറ്റുള്ളവർ))',
+        re.IGNORECASE
+    )
+    gender_match = gender_pattern.search(text)
     if gender_match:
-        raw_g = gender_match.group(1).lower()
-        if raw_g in ('female', 'f'):
-            gender = 'Female'
-        elif raw_g in ('male', 'm'):
-            gender = 'Male'
-        else:
-            gender = 'Other'
+        gender = normalize_gender_to_english(gender_match.group(1))
 
-    # 4. Name extraction
+    # 4. Name extraction (Normalized and transliterated to pure English)
     if default_name:
         name = default_name.strip()
     else:
         remainder = text
         # Remove phone digits and 'SAME' keywords
         remainder = re.sub(r'(\+?\d{1,3}[-.\s]?)?(\d{10})\b', ' ', remainder)
-        remainder = re.sub(r'\b(same|this\s+number|my\s+number|same\s+number|whatsapp)\b', ' ', remainder, flags=re.IGNORECASE)
+        remainder = re.sub(r'\b(same|this\s+number|my\s+number|same\s+number|whatsapp)\b|(?:ഇതേ\s*നമ്പർ|ഇതേ\s*ഫോൺ|ഇതേ\s*വാട്ട്‌സ്ആപ്പ്)', ' ', remainder, flags=re.IGNORECASE)
         if age:
             remainder = re.sub(rf'\b{re.escape(age)}\b', ' ', remainder, count=1)
-        remainder = re.sub(r'\b(female|male|other|m|f)\b', ' ', remainder, count=1, flags=re.IGNORECASE)
+        if gender_match:
+            remainder = re.sub(re.escape(gender_match.group(0)), ' ', remainder, count=1, flags=re.IGNORECASE)
+        remainder = gender_pattern.sub(' ', remainder)
 
         parts = [p.strip() for p in re.split(r'[,;|\n]', remainder) if p.strip()]
         clean = parts[0] if parts else remainder
-        clean = re.sub(r'\b(age|years|gender|yrs|old|patient|name|phone|number|is|for)\b', ' ', clean, flags=re.IGNORECASE)
-        clean = re.sub(r'[^a-zA-Z\s\.]', ' ', clean).strip()
-        clean = re.sub(r'\s+', ' ', clean)
-        name = clean if len(clean) >= 2 else None
+        clean = re.sub(
+            r'\b(age|years|gender|yrs|old|patient|name|phone|number|is|for|വയസ്സ്|രോഗി|പേര്|ഫോൺ|നമ്പർ)\b',
+            ' ',
+            clean,
+            flags=re.IGNORECASE
+        )
+
+        # Transliterate Malayalam script into standard English Latin alphabet
+        if re.search(r'[\u0D00-\u0D7F]', clean):
+            transliterated = transliterate_malayalam_name_to_english(clean)
+            name = transliterated if len(transliterated) >= 2 else None
+        else:
+            clean = re.sub(r'[^a-zA-Z\s\.]', ' ', clean).strip()
+            clean = re.sub(r'\s+', ' ', clean)
+            name = clean if len(clean) >= 2 else None
 
     return name, age, gender, phone
 
@@ -907,15 +930,28 @@ def handle_whatsapp_booking_flow(
     sender_role: str,
     user_id: Optional[int] = None,
     display_name: Optional[str] = None,
-    groq_client: Optional[Any] = None
+    groq_client: Optional[Any] = None,
+    user_lang: str = "en"
 ) -> Dict[str, Any]:
     """
     Main state machine for WhatsApp appointment booking.
     Maintains zero AI during sequential multi-turn options flow.
     Enables AI fast-path only for comprehensive single-message bookings.
+    Supports English and Malayalam localization.
     """
     from app import db, User, Doctor, DoctorSchedule, WhatsAppBookingSession, get_all_doctors
     from services.booking_services import check_availability_service, create_booking_service
+    from services.whatsapp_localization import (
+        format_booking_summary_card,
+        format_booking_confirmation_card
+    )
+
+    if user_lang == "en" and sender_phone and sender_role in ('guest', 'patient'):
+        try:
+            from app import get_whatsapp_user_language
+            user_lang = get_whatsapp_user_language(sender_phone)
+        except Exception:
+            user_lang = "en"
 
     text = (message_body or "").strip()
     text_lower = text.lower()
@@ -1032,18 +1068,7 @@ def handle_whatsapp_booking_flow(
                     db.session.add(fast_session)
                     db.session.commit()
 
-                    summary_card = (
-                        "📋 *PrimeCare Clinic — Appointment Summary*\n"
-                        "----------------------------------------\n"
-                        f"• *Doctor:* {doc_name} ({spec})\n"
-                        f"• *Date:* {norm_date} ({weekday})\n"
-                        f"• *Consultation Hours:* {time_slot}\n"
-                        f"• *Patient:* {p_name}\n"
-                        f"• *Age / Gender:* {p_age} yrs, {p_gender}\n"
-                        f"• *Contact Phone:* {contact_phone}\n"
-                        "----------------------------------------\n\n"
-                        "Reply *CONFIRM* to book this appointment, or *CANCEL* to abort."
-                    )
+                    summary_card = format_booking_summary_card(fast_session, lang=user_lang)
                     return {"handled": True, "reply": summary_card, "session": fast_session}
 
         # --- Sub-branch B: Standard Sequential Booking Initiation (Zero AI) ---
@@ -1098,7 +1123,10 @@ def handle_whatsapp_booking_flow(
     if text_lower in CANCEL_WORDS:
         active_session.cancel()
         db.session.commit()
-        reply = "Your appointment booking request has been cancelled. Let us know if you need anything else!"
+        if user_lang == "ml":
+            reply = "നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് ബുക്കിംഗ് അഭ്യർത്ഥന റദ്ദാക്കിയിരിക്കുന്നു. എന്തെങ്കിലും ആവശ്യമുണ്ടെങ്കിൽ അറിയിക്കുക!"
+        else:
+            reply = "Your appointment booking request has been cancelled. Let us know if you need anything else!"
         return {"handled": True, "reply": reply, "session": active_session}
 
     # -------------------------------------------------------------------------
@@ -1196,11 +1224,18 @@ def handle_whatsapp_booking_flow(
     if current_step == 'SELECT_DATE':
         norm_date = parse_booking_date(text)
         if not norm_date:
-            reply = (
-                "Could not recognize that date. Please enter a valid date within the next 15 days "
-                "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
-                "_Reply CANCEL to exit._"
-            )
+            if user_lang == "ml":
+                reply = (
+                    "നൽകിയ തീയതി തിരിച്ചറിയാൻ കഴിഞ്ഞില്ല. ദയവായി അടുത്ത 15 ദിവസത്തിനുള്ളിലെ സാധുവായ ഒരു തീയതി നൽകുക "
+                    "(ഉദാ: *'നാളെ'*, *'തിങ്കൾ'*, അല്ലെങ്കിൽ *'YYYY-MM-DD'*).\n\n"
+                    "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                )
+            else:
+                reply = (
+                    "Could not recognize that date. Please enter a valid date within the next 15 days "
+                    "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                    "_Reply CANCEL to exit._"
+                )
             return {"handled": True, "reply": reply, "session": active_session}
 
         get_all_doctors(force_refresh=True)
@@ -1215,10 +1250,16 @@ def handle_whatsapp_booking_flow(
 
         if not avail_res.get("available"):
             reason = avail_res.get("reason") or "Doctor is not available on this date."
-            reply = (
-                f"⚠️ *Not Available:* {reason}\n\n"
-                "Please choose an alternative date within the 15-day window, or reply *CANCEL* to exit."
-            )
+            if user_lang == "ml":
+                reply = (
+                    f"⚠️ *ലഭ്യമല്ല:* {reason}\n\n"
+                    "ദയവായി അടുത്ത 15 ദിവസത്തിനുള്ളിലെ മറ്റൊരു തീയതി തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                )
+            else:
+                reply = (
+                    f"⚠️ *Not Available:* {reason}\n\n"
+                    "Please choose an alternative date within the 15-day window, or reply *CANCEL* to exit."
+                )
             return {"handled": True, "reply": reply, "session": active_session}
 
         parsed_dt = datetime.strptime(norm_date, '%Y-%m-%d')
@@ -1280,30 +1321,58 @@ def handle_whatsapp_booking_flow(
 
         # Prompt for patient details
         registered_phone = active_session.contact_phone or sender_phone or "+91 85920 31725"
+        ml_day_map = {
+            'Monday': 'തിങ്കൾ', 'Tuesday': 'ചൊവ്വ', 'Wednesday': 'ബുധൻ',
+            'Thursday': 'വ്യാഴം', 'Friday': 'വെള്ളി', 'Saturday': 'ശനി', 'Sunday': 'ഞായർ'
+        }
+        ml_day = ml_day_map.get(weekday, weekday)
+
         if sender_role == 'patient' and active_session.patient_user_id:
             user_rec = User.query.get(active_session.patient_user_id)
             registered_name = user_rec.name if user_rec else display_name or "Patient"
-            reply = (
-                f"✅ *Date Confirmed:* {norm_date} ({weekday})\n"
-                f"⏰ *Consultation Hours:* {active_session.time_slot}\n\n"
-                f"Booking appointment for: *{registered_name}*.\n"
-                "Please reply with your *Age and Gender* (e.g., *'32, Female'*).\n\n"
-                f"💡 _Your registered phone number ({registered_phone}) will be used automatically._\n\n"
-                "_(Note: Dependent family member bookings will be available in Phase 4C.)_\n\n"
-                "_Reply CANCEL to exit._"
-            )
+            if user_lang == "ml":
+                reply = (
+                    f"✅ *തീയതി ഉറപ്പിച്ചു:* {norm_date} ({ml_day})\n"
+                    f"⏰ *കൺസൾട്ടേഷൻ സമയം:* {active_session.time_slot}\n\n"
+                    f"രോഗിയുടെ പേര്: *{registered_name}*.\n"
+                    "ദയവായി നിങ്ങളുടെ *പ്രായവും ലിംഗവും* നൽകുക (ഉദാ: *'32, സ്ത്രീ'* അല്ലെങ്കിൽ *'28, പുരുഷൻ'*).\n\n"
+                    f"💡 _രജിസ്റ്റർ ചെയ്ത ഫോൺ നമ്പർ ({registered_phone}) സ്വമേധയാ ഉപയോഗിക്കുന്നതാണ്._\n\n"
+                    "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                )
+            else:
+                reply = (
+                    f"✅ *Date Confirmed:* {norm_date} ({weekday})\n"
+                    f"⏰ *Consultation Hours:* {active_session.time_slot}\n\n"
+                    f"Booking appointment for: *{registered_name}*.\n"
+                    "Please reply with your *Age and Gender* (e.g., *'32, Female'*).\n\n"
+                    f"💡 _Your registered phone number ({registered_phone}) will be used automatically._\n\n"
+                    "_(Note: Dependent family member bookings will be available in Phase 4C.)_\n\n"
+                    "_Reply CANCEL to exit._"
+                )
         else:
-            reply = (
-                f"✅ *Date Confirmed:* {norm_date} ({weekday})\n"
-                f"⏰ *Consultation Hours:* {active_session.time_slot}\n\n"
-                "Please provide the patient details in format:\n"
-                "*Name, Age, Gender, Phone*\n"
-                "(e.g., *'Rahul Sharma, 28, Male, 9876543210'*).\n\n"
-                f"💡 *Same Number Shortcut:* To use this WhatsApp number ({registered_phone}), "
-                f"you can simply reply *SAME* as the phone, or reply:\n"
-                f"*'Rahul Sharma, 28, Male, SAME'*\n\n"
-                "_Reply CANCEL to exit._"
-            )
+            if user_lang == "ml":
+                reply = (
+                    f"✅ *തീയതി ഉറപ്പിച്ചു:* {norm_date} ({ml_day})\n"
+                    f"⏰ *കൺസൾട്ടേഷൻ സമയം:* {active_session.time_slot}\n\n"
+                    "ദയവായി രോഗിയുടെ വിവരങ്ങൾ താഴെ പറയുന്ന രീതിയിൽ നൽകുക:\n"
+                    "*പേര്, പ്രായം, ലിംഗം, ഫോൺ നമ്പർ*\n"
+                    "(ഉദാ: *'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, 9876543210'*).\n\n"
+                    f"💡 *ഇതേ വാട്ട്‌സ്ആപ്പ് നമ്പർ ഉപയോഗിക്കാൻ:* ഫോൺ നമ്പറിന് പകരം *SAME* എന്ന് നൽകാം:\n"
+                    f"*'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, SAME'*\n\n"
+                    "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                )
+            else:
+                reply = (
+                    f"✅ *Date Confirmed:* {norm_date} ({weekday})\n"
+                    f"⏰ *Consultation Hours:* {active_session.time_slot}\n\n"
+                    "Please provide the patient details in format:\n"
+                    "*Name, Age, Gender, Phone*\n"
+                    "(e.g., *'Rahul Sharma, 28, Male, 9876543210'*).\n\n"
+                    f"💡 *Same Number Shortcut:* To use this WhatsApp number ({registered_phone}), "
+                    f"you can simply reply *SAME* as the phone, or reply:\n"
+                    f"*'Rahul Sharma, 28, Male, SAME'*\n\n"
+                    "_Reply CANCEL to exit._"
+                )
         return {"handled": True, "reply": reply, "session": active_session}
 
     # --- STEP 2.5: SELECT_SLOT ---
@@ -1424,34 +1493,13 @@ def handle_whatsapp_booking_flow(
         active_session.step = 'CONFIRMATION'
         db.session.commit()
 
-        parsed_dt = datetime.strptime(active_session.appointment_date, '%Y-%m-%d')
-        weekday = parsed_dt.strftime('%A')
-
-        reply = (
-            "📋 *PrimeCare Clinic — Appointment Summary*\n"
-            "----------------------------------------\n"
-            f"• *Doctor:* {active_session.doctor_name} ({active_session.specialization})\n"
-            f"• *Date:* {active_session.appointment_date} ({weekday})\n"
-            f"• *Consultation Hours:* {active_session.time_slot}\n"
-            f"• *Patient:* {active_session.patient_name}\n"
-            f"• *Age / Gender:* {active_session.patient_age} yrs, {active_session.patient_gender}\n"
-            f"• *Contact Phone:* {active_session.contact_phone}\n"
-            "----------------------------------------\n\n"
-            "Reply *CONFIRM* to book this appointment, or *CANCEL* to abort."
-        )
+        reply = format_booking_summary_card(active_session, lang=user_lang)
         return {"handled": True, "reply": reply, "session": active_session}
 
     # --- STEP 4: CONFIRMATION ---
     if current_step == 'CONFIRMATION':
         if active_session.status == 'confirmed':
-            reply = (
-                f"Your appointment is already confirmed!\n"
-                f"• *Token Number:* #{active_session.token_number}\n"
-                f"• *Doctor:* {active_session.doctor_name} ({active_session.specialization})\n"
-                f"• *Date:* {active_session.appointment_date}\n"
-                f"• *Booking ID:* #{active_session.booking_id}\n\n"
-                "For any queries, please call +91 85920 31725."
-            )
+            reply = format_booking_confirmation_card(active_session, lang=user_lang)
             return {"handled": True, "reply": reply, "session": active_session}
 
         if text_lower in CONFIRM_WORDS:
@@ -1476,42 +1524,45 @@ def handle_whatsapp_booking_flow(
                 active_session.token_number = booking_res.get("token")
                 db.session.commit()
 
-                parsed_dt = datetime.strptime(active_session.appointment_date, '%Y-%m-%d')
-                weekday = parsed_dt.strftime('%A')
-
-                reply = (
-                    "🎉 *Appointment Confirmed!*\n\n"
-                    f"• *Token Number:* #{active_session.token_number}\n"
-                    f"• *Doctor:* {active_session.doctor_name} ({active_session.specialization})\n"
-                    f"• *Date:* {active_session.appointment_date} ({weekday})\n"
-                    f"• *Consultation Hours:* {active_session.time_slot}\n"
-                    f"• *Patient Name:* {active_session.patient_name}\n"
-                    f"• *Booking Reference:* #{active_session.booking_id}\n\n"
-                    "📍 *PrimeCare Clinic*, Main Road, Calicut\n"
-                    "ℹ️ _Please arrive 15 minutes before your consultation. For any questions, call +91 85920 31725._"
-                )
+                reply = format_booking_confirmation_card(active_session, lang=user_lang)
                 return {"handled": True, "reply": reply, "session": active_session}
 
             if booking_res.get("duplicate"):
                 active_session.status = 'cancelled'
                 db.session.commit()
-                reply = (
-                    f"⚠️ An appointment for *{active_session.patient_name}* with "
-                    f"*{active_session.doctor_name}* on *{active_session.appointment_date}* is already booked.\n\n"
-                    "To modify or review your booking, please call +91 85920 31725."
-                )
+                if user_lang == "ml":
+                    reply = (
+                        f"⚠️ *{active_session.patient_name}* എന്ന പേരിൽ *{active_session.doctor_name}* ഡോക്ടറുമായി "
+                        f"*{active_session.appointment_date}* തീയതിയിൽ ഇതിനകം ഒരു അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്തിട്ടുണ്ട്.\n\n"
+                        "ബുക്കിംഗ് മാറ്റാനോ കൂടുതൽ വിവരങ്ങൾ അറിയാനോ +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
+                    )
+                else:
+                    reply = (
+                        f"⚠️ An appointment for *{active_session.patient_name}* with "
+                        f"*{active_session.doctor_name}* on *{active_session.appointment_date}* is already booked.\n\n"
+                        "To modify or review your booking, please call +91 85920 31725."
+                    )
                 return {"handled": True, "reply": reply, "session": active_session}
 
             msg = booking_res.get("message") or "Capacity limit reached or doctor unavailable."
-            reply = (
-                f"⚠️ *Booking Unsuccessful:* {msg}\n\n"
-                "Please choose an alternative date, or reply *CANCEL* to exit."
-            )
+            if user_lang == "ml":
+                reply = (
+                    f"⚠️ *ബുക്കിംഗ് പരാജയപ്പെട്ടു:* {msg}\n\n"
+                    "ദയവായി മറ്റൊരു തീയതി തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                )
+            else:
+                reply = (
+                    f"⚠️ *Booking Unsuccessful:* {msg}\n\n"
+                    "Please choose an alternative date, or reply *CANCEL* to exit."
+                )
             active_session.step = 'SELECT_DATE'
             db.session.commit()
             return {"handled": True, "reply": reply, "session": active_session}
 
-        reply = "Please reply *CONFIRM* to complete your appointment booking, or *CANCEL* to abort."
+        if user_lang == "ml":
+            reply = "അപ്പോയിന്റ്മെന്റ് ഉറപ്പിക്കാൻ *CONFIRM* (അല്ലെങ്കിൽ *ശരി*) എന്ന് അയക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+        else:
+            reply = "Please reply *CONFIRM* to complete your appointment booking, or *CANCEL* to abort."
         return {"handled": True, "reply": reply, "session": active_session}
 
     return {"handled": False}
