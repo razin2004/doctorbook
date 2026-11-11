@@ -6,7 +6,7 @@ if __name__ == '__main__' and 'app' not in sys.modules:
     sys.modules['app'] = sys.modules['__main__']
 
 from flask import Flask, render_template, request, redirect, session, jsonify, url_for, send_from_directory, make_response
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pytz
 import os
 import re
@@ -2374,7 +2374,7 @@ def home():
     has_upcoming = False
     user_id = session.get('user_id')
     if user_id and session.get('user_role') == 'patient':
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user or (user.email or "").strip().lower() == 'guest@primecare.com':
             user_id = None
         else:
@@ -2429,7 +2429,7 @@ def booking():
     past_bookings = []
     
     if user_id:
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user or (user.email or "").strip().lower() == 'guest@primecare.com':
             user_id = None
     
@@ -3451,7 +3451,7 @@ def doctor_pending_verification():
     if user_role != 'doctor' or not user_id:
         return redirect(url_for('home'))
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return redirect(url_for('home'))
 
@@ -3722,7 +3722,7 @@ def patient_update_phone():
     if has_conflict:
         return jsonify(success=False, msg=conflict_msg)
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user or (user.email or "").strip().lower() == 'guest@primecare.com':
         session.clear()
         return jsonify(success=False, msg="Unauthorized user.")
@@ -3741,7 +3741,7 @@ def delete_user_account():
     if not user_id:
         return jsonify(success=False, msg="Unauthorized. Please log in to manage your account."), 401
 
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user or (user.email or "").strip().lower() == 'guest@primecare.com':
         session.clear()
         return jsonify(success=False, msg="Invalid or placeholder account cannot be deleted."), 400
@@ -3933,7 +3933,7 @@ def patient_dashboard():
         if user_role == 'doctor':
             return redirect(url_for('doctor_dashboard'))
         return redirect(url_for('home'))
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user or (user.email or "").strip().lower() == 'guest@primecare.com':
         session.clear()
         return redirect(url_for('home'))
@@ -6127,7 +6127,7 @@ def build_clinic_context(user_id=None):
     
 # 1. USER'S PERSONAL BOOKINGS (if logged in)
     if user_id:
-        user_record = User.query.get(user_id)
+        user_record = db.session.get(User, user_id)
         if user_record and (user_record.email or "").strip().lower() != 'guest@primecare.com':
             ist = pytz.timezone('Asia/Kolkata')
             today_str = datetime.now(ist).strftime("%Y-%m-%d")
@@ -7646,7 +7646,7 @@ def live_tokens():
     # Return messages that are active right now (handling both IST and UTC timestamps gracefully)
     ist = pytz.timezone('Asia/Kolkata')
     now_ist = datetime.now(ist).replace(tzinfo=None)
-    now_utc = datetime.utcnow()
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     active_msgs = TickerMessage.query.filter(
         (TickerMessage.is_active == True) | (TickerMessage.is_active == None),
         (TickerMessage.start_time == None) | (TickerMessage.start_time <= now_ist) | (TickerMessage.start_time <= now_utc),
@@ -7728,7 +7728,7 @@ def live_tokens():
     user_tokens = {}
     user_id = session.get('user_id')
     if user_id:
-        user_record = User.query.get(user_id)
+        user_record = db.session.get(User, user_id)
         if user_record and (user_record.email or "").strip().lower() != 'guest@primecare.com':
             try:
                 dt_formatted = now.strftime("%d-%m-%Y")
@@ -7769,7 +7769,7 @@ def my_token_status():
     if user_role != 'patient':
         return jsonify({"success": False, "msg": "Notifications restricted to patient role"})
 
-    user_record = User.query.get(user_id)
+    user_record = db.session.get(User, user_id)
     if not user_record or (user_record.email or "").strip().lower() == 'guest@primecare.com':
         return jsonify({"success": False, "msg": "Invalid user account"})
         
