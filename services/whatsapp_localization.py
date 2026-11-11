@@ -225,11 +225,11 @@ def build_language_selection_payload() -> Dict[str, Any]:
             "Please select your preferred language for WhatsApp consultations and messages:\n\n"
             "ദയവായി നിങ്ങളുടെ വാട്ട്‌സ്ആപ്പ് ഭാഷ തിരഞ്ഞെടുക്കുക:"
         ),
-        "button_text": "Select Language / ഭാഷ",
+        "button_text": "Language / ഭാഷ",
         "footer_text": "PrimeCare Clinic • Koorachundu",
         "sections": [
             {
-                "title": "Available Languages / ഭാഷകൾ",
+                "title": "Languages / ഭാഷകൾ",
                 "rows": [
                     {
                         "id": "lang_en",
@@ -307,6 +307,11 @@ def build_main_menu_interactive_payload(lang: str = "en") -> Dict[str, Any]:
                             "description": "നിങ്ങളുടെ ടോക്കൺ വിവരങ്ങളും സ്റ്റാറ്റസും കാണുക"
                         },
                         {
+                            "id": "menu_reschedule",
+                            "title": "🔄 തീയതി മാറ്റുക",
+                            "description": "അപ്പോയിന്റ്മെന്റ് മറ്റൊരു ദിവസത്തിലേക്ക് മാറ്റുക"
+                        },
+                        {
                             "id": "menu_cancel",
                             "title": "❌ ബുക്കിംഗ് റദ്ദാക്കുക",
                             "description": "നിലവിലുള്ള അപ്പോയിന്റ്മെന്റ് റദ്ദാക്കുക"
@@ -354,6 +359,11 @@ def build_main_menu_interactive_payload(lang: str = "en") -> Dict[str, Any]:
                         "id": "menu_my_bookings",
                         "title": "📋 My Appointments",
                         "description": "View your active tokens & status"
+                    },
+                    {
+                        "id": "menu_reschedule",
+                        "title": "🔄 Reschedule Booking",
+                        "description": "Change your appointment date"
                     },
                     {
                         "id": "menu_cancel",

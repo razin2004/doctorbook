@@ -766,7 +766,7 @@ class WhatsAppBookingSession(db.Model):
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctor.id', ondelete='SET NULL'), nullable=True, index=True)
     doctor_name = db.Column(db.String(100), nullable=True)
     specialization = db.Column(db.String(100), nullable=True)
-    appointment_date = db.Column(db.String(20), nullable=True) # Normalized YYYY-MM-DD
+    appointment_date = db.Column(db.String(50), nullable=True) # Normalized YYYY-MM-DD or original|new for reschedule
     time_slot = db.Column(db.String(50), nullable=True)
     patient_name = db.Column(db.String(100), nullable=True)
     patient_age = db.Column(db.String(10), nullable=True)

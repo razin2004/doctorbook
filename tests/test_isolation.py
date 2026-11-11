@@ -13,6 +13,15 @@ Guarantees:
 import os
 import sys
 import json
+import werkzeug
+
+# Ensure werkzeug has __version__ for Flask test_client compatibility
+if not hasattr(werkzeug, '__version__'):
+    try:
+        import importlib.metadata
+        werkzeug.__version__ = importlib.metadata.version('werkzeug')
+    except Exception:
+        werkzeug.__version__ = '3.0.0'
 
 # Compute project base and instance directory
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

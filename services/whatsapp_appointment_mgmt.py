@@ -30,9 +30,9 @@ LOOKUP_INTENT_PATTERNS = [
     re.compile(r'\b(show\s+my\s+appointment|my\s+appointment|check\s+my\s+appointment|view\s+my\s+appointment)s?\b', re.IGNORECASE),
     re.compile(r'\b(do\s+i\s+have\s+an?\s+(upcoming\s+)?appointment|appointment\s+status|my\s+booking|show\s+my\s+booking)s?\b', re.IGNORECASE),
     re.compile(r'\b(what\s+is\s+my\s+appointment|check\s+my\s+booking|view\s+my\s+booking|my\s+appointments?)s?\b', re.IGNORECASE),
-    re.compile(r'^(my\s+appointments?|appointments?|bookings?|show\s+bookings?|menu_my_bookings|2)$', re.IGNORECASE),
-    re.compile(r'\b(upcoming\s+appointment|list\s+my\s+appointment|see\s+my\s+appointment)\b', re.IGNORECASE),
-    re.compile(r'(?:^|\s|[.,!?])(എന്റെ\s*ബുക്കിംഗ്|എന്റെ\s*അപ്പോയിന്റ്മെന്റ്|ടോക്കൺ\s*വിവരങ്ങൾ|ബുക്കിംഗുകൾ)(?:$|\s|[.,!?])', re.IGNORECASE),
+    re.compile(r'^(my\s+appointments?|appointments?|bookings?|show\s+bookings?|current\s+bookings?|current\s+appointments?|menu_my_bookings|2)$', re.IGNORECASE),
+    re.compile(r'\b(upcoming\s+appointment|current\s+booking|current\s+appointment|active\s+booking|list\s+my\s+appointment|see\s+my\s+appointment)\b', re.IGNORECASE),
+    re.compile(r'(?:^|\s|[.,!?])(നിലവിലെ\s*ബുക്കിംഗ്|നിലവിലെ\s*അപ്പോയിന്റ്മെന്റ്|എന്റെ\s*ബുക്കിംഗ്|എന്റെ\s*അപ്പോയിന്റ്മെന്റ്|ടോക്കൺ\s*വിവരങ്ങൾ|ബുക്കിംഗുകൾ)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
 
 CANCEL_INTENT_PATTERNS = [
@@ -48,9 +48,9 @@ CANCEL_INTENT_PATTERNS = [
 RESCHEDULE_INTENT_PATTERNS = [
     re.compile(r'\b(reschedule|re-schedule)\s+(my\s+)?(appointment|booking)\b', re.IGNORECASE),
     re.compile(r'\b(i\s+want\s+to\s+(reschedule|re-schedule)|need\s+to\s+(reschedule|re-schedule)|change\s+(my\s+)?appointment\s+date)\b', re.IGNORECASE),
-    re.compile(r'^(reschedule|re-schedule|reschedule\s+appointment|reschedule\s+booking)$', re.IGNORECASE),
+    re.compile(r'^(reschedule|re-schedule|reschedule\s+appointment|reschedule\s+booking|menu_reschedule)$', re.IGNORECASE),
     re.compile(r'\b(move\s+my\s+appointment|change\s+my\s+booking\s+date)\b', re.IGNORECASE),
-    re.compile(r'(?:^|\s|[.,!?])(തീയതി\s*മാറ്റുക|മാറ്റിവെക്കുക|റീഷെഡ്യൂൾ)(?:$|\s|[.,!?])', re.IGNORECASE),
+    re.compile(r'(?:^|\s|[.,!?])(തീയതി\s*മാറ്റുക|മാറ്റിവെക്കുക|റീഷെഡ്യൂൾ|റിഷെഡ്യൂൾ|തീയതി\s*മാറ്റണം)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
 
 ABORT_WORDS = {'cancel', 'abort', 'stop', 'exit', 'quit', 'back', 'no', 'nevermind', 'never mind', 'വേണ്ട', 'റദ്ദാക്കുക', 'നോ', 'venda'}
@@ -108,27 +108,56 @@ def _get_patient_appointments(user_id, sender_phone, sender_role):
     return result
 
 
-def _format_appointment_list(bookings: list, header: str = "Your Upcoming Appointments") -> str:
-    """Formats a list of bookings for WhatsApp display."""
+def _format_appointment_list(bookings: list, header: str = "Your Upcoming Appointments", lang: str = "en") -> str:
+    """Formats a list of bookings for WhatsApp display in English or Malayalam."""
     if not bookings:
+        if lang == "ml":
+            return (
+                "നിങ്ങൾക്ക് വരാനിരിക്കുന്ന അപ്പോയിന്റ്മെന്റുകൾ ഒന്നും നിലവിലില്ല.\n\n"
+                "പുതിയ അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ *Book* എന്ന് മറുപടി നൽകുക."
+            )
         return (
             "You don't have any upcoming appointments.\n\n"
             "To book a new appointment, just say *\"Book an appointment\"*."
         )
 
-    lines = [f"📋 *{header}*\n"]
+    hdr = header if header != "Your Upcoming Appointments" else ("നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റുകൾ" if lang == "ml" else header)
+    lines = [f"📋 *{hdr}*\n"]
     for idx, b in enumerate(bookings, start=1):
         status_emoji = "✅" if b["status"] in ("confirmed", "active") else "⏳"
-        lines.append(
-            f"*{idx}.* {status_emoji} *{b['doctor_name']}* ({b['specialization']})\n"
-            f"   📅 {b['date']} | ⏰ {b['time'] or 'Clinic Hours'}\n"
-            f"   🎫 Token #{b['token']} | 📌 Booking #{b['id']} | Status: {b['status'].capitalize()}"
-        )
+        if lang == "ml":
+            status_text = "ഉറപ്പിച്ചു" if b["status"] in ("confirmed", "active") else b["status"].capitalize()
+            lines.append(
+                f"*{idx}.* {status_emoji} *{b['doctor_name']}* ({b['specialization']})\n"
+                f"   📅 {b['date']} | ⏰ {b['time'] or 'ക്ലിനിക്ക് സമയം'}\n"
+                f"   🎫 ടോക്കൺ #{b['token']} | 📌 ബുക്കിംഗ് #{b['id']} | സ്ഥിതി: {status_text}"
+            )
+        else:
+            lines.append(
+                f"*{idx}.* {status_emoji} *{b['doctor_name']}* ({b['specialization']})\n"
+                f"   📅 {b['date']} | ⏰ {b['time'] or 'Clinic Hours'}\n"
+                f"   🎫 Token #{b['token']} | 📌 Booking #{b['id']} | Status: {b['status'].capitalize()}"
+            )
     return "\n".join(lines)
 
 
-def _format_appointment_detail(b: dict) -> str:
-    """Formats a single appointment's details."""
+def _format_appointment_detail(b: dict, lang: str = "en") -> str:
+    """Formats a single appointment's details in English or Malayalam."""
+    if lang == "ml":
+        status_text = "ഉറപ്പിച്ചു" if b["status"] in ("confirmed", "active") else b["status"].capitalize()
+        return (
+            f"📋 *അപ്പോയിന്റ്മെന്റ് വിവരങ്ങൾ*\n"
+            f"{'─' * 30}\n"
+            f"• *ബുക്കിംഗ് ഐഡി:* #{b['id']}\n"
+            f"• *ഡോക്ടർ:* {b['doctor_name']} ({b['specialization']})\n"
+            f"• *തീയതി:* {b['date']}\n"
+            f"• *സമയം:* {b['time'] or 'ക്ലിനിക്ക് സമയം'}\n"
+            f"• *ടോക്കൺ:* #{b['token']}\n"
+            f"• *രോഗി:* {b['patient_name']}\n"
+            f"• *സ്ഥിതി:* {status_text}\n"
+            f"{'─' * 30}"
+        )
+
     return (
         f"📋 *Appointment Details*\n"
         f"{'─' * 30}\n"
@@ -199,8 +228,18 @@ def handle_whatsapp_appointment_mgmt(
 
     # Only handle management sessions (cancel, reschedule) - not booking sessions
     if active_session and active_session.action == 'book':
-        # This is a booking session, not ours to handle
-        return {"handled": False}
+        if (
+            is_lookup_intent(text)
+            or is_cancel_intent(text)
+            or is_reschedule_intent(text)
+            or text_lower.startswith("menu_")
+        ):
+            # User chose to leave booking and enter appointment management
+            active_session.cancel()
+            db.session.commit()
+            active_session = None
+        else:
+            return {"handled": False}
 
     # -------------------------------------------------------------------------
     # 2. Role Restriction
@@ -223,7 +262,14 @@ def handle_whatsapp_appointment_mgmt(
         # If user chooses a main menu action, greeting, or language command, auto-cancel active session and release
         from services.whatsapp_webhook_service import is_greeting_message
         from services.whatsapp_localization import is_language_command
-        if text_lower.startswith("menu_") or is_greeting_message(text) or is_language_command(text):
+        from services.whatsapp_booking_flow import is_booking_intent
+        if (
+            text_lower.startswith("menu_")
+            or text_lower.startswith("doc_")
+            or is_greeting_message(text)
+            or is_language_command(text)
+            or (not text.isdigit() and is_booking_intent(text))
+        ):
             active_session.cancel()
             db.session.commit()
             return {"handled": False}
@@ -232,10 +278,15 @@ def handle_whatsapp_appointment_mgmt(
         if text_lower in ABORT_WORDS and active_session.step != 'CONFIRMATION':
             active_session.cancel()
             db.session.commit()
-            action_name = "cancellation" if active_session.action == 'cancel' else "rescheduling"
+            if user_lang == "ml":
+                action_name = "റദ്ദാക്കാനുള്ള" if active_session.action == 'cancel' else "തീയതി മാറ്റാനുള്ള"
+                reply = f"നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് {action_name} അഭ്യർത്ഥന ഒഴിവാക്കിയിരിക്കുന്നു. എന്തെങ്കിലും ആവശ്യമുണ്ടെങ്കിൽ അറിയിക്കുക!"
+            else:
+                action_name = "cancellation" if active_session.action == 'cancel' else "rescheduling"
+                reply = f"Your appointment {action_name} request has been cancelled. Let us know if you need anything else!"
             return {
                 "handled": True,
-                "reply": f"Your appointment {action_name} request has been cancelled. Let us know if you need anything else!",
+                "reply": reply,
                 "session": active_session
             }
 
@@ -252,7 +303,10 @@ def handle_whatsapp_appointment_mgmt(
                 eligible = [b for b in bookings if b["status"] in ("confirmed", "active")]
 
                 if selection < 1 or selection > len(eligible):
-                    reply = f"Please select a number between 1 and {len(eligible)}, or reply *CANCEL* to abort."
+                    if user_lang == "ml":
+                        reply = f"ദയവായി 1 നും {len(eligible)} നും ഇടയിലുള്ള ഒരു നമ്പർ തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                    else:
+                        reply = f"Please select a number between 1 and {len(eligible)}, or reply *CANCEL* to abort."
                     return {"handled": True, "reply": reply, "session": active_session}
 
                 chosen = eligible[selection - 1]
@@ -268,32 +322,53 @@ def handle_whatsapp_appointment_mgmt(
                     active_session.step = 'CONFIRMATION'
                     db.session.commit()
 
-                    detail = _format_appointment_detail(chosen)
-                    reply = (
-                        f"{detail}\n\n"
-                        "⚠️ *Are you sure you want to cancel this appointment?*\n"
-                        "• Your token number will be permanently released.\n"
-                        "• Cancellations cannot be undone.\n\n"
-                        "Reply *CONFIRM* to proceed with cancellation, or *CANCEL* to keep your appointment."
-                    )
+                    detail = _format_appointment_detail(chosen, lang=user_lang)
+                    if user_lang == "ml":
+                        reply = (
+                            f"{detail}\n\n"
+                            "⚠️ *ഈ അപ്പോയിന്റ്മെന്റ് റദ്ദാക്കാൻ തീർച്ചയാണോ?*\n"
+                            "• നിങ്ങളുടെ ടോക്കൺ നമ്പർ സ്ഥിരമായി റദ്ദാക്കപ്പെടും.\n"
+                            "• ഇത് പിന്നീട് പഴയപടിയാക്കാൻ കഴിയില്ല.\n\n"
+                            "റദ്ദാക്കാൻ *CONFIRM* (അല്ലെങ്കിൽ *ശരി*) എന്ന് അയക്കുക, ഒഴിവാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                        )
+                    else:
+                        reply = (
+                            f"{detail}\n\n"
+                            "⚠️ *Are you sure you want to cancel this appointment?*\n"
+                            "• Your token number will be permanently released.\n"
+                            "• Cancellations cannot be undone.\n\n"
+                            "Reply *CONFIRM* to proceed with cancellation, or *CANCEL* to keep your appointment."
+                        )
                     return {"handled": True, "reply": reply, "session": active_session}
 
                 elif active_session.action == 'reschedule':
                     active_session.step = 'SELECT_DATE'
                     db.session.commit()
 
-                    detail = _format_appointment_detail(chosen)
-                    reply = (
-                        f"{detail}\n\n"
-                        "📅 *Select a new date for your appointment.*\n"
-                        "Please enter a date within the next 15 days "
-                        "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
-                        "_Reply CANCEL to abort rescheduling._"
-                    )
+                    detail = _format_appointment_detail(chosen, lang=user_lang)
+                    if user_lang == "ml":
+                        reply = (
+                            f"{detail}\n\n"
+                            "📅 *അപ്പോയിന്റ്മെന്റിനായി പുതിയ തീയതി തിരഞ്ഞെടുക്കുക.*\n"
+                            "ദയവായി അടുത്ത 15 ദിവസത്തിനുള്ളിലെ ഒരു തീയതി നൽകുക "
+                            "(ഉദാ: *'നാളെ'*, *'തിങ്കൾ'*, അല്ലെങ്കിൽ *'YYYY-MM-DD'*).\n\n"
+                            "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                        )
+                    else:
+                        reply = (
+                            f"{detail}\n\n"
+                            "📅 *Select a new date for your appointment.*\n"
+                            "Please enter a date within the next 15 days "
+                            "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                            "_Reply CANCEL to abort rescheduling._"
+                        )
                     return {"handled": True, "reply": reply, "session": active_session}
 
             else:
-                reply = "Please enter the appointment number from the list, or reply *CANCEL* to abort."
+                if user_lang == "ml":
+                    reply = "ദയവായി ലിസ്റ്റിൽ നിന്ന് അപ്പോയിന്റ്മെന്റ് നമ്പർ നൽകുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                else:
+                    reply = "Please enter the appointment number from the list, or reply *CANCEL* to abort."
                 return {"handled": True, "reply": reply, "session": active_session}
 
         # --- CONFIRMATION step (cancellation) ---
@@ -301,11 +376,18 @@ def handle_whatsapp_appointment_mgmt(
             if text_lower in CONFIRM_WORDS:
                 # Idempotency check
                 if active_session.status == 'confirmed':
-                    reply = (
-                        "This cancellation has already been processed.\n"
-                        f"• *Booking ID:* #{active_session.booking_id}\n\n"
-                        "For any queries, please call +91 85920 31725."
-                    )
+                    if user_lang == "ml":
+                        reply = (
+                            "ഈ അപ്പോയിന്റ്മെന്റ് ഇതിനകം റദ്ദാക്കിയിട്ടുണ്ട്.\n"
+                            f"• *ബുക്കിംഗ് ഐഡി:* #{active_session.booking_id}\n\n"
+                            "കൂടുതൽ വിവരങ്ങൾക്ക് +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
+                        )
+                    else:
+                        reply = (
+                            "This cancellation has already been processed.\n"
+                            f"• *Booking ID:* #{active_session.booking_id}\n\n"
+                            "For any queries, please call +91 85920 31725."
+                        )
                     return {"handled": True, "reply": reply, "session": active_session}
 
                 # Re-validate ownership before executing
@@ -313,7 +395,10 @@ def handle_whatsapp_appointment_mgmt(
                 if not booking or booking.status not in ('confirmed', 'active'):
                     active_session.cancel()
                     db.session.commit()
-                    reply = "This appointment is no longer available for cancellation. It may have already been cancelled or completed."
+                    if user_lang == "ml":
+                        reply = "ഈ അപ്പോയിന്റ്മെന്റ് റദ്ദാക്കാൻ നിലവിൽ ലഭ്യമല്ല. ഇത് ഇതിനകം പൂർത്തിയായിട്ടുണ്ടാകാം അല്ലെങ്കിൽ റദ്ദാക്കിയിട്ടുണ്ടാകാം."
+                    else:
+                        reply = "This appointment is no longer available for cancellation. It may have already been cancelled or completed."
                     return {"handled": True, "reply": reply, "session": active_session}
 
                 # Execute cancellation via shared service
@@ -330,46 +415,76 @@ def handle_whatsapp_appointment_mgmt(
                     active_session.step = 'COMPLETED'
                     db.session.commit()
 
-                    reply = (
-                        "✅ *Appointment Cancelled Successfully*\n\n"
-                        f"• *Booking ID:* #{active_session.booking_id}\n"
-                        f"• *Doctor:* {active_session.doctor_name} ({active_session.specialization})\n"
-                        f"• *Date:* {active_session.appointment_date}\n"
-                        f"• *Token:* #{active_session.token_number} (released)\n\n"
-                        "To book a new appointment, say *\"Book an appointment\"*.\n"
-                        "For any queries, please call +91 85920 31725."
-                    )
+                    if user_lang == "ml":
+                        reply = (
+                            "✅ *അപ്പോയിന്റ്മെന്റ് വിജയകരമായി റദ്ദാക്കി*\n\n"
+                            f"• *ബുക്കിംഗ് ഐഡി:* #{active_session.booking_id}\n"
+                            f"• *ഡോക്ടർ:* {active_session.doctor_name} ({active_session.specialization})\n"
+                            f"• *തീയതി:* {active_session.appointment_date}\n"
+                            f"• *ടോക്കൺ:* #{active_session.token_number} (റദ്ദാക്കി)\n\n"
+                            "പുതിയ അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ *Book* എന്ന് മറുപടി നൽകുക.\n"
+                            "കൂടുതൽ വിവരങ്ങൾക്ക് +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
+                        )
+                    else:
+                        reply = (
+                            "✅ *Appointment Cancelled Successfully*\n\n"
+                            f"• *Booking ID:* #{active_session.booking_id}\n"
+                            f"• *Doctor:* {active_session.doctor_name} ({active_session.specialization})\n"
+                            f"• *Date:* {active_session.appointment_date}\n"
+                            f"• *Token:* #{active_session.token_number} (released)\n\n"
+                            "To book a new appointment, say *\"Book an appointment\"*.\n"
+                            "For any queries, please call +91 85920 31725."
+                        )
                     return {"handled": True, "reply": reply, "session": active_session}
                 else:
                     active_session.cancel()
                     db.session.commit()
 
                     error_msg = cancel_res.get("message", "Unknown error")
-                    reply = (
-                        f"❌ *Cancellation Failed*\n\n"
-                        f"Reason: {error_msg}\n\n"
-                        "Please try again or call +91 85920 31725 for assistance."
-                    )
+                    if user_lang == "ml":
+                        reply = (
+                            f"❌ *റദ്ദാക്കൽ പരാജയപ്പെട്ടു*\n\n"
+                            f"കാരണം: {error_msg}\n\n"
+                            "ദയവായി വീണ്ടും ശ്രമിക്കുക അല്ലെങ്കിൽ +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
+                        )
+                    else:
+                        reply = (
+                            f"❌ *Cancellation Failed*\n\n"
+                            f"Reason: {error_msg}\n\n"
+                            "Please try again or call +91 85920 31725 for assistance."
+                        )
                     return {"handled": True, "reply": reply, "session": active_session}
 
             elif text_lower in ABORT_WORDS or text_lower == 'cancel':
                 active_session.cancel()
                 db.session.commit()
-                reply = "Cancellation aborted. Your appointment remains intact. Let us know if you need anything else!"
+                if user_lang == "ml":
+                    reply = "റദ്ദാക്കൽ ഒഴിവാക്കി. നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് മാറ്റമില്ലാതെ നിലനിൽക്കുന്നു."
+                else:
+                    reply = "Cancellation aborted. Your appointment remains intact. Let us know if you need anything else!"
                 return {"handled": True, "reply": reply, "session": active_session}
 
             else:
-                reply = "Please reply *CONFIRM* to proceed with cancellation, or *CANCEL* to keep your appointment."
+                if user_lang == "ml":
+                    reply = "റദ്ദാക്കാൻ *CONFIRM* (അല്ലെങ്കിൽ *ശരി*) എന്ന് അയക്കുക, ഒഴിവാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                else:
+                    reply = "Please reply *CONFIRM* to proceed with cancellation, or *CANCEL* to keep your appointment."
                 return {"handled": True, "reply": reply, "session": active_session}
 
         # --- SELECT_DATE step (rescheduling) ---
         if current_step == 'SELECT_DATE' and active_session.action == 'reschedule':
             parsed_date = parse_booking_date(text)
             if not parsed_date:
-                reply = (
-                    "Please enter a valid date (e.g., *'tomorrow'*, *'Monday'*, or *'2026-11-10'*).\n\n"
-                    "_Reply CANCEL to abort rescheduling._"
-                )
+                if user_lang == "ml":
+                    reply = (
+                        "സാധുവായ ഒരു തീയതി നൽകുക (ഉദാ: *'നാളെ'*, *'തിങ്കൾ'*, അല്ലെങ്കിൽ *'YYYY-MM-DD'*).\n\n"
+                        "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                    )
+                else:
+                    reply = (
+                        "Please enter a valid date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                        "_Reply CANCEL to abort rescheduling._"
+                    )
                 return {"handled": True, "reply": reply, "session": active_session}
 
             # Validate availability
@@ -380,47 +495,71 @@ def handle_whatsapp_appointment_mgmt(
             )
             if not avail.get("available"):
                 reason = avail.get("reason", "Doctor is not available on this date")
-                reply = (
-                    f"❌ *{reason}*\n\n"
-                    "Please choose a different date, or reply *CANCEL* to abort rescheduling."
-                )
+                if user_lang == "ml":
+                    reply = (
+                        f"❌ *ലഭ്യമല്ല:* {reason}\n\n"
+                        "ദയവായി മറ്റൊരു തീയതി തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                    )
+                else:
+                    reply = (
+                        f"❌ *{reason}*\n\n"
+                        "Please choose a different date, or reply *CANCEL* to abort rescheduling."
+                    )
                 return {"handled": True, "reply": reply, "session": active_session}
 
             # Check same date
             if parsed_date == active_session.appointment_date:
-                reply = (
-                    "The selected date is the same as your current appointment date.\n"
-                    "Please choose a different date, or reply *CANCEL* to abort."
-                )
+                if user_lang == "ml":
+                    reply = (
+                        "തിരഞ്ഞെടുത്ത തീയതി നിങ്ങളുടെ നിലവിലെ അപ്പോയിന്റ്മെന്റ് തീയതി തന്നെയാണ്.\n"
+                        "ദയവായി മറ്റൊരു തീയതി നൽകുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                    )
+                else:
+                    reply = (
+                        "The selected date is the same as your current appointment date.\n"
+                        "Please choose a different date, or reply *CANCEL* to abort."
+                    )
                 return {"handled": True, "reply": reply, "session": active_session}
 
             # Store new date and move to confirmation
             active_session.time_slot = avail.get("time") or active_session.time_slot
             active_session.step = 'CONFIRMATION'
-            # Store the new date temporarily in a way that doesn't overwrite the original
-            # We'll use the doctor_name field is already set, so we store target date
-            # in an attribute we can access
-            active_session._reschedule_target_date = parsed_date
-            # Since we can't add transient attrs, store in appointment_date after confirmation
-            # Use a convention: store "original_date|new_date" temporarily
-            original_date = active_session.appointment_date
+            original_date = (active_session.appointment_date or "").split("|")[0]
             active_session.appointment_date = f"{original_date}|{parsed_date}"
             db.session.commit()
 
+            ml_day_map = {
+                'Monday': 'തിങ്കൾ', 'Tuesday': 'ചൊവ്വ', 'Wednesday': 'ബുധൻ',
+                'Thursday': 'വ്യാഴം', 'Friday': 'വെള്ളി', 'Saturday': 'ശനി', 'Sunday': 'ഞായർ'
+            }
             parsed_dt = datetime.strptime(parsed_date, '%Y-%m-%d')
             weekday = parsed_dt.strftime('%A')
+            ml_day = ml_day_map.get(weekday, weekday)
 
-            reply = (
-                "📋 *Rescheduling Summary*\n"
-                f"{'─' * 30}\n"
-                f"• *Doctor:* {active_session.doctor_name} ({active_session.specialization})\n"
-                f"• *Current Date:* {original_date}\n"
-                f"• *New Date:* {parsed_date} ({weekday})\n"
-                f"• *Current Token:* #{active_session.token_number} (will be released)\n"
-                f"{'─' * 30}\n\n"
-                "⚠️ *Your current token will be released and a new token will be assigned.*\n\n"
-                "Reply *CONFIRM* to reschedule, or *CANCEL* to keep the current appointment."
-            )
+            if user_lang == "ml":
+                reply = (
+                    "📋 *തീയതി മാറ്റ വിവരങ്ങൾ (Reschedule Summary)*\n"
+                    f"{'─' * 30}\n"
+                    f"• *ഡോക്ടർ:* {active_session.doctor_name} ({active_session.specialization})\n"
+                    f"• *നിലവിലെ തീയതി:* {original_date}\n"
+                    f"• *പുതിയ തീയതി:* {parsed_date} ({ml_day})\n"
+                    f"• *നിലവിലെ ടോക്കൺ:* #{active_session.token_number} (റദ്ദാക്കപ്പെടും)\n"
+                    f"{'─' * 30}\n\n"
+                    "⚠️ *നിങ്ങളുടെ നിലവിലെ ടോക്കൺ റദ്ദാക്കി പുതിയ തീയതിയിലേക്ക് പുതിയ ടോക്കൺ നൽകുന്നതാണ്.*\n\n"
+                    "ഉറപ്പാക്കാൻ *CONFIRM* (അല്ലെങ്കിൽ *ശരി*) എന്ന് അയക്കുക, ഒഴിവാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                )
+            else:
+                reply = (
+                    "📋 *Rescheduling Summary*\n"
+                    f"{'─' * 30}\n"
+                    f"• *Doctor:* {active_session.doctor_name} ({active_session.specialization})\n"
+                    f"• *Current Date:* {original_date}\n"
+                    f"• *New Date:* {parsed_date} ({weekday})\n"
+                    f"• *Current Token:* #{active_session.token_number} (will be released)\n"
+                    f"{'─' * 30}\n\n"
+                    "⚠️ *Your current token will be released and a new token will be assigned.*\n\n"
+                    "Reply *CONFIRM* to reschedule, or *CANCEL* to keep the current appointment."
+                )
             return {"handled": True, "reply": reply, "session": active_session}
 
         # --- CONFIRMATION step (rescheduling) ---
@@ -428,11 +567,18 @@ def handle_whatsapp_appointment_mgmt(
             if text_lower in CONFIRM_WORDS:
                 # Idempotency check
                 if active_session.status == 'confirmed':
-                    reply = (
-                        "This rescheduling has already been processed.\n"
-                        f"• *New Booking ID:* #{active_session.booking_id}\n\n"
-                        "For any queries, please call +91 85920 31725."
-                    )
+                    if user_lang == "ml":
+                        reply = (
+                            "ഈ തീയതി മാറ്റം ഇതിനകം പൂർത്തിയായിട്ടുണ്ട്.\n"
+                            f"• *പുതിയ ബുക്കിംഗ് ഐഡി:* #{active_session.booking_id}\n\n"
+                            "കൂടുതൽ വിവരങ്ങൾക്ക് +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
+                        )
+                    else:
+                        reply = (
+                            "This rescheduling has already been processed.\n"
+                            f"• *New Booking ID:* #{active_session.booking_id}\n\n"
+                            "For any queries, please call +91 85920 31725."
+                        )
                     return {"handled": True, "reply": reply, "session": active_session}
 
                 # Parse original and new dates from stored value
@@ -440,7 +586,10 @@ def handle_whatsapp_appointment_mgmt(
                 if len(date_parts) != 2:
                     active_session.cancel()
                     db.session.commit()
-                    reply = "Rescheduling session data is inconsistent. Please start over."
+                    if user_lang == "ml":
+                        reply = "സെഷൻ വിവരങ്ങൾ പൊരുത്തപ്പെടുന്നില്ല. ദയവായി വീണ്ടും ആരംഭിക്കുക."
+                    else:
+                        reply = "Rescheduling session data is inconsistent. Please start over."
                     return {"handled": True, "reply": reply, "session": active_session}
 
                 original_date, new_date = date_parts[0], date_parts[1]
@@ -451,7 +600,10 @@ def handle_whatsapp_appointment_mgmt(
                 if not original_booking or original_booking.status not in ('confirmed', 'active'):
                     active_session.cancel()
                     db.session.commit()
-                    reply = "The original appointment is no longer available for rescheduling."
+                    if user_lang == "ml":
+                        reply = "യഥാർത്ഥ അപ്പോയിന്റ്മെന്റ് ഇപ്പോൾ തീയതി മാറ്റാൻ ലഭ്യമല്ല."
+                    else:
+                        reply = "The original appointment is no longer available for rescheduling."
                     return {"handled": True, "reply": reply, "session": active_session}
 
                 # Execute rescheduling via shared service
@@ -472,15 +624,26 @@ def handle_whatsapp_appointment_mgmt(
                     active_session.appointment_date = new_date
                     db.session.commit()
 
-                    reply = (
-                        "✅ *Appointment Rescheduled Successfully!*\n\n"
-                        f"• *New Booking ID:* #{reschedule_res['new_booking_id']}\n"
-                        f"• *Doctor:* {reschedule_res['doctor_name']} ({reschedule_res['specialization']})\n"
-                        f"• *New Date:* {new_date}\n"
-                        f"• *New Token:* #{reschedule_res['new_token']}\n"
-                        f"• *Previous Date:* {original_date} (Token #{reschedule_res['original_token']} released)\n\n"
-                        "For any queries, please call +91 85920 31725."
-                    )
+                    if user_lang == "ml":
+                        reply = (
+                            "✅ *അപ്പോയിന്റ്മെന്റ് തീയതി വിജയകരമായി മാറ്റി!*\n\n"
+                            f"• *പുതിയ ബുക്കിംഗ് ഐഡി:* #{reschedule_res['new_booking_id']}\n"
+                            f"• *ഡോക്ടർ:* {reschedule_res['doctor_name']} ({reschedule_res['specialization']})\n"
+                            f"• *പുതിയ തീയതി:* {new_date}\n"
+                            f"• *പുതിയ ടോക്കൺ:* #{reschedule_res['new_token']}\n"
+                            f"• *പഴയ തീയതി:* {original_date} (ടോക്കൺ #{reschedule_res['original_token']} റദ്ദാക്കി)\n\n"
+                            "കൂടുതൽ വിവരങ്ങൾക്ക് +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
+                        )
+                    else:
+                        reply = (
+                            "✅ *Appointment Rescheduled Successfully!*\n\n"
+                            f"• *New Booking ID:* #{reschedule_res['new_booking_id']}\n"
+                            f"• *Doctor:* {reschedule_res['doctor_name']} ({reschedule_res['specialization']})\n"
+                            f"• *New Date:* {new_date}\n"
+                            f"• *New Token:* #{reschedule_res['new_token']}\n"
+                            f"• *Previous Date:* {original_date} (Token #{reschedule_res['original_token']} released)\n\n"
+                            "For any queries, please call +91 85920 31725."
+                        )
                     return {"handled": True, "reply": reply, "session": active_session}
                 else:
                     active_session.cancel()
@@ -488,12 +651,20 @@ def handle_whatsapp_appointment_mgmt(
                     db.session.commit()
 
                     error_msg = reschedule_res.get("message", "Unknown error")
-                    reply = (
-                        f"❌ *Rescheduling Failed*\n\n"
-                        f"Reason: {error_msg}\n\n"
-                        "Your original appointment remains intact.\n"
-                        "Please try again or call +91 85920 31725 for assistance."
-                    )
+                    if user_lang == "ml":
+                        reply = (
+                            f"❌ *തീയതി മാറ്റം പരാജയപ്പെട്ടു*\n\n"
+                            f"കാരണം: {error_msg}\n\n"
+                            "നിങ്ങളുടെ പഴയ അപ്പോയിന്റ്മെന്റ് മാറ്റമില്ലാതെ നിലനിൽക്കുന്നു.\n"
+                            "ദയവായി വീണ്ടും ശ്രമിക്കുക അല്ലെങ്കിൽ +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
+                        )
+                    else:
+                        reply = (
+                            f"❌ *Rescheduling Failed*\n\n"
+                            f"Reason: {error_msg}\n\n"
+                            "Your original appointment remains intact.\n"
+                            "Please try again or call +91 85920 31725 for assistance."
+                        )
                     return {"handled": True, "reply": reply, "session": active_session}
 
             elif text_lower in ABORT_WORDS or text_lower == 'cancel':
@@ -503,11 +674,17 @@ def handle_whatsapp_appointment_mgmt(
                     active_session.appointment_date = date_parts[0]
                 active_session.cancel()
                 db.session.commit()
-                reply = "Rescheduling cancelled. Your original appointment remains intact."
+                if user_lang == "ml":
+                    reply = "തീയതി മാറ്റം ഒഴിവാക്കി. നിങ്ങളുടെ പഴയ അപ്പോയിന്റ്മെന്റ് മാറ്റമില്ലാതെ നിലനിൽക്കുന്നു."
+                else:
+                    reply = "Rescheduling cancelled. Your original appointment remains intact."
                 return {"handled": True, "reply": reply, "session": active_session}
 
             else:
-                reply = "Please reply *CONFIRM* to proceed with rescheduling, or *CANCEL* to keep the current appointment."
+                if user_lang == "ml":
+                    reply = "തീയതി മാറ്റാൻ *CONFIRM* (അല്ലെങ്കിൽ *ശരി*) എന്ന് അയക്കുക, ഒഴിവാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                else:
+                    reply = "Please reply *CONFIRM* to proceed with rescheduling, or *CANCEL* to keep the current appointment."
                 return {"handled": True, "reply": reply, "session": active_session}
 
         # Fallback for unknown step in active management session
@@ -532,21 +709,37 @@ def handle_whatsapp_appointment_mgmt(
                 is_recent_confirm = True
 
         if is_recent_confirm and recent_confirmed.action == 'cancel':
-            reply = (
-                "This cancellation has already been processed.\n"
-                f"• *Booking ID:* #{recent_confirmed.booking_id}\n\n"
-                "For any queries, please call +91 85920 31725."
-            )
+            if user_lang == "ml":
+                reply = (
+                    "ഈ അപ്പോയിന്റ്മെന്റ് ഇതിനകം റദ്ദാക്കിയിട്ടുണ്ട്.\n"
+                    f"• *ബുക്കിംഗ് ഐഡി:* #{recent_confirmed.booking_id}\n\n"
+                    "കൂടുതൽ വിവരങ്ങൾക്ക് +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
+                )
+            else:
+                reply = (
+                    "This cancellation has already been processed.\n"
+                    f"• *Booking ID:* #{recent_confirmed.booking_id}\n\n"
+                    "For any queries, please call +91 85920 31725."
+                )
             return {"handled": True, "reply": reply, "session": recent_confirmed}
 
         if is_recent_confirm and recent_confirmed.action == 'reschedule':
-            reply = (
-                "This rescheduling has already been processed.\n"
-                f"• *New Booking ID:* #{recent_confirmed.booking_id}\n"
-                f"• *Doctor:* {recent_confirmed.doctor_name}\n"
-                f"• *Date:* {recent_confirmed.appointment_date}\n\n"
-                "For any queries, please call +91 85920 31725."
-            )
+            if user_lang == "ml":
+                reply = (
+                    "ഈ അപ്പോയിന്റ്മെന്റ് തീയതി ഇതിനകം മാറ്റിയിട്ടുണ്ട്.\n"
+                    f"• *പുതിയ ബുക്കിംഗ് ഐഡി:* #{recent_confirmed.booking_id}\n"
+                    f"• *ഡോക്ടർ:* {recent_confirmed.doctor_name}\n"
+                    f"• *തീയതി:* {recent_confirmed.appointment_date}\n\n"
+                    "കൂടുതൽ വിവരങ്ങൾക്ക് +91 85920 31725 എന്ന നമ്പറിൽ വിളിക്കുക."
+                )
+            else:
+                reply = (
+                    "This rescheduling has already been processed.\n"
+                    f"• *New Booking ID:* #{recent_confirmed.booking_id}\n"
+                    f"• *Doctor:* {recent_confirmed.doctor_name}\n"
+                    f"• *Date:* {recent_confirmed.appointment_date}\n\n"
+                    "For any queries, please call +91 85920 31725."
+                )
             return {"handled": True, "reply": reply, "session": recent_confirmed}
 
     # -------------------------------------------------------------------------
@@ -570,7 +763,10 @@ def handle_whatsapp_appointment_mgmt(
         eligible = [b for b in bookings if b["status"] in ("confirmed", "active")]
 
         if not eligible:
-            reply = "You don't have any upcoming appointments that can be cancelled."
+            if user_lang == "ml":
+                reply = "റദ്ദാക്കാൻ സാധിക്കുന്ന അപ്പോയിന്റ്മെന്റുകൾ ഒന്നും നിലവിലില്ല."
+            else:
+                reply = "You don't have any upcoming appointments that can be cancelled."
             return {"handled": True, "reply": reply, "session": None}
 
         # Check if user explicitly specified a booking ID (e.g., #374 or 374)
@@ -632,15 +828,26 @@ def handle_whatsapp_appointment_mgmt(
                     )
                     db.session.add(confirmed_session)
                     db.session.commit()
-                    reply = (
-                        "✅ *Appointment Cancelled Successfully*\n\n"
-                        f"• *Booking ID:* #{chosen['id']}\n"
-                        f"• *Doctor:* {chosen['doctor_name']} ({chosen['specialization']})\n"
-                        f"• *Date:* {chosen['date']}\n"
-                        f"• *Token Number:* #{chosen['token']}\n\n"
-                        "Your appointment has been cancelled and your token released. "
-                        "If you need to book again, simply reply *Book*."
-                    )
+                    if user_lang == "ml":
+                        reply = (
+                            "✅ *അപ്പോയിന്റ്മെന്റ് വിജയകരമായി റദ്ദാക്കി*\n\n"
+                            f"• *ബുക്കിംഗ് ഐഡി:* #{chosen['id']}\n"
+                            f"• *ഡോക്ടർ:* {chosen['doctor_name']} ({chosen['specialization']})\n"
+                            f"• *തീയതി:* {chosen['date']}\n"
+                            f"• *ടോക്കൺ നമ്പർ:* #{chosen['token']}\n\n"
+                            "നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് റദ്ദാക്കുകയും ടോക്കൺ ഒഴിവാക്കുകയും ചെയ്തു. "
+                            "പുതിയ അപ്പോയിന്റ്മെന്റിനായി *Book* എന്ന് അയക്കുക."
+                        )
+                    else:
+                        reply = (
+                            "✅ *Appointment Cancelled Successfully*\n\n"
+                            f"• *Booking ID:* #{chosen['id']}\n"
+                            f"• *Doctor:* {chosen['doctor_name']} ({chosen['specialization']})\n"
+                            f"• *Date:* {chosen['date']}\n"
+                            f"• *Token Number:* #{chosen['token']}\n\n"
+                            "Your appointment has been cancelled and your token released. "
+                            "If you need to book again, simply reply *Book*."
+                        )
                     return {"handled": True, "reply": reply, "session": confirmed_session}
 
             new_session = WhatsAppBookingSession(
@@ -661,14 +868,23 @@ def handle_whatsapp_appointment_mgmt(
             db.session.add(new_session)
             db.session.commit()
 
-            detail = _format_appointment_detail(chosen)
-            reply = (
-                f"{detail}\n\n"
-                "⚠️ *Are you sure you want to cancel this appointment?*\n"
-                "• Your token number will be permanently released.\n"
-                "• Cancellations cannot be undone.\n\n"
-                "Reply *CONFIRM* to proceed with cancellation, or *CANCEL* to keep your appointment."
-            )
+            detail = _format_appointment_detail(chosen, lang=user_lang)
+            if user_lang == "ml":
+                reply = (
+                    f"{detail}\n\n"
+                    "⚠️ *ഈ അപ്പോയിന്റ്മെന്റ് റദ്ദാക്കാൻ തീർച്ചയാണോ?*\n"
+                    "• നിങ്ങളുടെ ടോക്കൺ നമ്പർ സ്ഥിരമായി റദ്ദാക്കപ്പെടും.\n"
+                    "• ഇത് പിന്നീട് പഴയപടിയാക്കാൻ കഴിയില്ല.\n\n"
+                    "റദ്ദാക്കാൻ *CONFIRM* (അല്ലെങ്കിൽ *ശരി*) എന്ന് അയക്കുക, ഒഴിവാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                )
+            else:
+                reply = (
+                    f"{detail}\n\n"
+                    "⚠️ *Are you sure you want to cancel this appointment?*\n"
+                    "• Your token number will be permanently released.\n"
+                    "• Cancellations cannot be undone.\n\n"
+                    "Reply *CONFIRM* to proceed with cancellation, or *CANCEL* to keep your appointment."
+                )
             return {"handled": True, "reply": reply, "session": new_session}
 
         else:
@@ -684,8 +900,12 @@ def handle_whatsapp_appointment_mgmt(
             db.session.add(new_session)
             db.session.commit()
 
-            listing = _format_appointment_list(eligible, "Which appointment would you like to cancel?")
-            reply = f"{listing}\n\n_Reply with the appointment number, or *CANCEL* to abort._"
+            if user_lang == "ml":
+                listing = _format_appointment_list(eligible, "ഏത് അപ്പോയിന്റ്മെന്റാണ് റദ്ദാക്കേണ്ടത്?", lang="ml")
+                reply = f"{listing}\n\n_അപ്പോയിന്റ്മെന്റ് നമ്പർ നൽകുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക._"
+            else:
+                listing = _format_appointment_list(eligible, "Which appointment would you like to cancel?")
+                reply = f"{listing}\n\n_Reply with the appointment number, or *CANCEL* to abort._"
             return {"handled": True, "reply": reply, "session": new_session}
 
     # 4C. Reschedule Intent
@@ -704,7 +924,10 @@ def handle_whatsapp_appointment_mgmt(
         eligible = [b for b in bookings if b["status"] in ("confirmed", "active")]
 
         if not eligible:
-            reply = "You don't have any upcoming appointments that can be rescheduled."
+            if user_lang == "ml":
+                reply = "തീയതി മാറ്റാൻ സാധിക്കുന്ന അപ്പോയിന്റ്മെന്റുകൾ ഒന്നും നിലവിലില്ല."
+            else:
+                reply = "You don't have any upcoming appointments that can be rescheduled."
             return {"handled": True, "reply": reply, "session": None}
 
         if len(eligible) == 1:
@@ -727,14 +950,23 @@ def handle_whatsapp_appointment_mgmt(
             db.session.add(new_session)
             db.session.commit()
 
-            detail = _format_appointment_detail(chosen)
-            reply = (
-                f"{detail}\n\n"
-                "📅 *Select a new date for your appointment.*\n"
-                "Please enter a date within the next 15 days "
-                "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
-                "_Reply CANCEL to abort rescheduling._"
-            )
+            detail = _format_appointment_detail(chosen, lang=user_lang)
+            if user_lang == "ml":
+                reply = (
+                    f"{detail}\n\n"
+                    "📅 *അപ്പോയിന്റ്മെന്റിനായി പുതിയ തീയതി തിരഞ്ഞെടുക്കുക.*\n"
+                    "ദയവായി അടുത്ത 15 ദിവസത്തിനുള്ളിലെ ഒരു തീയതി നൽകുക "
+                    "(ഉദാ: *'നാളെ'*, *'തിങ്കൾ'*, അല്ലെങ്കിൽ *'YYYY-MM-DD'*).\n\n"
+                    "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                )
+            else:
+                reply = (
+                    f"{detail}\n\n"
+                    "📅 *Select a new date for your appointment.*\n"
+                    "Please enter a date within the next 15 days "
+                    "(e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                    "_Reply CANCEL to abort rescheduling._"
+                )
             return {"handled": True, "reply": reply, "session": new_session}
 
         else:
@@ -749,16 +981,23 @@ def handle_whatsapp_appointment_mgmt(
             db.session.add(new_session)
             db.session.commit()
 
-            listing = _format_appointment_list(eligible, "Which appointment would you like to reschedule?")
-            reply = f"{listing}\n\n_Reply with the appointment number, or *CANCEL* to abort._"
+            if user_lang == "ml":
+                listing = _format_appointment_list(eligible, "ഏത് അപ്പോയിന്റ്മെന്റിന്റെ തീയതിയാണ് മാറ്റേണ്ടത്?", lang="ml")
+                reply = f"{listing}\n\n_അപ്പോയിന്റ്മെന്റ് നമ്പർ നൽകുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക._"
+            else:
+                listing = _format_appointment_list(eligible, "Which appointment would you like to reschedule?")
+                reply = f"{listing}\n\n_Reply with the appointment number, or *CANCEL* to abort._"
             return {"handled": True, "reply": reply, "session": new_session}
 
     # 4C. Lookup Intent (Evaluated after cancel and reschedule intents)
     if is_lookup_intent(text):
         appointments_res = _get_patient_appointments(user_id, sender_phone, sender_role)
         bookings = appointments_res.get("bookings", [])
-        reply = _format_appointment_list(bookings)
+        reply = _format_appointment_list(bookings, lang=user_lang)
         return {"handled": True, "reply": reply, "session": None}
+
+    # Not a management intent
+    return {"handled": False}
 
     # Not a management intent
     return {"handled": False}

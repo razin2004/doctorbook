@@ -153,7 +153,7 @@ def get_active_specializations(doctors) -> List[Dict[str, Any]]:
     return result
 
 
-def format_doctor_schedule_summary(schedules) -> str:
+def format_doctor_schedule_summary(schedules, lang: str = "en") -> str:
     """
     Formats doctor's weekly consultation schedule.
     If all working days have identical consultation hours, displays:
@@ -164,29 +164,60 @@ def format_doctor_schedule_summary(schedules) -> str:
         • Monday: 09:00 - 14:00
         • Wednesday: 09:00 - 13:00
         • Friday: 10:00 - 14:00
+    Supports English and Malayalam.
     """
     if not schedules:
+        if lang == "ml":
+            return "📅 *കൺസൾട്ടേഷൻ സമയം:* തിങ്കൾ - ശനി (09:00 AM - 05:00 PM)"
         return "📅 *Consultation Hours:* Mon - Sat (09:00 AM - 05:00 PM)"
 
     active_scheds = [s for s in schedules if getattr(s, 'is_available', True)]
     if not active_scheds:
         active_scheds = schedules
 
+    ml_days_full = {
+        'Monday': 'തിങ്കൾ', 'Tuesday': 'ചൊവ്വ', 'Wednesday': 'ബുധൻ',
+        'Thursday': 'വ്യാഴം', 'Friday': 'വെള്ളി', 'Saturday': 'ശനി', 'Sunday': 'ഞായർ'
+    }
+
     times = set((s.start_time, s.end_time) for s in active_scheds)
     if len(times) == 1:
         st, et = next(iter(times))
-        days = [s.day_of_week for s in active_scheds]
-        return f"📅 *Doctor's Working Days:* {', '.join(days)}\n⏰ *Consultation Hours:* {st} - {et}"
+        if lang == "ml":
+            days = [ml_days_full.get(s.day_of_week, s.day_of_week) for s in active_scheds]
+            return f"📅 *പ്രവർത്തന ദിവസങ്ങൾ:* {', '.join(days)}\n⏰ *കൺസൾട്ടേഷൻ സമയം:* {st} - {et}"
+        else:
+            days = [s.day_of_week for s in active_scheds]
+            return f"📅 *Doctor's Working Days:* {', '.join(days)}\n⏰ *Consultation Hours:* {st} - {et}"
 
-    lines = ["📅 *Doctor's Working Days & Consultation Timings:*"]
+    hdr = "📅 *ഡോക്ടറുടെ പ്രവർത്തന ദിവസങ്ങളും സമയക്രമവും:*" if lang == "ml" else "📅 *Doctor's Working Days & Consultation Timings:*"
+    lines = [hdr]
     for s in active_scheds:
-        lines.append(f"• *{s.day_of_week}:* {s.start_time} - {s.end_time}")
+        d = ml_days_full.get(s.day_of_week, s.day_of_week) if lang == "ml" else s.day_of_week
+        lines.append(f"• *{d}:* {s.start_time} - {s.end_time}")
     return "\n".join(lines)
 
 
-def format_doctors_menu(doctors) -> str:
-    """Formats the list of active doctors and departments for WhatsApp plain text display."""
+def format_doctors_menu(doctors, lang: str = "en") -> str:
+    """Formats the list of active doctors and departments for WhatsApp plain text display in English or Malayalam."""
     specs = get_active_specializations(doctors)
+    if lang == "ml":
+        lines = [
+            "🏥 *പ്രൈംകെയർ ക്ലിനിക്ക് — അപ്പോയിന്റ്മെന്റ് ബുക്കിംഗ്*",
+            "താഴെ പറയുന്നതിൽ നിന്ന് ഒരു ഡോക്ടറെയോ വിഭാഗത്തെയോ തിരഞ്ഞെടുക്കുക:\n",
+            "📂 *വിഭാഗങ്ങൾ:*"
+        ]
+        for s in specs:
+            doc_names = ", ".join(d.name for d in s["doctors"][:2])
+            lines.append(f"• *{s['specialization']}* ({s['count']} ഡോക്ടർമാർ: _{doc_names}_)")
+
+        lines.append("\n👨‍⚕️ *ഡോക്ടർമാർ:*")
+        for idx, doc in enumerate(doctors, start=1):
+            lines.append(f"*{idx}.* {doc.name} — _{doc.specialization}_")
+
+        lines.append("\n_ഡോക്ടറുടെ പേരോ നമ്പറോ അയക്കുക (റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക)._")
+        return "\n".join(lines)
+
     lines = [
         "🏥 *PrimeCare Clinic — Appointment Booking*",
         "Please choose a department or doctor from the list below:\n",
@@ -204,27 +235,54 @@ def format_doctors_menu(doctors) -> str:
     return "\n".join(lines)
 
 
-def build_doctors_interactive_list(doctors) -> dict:
+def build_doctors_interactive_list(doctors, lang: str = "en") -> dict:
     """
     Builds the Meta WhatsApp interactive list structure strictly containing active doctors.
     Guarantees every row ID starts with 'doc_' to satisfy test_03 compliance.
+    Supports English and Malayalam.
     """
     from app import DoctorSchedule
+    ml_days_abbr = {
+        'Mon': 'തിങ്കൾ', 'Tue': 'ചൊവ്വ', 'Wed': 'ബുധൻ',
+        'Thu': 'വ്യാഴം', 'Fri': 'വെള്ളി', 'Sat': 'ശനി', 'Sun': 'ഞായർ'
+    }
     rows = []
     for doc in doctors[:10]:
         schedules = DoctorSchedule.query.filter_by(doctor_id=doc.id, is_available=True).all()
         if schedules:
-            days = [s.day_of_week[:3] for s in schedules]
-            duty_info = f"{schedules[0].start_time}-{schedules[0].end_time}"
-            desc = f"{doc.specialization} • {','.join(days[:3])} {duty_info}"
+            if lang == "ml":
+                days = [ml_days_abbr.get(s.day_of_week[:3], s.day_of_week[:3]) for s in schedules]
+                duty_info = f"{schedules[0].start_time}-{schedules[0].end_time}"
+                desc = f"{doc.specialization} • {','.join(days[:2])} {duty_info}"
+            else:
+                days = [s.day_of_week[:3] for s in schedules]
+                duty_info = f"{schedules[0].start_time}-{schedules[0].end_time}"
+                desc = f"{doc.specialization} • {','.join(days[:3])} {duty_info}"
         else:
-            desc = f"{doc.specialization} • Working hours"
+            desc = f"{doc.specialization} • കൺസൾട്ടേഷൻ" if lang == "ml" else f"{doc.specialization} • Working hours"
 
         rows.append({
             "id": f"doc_{doc.id}",
             "title": str(doc.name)[:24],
             "description": str(desc)[:72]
         })
+
+    if lang == "ml":
+        return {
+            "header_text": "പ്രൈംകെയർ ക്ലിനിക്ക്",
+            "body_text": (
+                "🏥 *പ്രൈംകെയർ ക്ലിനിക്ക് — അപ്പോയിന്റ്മെന്റ് ബുക്കിംഗ്*\n\n"
+                "ബുക്ക് ചെയ്യുവാനായി താഴെ നൽകിയിട്ടുള്ള പട്ടികയിൽ നിന്ന് ഡോക്ടറെ തിരഞ്ഞെടുക്കുക:"
+            ),
+            "button_text": "ഡോക്ടറെ കാണുക",
+            "footer_text": "തിരഞ്ഞെടുക്കാൻ ബട്ടൺ അമർത്തുക",
+            "sections": [
+                {
+                    "title": "ലഭ്യമായ ഡോക്ടർമാർ",
+                    "rows": rows
+                }
+            ]
+        }
 
     return {
         "header_text": "PrimeCare Clinic",
@@ -514,24 +572,47 @@ def get_available_dates_for_specialization(specialization: str, doctors, days_ah
     return available_dates
 
 
-def build_dates_interactive_list(available_dates: List[Dict[str, Any]], doctor_name: Optional[str] = None, specialization: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def build_dates_interactive_list(available_dates: List[Dict[str, Any]], doctor_name: Optional[str] = None, specialization: Optional[str] = None, lang: str = "en") -> Optional[Dict[str, Any]]:
     """
     Builds Meta WhatsApp interactive list for date selection.
     Strictly caps rows to 10 (Meta limit) and guarantees character limits.
+    Supports English and Malayalam.
     """
     if not available_dates:
         return None
 
+    ml_days_full = {
+        'Monday': 'തിങ്കൾ', 'Tuesday': 'ചൊവ്വ', 'Wednesday': 'ബുധൻ',
+        'Thursday': 'വ്യാഴം', 'Friday': 'വെള്ളി', 'Saturday': 'ശനി', 'Sunday': 'ഞായർ'
+    }
+    ml_months = {
+        'Jan': 'ജനു', 'Feb': 'ഫെബ്രു', 'Mar': 'മാർച്ച്', 'Apr': 'ഏപ്രിൽ',
+        'May': 'മേയ്', 'Jun': 'ജൂൺ', 'Jul': 'ജൂലൈ', 'Aug': 'ഓഗസ്റ്റ്',
+        'Sep': 'സെപ്റ്റം', 'Oct': 'ഒക്ടോ', 'Nov': 'നവം', 'Dec': 'ഡിസം'
+    }
+
     rows = []
     for item in available_dates[:10]:
         date_id = f"date_{item['date']}"
-        title = str(item["display_date"])[:24]
+        if lang == "ml":
+            w = ml_days_full.get(item.get('weekday'), item.get('weekday', ''))
+            dt_parts = str(item.get("display_date", "")).replace(',', '').split()
+            day_num = dt_parts[1] if len(dt_parts) > 1 else ""
+            mon_str = ml_months.get(dt_parts[2], dt_parts[2]) if len(dt_parts) > 2 else ""
+            title = f"{w}, {day_num} {mon_str}".strip()[:24]
 
-        if "time_slot" in item:
-            desc = f"{item['time_slot']} • Available"[:72]
+            if "time_slot" in item:
+                desc = f"{item['time_slot']} • ലഭ്യമാണ്"[:72]
+            else:
+                doc_count = len(item.get("available_doctors", []))
+                desc = f"{doc_count} ഡോക്ടർമാർ • ലഭ്യമാണ്"[:72]
         else:
-            doc_count = len(item.get("available_doctors", []))
-            desc = f"{doc_count} Doctor{'s' if doc_count > 1 else ''} Available • Tap to choose"[:72]
+            title = str(item["display_date"])[:24]
+            if "time_slot" in item:
+                desc = f"{item['time_slot']} • Available"[:72]
+            else:
+                doc_count = len(item.get("available_doctors", []))
+                desc = f"{doc_count} Doctor{'s' if doc_count > 1 else ''} Available • Tap to choose"[:72]
 
         rows.append({
             "id": date_id,
@@ -539,7 +620,27 @@ def build_dates_interactive_list(available_dates: List[Dict[str, Any]], doctor_n
             "description": desc
         })
 
-    target_title = doctor_name or specialization or "Specialist"
+    target_title = doctor_name or specialization or ("സ്പെഷ്യലിസ്റ്റ്" if lang == "ml" else "Specialist")
+
+    if lang == "ml":
+        body = (
+            f"📅 *തീയതി തിരഞ്ഞെടുക്കുക*\n"
+            f"*{target_title}* ഡോക്ടറുടെ അപ്പോയിന്റ്മെന്റിനായി ലഭ്യമായ തീയതികളിൽ ഒന്ന് തിരഞ്ഞെടുക്കുക:\n\n"
+            f"_(ക്ലിനിക്ക് പ്രവർത്തിക്കുന്ന ദിവസങ്ങൾ മാത്രം)_"
+        )
+        return {
+            "header_text": "പ്രൈംകെയർ ക്ലിനിക്ക്",
+            "body_text": body[:1024],
+            "button_text": "തീയതി കാണുക",
+            "footer_text": "തിരഞ്ഞെടുക്കാൻ ബട്ടൺ അമർത്തുക",
+            "sections": [
+                {
+                    "title": "ലഭ്യമായ തീയതികൾ",
+                    "rows": rows
+                }
+            ]
+        }
+
     body = (
         f"📅 *Select Appointment Date*\n"
         f"Please select your preferred appointment date for *{target_title}* from the available slots below:\n\n"
@@ -560,31 +661,41 @@ def build_dates_interactive_list(available_dates: List[Dict[str, Any]], doctor_n
     }
 
 
-def build_timings_interactive_list(slots: List[Dict[str, Any]], date_str: str) -> Dict[str, Any]:
+def build_timings_interactive_list(slots: List[Dict[str, Any]], date_str: str, lang: str = "en") -> Dict[str, Any]:
     """
     Builds Meta WhatsApp interactive list when multiple doctors or timing shifts
-    are available on a selected date.
+    are available on a selected date. Supports English and Malayalam.
     """
     rows = []
     for s in slots[:10]:
         slot_id = f"slot_{s['doctor_id']}_{s.get('start_time', '09:00')}-{s.get('end_time', '13:00')}"
-        title = f"{s.get('time_slot', 'Consultation Hours')}"[:24]
-        desc = f"{s['doctor_name']} • {s.get('specialization', '')}"[:72]
+        title = f"{s.get('time_slot', 'Consultation')}"[:24]
+        desc = f"{s['doctor_name']} ({s['specialization']})"[:72]
         rows.append({
             "id": slot_id,
             "title": title,
             "description": desc
         })
 
+    if lang == "ml":
+        return {
+            "header_text": "പ്രൈംകെയർ ക്ലിനിക്ക്",
+            "body_text": f"⏰ *സമയം തിരഞ്ഞെടുക്കുക: {date_str}*\nദയവായി അനുയോജ്യമായ സമയവും ഡോക്ടറെയും തിരഞ്ഞെടുക്കുക:",
+            "button_text": "സമയം കാണുക",
+            "footer_text": "തിരഞ്ഞെടുക്കാൻ ബട്ടൺ അമർത്തുക",
+            "sections": [
+                {
+                    "title": "ലഭ്യമായ സമയങ്ങൾ",
+                    "rows": rows
+                }
+            ]
+        }
+
     return {
         "header_text": "PrimeCare Clinic",
-        "body_text": (
-            f"🕒 *Select Consultation Timing*\n"
-            f"Multiple consultation slots are available on *{date_str}*. "
-            "Please select your preferred timing from the list below:"
-        ),
-        "button_text": "Select Timing",
-        "footer_text": "Tap button to choose timing",
+        "body_text": f"⏰ *Select Consultation Timing: {date_str}*\nPlease choose your preferred timing slot or doctor below:",
+        "button_text": "Choose Timing",
+        "footer_text": "Tap button to select timing",
         "sections": [
             {
                 "title": "Available Timings",
@@ -740,8 +851,30 @@ def parse_patient_and_phone(
             remainder = re.sub(re.escape(gender_match.group(0)), ' ', remainder, count=1, flags=re.IGNORECASE)
         remainder = gender_pattern.sub(' ', remainder)
 
-        parts = [p.strip() for p in re.split(r'[,;|\n]', remainder) if p.strip()]
-        clean = parts[0] if parts else remainder
+        # Check explicit "patient name" / "name" label first
+        explicit_name_m = re.search(
+            r'\b(?:patient\s*name|name|രോഗിയുടെ\s*പേര്|പേര്)\s*[:=]?\s*([a-zA-Z\s\.\u0D00-\u0D7F]+?)(?=(?:,\s*|;|\n|\b(?:age|years|gender|phone|number|വയസ്സ്|ലിംഗം|ഫോൺ)\b|$))',
+            text,
+            re.IGNORECASE
+        )
+        if explicit_name_m and len(explicit_name_m.group(1).strip()) >= 2:
+            clean = explicit_name_m.group(1).strip()
+        else:
+            parts = [p.strip() for p in re.split(r'[,;|\n]', remainder) if p.strip()]
+            clean = remainder
+            for p in parts:
+                p_cand = re.sub(
+                    r'\b(age|years|gender|yrs|old|patient|name|phone|number|is|for|വയസ്സ്|രോഗി|പേര്|ഫോൺ|നമ്പർ)\b',
+                    ' ',
+                    p,
+                    flags=re.IGNORECASE
+                ).strip()
+                if p_cand and not re.search(r'\b(dr|doctor|book|appointment)\b', p, re.IGNORECASE):
+                    clean = p_cand
+                    break
+            else:
+                clean = parts[0] if parts else remainder
+
         clean = re.sub(
             r'\b(age|years|gender|yrs|old|patient|name|phone|number|is|for|വയസ്സ്|രോഗി|പേര്|ഫോൺ|നമ്പർ)\b',
             ' ',
@@ -819,7 +952,13 @@ def extract_booking_entities_deterministic(message_text: str, sender_phone: Opti
     resolved_doc, _, _ = resolve_doctor_from_input(message_text, doctors)
     spec_name, _ = resolve_specialization_from_input(message_text, doctors)
     parsed_date = parse_booking_date(message_text)
-    p_name, p_age, p_gender, p_phone = parse_patient_and_phone(message_text, sender_phone=sender_phone)
+
+    clean_text = message_text
+    if resolved_doc:
+        clean_text = re.sub(re.escape(resolved_doc.name), ' ', clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r'\b(book|appointment|consultation|with|for)\b', ' ', clean_text, flags=re.IGNORECASE)
+
+    p_name, p_age, p_gender, p_phone = parse_patient_and_phone(clean_text, sender_phone=sender_phone)
 
     return {
         "doctor_name": resolved_doc.name if resolved_doc else None,
@@ -1098,23 +1237,32 @@ def handle_whatsapp_booking_flow(
             db.session.commit()
 
             schedules = DoctorSchedule.query.filter_by(doctor_id=resolved_doc.id, is_available=True).all()
-            sched_summary = format_doctor_schedule_summary(schedules)
+            sched_summary = format_doctor_schedule_summary(schedules, lang=user_lang)
 
             available_dates = get_available_dates_for_doctor(resolved_doc, days_ahead=14)
-            interactive_dates = build_dates_interactive_list(available_dates, doctor_name=resolved_doc.name, specialization=resolved_doc.specialization)
+            interactive_dates = build_dates_interactive_list(available_dates, doctor_name=resolved_doc.name, specialization=resolved_doc.specialization, lang=user_lang)
 
-            reply = (
-                f"You have selected *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
-                f"{sched_summary}\n\n"
-                "Please select your preferred appointment date from the available slots below, "
-                "or reply with a date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
-                "_Reply CANCEL to exit._"
-            )
+            if user_lang == "ml":
+                reply = (
+                    f"നിങ്ങൾ തിരഞ്ഞെടുത്ത ഡോക്ടർ: *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
+                    f"{sched_summary}\n\n"
+                    "താഴെ പറയുന്നതിൽ നിന്ന് നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് തീയതി തിരഞ്ഞെടുക്കുക, "
+                    "അല്ലെങ്കിൽ ഒരു തീയതി നൽകുക (ഉദാ: *'നാളെ'*, *'തിങ്കൾ'*, അല്ലെങ്കിൽ *'YYYY-MM-DD'*).\n\n"
+                    "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                )
+            else:
+                reply = (
+                    f"You have selected *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
+                    f"{sched_summary}\n\n"
+                    "Please select your preferred appointment date from the available slots below, "
+                    "or reply with a date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                    "_Reply CANCEL to exit._"
+                )
             return {"handled": True, "reply": reply, "session": new_session, "interactive": interactive_dates}
 
         # Otherwise display full discovery menu (Specializations + Doctors)
-        reply = format_doctors_menu(doctors)
-        interactive_data = build_doctors_interactive_list(doctors)
+        reply = format_doctors_menu(doctors, lang=user_lang)
+        interactive_data = build_doctors_interactive_list(doctors, lang=user_lang)
         return {"handled": True, "reply": reply, "session": new_session, "interactive": interactive_data}
 
     # -------------------------------------------------------------------------
@@ -1122,7 +1270,17 @@ def handle_whatsapp_booking_flow(
     # -------------------------------------------------------------------------
     from services.whatsapp_webhook_service import is_greeting_message
     from services.whatsapp_localization import is_language_command
-    if (text_lower.startswith("menu_") and text_lower != "menu_book") or is_greeting_message(text) or is_language_command(text):
+    from services.whatsapp_appointment_mgmt import is_lookup_intent, is_cancel_intent, is_reschedule_intent
+    if (
+        (text_lower.startswith("menu_") and text_lower != "menu_book")
+        or is_greeting_message(text)
+        or is_language_command(text)
+        or (not text.isdigit() and (
+            is_lookup_intent(text)
+            or is_cancel_intent(text)
+            or is_reschedule_intent(text)
+        ))
+    ):
         active_session.cancel()
         db.session.commit()
         return {"handled": False}
@@ -1157,18 +1315,27 @@ def handle_whatsapp_booking_flow(
                 db.session.commit()
 
                 schedules = DoctorSchedule.query.filter_by(doctor_id=resolved_doc.id, is_available=True).all()
-                sched_summary = format_doctor_schedule_summary(schedules)
+                sched_summary = format_doctor_schedule_summary(schedules, lang=user_lang)
 
                 available_dates = get_available_dates_for_doctor(resolved_doc, days_ahead=14)
-                interactive_dates = build_dates_interactive_list(available_dates, doctor_name=resolved_doc.name, specialization=resolved_doc.specialization)
+                interactive_dates = build_dates_interactive_list(available_dates, doctor_name=resolved_doc.name, specialization=resolved_doc.specialization, lang=user_lang)
 
-                reply = (
-                    f"You selected *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
-                    f"{sched_summary}\n\n"
-                    "Please select your preferred appointment date from the available slots below, "
-                    "or reply with a date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
-                    "_Reply CANCEL to exit._"
-                )
+                if user_lang == "ml":
+                    reply = (
+                        f"നിങ്ങൾ തിരഞ്ഞെടുത്ത ഡോക്ടർ: *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
+                        f"{sched_summary}\n\n"
+                        "താഴെ പറയുന്നതിൽ നിന്ന് നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് തീയതി തിരഞ്ഞെടുക്കുക, "
+                        "അല്ലെങ്കിൽ ഒരു തീയതി നൽകുക (ഉദാ: *'നാളെ'*, *'തിങ്കൾ'*, അല്ലെങ്കിൽ *'YYYY-MM-DD'*).\n\n"
+                        "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                    )
+                else:
+                    reply = (
+                        f"You selected *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
+                        f"{sched_summary}\n\n"
+                        "Please select your preferred appointment date from the available slots below, "
+                        "or reply with a date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                        "_Reply CANCEL to exit._"
+                    )
                 return {"handled": True, "reply": reply, "session": active_session, "interactive": interactive_dates}
             else:
                 # Multiple doctors in department -> show available dates for the department
@@ -1179,19 +1346,35 @@ def handle_whatsapp_booking_flow(
                 db.session.commit()
 
                 available_dates = get_available_dates_for_specialization(spec_name, doctors, days_ahead=14)
-                interactive_dates = build_dates_interactive_list(available_dates, specialization=spec_name)
+                interactive_dates = build_dates_interactive_list(available_dates, specialization=spec_name, lang=user_lang)
 
-                reply = (
-                    f"You selected the *{spec_name}* department ({len(spec_doctors)} specialists available).\n\n"
-                    "Please select your preferred appointment date from the available dates below, "
-                    "or reply with a date (e.g. *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
-                    "_Reply CANCEL to exit._"
-                )
+                if user_lang == "ml":
+                    reply = (
+                        f"നിങ്ങൾ തിരഞ്ഞെടുത്ത വിഭാഗം: *{spec_name}* ({len(spec_doctors)} സ്പെഷ്യലിസ്റ്റുകൾ ലഭ്യമാണ്).\n\n"
+                        "താഴെ പറയുന്നതിൽ നിന്ന് നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് തീയതി തിരഞ്ഞെടുക്കുക, "
+                        "അല്ലെങ്കിൽ ഒരു തീയതി നൽകുക (ഉദാ: *'നാളെ'*, *'തിങ്കൾ'*, അല്ലെങ്കിൽ *'YYYY-MM-DD'*).\n\n"
+                        "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                    )
+                else:
+                    reply = (
+                        f"You selected the *{spec_name}* department ({len(spec_doctors)} specialists available).\n\n"
+                        "Please select your preferred appointment date from the available dates below, "
+                        "or reply with a date (e.g. *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                        "_Reply CANCEL to exit._"
+                    )
                 return {"handled": True, "reply": reply, "session": active_session, "interactive": interactive_dates}
 
         # Otherwise resolve by doctor name, number, or doc_{id}
         resolved_doc, matching_list, err_msg = resolve_doctor_from_input(text, doctors)
         if err_msg:
+            if user_lang == "ml":
+                err_text = f"❓ നൽകിയ ഡോക്ടറെയോ വിഭാഗത്തെയോ കണ്ടെത്താനായില്ല: '{text}'. ദയവായി താഴെ പറയുന്ന ലിസ്റ്റിൽ നിന്ന് തിരഞ്ഞെടുക്കുക:"
+                return {
+                    "handled": True,
+                    "reply": f"{err_text}\n\n{format_doctors_menu(doctors, lang='ml')}",
+                    "session": active_session,
+                    "interactive": build_doctors_interactive_list(doctors, lang='ml')
+                }
             return {
                 "handled": True,
                 "reply": f"{err_msg}\n\n{format_doctors_menu(doctors)}",
@@ -1200,10 +1383,16 @@ def handle_whatsapp_booking_flow(
             }
 
         if matching_list:
-            lines = [f"Multiple doctors found matching '{text}'. Please select by number:\n"]
-            for idx, d in enumerate(matching_list, start=1):
-                lines.append(f"*{idx}.* {d.name} — _{d.specialization}_")
-            lines.append("\n_Reply with the number or doctor name, or CANCEL to exit._")
+            if user_lang == "ml":
+                lines = [f"'{text}' എന്നതുമായി പൊരുത്തപ്പെടുന്ന ഒന്നിലധികം ഡോക്ടർമാരുണ്ട്. നമ്പർ തിരഞ്ഞെടുക്കുക:\n"]
+                for idx, d in enumerate(matching_list, start=1):
+                    lines.append(f"*{idx}.* {d.name} — _{d.specialization}_")
+                lines.append("\n_നമ്പറോ ഡോക്ടറുടെ പേരോ അയക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._")
+            else:
+                lines = [f"Multiple doctors found matching '{text}'. Please select by number:\n"]
+                for idx, d in enumerate(matching_list, start=1):
+                    lines.append(f"*{idx}.* {d.name} — _{d.specialization}_")
+                lines.append("\n_Reply with the number or doctor name, or CANCEL to exit._")
             return {"handled": True, "reply": "\n".join(lines), "session": active_session}
 
         active_session.doctor_id = resolved_doc.id
@@ -1213,18 +1402,27 @@ def handle_whatsapp_booking_flow(
         db.session.commit()
 
         schedules = DoctorSchedule.query.filter_by(doctor_id=resolved_doc.id, is_available=True).all()
-        sched_summary = format_doctor_schedule_summary(schedules)
+        sched_summary = format_doctor_schedule_summary(schedules, lang=user_lang)
 
         available_dates = get_available_dates_for_doctor(resolved_doc, days_ahead=14)
-        interactive_dates = build_dates_interactive_list(available_dates, doctor_name=resolved_doc.name, specialization=resolved_doc.specialization)
+        interactive_dates = build_dates_interactive_list(available_dates, doctor_name=resolved_doc.name, specialization=resolved_doc.specialization, lang=user_lang)
 
-        reply = (
-            f"You selected *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
-            f"{sched_summary}\n\n"
-            "Please select your preferred appointment date from the available slots below, "
-            "or reply with a date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
-            "_Reply CANCEL to exit._"
-        )
+        if user_lang == "ml":
+            reply = (
+                f"നിങ്ങൾ തിരഞ്ഞെടുത്ത ഡോക്ടർ: *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
+                f"{sched_summary}\n\n"
+                "താഴെ പറയുന്നതിൽ നിന്ന് നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് തീയതി തിരഞ്ഞെടുക്കുക, "
+                "അല്ലെങ്കിൽ ഒരു തീയതി നൽകുക (ഉദാ: *'നാളെ'*, *'തിങ്കൾ'*, അല്ലെങ്കിൽ *'YYYY-MM-DD'*).\n\n"
+                "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+            )
+        else:
+            reply = (
+                f"You selected *{resolved_doc.name}* ({resolved_doc.specialization}).\n\n"
+                f"{sched_summary}\n\n"
+                "Please select your preferred appointment date from the available slots below, "
+                "or reply with a date (e.g., *'tomorrow'*, *'Monday'*, or *'YYYY-MM-DD'*).\n\n"
+                "_Reply CANCEL to exit._"
+            )
         return {"handled": True, "reply": reply, "session": active_session, "interactive": interactive_dates}
 
     # --- STEP 2: SELECT_DATE ---
@@ -1421,8 +1619,11 @@ def handle_whatsapp_booking_flow(
                 selected_slot = next((s for s in avail_docs_on_date if s["doctor_id"] == resolved_doc.id), None)
 
         if not selected_slot:
-            reply = "Please select a valid timing slot from the options or reply with the number (or CANCEL to exit)."
-            return {"handled": True, "reply": reply, "session": active_session, "interactive": build_timings_interactive_list(avail_docs_on_date, active_session.appointment_date)}
+            if user_lang == "ml":
+                reply = "ദയവായി ഓപ്ഷനുകളിൽ നിന്ന് സാധുവായ സമയം തിരഞ്ഞെടുക്കുക അല്ലെങ്കിൽ നമ്പർ നൽകുക (റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക)."
+            else:
+                reply = "Please select a valid timing slot from the options or reply with the number (or CANCEL to exit)."
+            return {"handled": True, "reply": reply, "session": active_session, "interactive": build_timings_interactive_list(avail_docs_on_date, active_session.appointment_date, lang=user_lang)}
 
         active_session.doctor_id = selected_slot["doctor_id"]
         active_session.doctor_name = selected_slot["doctor_name"]
@@ -1431,17 +1632,29 @@ def handle_whatsapp_booking_flow(
         db.session.commit()
 
         registered_phone = active_session.contact_phone or sender_phone or "+91 85920 31725"
-        reply = (
-            f"✅ *Timing Confirmed:* {selected_slot['time_slot']}\n"
-            f"👨‍⚕️ *Doctor:* {selected_slot['doctor_name']} ({selected_slot['specialization']})\n\n"
-            "Please provide the patient details in format:\n"
-            "*Name, Age, Gender, Phone*\n"
-            "(e.g., *'Rahul Sharma, 28, Male, 9876543210'*).\n\n"
-            f"💡 *Same Number Shortcut:* To use this WhatsApp number ({registered_phone}), "
-            "you can reply *SAME* or:\n"
-            "*'Rahul Sharma, 28, Male, SAME'*\n\n"
-            "_Reply CANCEL to exit._"
-        )
+        if user_lang == "ml":
+            reply = (
+                f"✅ *സമയം ഉറപ്പിച്ചു:* {selected_slot['time_slot']}\n"
+                f"👨‍⚕️ *ഡോക്ടർ:* {selected_slot['doctor_name']} ({selected_slot['specialization']})\n\n"
+                "ദയവായി രോഗിയുടെ വിവരങ്ങൾ താഴെ പറയുന്ന രീതിയിൽ നൽകുക:\n"
+                "*പേര്, പ്രായം, ലിംഗം, ഫോൺ നമ്പർ*\n"
+                "(ഉദാ: *'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, 9876543210'*).\n\n"
+                f"💡 *ഇതേ വാട്ട്‌സ്ആപ്പ് നമ്പർ ഉപയോഗിക്കാൻ:* ഫോൺ നമ്പറിന് പകരം *SAME* എന്ന് നൽകാം:\n"
+                f"*'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, SAME'*\n\n"
+                "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+            )
+        else:
+            reply = (
+                f"✅ *Timing Confirmed:* {selected_slot['time_slot']}\n"
+                f"👨‍⚕️ *Doctor:* {selected_slot['doctor_name']} ({selected_slot['specialization']})\n\n"
+                "Please provide the patient details in format:\n"
+                "*Name, Age, Gender, Phone*\n"
+                "(e.g., *'Rahul Sharma, 28, Male, 9876543210'*).\n\n"
+                f"💡 *Same Number Shortcut:* To use this WhatsApp number ({registered_phone}), "
+                "you can reply *SAME* or:\n"
+                "*'Rahul Sharma, 28, Male, SAME'*\n\n"
+                "_Reply CANCEL to exit._"
+            )
         return {"handled": True, "reply": reply, "session": active_session}
 
     # --- STEP 3: PATIENT_DETAILS ---
@@ -1454,14 +1667,22 @@ def handle_whatsapp_booking_flow(
         if default_name:
             is_diff, cand_name = check_registered_patient_different_name(text, default_name)
             if is_diff:
-                reply = (
-                    "⚠️ *Notice: Family-Member Booking Deferred*\n"
-                    "Booking appointments for another person or dependent family members is not supported in Phase 4A. "
-                    "Family member booking will be available in Phase 4C.\n\n"
-                    f"Appointments can only be booked under your registered account (*{default_name}*).\n\n"
-                    "Please reply with your *Age and Gender* to proceed with booking for yourself (e.g., *'32, Female'*), "
-                    "or reply *CANCEL* to exit."
-                )
+                if user_lang == "ml":
+                    reply = (
+                        "⚠️ *മറ്റൊരാൾക്ക് വേണ്ടിയുള്ള ബുക്കിംഗ്:* മറ്റൊരാൾക്കോ കുടുംബാംഗങ്ങൾക്കോ വേണ്ടിയുള്ള ബുക്കിംഗ് ഉടൻ ലഭ്യമാകുന്നതാണ്.\n\n"
+                        f"നിലവിൽ രജിസ്റ്റർ ചെയ്ത അക്കൗണ്ടിലുള്ള രോഗിക്ക് (*{default_name}*) മാത്രമേ ബുക്ക് ചെയ്യാനാകൂ.\n\n"
+                        "ദയവായി നിങ്ങളുടെ *പ്രായവും ലിംഗവും* നൽകുക (ഉദാ: *'32, സ്ത്രീ'*), "
+                        "അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
+                    )
+                else:
+                    reply = (
+                        "⚠️ *Notice: Family-Member Booking Deferred*\n"
+                        "Booking appointments for another person or dependent family members is not supported in Phase 4A. "
+                        "Family member booking will be available in Phase 4C.\n\n"
+                        f"Appointments can only be booked under your registered account (*{default_name}*).\n\n"
+                        "Please reply with your *Age and Gender* to proceed with booking for yourself (e.g., *'32, Female'*), "
+                        "or reply *CANCEL* to exit."
+                    )
                 return {"handled": True, "reply": reply, "session": active_session}
 
         p_name, p_age, p_gender, p_phone = parse_patient_and_phone(
@@ -1472,25 +1693,45 @@ def handle_whatsapp_booking_flow(
 
         if not p_name or not p_age or not p_gender:
             if default_name:
-                reply = (
-                    f"Please provide your Age and Gender to complete the booking for *{default_name}* "
-                    "(e.g., *'32, Female'*).\n\n"
-                    "_Reply CANCEL to exit._"
-                )
+                if user_lang == "ml":
+                    reply = (
+                        f"*{default_name}* എന്ന രോഗിയുടെ ബുക്കിംഗ് പൂർത്തിയാക്കാൻ ദയവായി പ്രായവും ലിംഗവും നൽകുക "
+                        "(ഉദാ: *'32, സ്ത്രീ'* അല്ലെങ്കിൽ *'28, പുരുഷൻ'*).\n\n"
+                        "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                    )
+                else:
+                    reply = (
+                        f"Please provide your Age and Gender to complete the booking for *{default_name}* "
+                        "(e.g., *'32, Female'*).\n\n"
+                        "_Reply CANCEL to exit._"
+                    )
             else:
-                reply = (
-                    "Please provide valid patient details in the format:\n"
-                    "*Name, Age, Gender* (e.g., *'Rahul Sharma, 28, Male'*).\n\n"
-                    "_Reply CANCEL to exit._"
-                )
+                if user_lang == "ml":
+                    reply = (
+                        "ദയവായി താഴെ പറയുന്ന ഫോർമാറ്റിൽ രോഗിയുടെ വിവരങ്ങൾ നൽകുക:\n"
+                        "*പേര്, പ്രായം, ലിംഗം* (ഉദാ: *'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ'*).\n\n"
+                        "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                    )
+                else:
+                    reply = (
+                        "Please provide valid patient details in the format:\n"
+                        "*Name, Age, Gender* (e.g., *'Rahul Sharma, 28, Male'*).\n\n"
+                        "_Reply CANCEL to exit._"
+                    )
             return {"handled": True, "reply": reply, "session": active_session}
 
         contact_phone = p_phone or active_session.contact_phone or normalize_phone_number(sender_phone)
         if not contact_phone:
-            reply = (
-                "Please provide a contact phone number along with patient details "
-                "(e.g., *'Rahul Sharma, 28, Male, 9876543210'*), or reply *SAME* to use your WhatsApp number."
-            )
+            if user_lang == "ml":
+                reply = (
+                    "ദയവായി രോഗിയുടെ വിവരങ്ങളോടൊപ്പം ബന്ധപ്പെടാനുള്ള ഫോൺ നമ്പർ നൽകുക "
+                    "(ഉദാ: *'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, 9876543210'*), അല്ലെങ്കിൽ നിങ്ങളുടെ വാട്ട്‌സ്ആപ്പ് നമ്പർ ഉപയോഗിക്കാൻ *SAME* എന്ന് മറുപടി നൽകുക."
+                )
+            else:
+                reply = (
+                    "Please provide a contact phone number along with patient details "
+                    "(e.g., *'Rahul Sharma, 28, Male, 9876543210'*), or reply *SAME* to use your WhatsApp number."
+                )
             return {"handled": True, "reply": reply, "session": active_session}
 
         active_session.patient_name = p_name

@@ -97,9 +97,41 @@ class WhatsAppLocalizationTestSuite(unittest.TestCase):
         PatientBooking.query.filter_by(phone_number=self.patient_phone).delete()
         db.session.commit()
 
+        self.doc1 = Doctor.query.first()
+        self.patient_user = User.query.filter_by(phone_number=self.patient_phone).first()
+        if not self.patient_user:
+            self.patient_user = User(
+                name="Rahul Sharma",
+                email="rahul_test@primecare.com",
+                phone_number=self.patient_phone,
+                password_hash="pbkdf2:sha256:test_hash",
+                role="patient",
+                email_verified=True,
+                phone_verified=True
+            )
+            db.session.add(self.patient_user)
+            db.session.commit()
+
     def tearDown(self):
         db.session.rollback()
         self.app_context.pop()
+
+    def _create_convo(self, phone):
+        convo = WhatsAppConversation(
+            sender_phone=phone,
+            conversation_uuid=f"test-convo-{datetime.utcnow().timestamp()}",
+            status="active"
+        )
+        db.session.add(convo)
+        db.session.commit()
+        return convo
+
+    def _find_next_working_day(self, doc, offset=1):
+        from services.whatsapp_booking_flow import get_available_dates_for_doctor
+        avail = get_available_dates_for_doctor(doc, days_ahead=14)
+        if avail and len(avail) >= offset:
+            return avail[offset - 1]["date"]
+        return (datetime.now() + timedelta(days=offset + 1)).strftime('%Y-%m-%d')
 
     # -----------------------------------------------------------------
     # 1. Language Command Detection & Parsing
@@ -490,6 +522,275 @@ class WhatsAppLocalizationTestSuite(unittest.TestCase):
         )
         self.assertTrue(res4.get("menu_handled"))
         self.assertIn("കൂരാച്ചുണ്ട്, കോഴിക്കോട്", res4.get("reply"))
+
+    def test_13_navigation_override_interrupts_ongoing_booking_sequence(self):
+        """13. Choosing menu_my_bookings or other menu items in the middle of a booking
+        immediately cancels the booking session and executes the new selection."""
+        from unittest.mock import MagicMock
+        from services.whatsapp_webhook_service import dispatch_inbound_message_reply
+        from services.booking_services import create_booking_service
+
+        mock_client = MagicMock()
+        mock_client.send_interactive_list_message.return_value = {"success": True, "status": "accepted", "message_id": "wamid.out13"}
+        mock_client.send_text_message.return_value = {"success": True, "status": "sent", "message_id": "wamid.out13b"}
+
+        # Create an existing confirmed booking for the patient so my_bookings has data
+        target_date = self._find_next_working_day(self.doc1, 1)
+        create_booking_service(
+            patient_name="Rahul",
+            age=30,
+            gender="Male",
+            phone_number=self.patient_phone,
+            appointment_date=target_date,
+            doctor_id=self.doc1.id,
+            doctor_name=self.doc1.name,
+            specialization=self.doc1.specialization,
+            patient_user_id=self.patient_user.id,
+            actor_role='patient',
+            booking_source='test'
+        )
+
+        convo = self._create_convo(self.patient_phone)
+        set_whatsapp_user_language(self.patient_phone, "ml")
+
+        # Step 1: User starts booking (enters SELECT_DOCTOR)
+        msg1 = WhatsAppMessage(
+            conversation_id=convo.id,
+            wamid="wamid.in13_1",
+            direction="inbound",
+            message_type="text",
+            content="Book",
+            status="received"
+        )
+        db.session.add(msg1)
+        db.session.commit()
+
+        res1 = dispatch_inbound_message_reply(
+            conversation_id=convo.id,
+            inbound_msg_id=msg1.id,
+            webhook_event_id=131,
+            message={"type": "text"},
+            sender_phone=self.patient_phone,
+            scoped_user_id=None,
+            parent_scoped_id=None,
+            contact_name="Rahul",
+            client=mock_client
+        )
+        self.assertTrue(res1.get("booking_handled"))
+
+        # Verify active booking session is running
+        session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id, status='in_progress').first()
+        self.assertIsNotNone(session)
+        self.assertEqual(session.step, 'SELECT_DOCTOR')
+
+        # Step 2: In the middle of booking, user selects "menu_my_bookings" from old message/menu
+        msg2 = WhatsAppMessage(
+            conversation_id=convo.id,
+            wamid="wamid.in13_2",
+            direction="inbound",
+            message_type="text",
+            content="menu_my_bookings",
+            status="received"
+        )
+        db.session.add(msg2)
+        db.session.commit()
+
+        res2 = dispatch_inbound_message_reply(
+            conversation_id=convo.id,
+            inbound_msg_id=msg2.id,
+            webhook_event_id=132,
+            message={"type": "text"},
+            sender_phone=self.patient_phone,
+            scoped_user_id=None,
+            parent_scoped_id=None,
+            contact_name="Rahul",
+            client=mock_client
+        )
+
+        # Must be handled by appointment management, NOT booking doctor selection error!
+        self.assertTrue(res2.get("mgmt_handled"))
+        self.assertNotIn("Unrecognized", res2.get("reply", ""))
+        self.assertIn("നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റുകൾ", res2.get("reply", ""))
+        self.assertIn(self.doc1.name, res2.get("reply", ""))
+
+        # Previous booking session must be cancelled
+        old_session = WhatsAppBookingSession.query.filter_by(id=session.id).first()
+        self.assertEqual(old_session.status, 'cancelled')
+
+    def test_14_malayalam_full_sequence_prompts_and_cards(self):
+        """14. Full sequential multi-turn booking in Malayalam verifies that every sequence
+        prompt, day name, and summary/confirmation card is rendered in Malayalam."""
+        from services.whatsapp_booking_flow import handle_whatsapp_booking_flow
+
+        convo = self._create_convo(self.patient_phone)
+        set_whatsapp_user_language(self.patient_phone, "ml")
+
+        # Turn 1: Start booking -> Malayalam doctor menu
+        res1 = handle_whatsapp_booking_flow(
+            conversation=convo,
+            message_body="Book",
+            sender_phone=self.patient_phone,
+            sender_role="patient",
+            user_id=self.patient_user.id,
+            display_name="Rahul",
+            user_lang="ml"
+        )
+        self.assertTrue(res1["handled"])
+        self.assertIn("പ്രൈംകെയർ ക്ലിനിക്ക്", res1["reply"])
+        self.assertIn("വിഭാഗങ്ങൾ", res1["reply"])
+        self.assertEqual(res1["interactive"]["button_text"], "ഡോക്ടറെ കാണുക")
+
+        # Turn 2: Select Doctor -> Malayalam schedule and date list
+        res2 = handle_whatsapp_booking_flow(
+            conversation=convo,
+            message_body="doc_1",
+            sender_phone=self.patient_phone,
+            sender_role="patient",
+            user_id=self.patient_user.id,
+            display_name="Rahul",
+            user_lang="ml"
+        )
+        self.assertTrue(res2["handled"])
+        self.assertIn("നിങ്ങൾ തിരഞ്ഞെടുത്ത ഡോക്ടർ", res2["reply"])
+        self.assertEqual(res2["interactive"]["button_text"], "തീയതി കാണുക")
+
+        # Turn 3: Select Date -> Malayalam patient details prompt
+        target_date = self._find_next_working_day(self.doc1, 2)
+        res3 = handle_whatsapp_booking_flow(
+            conversation=convo,
+            message_body=target_date,
+            sender_phone=self.patient_phone,
+            sender_role="patient",
+            user_id=self.patient_user.id,
+            display_name="Rahul",
+            user_lang="ml"
+        )
+        self.assertTrue(res3["handled"])
+        self.assertIn("തീയതി ഉറപ്പിച്ചു", res3["reply"])
+
+        # Turn 4: Patient Details in Malayalam
+        res4 = handle_whatsapp_booking_flow(
+            conversation=convo,
+            message_body="രാഹുൽ ശർമ്മ, 32, പുരുഷൻ, ഇതേ നമ്പർ",
+            sender_phone=self.patient_phone,
+            sender_role="patient",
+            user_id=self.patient_user.id,
+            display_name="Rahul",
+            user_lang="ml"
+        )
+        self.assertTrue(res4["handled"])
+        self.assertIn("അപ്പോയിന്റ്മെന്റ് വിവരങ്ങൾ", res4["reply"])
+        self.assertIn("Rahul Sharma", res4["reply"])
+        self.assertIn("Male", res4["reply"])
+
+        # Turn 5: Confirm with Malayalam keyword 'ശരി'
+        res5 = handle_whatsapp_booking_flow(
+            conversation=convo,
+            message_body="ശരി",
+            sender_phone=self.patient_phone,
+            sender_role="patient",
+            user_id=self.patient_user.id,
+            display_name="Rahul",
+            user_lang="ml"
+        )
+        self.assertTrue(res5["handled"])
+        self.assertIn("വിജയകരമായി ബുക്ക് ചെയ്തിരിക്കുന്നു", res5["reply"])
+        self.assertIn("ടോക്കൺ നമ്പർ", res5["reply"])
+
+    def test_15_malayalam_reschedule_flow_and_cards(self):
+        """15. Rescheduling an appointment with user_lang='ml' returns Malayalam cards and updates booking."""
+        from services.booking_services import create_booking_service
+        from services.whatsapp_appointment_mgmt import handle_whatsapp_appointment_mgmt
+
+        convo = self._create_convo(self.patient_phone)
+        set_whatsapp_user_language(self.patient_phone, "ml")
+
+        date1 = self._find_next_working_day(self.doc1, 1)
+        date2 = self._find_next_working_day(self.doc1, 3)
+
+        b_res = create_booking_service(
+            patient_name="Rahul",
+            age=30,
+            gender="Male",
+            phone_number=self.patient_phone,
+            appointment_date=date1,
+            doctor_id=self.doc1.id,
+            doctor_name=self.doc1.name,
+            specialization=self.doc1.specialization,
+            patient_user_id=self.patient_user.id,
+            actor_role='patient',
+            booking_source='test'
+        )
+        booking_id = b_res["booking_id"]
+
+        # Step 1: Initiate reschedule
+        res1 = handle_whatsapp_appointment_mgmt(
+            conversation=convo,
+            message_body="menu_reschedule",
+            sender_phone=self.patient_phone,
+            sender_role="patient",
+            user_id=self.patient_user.id,
+            user_lang="ml"
+        )
+        self.assertTrue(res1["handled"])
+        self.assertIn("പുതിയ തീയതി തിരഞ്ഞെടുക്കുക", res1["reply"])
+
+        # Step 2: Provide new date
+        res2 = handle_whatsapp_appointment_mgmt(
+            conversation=convo,
+            message_body=date2,
+            sender_phone=self.patient_phone,
+            sender_role="patient",
+            user_id=self.patient_user.id,
+            user_lang="ml"
+        )
+        self.assertTrue(res2["handled"])
+        self.assertIn("തീയതി മാറ്റ വിവരങ്ങൾ", res2["reply"])
+        self.assertIn(date2, res2["reply"])
+
+        # Step 3: Confirm with 'CONFIRM'
+        res3 = handle_whatsapp_appointment_mgmt(
+            conversation=convo,
+            message_body="CONFIRM",
+            sender_phone=self.patient_phone,
+            sender_role="patient",
+            user_id=self.patient_user.id,
+            user_lang="ml"
+        )
+        self.assertTrue(res3["handled"])
+        self.assertIn("വിജയകരമായി മാറ്റി", res3["reply"])
+
+        # Verify in database: original cancelled, new confirmed
+        orig = PatientBooking.query.get(booking_id)
+        self.assertEqual(orig.status, 'cancelled')
+
+    def test_16_ai_faq_booking_guidance_and_foreign_script_stripping(self):
+        """16. Verifies AI prompt instructs clean Malayalam booking FAQ and strips stray CJK/Hangul characters."""
+        from services.whatsapp_ai_service import get_system_prompt_for_role, generate_whatsapp_ai_response
+        from unittest.mock import MagicMock
+
+        prompt = get_system_prompt_for_role(
+            role="patient",
+            clinic_context="PrimeCare Clinic",
+            sender_display_name="Rahul",
+            language="ml"
+        )
+        self.assertIn("NEVER output any Korean", prompt)
+        self.assertIn("*Book* എന്ന് മെസ്സേജ് അയക്കുക", prompt)
+
+        # Mock Groq client returning response with accidental Korean/Hangul tokens
+        mock_groq = MagicMock()
+        mock_groq.generate_chat_completion.return_value = "അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ Book എന്ന് അയക്കുക. 안내 감사합니다."
+
+        ai_res = generate_whatsapp_ai_response(
+            sender_role="patient",
+            user_message="book cheyyan nj endhellam cheyyanam",
+            client=mock_groq,
+            language="ml"
+        )
+        self.assertIn("അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ Book എന്ന് അയക്കുക.", ai_res)
+        self.assertNotIn("안내", ai_res)
+        self.assertNotIn("감사합니다", ai_res)
 
 
 if __name__ == "__main__":

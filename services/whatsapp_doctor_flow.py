@@ -152,13 +152,7 @@ def handle_whatsapp_doctor_flow(
         }
 
     if not doctor:
-        return {
-            "handled": True,
-            "reply": (
-                f"Hello {doctor_name}. Your phone number `{norm_phone}` is verified as a doctor, "
-                "but your profile is not linked to an active clinic doctor record. Please contact the administrator."
-            )
-        }
+        return {"handled": False}
 
     # -------------------------------------------------------------
     # 2. Today's Queue (doc_queue, queue, 1)

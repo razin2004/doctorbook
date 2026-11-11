@@ -144,7 +144,7 @@ def handle_menu_doctors(lang: str = "en") -> str:
         lines = ["👨‍⚕️ *പ്രൈംകെയർ ക്ലിനിക്ക് — ഡോക്ടർമാരുടെ സമയക്രമം*\n"]
         for d in doctors:
             schedules = DoctorSchedule.query.filter_by(doctor_id=d.id, is_available=True).all()
-            sched_text = format_doctor_schedule_summary(schedules)
+            sched_text = format_doctor_schedule_summary(schedules, lang=lang)
             lines.append(f"• *{d.name}* — _{d.specialization}_")
             for sl in sched_text.split("\n"):
                 lines.append(f"  {sl}")
@@ -463,6 +463,45 @@ def dispatch_inbound_message_reply(
             )
             user_lang = get_whatsapp_user_language(sender_phone)
             clean_inbound = (inbound_body or "").strip()
+            clean_inbound_lower = clean_inbound.lower()
+
+            # -------------------------------------------------------------
+            # Universal Navigation Interruption Guard:
+            # If user selects any top-level menu button, greeting, language command,
+            # or initiates an alternative flow (e.g. from booking to management or vice versa),
+            # cancel any active in-progress session immediately so the new request is processed.
+            # -------------------------------------------------------------
+            from app import WhatsAppBookingSession
+            active_s = WhatsAppBookingSession.query.filter_by(
+                conversation_id=conversation.id,
+                status='in_progress'
+            ).first()
+
+            if active_s:
+                from services.whatsapp_appointment_mgmt import is_lookup_intent, is_cancel_intent, is_reschedule_intent
+                from services.whatsapp_booking_flow import is_booking_intent
+
+                should_abort_session = False
+                if clean_inbound_lower.startswith("menu_") or is_greeting_message(clean_inbound) or is_language_command(clean_inbound):
+                    should_abort_session = True
+                elif active_s.action == 'book' and (
+                    clean_inbound_lower.startswith(("cancel_", "reschedule_"))
+                    or (not clean_inbound.isdigit() and (
+                        is_lookup_intent(clean_inbound)
+                        or is_cancel_intent(clean_inbound)
+                        or is_reschedule_intent(clean_inbound)
+                    ))
+                ):
+                    should_abort_session = True
+                elif active_s.action in ('cancel', 'reschedule') and (
+                    clean_inbound_lower.startswith("doc_")
+                    or (not clean_inbound.isdigit() and is_booking_intent(clean_inbound))
+                ):
+                    should_abort_session = True
+
+                if should_abort_session:
+                    active_s.cancel()
+                    db.session.commit()
 
             # A. Explicit Language Command Trigger
             if is_language_command(clean_inbound) or clean_inbound.lower() == "menu_language":
@@ -471,7 +510,7 @@ def dispatch_inbound_message_reply(
                 dispatch_res = active_client.send_interactive_list_message(
                     recipient_phone=sender_phone,
                     body_text=lang_payload.get("body_text", lang_fallback),
-                    button_text=lang_payload.get("button_text", "Select Language / ഭാഷ"),
+                    button_text=lang_payload.get("button_text", "Language / ഭാഷ"),
                     sections=lang_payload.get("sections"),
                     header_text=lang_payload.get("header_text"),
                     footer_text=lang_payload.get("footer_text"),
@@ -581,11 +620,27 @@ def dispatch_inbound_message_reply(
 
         if mgmt_result.get("handled"):
             reply_text = mgmt_result.get("reply")
-            dispatch_res = active_client.send_text_message(
-                recipient_phone=sender_phone,
-                bsuid=scoped_user_id,
-                text_body=reply_text
-            )
+            interactive_data = mgmt_result.get("interactive")
+            if interactive_data:
+                dispatch_res = active_client.send_interactive_list_message(
+                    recipient_phone=sender_phone,
+                    body_text=interactive_data.get("body_text", reply_text),
+                    button_text=interactive_data.get("button_text", "Options"),
+                    sections=interactive_data.get("sections"),
+                    header_text=interactive_data.get("header_text"),
+                    footer_text=interactive_data.get("footer_text"),
+                    bsuid=scoped_user_id,
+                    fallback_text=reply_text
+                )
+                out_msg_type = "interactive" if (dispatch_res.get("success") and dispatch_res.get("status") == "accepted") else "text"
+            else:
+                dispatch_res = active_client.send_text_message(
+                    recipient_phone=sender_phone,
+                    bsuid=scoped_user_id,
+                    text_body=reply_text
+                )
+                out_msg_type = "text"
+
             out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
             out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
 
@@ -593,7 +648,7 @@ def dispatch_inbound_message_reply(
                 conversation_id=conversation.id,
                 wamid=out_wamid,
                 direction="outbound",
-                message_type="text",
+                message_type=out_msg_type,
                 content=reply_text,
                 status=out_status
             )
