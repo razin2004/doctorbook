@@ -39,6 +39,24 @@ LANGUAGE_TRIGGER_REGEX = re.compile(
     re.IGNORECASE
 )
 
+# Canonical greeting pattern (English, Malayalam, Tamil greetings and bot entry words)
+GREETING_PATTERN = re.compile(
+    r'^\s*(hi+|hello+|hey+|hai+|start|menu|options|help|namaste|vanakkam|good\s*(morning|afternoon|evening))'
+    r'(\s+(primecare|clinic|team|there|all|doc|doctor|assistant|bot))?\s*[!.,?]?\s*$',
+    re.IGNORECASE
+)
+
+
+def is_greeting_message(text: str) -> bool:
+    """
+    Checks if an inbound message is a pure greeting or menu request.
+    Returns False if the message contains substantive questions or medical keywords.
+    """
+    if not text:
+        return False
+    clean = text.strip()
+    return bool(GREETING_PATTERN.match(clean))
+
 # Malayalam script unicode range
 MALAYALAM_UNICODE_PATTERN = re.compile(r'[\u0D00-\u0D7F]')
 

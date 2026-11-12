@@ -1274,8 +1274,7 @@ def handle_whatsapp_booking_flow(
     # -------------------------------------------------------------------------
     # 4. Handle Cancellation at Any Active Step
     # -------------------------------------------------------------------------
-    from services.whatsapp_webhook_service import is_greeting_message
-    from services.whatsapp_localization import is_language_command
+    from services.whatsapp_localization import is_greeting_message, is_language_command
     from services.whatsapp_appointment_mgmt import is_lookup_intent, is_cancel_intent, is_reschedule_intent
     if (
         (text_lower.startswith("menu_") and text_lower != "menu_book")

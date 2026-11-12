@@ -289,6 +289,15 @@ def process_claimed_job(
     conversation_id = job.conversation_id
     inbound_msg_id = job.inbound_message_id
 
+    # Fail-safe inbound message resolution if ID was unassigned during sync rollback
+    if not inbound_msg_id and conversation_id:
+        fallback_msg = WhatsAppMessage.query.filter_by(
+            conversation_id=conversation_id,
+            direction="inbound"
+        ).order_by(WhatsAppMessage.id.desc()).first()
+        if fallback_msg:
+            inbound_msg_id = fallback_msg.id
+
     try:
         # Execute the unified conversational AI reply and dispatch logic
         reply_info = dispatch_inbound_message_reply(
@@ -303,6 +312,10 @@ def process_claimed_job(
             client=client,
             groq_client=groq_client
         )
+
+        # Fail-safe check: If dispatch failed with an error, raise so it retries with backoff
+        if isinstance(reply_info, dict) and reply_info.get("status") == "error":
+            raise RuntimeError(f"Dispatch inbound reply failed: {reply_info.get('reason')}")
 
         now = datetime.utcnow()
         if worker_id:

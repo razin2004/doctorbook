@@ -96,22 +96,8 @@ def should_process_async() -> bool:
     return False
 
 
-GREETING_PATTERN = re.compile(
-    r'^\s*(hi+|hello+|hey+|hai+|start|menu|options|help|namaste|vanakkam|good\s*(morning|afternoon|evening))'
-    r'(\s+(primecare|clinic|team|there|all|doc|doctor|assistant|bot))?\s*[!.,?]?\s*$',
-    re.IGNORECASE
-)
-
-
-def is_greeting_message(text: str) -> bool:
-    """
-    Checks if an inbound message is a pure greeting or menu request.
-    Returns False if the message contains substantive questions or medical keywords.
-    """
-    if not text:
-        return False
-    clean = text.strip()
-    return bool(GREETING_PATTERN.match(clean))
+# Canonical greeting pattern & intent validator (imported from localization to avoid circular imports)
+from services.whatsapp_localization import GREETING_PATTERN, is_greeting_message
 
 
 def build_main_menu_interactive_payload(lang: str = "en") -> Dict[str, Any]:
@@ -1857,6 +1843,7 @@ def process_inbound_webhook(
                 )
                 db.session.add(inbound_msg)
             conversation.last_message_at = datetime.utcnow()
+            db.session.flush()  # Crucial: guarantees inbound_msg.id is populated before assigning to webhook_event
 
             # Store durable database-backed queue payload on webhook_event
             webhook_event.conversation_id = conversation.id
@@ -1923,15 +1910,27 @@ def process_inbound_webhook(
                         "Enqueuing to background worker for retry."
                     ))
                     # Resilient fallback: Hand off to durable background worker
-                    webhook_event.status = 'pending'
-                    webhook_event.locked_by = None
-                    webhook_event.locked_at = None
-                    webhook_event.next_retry_at = datetime.utcnow() + timedelta(seconds=1)
-                    webhook_event.last_error = f"Sync failed ({type(sync_err).__name__}): {str(sync_err)[:200]}"
                     try:
-                        db.session.commit()
-                    except Exception:
+                        ev_to_update = db.session.get(WhatsAppWebhookEvent, webhook_event.id)
+                        if ev_to_update:
+                            ev_to_update.status = 'pending'
+                            ev_to_update.locked_by = None
+                            ev_to_update.locked_at = None
+                            ev_to_update.conversation_id = conversation.id
+                            ev_to_update.inbound_message_id = getattr(inbound_msg, 'id', None)
+                            ev_to_update.payload_json = json.dumps({
+                                "message": message,
+                                "sender_phone": sender_phone,
+                                "scoped_user_id": scoped_user_id,
+                                "parent_scoped_id": parent_scoped_id,
+                                "contact_name": contact_name
+                            })
+                            ev_to_update.next_retry_at = datetime.utcnow() + timedelta(seconds=1)
+                            ev_to_update.last_error = f"Sync failed ({type(sync_err).__name__}): {str(sync_err)[:200]}"
+                            db.session.commit()
+                    except Exception as fb_err:
                         db.session.rollback()
+                        logger.error(f"Fallback queue commit failed: {fb_err}")
 
                     processed_replies.append({
                         "conversation_uuid": conversation.conversation_uuid,
@@ -1942,16 +1941,30 @@ def process_inbound_webhook(
             db.session.rollback()
             logger.error(sanitize_log_message(f"Error processing WhatsApp webhook message: {str(e)}"))
             if webhook_event:
-                webhook_event.status = "pending"
-                webhook_event.locked_by = None
-                webhook_event.locked_at = None
-                webhook_event.next_retry_at = datetime.utcnow() + timedelta(seconds=2)
-                webhook_event.error_code = type(e).__name__[:50]
-                webhook_event.last_error = str(e)[:200]
                 try:
-                    db.session.commit()
-                except Exception:
+                    ev_to_update = db.session.get(WhatsAppWebhookEvent, webhook_event.id)
+                    if ev_to_update:
+                        ev_to_update.status = "pending"
+                        ev_to_update.locked_by = None
+                        ev_to_update.locked_at = None
+                        if 'conversation' in locals() and conversation:
+                            ev_to_update.conversation_id = conversation.id
+                        if 'inbound_msg' in locals() and inbound_msg:
+                            ev_to_update.inbound_message_id = getattr(inbound_msg, 'id', None)
+                        ev_to_update.payload_json = json.dumps({
+                            "message": message,
+                            "sender_phone": sender_phone,
+                            "scoped_user_id": scoped_user_id,
+                            "parent_scoped_id": parent_scoped_id,
+                            "contact_name": contact_name
+                        })
+                        ev_to_update.next_retry_at = datetime.utcnow() + timedelta(seconds=2)
+                        ev_to_update.error_code = type(e).__name__[:50]
+                        ev_to_update.last_error = str(e)[:200]
+                        db.session.commit()
+                except Exception as fb_err2:
                     db.session.rollback()
+                    logger.error(f"Outer exception fallback failed: {fb_err2}")
 
             return jsonify({"status": "ok", "message": "enqueued_for_background_retry"}), 200
 

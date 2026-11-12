@@ -35,6 +35,18 @@ def _get_user_lang_for_phone(phone_str: str) -> str:
         return "en"
 
 
+def get_clinic_portal_url(endpoint: str = "") -> str:
+    """Returns the configured clinic portal URL from environment, or empty string."""
+    import os
+    base_url = (os.environ.get('CLINIC_PORTAL_URL') or os.environ.get('APP_BASE_URL') or '').strip().rstrip('/')
+    if not base_url:
+        return ""
+    if endpoint:
+        endpoint_clean = '/' + endpoint.lstrip('/')
+        return f"{base_url}{endpoint_clean}"
+    return base_url
+
+
 def _get_or_create_tracker(booking_id: int):
     """Retrieves or creates an idempotent BookingNotificationTracker record."""
     from app import app, db, BookingNotificationTracker
@@ -343,7 +355,7 @@ def trigger_whatsapp_queue_movement(
 # 3. SCHEDULED TIME-BASED REMINDERS (1-HOUR & 10-MINUTE)
 # =====================================================================
 
-def check_and_send_scheduled_pre_consultation_reminders():
+def check_and_send_scheduled_pre_consultation_reminders(current_time: Optional[datetime] = None):
     """
     Evaluates today's confirmed bookings and scheduled doctor OP start times.
     Dispatches:
@@ -353,12 +365,14 @@ def check_and_send_scheduled_pre_consultation_reminders():
     """
     from app import app, db, PatientBooking, Doctor, DoctorSchedule, BookingNotificationTracker
     from services.kapso_client import KapsoClient
-    from services.whatsapp_booking_flow import get_clinic_portal_url
 
     with app.app_context():
         try:
             ist = pytz.timezone('Asia/Kolkata')
-            now_ist = datetime.now(ist)
+            if current_time:
+                now_ist = current_time if current_time.tzinfo else ist.localize(current_time)
+            else:
+                now_ist = datetime.now(ist)
             today_str = now_ist.strftime("%Y-%m-%d")
             weekday = now_ist.strftime("%A")
 

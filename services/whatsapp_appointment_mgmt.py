@@ -313,8 +313,7 @@ def handle_whatsapp_appointment_mgmt(
     # -------------------------------------------------------------------------
     if active_session and active_session.action in ('cancel', 'reschedule'):
         # If user chooses a main menu action, greeting, or language command, auto-cancel active session and release
-        from services.whatsapp_webhook_service import is_greeting_message
-        from services.whatsapp_localization import is_language_command
+        from services.whatsapp_localization import is_greeting_message, is_language_command
         from services.whatsapp_booking_flow import is_booking_intent
         if (
             text_lower.startswith("menu_")
@@ -1090,7 +1089,7 @@ def handle_whatsapp_appointment_mgmt(
         if user_id and booking.user_id == user_id:
             is_owner = True
         elif sender_phone and booking.phone_number:
-            from services.whatsapp_webhook_service import normalize_phone_number
+            from phone_utils import normalize_phone_number
             norm_sender = normalize_phone_number(sender_phone)
             norm_booking = normalize_phone_number(booking.phone_number)
             if norm_sender and norm_booking and norm_sender == norm_booking:

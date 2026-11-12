@@ -216,7 +216,9 @@ class WhatsAppAppointmentMgmtTestSuite(unittest.TestCase):
 
     def test_01_lookup_registered_patient(self):
         """1. Registered patient lookup returns upcoming appointments by user_id."""
-        user = User.query.filter_by(email="patient_lookup_test@primecare.com").first()
+        user = User.query.filter(
+            (User.email == "patient_lookup_test@primecare.com") | (User.phone_number == "+919847055010")
+        ).first()
         if not user:
             user = User(
                 name="Ananya Nair",

@@ -309,7 +309,7 @@ class WhatsAppNotificationsTestSuite(unittest.TestCase):
         mock_send.return_value = {"success": True, "status": "sent"}
         ist = pytz.timezone('Asia/Kolkata')
         today_str = datetime.now(ist).strftime("%Y-%m-%d")
-        phone = "+919847055010"
+        phone = "+919847055099"
         user = self._get_or_create_user(phone, name="Sneha Roy")
 
         booking = PatientBooking(
@@ -481,7 +481,8 @@ class WhatsAppNotificationsTestSuite(unittest.TestCase):
         """Tests 1-hour pre-consultation reminder and 10-minute early warning."""
         mock_send.return_value = {"success": True, "status": "sent"}
         ist = pytz.timezone('Asia/Kolkata')
-        now_ist = datetime.now(ist)
+        # Use a fixed morning time so test is 100% time-independent and doesn't roll over midnight
+        now_ist = ist.localize(datetime(2026, 11, 12, 10, 0, 0))
         today_str = now_ist.strftime("%Y-%m-%d")
         weekday = now_ist.strftime("%A")
 
@@ -523,8 +524,8 @@ class WhatsAppNotificationsTestSuite(unittest.TestCase):
         self.session.add_all([b1, b3])
         self.session.commit()
 
-        # Run scheduled reminder evaluation
-        check_and_send_scheduled_pre_consultation_reminders()
+        # Run scheduled reminder evaluation with fixed reference time
+        check_and_send_scheduled_pre_consultation_reminders(current_time=now_ist)
 
         # Both Token 1 and Token 3 should receive 1-hour reminders
         self.assertEqual(mock_send.call_count, 2)
@@ -544,7 +545,7 @@ class WhatsAppNotificationsTestSuite(unittest.TestCase):
         sch.start_time = start_in_5m
         self.session.commit()
 
-        check_and_send_scheduled_pre_consultation_reminders()
+        check_and_send_scheduled_pre_consultation_reminders(current_time=now_ist)
 
         # Token 1 receives 10-min warning, Token 3 does NOT
         self.assertEqual(mock_send.call_count, 1)
