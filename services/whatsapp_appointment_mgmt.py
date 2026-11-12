@@ -20,6 +20,7 @@ Security & Safety:
 import os
 import re
 import logging
+from typing import Optional, Dict, Any, List
 from datetime import datetime, date, timedelta
 import pytz
 
@@ -30,7 +31,7 @@ LOOKUP_INTENT_PATTERNS = [
     re.compile(r'\b(show\s+my\s+appointment|my\s+appointment|check\s+my\s+appointment|view\s+my\s+appointment)s?\b', re.IGNORECASE),
     re.compile(r'\b(do\s+i\s+have\s+an?\s+(upcoming\s+)?appointment|appointment\s+status|my\s+booking|show\s+my\s+booking)s?\b', re.IGNORECASE),
     re.compile(r'\b(what\s+is\s+my\s+appointment|check\s+my\s+booking|view\s+my\s+booking|my\s+appointments?)s?\b', re.IGNORECASE),
-    re.compile(r'^(my\s+appointments?|appointments?|bookings?|show\s+bookings?|current\s+bookings?|current\s+appointments?|menu_my_bookings|2)$', re.IGNORECASE),
+    re.compile(r'^(my\s+appointments?|appointments?|bookings?|show\s+bookings?|current\s+bookings?|current\s+appointments?|menu_my_bookings)$', re.IGNORECASE),
     re.compile(r'\b(upcoming\s+appointment|current\s+booking|current\s+appointment|active\s+booking|list\s+my\s+appointment|see\s+my\s+appointment)\b', re.IGNORECASE),
     re.compile(r'(?:^|\s|[.,!?])(നിലവിലെ\s*ബുക്കിംഗ്|നിലവിലെ\s*അപ്പോയിന്റ്മെന്റ്|എന്റെ\s*ബുക്കിംഗ്|എന്റെ\s*അപ്പോയിന്റ്മെന്റ്|ടോക്കൺ\s*വിവരങ്ങൾ|ബുക്കിംഗുകൾ)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
@@ -41,7 +42,7 @@ CANCEL_INTENT_PATTERNS = [
     re.compile(r'\b(i\s+want\s+to|need\s+to|please)\s+(cancel|delete|remove)\b', re.IGNORECASE),
     re.compile(r'\b(cancel|delete|remove)\s*(booking|appointment|token)?\s*#?\d+\b', re.IGNORECASE),
     re.compile(r'\b(cancelling|canceling|cancellation|deleting)\s*(#\d+|booking|appointment)?\b', re.IGNORECASE),
-    re.compile(r'^(cancel\s+appointment|cancel\s+booking|delete\s+booking|cancel\s+my\s+appointment|menu_cancel|3)$', re.IGNORECASE),
+    re.compile(r'^(cancel\s+appointment|cancel\s+booking|delete\s+booking|cancel\s+my\s+appointment|menu_cancel)$', re.IGNORECASE),
     re.compile(r'(?:^|\s|[.,!?])(റദ്ദാക്കുക|റദ്ദാക്കണം|ക്യാൻസൽ|ഒഴിവാക്കുക|ബുക്കിംഗ്\s*റദ്ദാക്കുക)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
 
@@ -53,8 +54,59 @@ RESCHEDULE_INTENT_PATTERNS = [
     re.compile(r'(?:^|\s|[.,!?])(തീയതി\s*മാറ്റുക|മാറ്റിവെക്കുക|റീഷെഡ്യൂൾ|റിഷെഡ്യൂൾ|തീയതി\s*മാറ്റണം)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
 
-ABORT_WORDS = {'cancel', 'abort', 'stop', 'exit', 'quit', 'back', 'no', 'nevermind', 'never mind', 'വേണ്ട', 'റദ്ദാക്കുക', 'നോ', 'venda'}
+ABORT_WORDS = {
+    'cancel', 'abort', 'stop', 'exit', 'quit', 'back', 'no', 'nevermind', 'never mind',
+    'വേണ്ട', 'റദ്ദാക്കുക', 'നോ', 'venda', 'vendaa', 'venddaa', 'vendam', 'vendeda',
+    'don\'t cancel', 'dont cancel', 'do not cancel', 'keep', 'keep appointment', 'dont'
+}
 CONFIRM_WORDS = {'confirm', 'yes', 'ok', 'okay', 'proceed', 'yep', 'yeah', 'y', 'sure', 'ശരി', 'അതെ', 'യെസ്', 'തീർച്ചയായും', 'athe', 'sari'}
+
+
+def is_abort_input(text: str) -> bool:
+    """Checks if text expresses an abort/cancel/keep intent."""
+    if not text:
+        return False
+    t = text.strip().lower()
+    if t in ABORT_WORDS or t == 'cancel':
+        return True
+    if re.search(r'\b(don\'?t\s+cancel|do\s+not\s+cancel|no\s+cancel|venda+|vend+a|വേണ്ട|റദ്ദാക്കേണ്ട)\b', t, re.IGNORECASE):
+        return True
+    return False
+
+
+def extract_specific_booking_id(text: str, allow_bare_number: bool = False) -> Optional[int]:
+    """
+    Extracts a booking ID from an explicit lookup or booking inquiry phrase:
+    - 'Details of 373', 'details of booking #373', 'booking 373', 'appointment 373'
+    - '373 is my appointment itself', '373 details', 'show 373', 'status of 373'
+    - '#373'
+    - If allow_bare_number is True: pure 2-6 digit numbers like '373' (never 1 or single digit)
+    """
+    if not text:
+        return None
+    t = text.strip()
+
+    # Avoid matching dates like 2026-11-19
+    if re.search(r'\b\d{4}-\d{2}-\d{2}\b', t):
+        return None
+
+    explicit_patterns = [
+        re.compile(r'\b(?:details\s+(?:of|for)|info\s+(?:on|about)|show|view|check|status\s+of|about)\s+(?:booking|appointment|token)?\s*#?(\d+)\b', re.IGNORECASE),
+        re.compile(r'\b(?:booking|appointment|token)\s*(?:id|no|#)?\s*#?(\d+)\b', re.IGNORECASE),
+        re.compile(r'\b#?(\d+)\s*(?:is\s+my\s+(?:booking|appointment|token|appointment\s+itself)|details|info|status)\b', re.IGNORECASE),
+        re.compile(r'^#(\d{1,6})$'),
+    ]
+    for p in explicit_patterns:
+        m = p.search(t)
+        if m:
+            return int(m.group(1))
+
+    if allow_bare_number:
+        m = re.match(r'^(\d{2,6})$', t)
+        if m:
+            return int(m.group(1))
+
+    return None
 
 
 def is_cancel_intent(message_text: str) -> bool:
@@ -233,6 +285,7 @@ def handle_whatsapp_appointment_mgmt(
             or is_cancel_intent(text)
             or is_reschedule_intent(text)
             or text_lower.startswith("menu_")
+            or extract_specific_booking_id(text, allow_bare_number=False) is not None
         ):
             # User chose to leave booking and enter appointment management
             active_session.cancel()
@@ -294,22 +347,40 @@ def handle_whatsapp_appointment_mgmt(
 
         # --- CHOOSE_APPOINTMENT step ---
         if current_step == 'CHOOSE_APPOINTMENT':
-            # Parse numeric selection
-            if text.isdigit():
-                selection = int(text)
+            # Parse numeric selection or booking reference
+            clean_text = text.lstrip('#').strip()
+            if clean_text.isdigit():
+                selection = int(clean_text)
                 appointments_res = _get_patient_appointments(user_id, sender_phone, sender_role)
                 bookings = appointments_res.get("bookings", [])
 
                 eligible = [b for b in bookings if b["status"] in ("confirmed", "active")]
 
-                if selection < 1 or selection > len(eligible):
+                chosen = None
+                # If explicitly prefixed with '#' or outside index range, check direct booking ID first
+                if text.strip().startswith('#') or selection > len(eligible) or selection < 1:
+                    for b in eligible:
+                        if b.get("id") == selection:
+                            chosen = b
+                            break
+
+                # Otherwise check 1-based list index
+                if not chosen and 1 <= selection <= len(eligible):
+                    chosen = eligible[selection - 1]
+
+                # Fallback: check booking ID if index match wasn't found
+                if not chosen:
+                    for b in eligible:
+                        if b.get("id") == selection:
+                            chosen = b
+                            break
+
+                if not chosen:
                     if user_lang == "ml":
                         reply = f"ദയവായി 1 നും {len(eligible)} നും ഇടയിലുള്ള ഒരു നമ്പർ തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
                     else:
                         reply = f"Please select a number between 1 and {len(eligible)}, or reply *CANCEL* to abort."
                     return {"handled": True, "reply": reply, "session": active_session}
-
-                chosen = eligible[selection - 1]
                 active_session.booking_id = chosen["id"]
                 active_session.doctor_name = chosen["doctor_name"]
                 active_session.specialization = chosen["specialization"]
@@ -455,7 +526,7 @@ def handle_whatsapp_appointment_mgmt(
                         )
                     return {"handled": True, "reply": reply, "session": active_session}
 
-            elif text_lower in ABORT_WORDS or text_lower == 'cancel':
+            elif is_abort_input(text):
                 active_session.cancel()
                 db.session.commit()
                 if user_lang == "ml":
@@ -496,8 +567,10 @@ def handle_whatsapp_appointment_mgmt(
             if not avail.get("available"):
                 reason = avail.get("reason", "Doctor is not available on this date")
                 if user_lang == "ml":
+                    from services.whatsapp_localization import format_availability_reason_ml
+                    ml_reason = format_availability_reason_ml(reason, doctor_name=active_session.doctor_name or "")
                     reply = (
-                        f"❌ *ലഭ്യമല്ല:* {reason}\n\n"
+                        f"❌ *ലഭ്യമല്ല:* {ml_reason}\n\n"
                         "ദയവായി മറ്റൊരു തീയതി തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
                     )
                 else:
@@ -667,7 +740,7 @@ def handle_whatsapp_appointment_mgmt(
                         )
                     return {"handled": True, "reply": reply, "session": active_session}
 
-            elif text_lower in ABORT_WORDS or text_lower == 'cancel':
+            elif is_abort_input(text):
                 # Restore original date if stored as "old|new"
                 date_parts = (active_session.appointment_date or "").split("|")
                 if len(date_parts) == 2:
@@ -996,8 +1069,66 @@ def handle_whatsapp_appointment_mgmt(
         reply = _format_appointment_list(bookings, lang=user_lang)
         return {"handled": True, "reply": reply, "session": None}
 
-    # Not a management intent
-    return {"handled": False}
+    # 4D. Specific Booking Lookup by ID with Privacy & Ownership Verification
+    allow_bare = not (active_session and active_session.action == 'book')
+    specific_id = extract_specific_booking_id(text, allow_bare_number=allow_bare)
+    if specific_id is not None:
+        from app import PatientBooking
+        booking = db.session.get(PatientBooking, specific_id) if hasattr(db.session, 'get') else PatientBooking.query.get(specific_id)
+        if not booking:
+            if user_lang == "ml":
+                reply = f"❌ *ബുക്കിംഗ് #{specific_id} കണ്ടെത്താനായില്ല.*\nദയവായി റഫറൻസ് നമ്പർ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക."
+            else:
+                reply = f"❌ *Booking #{specific_id} could not be found.*\nPlease check the reference number and try again."
+            return {"handled": True, "reply": reply, "session": None}
+
+        # Check ownership:
+        # 1. Matches sender's registered user_id (if patient)
+        # 2. Or matches sender's normalized phone number
+        is_owner = False
+        if user_id and booking.user_id == user_id:
+            is_owner = True
+        elif sender_phone and booking.phone_number:
+            from services.whatsapp_webhook_service import normalize_phone_number
+            norm_sender = normalize_phone_number(sender_phone)
+            norm_booking = normalize_phone_number(booking.phone_number)
+            if norm_sender and norm_booking and norm_sender == norm_booking:
+                is_owner = True
+
+        if is_owner:
+            b_dict = {
+                "id": booking.id,
+                "doctor_name": booking.doctor_name,
+                "specialization": getattr(booking, "specialization", "General"),
+                "date": str(booking.date),
+                "time": getattr(booking, "time", None) or "09:00 AM",
+                "token": booking.token,
+                "status": booking.status,
+                "patient_name": booking.patient_name
+            }
+            detail = _format_appointment_detail(b_dict, lang=user_lang)
+            if user_lang == "ml":
+                reply = f"📋 *നിങ്ങളുടെ ബുക്കിംഗ് വിവരങ്ങൾ:*\n\n{detail}\n\nതീയതി മാറ്റാൻ *Reschedule* എന്നും, റദ്ദാക്കാൻ *Cancel* എന്നും അയക്കുക."
+            else:
+                reply = f"📋 *Your Booking Details:*\n\n{detail}\n\nTo reschedule, reply *Reschedule*. To cancel, reply *Cancel*."
+            return {"handled": True, "reply": reply, "session": None}
+        else:
+            # Privacy Protection: This booking does not belong to the sender!
+            if user_lang == "ml":
+                reply = (
+                    "🔒 *രോഗികളുടെ സ്വകാര്യതാ അറിയിപ്പ്*\n\n"
+                    "ക്ഷമിക്കണം, രോഗികളുടെ സ്വകാര്യതയും വിവരസുരക്ഷയും കണക്കിലെടുത്ത്, മറ്റ് രോഗികളുടെ ബുക്കിംഗ് വിവരങ്ങൾ വെളിപ്പെടുത്താൻ കഴിയില്ല.\n\n"
+                    "• നിങ്ങളുടെ സ്വന്തം അപ്പോയിന്റ്മെന്റുകൾ കാണാൻ: *My Bookings* എന്ന് അയക്കുക\n"
+                    "• പുതിയ അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ: *Book* എന്ന് അയക്കുക"
+                )
+            else:
+                reply = (
+                    "🔒 *Patient Privacy & Confidentiality Notice*\n\n"
+                    f"For patient confidentiality and privacy regulations, details of booking #{specific_id} cannot be disclosed.\n\n"
+                    "• To view your own personal bookings: reply *My Appointments*\n"
+                    "• To book an appointment: reply *Book*"
+                )
+            return {"handled": True, "reply": reply, "session": None}
 
     # Not a management intent
     return {"handled": False}

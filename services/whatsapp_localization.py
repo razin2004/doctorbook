@@ -199,17 +199,18 @@ def parse_language_choice(text: str) -> Optional[str]:
     """
     Parses a user reply to determine if they picked English ('en') or Malayalam ('ml').
     Returns 'en', 'ml', or None if unrecognized.
+    Numbers like 1 or 2 are strictly not used to avoid accidental switches.
     """
     if not text:
         return None
     clean = text.strip().lower()
 
     # English selections
-    if clean in ("1", "en", "eng", "english", "lang_en", "opt_en", "ഇംഗ്ലീഷ്", "english please"):
+    if clean in ("en", "eng", "english", "lang_en", "opt_en", "ഇംഗ്ലീഷ്", "english please"):
         return "en"
 
     # Malayalam selections
-    if clean in ("2", "ml", "mal", "malayalam", "lang_ml", "opt_ml", "മലയാളം", "baasha", "bhasha", "ഭാഷ"):
+    if clean in ("ml", "mal", "malayalam", "lang_ml", "opt_ml", "മലയാളം"):
         return "ml"
 
     return None
@@ -254,8 +255,8 @@ def format_language_selection_text() -> str:
     return (
         "🌐 *PrimeCare Clinic — Language Selection / ഭാഷ തിരഞ്ഞെടുക്കുക*\n\n"
         "Please choose your preferred language / ഭാഷ തിരഞ്ഞെടുക്കുക:\n\n"
-        "*1.* 🇬🇧 *English* (reply *1* or *English*)\n"
-        "*2.* 🇮🇳 *മലയാളം (Malayalam)* (reply *2* or *Malayalam*)\n\n"
+        "• 🇬🇧 *English* (reply *English*)\n"
+        "• 🇮🇳 *മലയാളം* (reply *Malayalam* അല്ലെങ്കിൽ *മലയാളം*)\n\n"
         "_You can change this anytime by replying *Language* or *ഭാഷ*._"
     )
 
@@ -399,29 +400,32 @@ def build_main_menu_interactive_payload(lang: str = "en") -> Dict[str, Any]:
 def format_main_menu_text(lang: str = "en") -> str:
     """
     Plain text fallback for Main Menu in English or Malayalam.
+    Numbers like 1, 2, etc. are omitted to avoid accidental collisions.
     """
     if lang == "ml":
         return (
             "🏥 *പ്രൈംകെയർ ക്ലിനിക്കിലേക്ക് സ്വാഗതം*\n\n"
-            "ഞങ്ങൾ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം? താഴെ പറയുന്ന ഓപ്ഷനുകളിൽ ഒന്നിന്റെ നമ്പർ അല്ലെങ്കിൽ വാക്ക് മറുപടിയായി അയക്കുക:\n\n"
-            "*1.* 📅 *ബുക്കിംഗ് ആരംഭിക്കുക* (മറുപടി *1* അല്ലെങ്കിൽ *Book*)\n"
-            "*2.* 📋 *എന്റെ ബുക്കിംഗുകൾ* (മറുപടി *2* അല്ലെങ്കിൽ *My Appointments*)\n"
-            "*3.* ❌ *ബുക്കിംഗ് റദ്ദാക്കുക* (മറുപടി *3* അല്ലെങ്കിൽ *Cancel*)\n"
-            "*4.* 👨‍⚕️ *ഡോക്ടർമാരുടെ സമയം* (മറുപടി *4* അല്ലെങ്കിൽ *Doctors*)\n"
-            "*5.* 📍 *ക്ലിനിക്ക് വിലാസം* (മറുപടി *5* അല്ലെങ്കിൽ *Location*)\n"
-            "*6.* 🌐 *ഭാഷ മാറ്റുക (Change Language)* (മറുപടി *6* അല്ലെങ്കിൽ *Language*)\n\n"
+            "ഞങ്ങൾ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം? താഴെ പറയുന്നവയിൽ ഒന്ന് തിരഞ്ഞെടുക്കുക:\n\n"
+            "• 📅 *ബുക്കിംഗ് ആരംഭിക്കുക* (മറുപടി *Book*)\n"
+            "• 📋 *എന്റെ ബുക്കിംഗുകൾ* (മറുപടി *My Bookings*)\n"
+            "• 🔄 *തീയതി മാറ്റുക* (മറുപടി *Reschedule*)\n"
+            "• ❌ *ബുക്കിംഗ് റദ്ദാക്കുക* (മറുപടി *Cancel*)\n"
+            "• 👨‍⚕️ *ഡോക്ടർമാരുടെ സമയം* (മറുപടി *Doctors*)\n"
+            "• 📍 *ക്ലിനിക്ക് വിലാസം* (മറുപടി *Location*)\n"
+            "• 🌐 *ഭാഷ മാറ്റുക* (മറുപടി *Language* അല്ലെങ്കിൽ *ഭാഷ*)\n\n"
             "_നിങ്ങൾക്ക് ഏത് ചോദ്യവും നേരിട്ട് ചോദിക്കാം (ഉദാ: 'ഇന്ന് ഏത് ഡോക്ടറാണ് ഉള്ളത്?')._"
         )
 
     return (
         "🏥 *Welcome to PrimeCare Clinic*\n\n"
-        "How can we help you today? Please reply with an option number or keyword:\n\n"
-        "*1.* 📅 *Book Appointment* (reply *1* or *Book*)\n"
-        "*2.* 📋 *My Appointments* (reply *2* or *My Appointments*)\n"
-        "*3.* ❌ *Cancel Booking* (reply *3* or *Cancel*)\n"
-        "*4.* 👨‍⚕️ *Doctors & Timings* (reply *4* or *Doctors*)\n"
-        "*5.* 📍 *Location & Contact* (reply *5* or *Location*)\n"
-        "*6.* 🌐 *Change Language / ഭാഷ* (reply *6* or *Language*)\n\n"
+        "How can we help you today? Please reply with an option keyword:\n\n"
+        "• 📅 *Book Appointment* (reply *Book*)\n"
+        "• 📋 *My Appointments* (reply *My Bookings*)\n"
+        "• 🔄 *Reschedule Booking* (reply *Reschedule*)\n"
+        "• ❌ *Cancel Booking* (reply *Cancel*)\n"
+        "• 👨‍⚕️ *Doctors & Timings* (reply *Doctors*)\n"
+        "• 📍 *Location & Contact* (reply *Location*)\n"
+        "• 🌐 *Change Language / ഭാഷ* (reply *Language*)\n\n"
         "_You can also ask any question directly, such as 'Which doctor is available today?'_"
     )
 
@@ -788,4 +792,55 @@ def format_patient_details_prompt(
         f"*'Rahul Sharma, 28, Male, SAME'*\n\n"
         "_Reply CANCEL to exit._"
     )
+
+
+def format_availability_reason_ml(reason: str, doctor_name: str = "") -> str:
+    """
+    Translates English doctor availability and scheduling error reasons
+    into polite, natural Malayalam script.
+    """
+    if not reason:
+        return "തിരഞ്ഞെടുത്ത തീയതിയിൽ ഡോക്ടറുടെ സേവനം ലഭ്യമല്ല."
+    r = reason.strip()
+    r_lower = r.lower()
+
+    if "15 days" in r_lower or "advance" in r_lower:
+        return "അടുത്ത 15 ദിവസത്തേക്കുള്ള ബുക്കിംഗുകൾ മാത്രമേ സാധ്യമാകൂ."
+    if "past" in r_lower:
+        return "കഴിഞ്ഞ തീയതികളിലേക്ക് ബുക്കിംഗ് സാധ്യമല്ല."
+    if "clinic is closed" in r_lower or "holiday" in r_lower:
+        return "ഈ തീയതിയിൽ ക്ലിനിക്ക് അവധിയാണ്."
+    if "concluded" in r_lower:
+        doc = doctor_name or "ഡോക്ടർ"
+        return f"{doc}യുടെ ഇന്നത്തെ ഒ.പി സമയം പൂർത്തിയായി."
+    if "fully booked" in r_lower or "capacity" in r_lower:
+        return "ഈ തീയതിയിലെ എല്ലാ ടോക്കണുകളും പൂർത്തിയായി."
+    if "on leave" in r_lower:
+        doc = doctor_name or "ഡോക്ടർ"
+        return f"{doc} ഈ തീയതിയിൽ അവധിയിലാണ്."
+
+    # Check day of week not available: e.g. 'Dr. Razin is not available on Tuesdays.'
+    day_match = re.search(r'not available on ([A-Za-z]+)', r, re.IGNORECASE)
+    if day_match:
+        day_raw = day_match.group(1).rstrip('sS').capitalize()
+        ml_days = {
+            'Monday': 'തിങ്കളാഴ്ചകളിൽ',
+            'Tuesday': 'ചൊവ്വാഴ്ചകളിൽ',
+            'Wednesday': 'ബുധനാഴ്ചകളിൽ',
+            'Thursday': 'വ്യാഴാഴ്ചകളിൽ',
+            'Friday': 'വെള്ളിയാഴ്ചകളിൽ',
+            'Saturday': 'ശനിയാഴ്ചകളിൽ',
+            'Sunday': 'ഞായറാഴ്ചകളിൽ'
+        }
+        ml_day = ml_days.get(day_raw, f"{day_raw} ദിവസങ്ങളിൽ")
+        doc = doctor_name or "ഡോക്ടർ"
+        return f"{doc} {ml_day} ലഭ്യമല്ല."
+
+    if "no doctor" in r_lower or "no active doctor" in r_lower:
+        return "ഈ തീയതിയിൽ ഡോക്ടർമാർ ലഭ്യമല്ല."
+    if "invalid date" in r_lower:
+        return "സാധുവായ ഒരു തീയതി നൽകുക."
+
+    return "തിരഞ്ഞെടുത്ത തീയതിയിൽ ഡോക്ടറുടെ സേവനം ലഭ്യമല്ല."
+
 

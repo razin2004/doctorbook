@@ -152,14 +152,17 @@ class WhatsAppLocalizationTestSuite(unittest.TestCase):
 
     def test_02_parse_language_choice(self):
         """Verifies accurate language parsing for English and Malayalam options."""
-        en_choices = ["1", "en", "eng", "english", "English", "lang_en"]
+        en_choices = ["en", "eng", "english", "English", "lang_en"]
         for c in en_choices:
             self.assertEqual(parse_language_choice(c), "en", f"Failed to parse EN choice: {c}")
 
-        ml_choices = ["2", "ml", "mal", "malayalam", "Malayalam", "മലയാളം", "lang_ml", "baasha"]
+        ml_choices = ["ml", "mal", "malayalam", "Malayalam", "മലയാളം", "lang_ml"]
         for c in ml_choices:
             self.assertEqual(parse_language_choice(c), "ml", f"Failed to parse ML choice: {c}")
 
+        # Bare numbers must NEVER switch language
+        self.assertIsNone(parse_language_choice("1"))
+        self.assertIsNone(parse_language_choice("2"))
         self.assertIsNone(parse_language_choice("unknown_option"))
 
     # -----------------------------------------------------------------
@@ -443,13 +446,13 @@ class WhatsAppLocalizationTestSuite(unittest.TestCase):
         self.assertTrue(res1.get("language_prompted"))
         self.assertIn("Language Selection", res1.get("reply"))
 
-        # Step 2: User selects Malayalam: "2"
+        # Step 2: User selects Malayalam: "Malayalam"
         msg2 = WhatsAppMessage(
             conversation_id=convo.id,
             wamid="wamid.in2",
             direction="inbound",
             message_type="text",
-            content="2",
+            content="Malayalam",
             status="received"
         )
         db.session.add(msg2)
@@ -791,6 +794,64 @@ class WhatsAppLocalizationTestSuite(unittest.TestCase):
         self.assertIn("അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ Book എന്ന് അയക്കുക.", ai_res)
         self.assertNotIn("안내", ai_res)
         self.assertNotIn("감사합니다", ai_res)
+
+    def test_17_format_availability_reason_ml(self):
+        """17. Verifies English availability error strings translate cleanly to Malayalam script."""
+        from services.whatsapp_localization import format_availability_reason_ml
+
+        r1 = format_availability_reason_ml("Bookings are only allowed up to 15 days in advance.")
+        self.assertIn("15 ദിവസത്തേക്കുള്ള", r1)
+
+        r2 = format_availability_reason_ml("Dr. Razin is not available on Tuesdays.", doctor_name="Dr. Razin")
+        self.assertIn("ചൊവ്വാഴ്ചകളിൽ ലഭ്യമല്ല", r2)
+        self.assertIn("Dr. Razin", r2)
+
+        r3 = format_availability_reason_ml("Clinic is closed on Sunday.", doctor_name="Dr. Sarah")
+        self.assertIn("ക്ലിനിക്ക് അവധിയാണ്", r3)
+
+        r4 = format_availability_reason_ml("Doctor has already concluded consultations for today.", doctor_name="Dr. Sarah")
+        self.assertIn("ഒ.പി സമയം പൂർത്തിയായി", r4)
+
+        r5 = format_availability_reason_ml("All slots are fully booked.")
+        self.assertIn("എല്ലാ ടോക്കണുകളും പൂർത്തിയായി", r5)
+
+    def test_18_bare_number_does_not_switch_language_or_trigger_booking(self):
+        """18. Typing bare '1' or '2' without an active list prompt does not trigger language switch or booking."""
+        convo = self._create_convo(self.patient_phone)
+
+        # Send bare '1'
+        msg = WhatsAppMessage(
+            conversation_id=convo.id,
+            wamid="wamid.bare1",
+            direction="inbound",
+            message_type="text",
+            content="1",
+            status="received"
+        )
+        db.session.add(msg)
+        db.session.commit()
+
+        # Set user language initially to 'ml'
+        set_whatsapp_user_language(self.patient_phone, "ml")
+
+        from unittest.mock import MagicMock
+        mock_client = MagicMock()
+        mock_client.send_text_message.return_value = {"success": True, "message_id": "out1"}
+
+        res = dispatch_inbound_message_reply(
+            conversation_id=convo.id,
+            inbound_msg_id=msg.id,
+            webhook_event_id=1,
+            message={"type": "text"},
+            sender_phone=self.patient_phone,
+            scoped_user_id=None,
+            parent_scoped_id=None,
+            contact_name="Rahul",
+            client=mock_client
+        )
+        # Should NOT have switched language to 'en'
+        self.assertEqual(get_whatsapp_user_language(self.patient_phone), "ml")
+        self.assertFalse(res.get("language_set"))
 
 
 if __name__ == "__main__":

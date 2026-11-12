@@ -967,6 +967,152 @@ class WhatsAppAppointmentMgmtTestSuite(unittest.TestCase):
         booking = PatientBooking.query.get(b_id)
         self.assertEqual(booking.status, 'cancelled')
 
+    def test_25_specific_booking_lookup_own_booking(self):
+        """25. Querying own booking by ID returns the full details card in Malayalam or English."""
+        phone = "+919847055225"
+        target_date = self._find_next_working_day(3)
+        b_res = create_booking_service(
+            patient_name="Anas", age="29", gender="Male",
+            phone_number=phone, appointment_date=target_date, doctor_id=1,
+            booking_source='kapso_whatsapp'
+        )
+        b_id = b_res["booking_id"]
+
+        convo = self._create_convo(phone)
+        from services.whatsapp_appointment_mgmt import handle_whatsapp_appointment_mgmt
+
+        # Test in English: "Details of <b_id>"
+        res_en = handle_whatsapp_appointment_mgmt(
+            conversation=convo,
+            message_body=f"Details of {b_id}",
+            sender_phone=phone,
+            sender_role="patient",
+            user_id=None,
+            display_name="Anas",
+            user_lang="en"
+        )
+        self.assertTrue(res_en.get("handled"))
+        self.assertIn("Your Booking Details", res_en.get("reply"))
+        self.assertIn(f"#{b_id}", res_en.get("reply"))
+        self.assertIn("Anas", res_en.get("reply"))
+
+        # Test in Malayalam: "<b_id> is my appointment itself"
+        res_ml = handle_whatsapp_appointment_mgmt(
+            conversation=convo,
+            message_body=f"{b_id} is my appointment itself",
+            sender_phone=phone,
+            sender_role="patient",
+            user_id=None,
+            display_name="Anas",
+            user_lang="ml"
+        )
+        self.assertTrue(res_ml.get("handled"))
+        self.assertIn("നിങ്ങളുടെ ബുക്കിംഗ് വിവരങ്ങൾ", res_ml.get("reply"))
+        self.assertIn(f"#{b_id}", res_ml.get("reply"))
+
+    def test_26_specific_booking_lookup_other_patient_booking_privacy(self):
+        """26. Querying another patient's booking ID strictly enforces privacy notice."""
+        victim_phone = "+919847055226"
+        attacker_phone = "+919847055227"
+        target_date = self._find_next_working_day(3)
+        b_res = create_booking_service(
+            patient_name="Victim Patient", age="40", gender="Female",
+            phone_number=victim_phone, appointment_date=target_date, doctor_id=1,
+            booking_source='kapso_whatsapp'
+        )
+        b_id = b_res["booking_id"]
+
+        convo = self._create_convo(attacker_phone)
+        from services.whatsapp_appointment_mgmt import handle_whatsapp_appointment_mgmt
+
+        # In English
+        res_en = handle_whatsapp_appointment_mgmt(
+            conversation=convo,
+            message_body=f"Details of booking #{b_id}",
+            sender_phone=attacker_phone,
+            sender_role="patient",
+            user_id=None,
+            display_name="Curious User",
+            user_lang="en"
+        )
+        self.assertTrue(res_en.get("handled"))
+        self.assertIn("Patient Privacy & Confidentiality Notice", res_en.get("reply"))
+        self.assertNotIn("Victim Patient", res_en.get("reply"))
+
+        # In Malayalam
+        res_ml = handle_whatsapp_appointment_mgmt(
+            conversation=convo,
+            message_body=f"Details of {b_id}",
+            sender_phone=attacker_phone,
+            sender_role="patient",
+            user_id=None,
+            display_name="Curious User",
+            user_lang="ml"
+        )
+        self.assertTrue(res_ml.get("handled"))
+        self.assertIn("രോഗികളുടെ സ്വകാര്യതാ അറിയിപ്പ്", res_ml.get("reply"))
+        self.assertNotIn("Victim Patient", res_ml.get("reply"))
+
+    def test_27_abort_input_variations(self):
+        """27. Abort input variations like 'vendaa', 'venddaa', 'don't cancel' are recognized."""
+        from services.whatsapp_appointment_mgmt import is_abort_input
+        self.assertTrue(is_abort_input("cancel"))
+        self.assertTrue(is_abort_input("abort"))
+        self.assertTrue(is_abort_input("venda"))
+        self.assertTrue(is_abort_input("vendaa"))
+        self.assertTrue(is_abort_input("venddaa"))
+        self.assertTrue(is_abort_input("don't cancel"))
+        self.assertTrue(is_abort_input("dont cancel"))
+        self.assertTrue(is_abort_input("do not cancel"))
+        self.assertTrue(is_abort_input("വേണ്ട"))
+        self.assertFalse(is_abort_input("confirm"))
+        self.assertFalse(is_abort_input("yes"))
+        self.assertFalse(is_abort_input("ശരി"))
+
+    def test_28_choose_appointment_by_direct_booking_id(self):
+        """28. In CHOOSE_APPOINTMENT step, choosing by direct booking ID works alongside index."""
+        phone = "+919847055228"
+        target_date = self._find_next_working_day(4)
+        b1 = create_booking_service(
+            patient_name="Patient One", age="30", gender="Male",
+            phone_number=phone, appointment_date=target_date, doctor_id=1,
+            booking_source='kapso_whatsapp'
+        )
+        b2 = create_booking_service(
+            patient_name="Patient Two", age="32", gender="Female",
+            phone_number=phone, appointment_date=target_date, doctor_id=1,
+            booking_source='kapso_whatsapp'
+        )
+        convo = self._create_convo(phone)
+        from services.whatsapp_appointment_mgmt import handle_whatsapp_appointment_mgmt
+
+        # Turn 1: trigger cancel -> prompts CHOOSE_APPOINTMENT
+        res1 = handle_whatsapp_appointment_mgmt(
+            conversation=convo,
+            message_body="cancel booking",
+            sender_phone=phone,
+            sender_role="patient",
+            user_id=None,
+            display_name="Patient",
+            user_lang="en"
+        )
+        self.assertTrue(res1.get("handled"))
+        self.assertEqual(res1["session"].step, "CHOOSE_APPOINTMENT")
+
+        # Turn 2: reply with direct booking reference '#<id>' of b2
+        res2 = handle_whatsapp_appointment_mgmt(
+            conversation=convo,
+            message_body=f"#{b2['booking_id']}",
+            sender_phone=phone,
+            sender_role="patient",
+            user_id=None,
+            display_name="Patient",
+            user_lang="en"
+        )
+        self.assertTrue(res2.get("handled"))
+        self.assertEqual(res2["session"].step, "CONFIRMATION")
+        self.assertEqual(res2["session"].booking_id, b2["booking_id"])
+
 
 if __name__ == '__main__':
     unittest.main()

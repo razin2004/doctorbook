@@ -41,7 +41,7 @@ BOOKING_INTENT_PATTERNS = [
     re.compile(r'\b(i\s+want\s+to\s+book|need\s+(an\s+)?appointment|want\s+(an\s+)?appointment|make\s+(an\s+)?appointment)\b', re.IGNORECASE),
     re.compile(r'\b(schedule\s+(an\s+)?appointment|take\s+(an\s+)?appointment|doctor\s+appointment|appointment\s+booking)\b', re.IGNORECASE),
     re.compile(r'\b(book\s+(with\s+)?(dr|doctor))\b', re.IGNORECASE),
-    re.compile(r'^(book|book appointment|new booking|new appointment|book doctor|menu_book|1)$', re.IGNORECASE),
+    re.compile(r'^(book|book appointment|new booking|new appointment|book doctor|menu_book)$', re.IGNORECASE),
     re.compile(r'(?:^|\s|[.,!?])(ബുക്കിംഗ്|ബുക്ക്|അപ്പോയിന്റ്മെന്റ്|ഡോക്ടറെ\s+കാണണം|സമയം\s+വേണം)(?:$|\s|[.,!?])', re.IGNORECASE),
 ]
 
@@ -1456,8 +1456,10 @@ def handle_whatsapp_booking_flow(
         if not avail_res.get("available"):
             reason = avail_res.get("reason") or "Doctor is not available on this date."
             if user_lang == "ml":
+                from services.whatsapp_localization import format_availability_reason_ml
+                ml_reason = format_availability_reason_ml(reason, doctor_name=active_session.doctor_name)
                 reply = (
-                    f"⚠️ *ലഭ്യമല്ല:* {reason}\n\n"
+                    f"⚠️ *ലഭ്യമല്ല:* {ml_reason}\n\n"
                     "ദയവായി അടുത്ത 15 ദിവസത്തിനുള്ളിലെ മറ്റൊരു തീയതി തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
                 )
             else:
@@ -1794,8 +1796,10 @@ def handle_whatsapp_booking_flow(
 
             msg = booking_res.get("message") or "Capacity limit reached or doctor unavailable."
             if user_lang == "ml":
+                from services.whatsapp_localization import format_availability_reason_ml
+                ml_msg = format_availability_reason_ml(msg, doctor_name=active_session.doctor_name)
                 reply = (
-                    f"⚠️ *ബുക്കിംഗ് പരാജയപ്പെട്ടു:* {msg}\n\n"
+                    f"⚠️ *ബുക്കിംഗ് പരാജയപ്പെട്ടു:* {ml_msg}\n\n"
                     "ദയവായി മറ്റൊരു തീയതി തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
                 )
             else:

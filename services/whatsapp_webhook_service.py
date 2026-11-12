@@ -551,11 +551,10 @@ def dispatch_inbound_message_reply(
                 status='in_progress'
             ).first()
 
-            explicit_lang_tokens = {'lang_en', 'lang_ml', 'english', 'malayalam', 'മലയാളം', 'ഇംഗ്ലീഷ്'}
+            explicit_lang_tokens = {'lang_en', 'lang_ml', 'english', 'malayalam', 'മലയാളം', 'ഇംഗ്ലീഷ്', 'en', 'ml'}
             is_explicit = clean_inbound.lower() in explicit_lang_tokens
-            is_numeric_switch = clean_inbound in ('1', '2') and not active_session_check
 
-            if is_explicit or is_numeric_switch:
+            if is_explicit:
                 chosen_lang = parse_language_choice(clean_inbound)
                 if chosen_lang:
                     user_lang = set_whatsapp_user_language(sender_phone, chosen_lang)
@@ -748,7 +747,7 @@ def dispatch_inbound_message_reply(
         clean_inbound_lower = (inbound_body or "").strip().lower()
 
         # Menu Action: Doctors & Timings
-        if clean_inbound_lower in ("menu_doctors", "4", "doctors", "doctor list", "doctor timings", "timings", "ഡോക്ടർമാർ", "ഡോക്ടർമാരുടെ സമയം"):
+        if clean_inbound_lower in ("menu_doctors", "doctors", "doctor list", "doctor timings", "timings", "ഡോക്ടർമാർ", "ഡോക്ടർമാരുടെ സമയം"):
             doc_reply = handle_menu_doctors(lang=user_lang)
             dispatch_res = active_client.send_text_message(
                 recipient_phone=sender_phone,
@@ -782,7 +781,7 @@ def dispatch_inbound_message_reply(
             }
 
         # Menu Action: Location & Contact
-        if clean_inbound_lower in ("menu_location", "5", "location", "address", "directions", "map", "clinic location", "വിലാസം", "ക്ലിനിക്ക് വിലാസം"):
+        if clean_inbound_lower in ("menu_location", "location", "address", "directions", "map", "clinic location", "വിലാസം", "ക്ലിനിക്ക് വിലാസം"):
             loc_reply = handle_menu_location(lang=user_lang)
             dispatch_res = active_client.send_text_message(
                 recipient_phone=sender_phone,
@@ -880,13 +879,22 @@ def dispatch_inbound_message_reply(
                 re.compile(r'\b(admin\s+settings?|system\s+settings?|database\s+records?)\b', re.IGNORECASE),
             ]
             if any(p.search(inbound_body) for p in privacy_patterns):
-                privacy_reply = (
-                    "🔒 *Patient Privacy & Confidentiality Notice*\n\n"
-                    "For patient confidentiality and privacy regulations, individual booking schedules, "
-                    "patient counts, and consult lists cannot be disclosed.\n\n"
-                    "• To view your own personal bookings: reply *My Appointments*\n"
-                    "• To book an appointment: reply *Book*"
-                )
+                if user_lang == "ml":
+                    privacy_reply = (
+                        "🔒 *രോഗികളുടെ സ്വകാര്യതാ അറിയിപ്പ്*\n\n"
+                        "രോഗികളുടെ സ്വകാര്യത മാനിച്ചുകൊണ്ട് മറ്റ് രോഗികളുടെ ബുക്കിംഗ് വിവരങ്ങളോ, "
+                        "കൺസൾട്ടേഷൻ ലിസ്റ്റോ വെളിപ്പെടുത്താൻ കഴിയില്ല.\n\n"
+                        "• നിങ്ങളുടെ സ്വന്തം ബുക്കിംഗുകൾ കാണാൻ: *My Bookings* എന്ന് അയക്കുക\n"
+                        "• പുതിയ അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യാൻ: *Book* എന്ന് അയക്കുക"
+                    )
+                else:
+                    privacy_reply = (
+                        "🔒 *Patient Privacy & Confidentiality Notice*\n\n"
+                        "For patient confidentiality and privacy regulations, individual booking schedules, "
+                        "patient counts, and consult lists cannot be disclosed.\n\n"
+                        "• To view your own personal bookings: reply *My Appointments*\n"
+                        "• To book an appointment: reply *Book*"
+                    )
                 dispatch_res = active_client.send_text_message(
                     recipient_phone=sender_phone,
                     bsuid=scoped_user_id,
