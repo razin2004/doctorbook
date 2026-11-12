@@ -21,6 +21,7 @@ from app import (
     app, db, User, Doctor, DoctorSchedule, DoctorSession, PatientBooking,
     BookingNotificationTracker, SavedPatient, WhatsAppConversation,
     WhatsAppMessage, WhatsAppWebhookEvent, WhatsAppBookingSession,
+    WhatsAppUserPreference, ClinicHoliday, DoctorLeave, ADMIN_EMAIL,
     get_or_create_whatsapp_patient_user
 )
 from services.whatsapp_patient_mgmt import (
@@ -39,6 +40,10 @@ from services.whatsapp_notification_service import (
     notify_patient_consultation_completed,
     handle_custom_reminder_command,
     check_and_send_scheduled_pre_consultation_reminders,
+    notify_clinic_holiday_affected_patients,
+    notify_clinic_holiday_removal_patients,
+    notify_doctor_leave_affected_patients,
+    notify_doctor_leave_removal_patients,
     _get_or_create_tracker
 )
 from services.whatsapp_booking_flow import handle_whatsapp_booking_flow
@@ -68,6 +73,9 @@ class WhatsAppNotificationsTestSuite(unittest.TestCase):
         self.session.query(PatientBooking).delete()
         self.session.query(SavedPatient).delete()
         self.session.query(DoctorSession).delete()
+        self.session.query(ClinicHoliday).delete()
+        self.session.query(DoctorLeave).delete()
+        self.session.query(WhatsAppUserPreference).delete()
         self.session.commit()
 
         # Setup test doctor
@@ -107,6 +115,9 @@ class WhatsAppNotificationsTestSuite(unittest.TestCase):
         self.session.query(PatientBooking).delete()
         self.session.query(SavedPatient).delete()
         self.session.query(DoctorSession).delete()
+        self.session.query(ClinicHoliday).delete()
+        self.session.query(DoctorLeave).delete()
+        self.session.query(WhatsAppUserPreference).delete()
         self.session.commit()
         self.app_context.pop()
 
@@ -647,6 +658,222 @@ class WhatsAppNotificationsTestSuite(unittest.TestCase):
         )
         self.assertTrue(res3.get("reminder_handled"))
         self.assertIn("Custom Alert Set", res3.get("reply"))
+
+    # =====================================================================
+    # 7. CLINIC HOLIDAY & DOCTOR LEAVE WHATSAPP NOTIFICATIONS TESTS
+    # =====================================================================
+
+    @patch("services.kapso_client.KapsoClient.send_text_message")
+    def test_clinic_holiday_affected_patients_english(self, mock_send):
+        """Notifies active booked patients in English when a clinic holiday is declared."""
+        mock_send.return_value = {"success": True, "status": "sent"}
+        holiday_date = "2026-11-25"
+        phone = "+919847055020"
+        user = self._get_or_create_user(phone, name="John Doe")
+
+        booking = PatientBooking(
+            user_id=user.id,
+            patient_name="John Doe",
+            phone_number=phone,
+            doctor_name="Dr. Arshitha Abdurahman",
+            specialization="Gynecologist",
+            date=holiday_date,
+            time="09:00 - 13:00",
+            token=7,
+            status="confirmed"
+        )
+        self.session.add(booking)
+        self.session.commit()
+
+        # Trigger holiday notification (sync mode)
+        notified = notify_clinic_holiday_affected_patients(
+            holiday_date,
+            reason="National Holiday",
+            async_mode=False
+        )
+        self.assertEqual(notified, 1)
+        self.assertTrue(mock_send.called)
+        sent_args = mock_send.call_args[1]
+        self.assertEqual(sent_args["recipient_phone"], phone)
+        body = sent_args["text_body"]
+        self.assertIn("Clinic Holiday Notice — PrimeCare Clinic", body)
+        self.assertIn("John Doe", body)
+        self.assertIn("National Holiday", body)
+        self.assertIn("#7", body)
+        self.assertIn("Reschedule", body)
+
+    @patch("services.kapso_client.KapsoClient.send_text_message")
+    def test_clinic_holiday_affected_patients_malayalam(self, mock_send):
+        """Notifies active booked patients in Malayalam when preferred language is 'ml'."""
+        mock_send.return_value = {"success": True, "status": "sent"}
+        holiday_date = "2026-11-26"
+        phone = "+919847055021"
+        user = self._get_or_create_user(phone, name="Anoop Kumar")
+
+        # Set user preference to Malayalam
+        pref = WhatsAppUserPreference(sender_phone=phone, language="ml")
+        self.session.add(pref)
+
+        booking = PatientBooking(
+            user_id=user.id,
+            patient_name="Anoop Kumar",
+            phone_number=phone,
+            doctor_name="Dr. Arshitha Abdurahman",
+            specialization="Gynecologist",
+            date=holiday_date,
+            time="09:00 - 13:00",
+            token=3,
+            status="confirmed"
+        )
+        self.session.add(booking)
+        self.session.commit()
+
+        notified = notify_clinic_holiday_affected_patients(
+            holiday_date,
+            reason="General Holiday",
+            async_mode=False
+        )
+        self.assertEqual(notified, 1)
+        self.assertTrue(mock_send.called)
+        sent_args = mock_send.call_args[1]
+        body = sent_args["text_body"]
+        self.assertIn("അവധി അറിയിപ്പ് — പ്രൈംകെയർ ക്ലിനിക്ക്", body)
+        self.assertIn("പൊതു അവധി", body)
+        self.assertIn("#3", body)
+        self.assertIn("Reschedule", body)
+
+    @patch("services.kapso_client.KapsoClient.send_text_message")
+    def test_clinic_holiday_removal_patients(self, mock_send):
+        """Notifies patients when an announced holiday is removed/cancelled."""
+        mock_send.return_value = {"success": True, "status": "sent"}
+        holiday_date = "2026-11-27"
+        phone = "+919847055022"
+        user = self._get_or_create_user(phone, name="Meera Nair")
+
+        booking = PatientBooking(
+            user_id=user.id,
+            patient_name="Meera Nair",
+            phone_number=phone,
+            doctor_name="Dr. Arshitha Abdurahman",
+            specialization="Gynecologist",
+            date=holiday_date,
+            time="09:00 - 13:00",
+            token=2,
+            status="confirmed"
+        )
+        self.session.add(booking)
+        self.session.commit()
+
+        notified = notify_clinic_holiday_removal_patients(holiday_date, async_mode=False)
+        self.assertEqual(notified, 1)
+        self.assertTrue(mock_send.called)
+        body = mock_send.call_args[1]["text_body"]
+        self.assertIn("Holiday Cancelled", body)
+        self.assertIn("remain OPEN", body)
+
+    @patch("services.kapso_client.KapsoClient.send_text_message")
+    def test_doctor_leave_affected_patients_english_and_malayalam(self, mock_send):
+        """Alerts patients via WhatsApp when doctor takes leave on their booking date."""
+        mock_send.return_value = {"success": True, "status": "sent"}
+        leave_date = "2026-11-28"
+        phone_en = "+919847055023"
+        phone_ml = "+919847055024"
+
+        u_en = self._get_or_create_user(phone_en, name="Sanjay Roy")
+        u_ml = self._get_or_create_user(phone_ml, name="Shafi Basheer")
+        self.session.add(WhatsAppUserPreference(sender_phone=phone_ml, language="ml"))
+
+        b_en = PatientBooking(
+            user_id=u_en.id,
+            patient_name="Sanjay Roy",
+            phone_number=phone_en,
+            doctor_name="Dr. Arshitha Abdurahman",
+            specialization="Gynecologist",
+            date=leave_date,
+            time="09:00 - 13:00",
+            token=1,
+            status="confirmed"
+        )
+        b_ml = PatientBooking(
+            user_id=u_ml.id,
+            patient_name="Shafi Basheer",
+            phone_number=phone_ml,
+            doctor_name="Dr. Arshitha Abdurahman",
+            specialization="Gynecologist",
+            date=leave_date,
+            time="09:00 - 13:00",
+            token=2,
+            status="confirmed"
+        )
+        self.session.add_all([b_en, b_ml])
+        self.session.commit()
+
+        notified = notify_doctor_leave_affected_patients(
+            "Dr. Arshitha Abdurahman",
+            leave_date,
+            reason="Medical Conference",
+            async_mode=False
+        )
+        self.assertEqual(notified, 2)
+        self.assertEqual(mock_send.call_count, 2)
+
+        bodies = [call[1]["text_body"] for call in mock_send.call_args_list]
+        en_match = any("Doctor Unavailable — PrimeCare Clinic" in b for b in bodies)
+        ml_match = any("ഡോക്ടറുടെ അവധി അറിയിപ്പ് — പ്രൈംകെയർ ക്ലിനിക്ക്" in b for b in bodies)
+        self.assertTrue(en_match)
+        self.assertTrue(ml_match)
+
+    @patch("services.kapso_client.KapsoClient.send_text_message")
+    def test_doctor_leave_removal_patients(self, mock_send):
+        """Notifies patients when doctor leave is cancelled."""
+        mock_send.return_value = {"success": True, "status": "sent"}
+        leave_date = "2026-11-29"
+        phone = "+919847055025"
+        user = self._get_or_create_user(phone, name="Kavya Madhavan")
+
+        booking = PatientBooking(
+            user_id=user.id,
+            patient_name="Kavya Madhavan",
+            phone_number=phone,
+            doctor_name="Dr. Arshitha Abdurahman",
+            specialization="Gynecologist",
+            date=leave_date,
+            time="09:00 - 13:00",
+            token=5,
+            status="confirmed"
+        )
+        self.session.add(booking)
+        self.session.commit()
+
+        notified = notify_doctor_leave_removal_patients(
+            "Dr. Arshitha Abdurahman",
+            leave_date,
+            async_mode=False
+        )
+        self.assertEqual(notified, 1)
+        self.assertTrue(mock_send.called)
+        body = mock_send.call_args[1]["text_body"]
+        self.assertIn("Doctor Schedule Update — PrimeCare Clinic", body)
+
+    @patch("services.whatsapp_notification_service.notify_clinic_holiday_affected_patients")
+    def test_admin_add_holiday_endpoint_triggers_whatsapp(self, mock_notify):
+        """Admin add holiday endpoint triggers WhatsApp notification dispatcher."""
+        # Authenticate admin session
+        with self.client.session_transaction() as sess:
+            sess['admin_logged_in'] = True
+            sess['role'] = 'admin'
+            sess['admin_email'] = ADMIN_EMAIL
+
+        resp = self.client.post("/admin_add_holiday", json={
+            "date": "2026-12-05",
+            "reason": "Annual Maintenance"
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data.get("success"))
+        self.assertTrue(mock_notify.called)
+        self.assertEqual(mock_notify.call_args[0][0], "2026-12-05")
+        self.assertEqual(mock_notify.call_args[0][1], "Annual Maintenance")
 
 
 if __name__ == '__main__':

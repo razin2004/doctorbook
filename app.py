@@ -4936,6 +4936,13 @@ def admin_add_leave():
     except Exception as e:
         app.logger.error(f"Failed to trigger doctor leave push notification: {e}")
 
+    # Trigger WhatsApp notification for patients whose appointments are affected
+    try:
+        from services.whatsapp_notification_service import notify_doctor_leave_affected_patients
+        notify_doctor_leave_affected_patients(doctor_name, date_str, reason)
+    except Exception as e:
+        app.logger.error(f"Failed to trigger doctor leave WhatsApp notification: {e}")
+
     return jsonify({"success": True, "msg": "Leave added successfully."})
 
 
@@ -5023,6 +5030,13 @@ def admin_delete_leave():
     except Exception as e:
         app.logger.error(f"Failed to trigger doctor leave cancellation push notification: {e}")
 
+    # Trigger doctor leave cancellation WhatsApp notification
+    try:
+        from services.whatsapp_notification_service import notify_doctor_leave_removal_patients
+        notify_doctor_leave_removal_patients(doctor_name, date_str)
+    except Exception as e:
+        app.logger.error(f"Failed to trigger doctor leave cancellation WhatsApp notification: {e}")
+
     return jsonify({"success": True, "msg": "Leave entry removed."})
 
 # ===================== Holiday CRUD =====================
@@ -5084,6 +5098,14 @@ def admin_add_holiday():
                 send_holiday_notification(entry[0], entry[1], app, db, PatientBooking, PushSubscription)
         except Exception as e:
             app.logger.error(f"Failed to trigger holiday push notifications: {e}")
+
+        # Trigger WhatsApp notification for patients whose appointments are affected by the holiday(s)
+        try:
+            from services.whatsapp_notification_service import notify_clinic_holiday_affected_patients
+            for entry in new_entries:
+                notify_clinic_holiday_affected_patients(entry[0], entry[1])
+        except Exception as e:
+            app.logger.error(f"Failed to trigger holiday WhatsApp notifications: {e}")
         
         msg = f"Successfully added {len(new_entries)} holiday(s)."
         if skipped_count > 0:
@@ -5286,6 +5308,13 @@ def admin_delete_holiday():
             send_holiday_removal_notification(date_str, app, db, PatientBooking, PushSubscription)
         except Exception as e:
             app.logger.error(f"Failed to trigger holiday cancellation push notification: {e}")
+
+        # Trigger clinic holiday cancellation WhatsApp notification
+        try:
+            from services.whatsapp_notification_service import notify_clinic_holiday_removal_patients
+            notify_clinic_holiday_removal_patients(date_str)
+        except Exception as e:
+            app.logger.error(f"Failed to trigger holiday cancellation WhatsApp notification: {e}")
 
         return jsonify({"success": True, "msg": "Holiday removed"})
     

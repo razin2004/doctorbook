@@ -20,7 +20,7 @@ import re
 import logging
 import threading
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 import pytz
 
 logger = logging.getLogger("whatsapp_notification_service")
@@ -604,4 +604,471 @@ def handle_custom_reminder_command(
         )
 
     return {"handled": True, "reply": reply}
+
+
+# =====================================================================
+# 5. CLINIC HOLIDAY & DOCTOR LEAVE NOTIFICATIONS (BILINGUAL)
+# =====================================================================
+
+def _format_date_bilingual(date_str: str) -> Tuple[str, str, str]:
+    """
+    Parses a date string (YYYY-MM-DD or DD-MM-YYYY) and returns:
+    (iso_date, display_en, display_ml)
+    e.g. ("2026-11-20", "20-11-2026 (Friday)", "20-11-2026 (വെള്ളി)")
+    """
+    d_clean = date_str.strip()
+    dt_obj = None
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            dt_obj = datetime.strptime(d_clean, fmt)
+            break
+        except Exception:
+            continue
+
+    if not dt_obj:
+        return (d_clean, d_clean, d_clean)
+
+    iso_date = dt_obj.strftime("%Y-%m-%d")
+    day_str = dt_obj.strftime("%d-%m-%Y")
+    weekday_en = dt_obj.strftime("%A")
+
+    day_map_ml = {
+        'Monday': 'തിങ്കൾ', 'Tuesday': 'ചൊവ്വ', 'Wednesday': 'ബുധൻ',
+        'Thursday': 'വ്യാഴം', 'Friday': 'വെള്ളി', 'Saturday': 'ശനി', 'Sunday': 'ഞായർ'
+    }
+    weekday_ml = day_map_ml.get(weekday_en, weekday_en)
+
+    display_en = f"{day_str} ({weekday_en})"
+    display_ml = f"{day_str} ({weekday_ml})"
+
+    return (iso_date, display_en, display_ml)
+
+
+def _format_holiday_reason(reason: str, lang: str) -> str:
+    """Translates common clinic holiday reasons to Malayalam if requested."""
+    if not reason or reason.strip().lower() in ("general holiday", "holiday", "clinic closed"):
+        return "പൊതു അവധി" if lang == "ml" else "General Holiday"
+    if lang == "ml":
+        r_low = reason.strip().lower()
+        if "onam" in r_low:
+            return "ഓണം അവധി"
+        elif "vishu" in r_low:
+            return "വിഷു അവധി"
+        elif "eid" in r_low or "bakrid" in r_low:
+            return "പെരുന്നാൾ അവധി"
+        elif "christmas" in r_low:
+            return "ക്രിസ്മസ് അവധി"
+        elif "sunday" in r_low:
+            return "ഞായറാഴ്ച അവധി"
+        elif "maintenance" in r_low:
+            return "അറ്റകുറ്റപ്പണി"
+        elif "strike" in r_low or "hartal" in r_low:
+            return "ഹർത്താൽ / പണിമുടക്ക്"
+    return reason.strip()
+
+
+def _format_leave_reason(reason: str, lang: str) -> str:
+    """Translates doctor leave reasons to Malayalam if requested."""
+    if not reason or reason.strip().lower() in ("temporary leave", "leave", "personal"):
+        return "വ്യക്തിപരമായ അവധി" if lang == "ml" else (reason or "Temporary Leave")
+    return reason.strip()
+
+
+def notify_clinic_holiday_affected_patients(
+    date_str: str,
+    reason: str = "General Holiday",
+    async_mode: bool = True
+) -> int:
+    """
+    Finds all active confirmed bookings on date_str and dispatches a personalized
+    WhatsApp notification in English or Malayalam informing the patient that the clinic
+    is closed on that holiday and prompting them to reschedule.
+    """
+    from app import app, db, PatientBooking, User
+    from services.kapso_client import KapsoClient
+    from phone_utils import normalize_phone_number
+
+    def _execute():
+        with app.app_context():
+            try:
+                iso_date, display_en, display_ml = _format_date_bilingual(date_str)
+                d_str = date_str.strip()
+                try:
+                    if len(d_str.split('-')[0]) == 4:
+                        alt_date = datetime.strptime(d_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    else:
+                        alt_date = datetime.strptime(d_str, "%d-%m-%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    alt_date = d_str
+
+                bookings = PatientBooking.query.filter(
+                    (PatientBooking.date == d_str) | (PatientBooking.date == alt_date),
+                    PatientBooking.status.in_(['confirmed', 'active'])
+                ).all()
+
+                if not bookings:
+                    logger.info(f"No active bookings found on holiday date {date_str}.")
+                    return 0
+
+                client = KapsoClient()
+                sent_count = 0
+
+                for b in bookings:
+                    phone = b.phone_number
+                    if not phone and b.user_id:
+                        u = User.query.get(b.user_id)
+                        if u:
+                            phone = u.phone_number
+                    if not phone:
+                        continue
+
+                    norm_phone = normalize_phone_number(phone)
+                    if not norm_phone:
+                        continue
+
+                    lang = _get_user_lang_for_phone(norm_phone)
+                    patient_name = b.patient_name or ("രോഗി" if lang == "ml" else "Patient")
+                    doc_disp = (b.doctor_name or "Doctor").strip()
+                    if not doc_disp.lower().startswith("dr."):
+                        doc_disp = f"Dr. {doc_disp}"
+                    spec_disp = f" ({b.specialization.strip()})" if b.specialization else ""
+
+                    if lang == "ml":
+                        reason_ml = _format_holiday_reason(reason, "ml")
+                        msg = (
+                            "🏥 *അവധി അറിയിപ്പ് — പ്രൈംകെയർ ക്ലിനിക്ക്*\n\n"
+                            f"പ്രിയ *{patient_name}*,\n\n"
+                            f"*{reason_ml}* പ്രമാണിച്ച് *{display_ml}* തീയതിയിൽ പ്രൈംകെയർ ക്ലിനിക്ക് അവധിയായിരിക്കുന്നതാണ്.\n\n"
+                            "നിങ്ങൾ ബുക്ക് ചെയ്തിരുന്ന അപ്പോയിന്റ്മെന്റ്:\n"
+                            f"• *ഡോക്ടർ:* {doc_disp}{spec_disp}\n"
+                            f"• *ടോക്കൺ:* #{b.token}\n"
+                            f"• *തീയതി:* {display_ml}\n\n"
+                            "മറ്റൊരു സൗകര്യപ്രദമായ ദിവസത്തേക്ക് അപ്പോയിന്റ്മെന്റ് മാറ്റുന്നതിനായി *Reschedule* എന്ന് മറുപടി അയക്കുക, അല്ലെങ്കിൽ ഓൺലൈൻ പോർട്ടൽ സന്ദർശിക്കുക.\n\n"
+                            "നിങ്ങൾക്കുണ്ടാകുന്ന അസൗകര്യത്തിൽ ഞങ്ങൾ ആത്മാർത്ഥമായി ഖേദിക്കുന്നു."
+                        )
+                    else:
+                        reason_en = _format_holiday_reason(reason, "en")
+                        msg = (
+                            "🏥 *Clinic Holiday Notice — PrimeCare Clinic*\n\n"
+                            f"Dear *{patient_name}*,\n\n"
+                            f"Please be informed that PrimeCare Clinic will remain closed on *{display_en}* due to *{reason_en}*.\n\n"
+                            "Your scheduled appointment has been affected:\n"
+                            f"• *Doctor:* {doc_disp}{spec_disp}\n"
+                            f"• *Token:* #{b.token}\n"
+                            f"• *Original Date:* {display_en}\n\n"
+                            "To choose an alternative date, simply reply with *Reschedule* or visit our online clinic portal.\n\n"
+                            "We sincerely apologize for any inconvenience caused."
+                        )
+
+                    try:
+                        client.send_text_message(recipient_phone=norm_phone, text_body=msg)
+                        sent_count += 1
+                        logger.info(f"Dispatched holiday notification to {norm_phone} for booking #{b.id}")
+                    except Exception as err:
+                        logger.warning(f"Failed to dispatch holiday notification to {norm_phone}: {err}")
+
+                return sent_count
+            except Exception as e:
+                logger.error(f"Error in notify_clinic_holiday_affected_patients: {e}")
+                return 0
+
+    if async_mode:
+        thread = threading.Thread(target=_execute, daemon=True, name="wa_holiday_notifier")
+        thread.start()
+        return 0
+    else:
+        return _execute()
+
+
+def notify_clinic_holiday_removal_patients(
+    date_str: str,
+    async_mode: bool = True
+) -> int:
+    """
+    Notifies patients when a clinic holiday is removed/cancelled, confirming normal clinic operations.
+    """
+    from app import app, db, PatientBooking, User
+    from services.kapso_client import KapsoClient
+    from phone_utils import normalize_phone_number
+
+    def _execute():
+        with app.app_context():
+            try:
+                iso_date, display_en, display_ml = _format_date_bilingual(date_str)
+                d_str = date_str.strip()
+                try:
+                    if len(d_str.split('-')[0]) == 4:
+                        alt_date = datetime.strptime(d_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    else:
+                        alt_date = datetime.strptime(d_str, "%d-%m-%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    alt_date = d_str
+
+                bookings = PatientBooking.query.filter(
+                    (PatientBooking.date == d_str) | (PatientBooking.date == alt_date),
+                    PatientBooking.status.in_(['confirmed', 'active'])
+                ).all()
+
+                if not bookings:
+                    return 0
+
+                client = KapsoClient()
+                sent_count = 0
+
+                for b in bookings:
+                    phone = b.phone_number
+                    if not phone and b.user_id:
+                        u = User.query.get(b.user_id)
+                        if u:
+                            phone = u.phone_number
+                    if not phone:
+                        continue
+                    norm_phone = normalize_phone_number(phone)
+                    if not norm_phone:
+                        continue
+
+                    lang = _get_user_lang_for_phone(norm_phone)
+                    patient_name = b.patient_name or ("രോഗി" if lang == "ml" else "Patient")
+                    doc_disp = (b.doctor_name or "Doctor").strip()
+                    if not doc_disp.lower().startswith("dr."):
+                        doc_disp = f"Dr. {doc_disp}"
+
+                    if lang == "ml":
+                        msg = (
+                            "🏥 *ക്ലിനിക്ക് അറിയിപ്പ് — അവധി റദ്ദാക്കി*\n\n"
+                            f"പ്രിയ *{patient_name}*,\n\n"
+                            f"*{display_ml}* തീയതിയിൽ നേരത്തെ പ്രഖ്യാപിച്ചിരുന്ന അവധി റദ്ദാക്കിയിരിക്കുന്നു. പ്രൈംകെയർ ക്ലിനിക്ക് സാധാരണ പോലെ പ്രവർത്തിക്കുന്നതാണ്.\n\n"
+                            "നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് വിവരങ്ങൾ:\n"
+                            f"• *ഡോക്ടർ:* {doc_disp}\n"
+                            f"• *ടോക്കൺ:* #{b.token}\n"
+                            "• *സ്റ്റാറ്റസ്:* സ്ഥിരീകരിച്ചു (Confirmed)\n\n"
+                            "സംശയങ്ങളുണ്ടെങ്കിൽ ഈ സന്ദേശത്തിന് മറുപടി അയക്കാവുന്നതാണ്."
+                        )
+                    else:
+                        msg = (
+                            "🏥 *Clinic Notice — Holiday Cancelled*\n\n"
+                            f"Dear *{patient_name}*,\n\n"
+                            f"The clinic holiday previously announced for *{display_en}* has been cancelled. PrimeCare Clinic will remain OPEN and consultations will proceed as scheduled.\n\n"
+                            "Your appointment details:\n"
+                            f"• *Doctor:* {doc_disp}\n"
+                            f"• *Token:* #{b.token}\n"
+                            "• *Status:* Confirmed\n\n"
+                            "If you have any questions, please reply to this message."
+                        )
+
+                    try:
+                        client.send_text_message(recipient_phone=norm_phone, text_body=msg)
+                        sent_count += 1
+                        logger.info(f"Dispatched holiday cancellation notification to {norm_phone} for booking #{b.id}")
+                    except Exception as err:
+                        logger.warning(f"Failed to dispatch holiday cancellation notification to {norm_phone}: {err}")
+
+                return sent_count
+            except Exception as e:
+                logger.error(f"Error in notify_clinic_holiday_removal_patients: {e}")
+                return 0
+
+    if async_mode:
+        thread = threading.Thread(target=_execute, daemon=True, name="wa_holiday_removal_notifier")
+        thread.start()
+        return 0
+    else:
+        return _execute()
+
+
+def notify_doctor_leave_affected_patients(
+    doctor_name: str,
+    date_str: str,
+    reason: str = "Temporary Leave",
+    async_mode: bool = True
+) -> int:
+    """
+    Finds active bookings for doctor_name on date_str and alerts patients via WhatsApp
+    that the doctor is on temporary leave, offering quick reschedule options.
+    """
+    from app import app, db, PatientBooking, User
+    from services.kapso_client import KapsoClient
+    from phone_utils import normalize_phone_number
+
+    def _execute():
+        with app.app_context():
+            try:
+                iso_date, display_en, display_ml = _format_date_bilingual(date_str)
+                d_str = date_str.strip()
+                try:
+                    if len(d_str.split('-')[0]) == 4:
+                        alt_date = datetime.strptime(d_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    else:
+                        alt_date = datetime.strptime(d_str, "%d-%m-%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    alt_date = d_str
+
+                bookings = PatientBooking.query.filter(
+                    db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_name.strip().lower(),
+                    (PatientBooking.date == d_str) | (PatientBooking.date == alt_date),
+                    PatientBooking.status.in_(['confirmed', 'active'])
+                ).all()
+
+                if not bookings:
+                    logger.info(f"No active bookings found for {doctor_name} on leave date {date_str}.")
+                    return 0
+
+                client = KapsoClient()
+                sent_count = 0
+
+                for b in bookings:
+                    phone = b.phone_number
+                    if not phone and b.user_id:
+                        u = User.query.get(b.user_id)
+                        if u:
+                            phone = u.phone_number
+                    if not phone:
+                        continue
+                    norm_phone = normalize_phone_number(phone)
+                    if not norm_phone:
+                        continue
+
+                    lang = _get_user_lang_for_phone(norm_phone)
+                    patient_name = b.patient_name or ("രോഗി" if lang == "ml" else "Patient")
+                    doc_disp = doctor_name.strip()
+                    if not doc_disp.lower().startswith("dr."):
+                        doc_disp = f"Dr. {doc_disp}"
+                    spec_disp = f" ({b.specialization.strip()})" if b.specialization else ""
+
+                    if lang == "ml":
+                        reason_ml = _format_leave_reason(reason, "ml")
+                        msg = (
+                            "⚠️ *ഡോക്ടറുടെ അവധി അറിയിപ്പ് — പ്രൈംകെയർ ക്ലിനിക്ക്*\n\n"
+                            f"പ്രിയ *{patient_name}*,\n\n"
+                            f"*{doc_disp}*{spec_disp} *{display_ml}* തീയതിയിൽ അവധിയിലായിരിക്കും ({reason_ml}).\n\n"
+                            "നിങ്ങൾ ബുക്ക് ചെയ്തിരുന്ന അപ്പോയിന്റ്മെന്റ്:\n"
+                            f"• *ഡോക്ടർ:* {doc_disp}\n"
+                            f"• *ടോക്കൺ:* #{b.token}\n"
+                            f"• *തീയതി:* {display_ml}\n\n"
+                            "മറ്റൊരു ദിവസത്തേക്ക് മാറ്റുന്നതിനായി *Reschedule* എന്ന് മറുപടി അയക്കുക.\n\n"
+                            "നിങ്ങൾക്കുണ്ടാകുന്ന അസൗകര്യത്തിൽ ഞങ്ങൾ ആത്മാർത്ഥമായി ഖേദിക്കുന്നു."
+                        )
+                    else:
+                        reason_en = _format_leave_reason(reason, "en")
+                        msg = (
+                            "⚠️ *Doctor Unavailable — PrimeCare Clinic*\n\n"
+                            f"Dear *{patient_name}*,\n\n"
+                            f"{doc_disp}{spec_disp} is on leave on *{display_en}* ({reason_en}).\n\n"
+                            "Your scheduled appointment has been affected:\n"
+                            f"• *Doctor:* {doc_disp}\n"
+                            f"• *Token:* #{b.token}\n"
+                            f"• *Original Date:* {display_en}\n\n"
+                            "To reschedule your appointment to another date, simply reply with *Reschedule*.\n\n"
+                            "We sincerely apologize for any inconvenience caused."
+                        )
+
+                    try:
+                        client.send_text_message(recipient_phone=norm_phone, text_body=msg)
+                        sent_count += 1
+                        logger.info(f"Dispatched doctor leave notification to {norm_phone} for booking #{b.id}")
+                    except Exception as err:
+                        logger.warning(f"Failed to dispatch doctor leave notification to {norm_phone}: {err}")
+
+                return sent_count
+            except Exception as e:
+                logger.error(f"Error in notify_doctor_leave_affected_patients: {e}")
+                return 0
+
+    if async_mode:
+        thread = threading.Thread(target=_execute, daemon=True, name="wa_leave_notifier")
+        thread.start()
+        return 0
+    else:
+        return _execute()
+
+
+def notify_doctor_leave_removal_patients(
+    doctor_name: str,
+    date_str: str,
+    async_mode: bool = True
+) -> int:
+    """
+    Notifies patients when doctor leave is cancelled, confirming consultation proceeds.
+    """
+    from app import app, db, PatientBooking, User
+    from services.kapso_client import KapsoClient
+    from phone_utils import normalize_phone_number
+
+    def _execute():
+        with app.app_context():
+            try:
+                iso_date, display_en, display_ml = _format_date_bilingual(date_str)
+                d_str = date_str.strip()
+                try:
+                    if len(d_str.split('-')[0]) == 4:
+                        alt_date = datetime.strptime(d_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+                    else:
+                        alt_date = datetime.strptime(d_str, "%d-%m-%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    alt_date = d_str
+
+                bookings = PatientBooking.query.filter(
+                    db.func.lower(db.func.trim(PatientBooking.doctor_name)) == doctor_name.strip().lower(),
+                    (PatientBooking.date == d_str) | (PatientBooking.date == alt_date),
+                    PatientBooking.status.in_(['confirmed', 'active'])
+                ).all()
+
+                if not bookings:
+                    return 0
+
+                client = KapsoClient()
+                sent_count = 0
+
+                for b in bookings:
+                    phone = b.phone_number
+                    if not phone and b.user_id:
+                        u = User.query.get(b.user_id)
+                        if u:
+                            phone = u.phone_number
+                    if not phone:
+                        continue
+                    norm_phone = normalize_phone_number(phone)
+                    if not norm_phone:
+                        continue
+
+                    lang = _get_user_lang_for_phone(norm_phone)
+                    patient_name = b.patient_name or ("രോഗി" if lang == "ml" else "Patient")
+                    doc_disp = doctor_name.strip()
+                    if not doc_disp.lower().startswith("dr."):
+                        doc_disp = f"Dr. {doc_disp}"
+
+                    if lang == "ml":
+                        msg = (
+                            "✅ *ഡോക്ടറുടെ വിവരങ്ങൾ — പ്രൈംകെയർ ക്ലിനിക്ക്*\n\n"
+                            f"പ്രിയ *{patient_name}*,\n\n"
+                            f"{doc_disp} *{display_ml}* തീയതിയിലെ അവധി റദ്ദാക്കിയിരിക്കുന്നു. സാധാരണ പോലെ കൺസൾട്ടേഷൻ ഉണ്ടായിരിക്കുന്നതാണ്.\n\n"
+                            f"നിങ്ങളുടെ അപ്പോയിന്റ്മെന്റ് (ടോക്കൺ #{b.token}) നിലവിലുണ്ട്."
+                        )
+                    else:
+                        msg = (
+                            "✅ *Doctor Schedule Update — PrimeCare Clinic*\n\n"
+                            f"Dear *{patient_name}*,\n\n"
+                            f"{doc_disp} has cancelled their leave on *{display_en}*. Consultations will proceed as scheduled.\n\n"
+                            f"Your appointment (Token #{b.token}) remains confirmed and active."
+                        )
+
+                    try:
+                        client.send_text_message(recipient_phone=norm_phone, text_body=msg)
+                        sent_count += 1
+                        logger.info(f"Dispatched doctor leave cancellation notification to {norm_phone} for booking #{b.id}")
+                    except Exception as err:
+                        logger.warning(f"Failed to dispatch doctor leave cancellation notification to {norm_phone}: {err}")
+
+                return sent_count
+            except Exception as e:
+                logger.error(f"Error in notify_doctor_leave_removal_patients: {e}")
+                return 0
+
+    if async_mode:
+        thread = threading.Thread(target=_execute, daemon=True, name="wa_leave_removal_notifier")
+        thread.start()
+        return 0
+    else:
+        return _execute()
+
 
