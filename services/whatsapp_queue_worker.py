@@ -460,11 +460,18 @@ def run_worker_loop(
             now_time = time.time()
             if now_time - last_reminder_check >= 60.0:
                 last_reminder_check = now_time
-                try:
-                    from services.whatsapp_notification_service import check_and_send_scheduled_pre_consultation_reminders
-                    check_and_send_scheduled_pre_consultation_reminders()
-                except Exception as rem_err:
-                    logger.warning(f"Error checking pre-consultation reminders: {rem_err}")
+                import threading
+
+                def _run_reminders_async():
+                    try:
+                        with app.app_context():
+                            from services.whatsapp_notification_service import check_and_send_scheduled_pre_consultation_reminders
+                            check_and_send_scheduled_pre_consultation_reminders()
+                    except Exception as rem_err:
+                        logger.warning(f"Error checking pre-consultation reminders: {rem_err}")
+
+                t = threading.Thread(target=_run_reminders_async, daemon=True, name="PreConsultationReminderWorker")
+                t.start()
 
             had_work = False
             try:

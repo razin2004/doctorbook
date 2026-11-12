@@ -1311,6 +1311,9 @@ def get_patient_bookings_service(
             }
 
         user_record = User.query.get(p_uid)
+        if not norm_phone and user_record and user_record.phone_number:
+            norm_phone = normalize_phone_number(user_record.phone_number)
+
         is_guest_user = user_record and (user_record.email or "").strip().lower() == "guest@primecare.com"
 
         if is_guest_user:
@@ -1327,7 +1330,16 @@ def get_patient_bookings_service(
                 PatientBooking.phone_number == norm_phone
             )
         else:
-            query = PatientBooking.query.filter(PatientBooking.user_id == p_uid)
+            if norm_phone:
+                from sqlalchemy import or_
+                query = PatientBooking.query.filter(
+                    or_(
+                        PatientBooking.user_id == p_uid,
+                        PatientBooking.phone_number == norm_phone
+                    )
+                )
+            else:
+                query = PatientBooking.query.filter(PatientBooking.user_id == p_uid)
 
     ist = pytz.timezone('Asia/Kolkata')
     today_str = datetime.now(ist).strftime("%Y-%m-%d")
