@@ -41,7 +41,7 @@ import json
 import hashlib
 import logging
 import concurrent.futures
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, Tuple, List
 
 from flask import Request, Response, jsonify
@@ -1690,7 +1690,7 @@ def process_inbound_webhook(
 
         # Deduplication Check 1: WhatsAppWebhookEvent
         existing_event = WhatsAppWebhookEvent.query.filter_by(event_id=event_id).first()
-        if existing_event and existing_event.status in ("processed", "duplicate"):
+        if existing_event and existing_event.status in ("processed", "completed", "duplicate"):
             logger.info(sanitize_log_message(f"Duplicate WhatsApp webhook event ignored: {event_id}"))
             return jsonify({"status": "ok", "message": "duplicate_event_ignored"}), 200
 
@@ -1698,21 +1698,41 @@ def process_inbound_webhook(
         if wamid:
             existing_msg = WhatsAppMessage.query.filter_by(wamid=wamid).first()
             if existing_msg:
-                logger.info(sanitize_log_message(f"Duplicate WhatsApp wamid ignored: {wamid}"))
-                return jsonify({"status": "ok", "message": "duplicate_message_ignored"}), 200
+                outbound_exists = WhatsAppMessage.query.filter(
+                    WhatsAppMessage.conversation_id == existing_msg.conversation_id,
+                    WhatsAppMessage.direction == "outbound",
+                    WhatsAppMessage.id > existing_msg.id
+                ).first()
+                if outbound_exists:
+                    logger.info(sanitize_log_message(f"Duplicate WhatsApp wamid ignored: {wamid}"))
+                    return jsonify({"status": "ok", "message": "duplicate_message_ignored"}), 200
+                logger.info(sanitize_log_message(f"Retrying message {wamid} because no outbound reply was sent."))
 
-        # Atomic Idempotency Event Reservation
-        webhook_event = WhatsAppWebhookEvent(
-            event_id=event_id,
-            event_type="messages",
-            status="processing"
-        )
-        db.session.add(webhook_event)
-        try:
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            return jsonify({"status": "ok", "message": "duplicate_event_ignored"}), 200
+        # Idempotency Event Reservation / Reuse
+        if existing_event:
+            webhook_event = existing_event
+            webhook_event.status = "processing"
+            webhook_event.locked_by = "sync_http" if not should_process_async() else None
+            webhook_event.locked_at = datetime.utcnow()
+            webhook_event.error_code = None
+            webhook_event.last_error = None
+        else:
+            webhook_event = WhatsAppWebhookEvent(
+                event_id=event_id,
+                event_type="messages",
+                status="processing",
+                locked_by="sync_http" if not should_process_async() else None,
+                locked_at=datetime.utcnow()
+            )
+            db.session.add(webhook_event)
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                webhook_event = WhatsAppWebhookEvent.query.filter_by(event_id=event_id).first()
+                if not webhook_event:
+                    return jsonify({"status": "ok", "message": "duplicate_event_ignored"}), 200
+                webhook_event.status = "processing"
 
         # Coexistence & Outbound Message Echo Guard (Phase 3B.1 Task 2)
         # Evaluates direction metadata, echo flags, and clinic sender fallback.
@@ -1823,25 +1843,26 @@ def process_inbound_webhook(
             else:
                 inbound_body = f"[{msg_type.upper()} RECEIVED]"
 
-            # Persist inbound message
-            inbound_msg = WhatsAppMessage(
-                conversation_id=conversation.id,
-                wamid=wamid,
-                direction="inbound",
-                message_type=msg_type,
-                content=inbound_body,
-                status="received"
-            )
-            db.session.add(inbound_msg)
+            # Persist inbound message (or reuse existing)
+            if existing_msg:
+                inbound_msg = existing_msg
+            else:
+                inbound_msg = WhatsAppMessage(
+                    conversation_id=conversation.id,
+                    wamid=wamid,
+                    direction="inbound",
+                    message_type=msg_type,
+                    content=inbound_body,
+                    status="received"
+                )
+                db.session.add(inbound_msg)
             conversation.last_message_at = datetime.utcnow()
 
             # Store durable database-backed queue payload on webhook_event
-            webhook_event.status = 'pending'
             webhook_event.conversation_id = conversation.id
             webhook_event.inbound_message_id = inbound_msg.id
-            webhook_event.attempt_count = 0
+            webhook_event.attempt_count = (webhook_event.attempt_count or 0) + 1
             webhook_event.max_attempts = 3
-            webhook_event.next_retry_at = datetime.utcnow()
             webhook_event.payload_json = json.dumps({
                 "message": message,
                 "sender_phone": sender_phone,
@@ -1849,14 +1870,18 @@ def process_inbound_webhook(
                 "parent_scoped_id": parent_scoped_id,
                 "contact_name": contact_name
             })
-            db.session.commit()
 
             # Determine synchronous vs asynchronous reply processing
             if should_process_async():
                 # Asynchronous durable queue processing:
-                # Inbound message and queue job are durably committed in PostgreSQL.
+                # Inbound message and queue job are durably committed in PostgreSQL with status='pending'.
                 # Immediately return sub-25ms HTTP 200 acknowledgement to Kapso.
                 # The dedicated background worker processes the job from the database.
+                webhook_event.status = 'pending'
+                webhook_event.locked_by = None
+                webhook_event.locked_at = None
+                webhook_event.next_retry_at = datetime.utcnow()
+                db.session.commit()
                 processed_replies.append({
                     "conversation_uuid": conversation.conversation_uuid,
                     "message": "queued",
@@ -1864,31 +1889,71 @@ def process_inbound_webhook(
                     "scoped_user_id": scoped_user_id
                 })
             else:
-                # Synchronous execution (used in automated tests and synchronous fallback mode)
-                reply_result = dispatch_inbound_message_reply(
-                    conversation_id=conversation.id,
-                    inbound_msg_id=inbound_msg.id,
-                    webhook_event_id=webhook_event.id,
-                    message=message,
-                    sender_phone=sender_phone,
-                    scoped_user_id=scoped_user_id,
-                    parent_scoped_id=parent_scoped_id,
-                    contact_name=contact_name,
-                    client=active_client,
-                    groq_client=groq_client
-                )
-                processed_replies.append(reply_result)
+                # Synchronous execution:
+                # Keep status = 'processing' and locked_by = 'sync_http'
+                # DO NOT set status = 'pending' so the background queue worker will NOT race!
+                webhook_event.status = 'processing'
+                webhook_event.locked_by = 'sync_http'
+                webhook_event.locked_at = datetime.utcnow()
+                db.session.commit()
+
+                try:
+                    reply_result = dispatch_inbound_message_reply(
+                        conversation_id=conversation.id,
+                        inbound_msg_id=inbound_msg.id,
+                        webhook_event_id=webhook_event.id,
+                        message=message,
+                        sender_phone=sender_phone,
+                        scoped_user_id=scoped_user_id,
+                        parent_scoped_id=parent_scoped_id,
+                        contact_name=contact_name,
+                        client=active_client,
+                        groq_client=groq_client
+                    )
+                    webhook_event.status = "completed"
+                    webhook_event.processed_at = datetime.utcnow()
+                    webhook_event.locked_by = None
+                    webhook_event.locked_at = None
+                    db.session.commit()
+                    processed_replies.append(reply_result)
+                except Exception as sync_err:
+                    db.session.rollback()
+                    logger.error(sanitize_log_message(
+                        f"Sync dispatch failed for event {webhook_event.id}: {sync_err}. "
+                        "Enqueuing to background worker for retry."
+                    ))
+                    # Resilient fallback: Hand off to durable background worker
+                    webhook_event.status = 'pending'
+                    webhook_event.locked_by = None
+                    webhook_event.locked_at = None
+                    webhook_event.next_retry_at = datetime.utcnow() + timedelta(seconds=1)
+                    webhook_event.last_error = f"Sync failed ({type(sync_err).__name__}): {str(sync_err)[:200]}"
+                    try:
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+
+                    processed_replies.append({
+                        "conversation_uuid": conversation.conversation_uuid,
+                        "message": "enqueued_after_sync_failure",
+                        "event_id": event_id
+                    })
         except Exception as e:
             db.session.rollback()
             logger.error(sanitize_log_message(f"Error processing WhatsApp webhook message: {str(e)}"))
-            webhook_event.status = "failed"
-            webhook_event.error_code = type(e).__name__[:50]
-            try:
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
+            if webhook_event:
+                webhook_event.status = "pending"
+                webhook_event.locked_by = None
+                webhook_event.locked_at = None
+                webhook_event.next_retry_at = datetime.utcnow() + timedelta(seconds=2)
+                webhook_event.error_code = type(e).__name__[:50]
+                webhook_event.last_error = str(e)[:200]
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
 
-            return jsonify({"error": "Internal webhook processing error"}), 500
+            return jsonify({"status": "ok", "message": "enqueued_for_background_retry"}), 200
 
     # Format return response
     if len(processed_replies) == 1:

@@ -452,7 +452,7 @@ def generate_whatsapp_ai_response(
 
     # 8. Generate completion with bounded retries and sanitized error handling
     try:
-        completion = groq_client.generate_chat_completion(messages=messages, fallback_model="qwen/qwen3.8-27b")
+        completion = groq_client.generate_chat_completion(messages=messages, fallback_model="qwen/qwen3.8-27b", timeout=8.0)
         response_text = str(completion).strip()
         # Post-processing: Remove stray CJK / Hangul characters if LLM generated any
         response_text = re.sub(r'[\u1100-\u11FF\u3130-\u318F\uA960-\uA97F\uAC00-\uD7AF\u4E00-\u9FFF]', '', response_text).strip()
