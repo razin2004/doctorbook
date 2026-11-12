@@ -882,6 +882,17 @@
       transition: all 0.2s;
     }
     .btn-danger-sm:hover { background: #e11d48; color: #fff; }
+    .btn-reschedule-sm {
+      background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;
+      padding: 0.4rem 0.9rem; border-radius: 10px; cursor: pointer;
+      display: inline-flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; margin-top: 0;
+      font-weight: 600; text-decoration: none; transition: all 0.2s;
+    }
+    .btn-reschedule-sm:hover { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .btn-reschedule-sm.urgent-reschedule {
+      background: #fffbeb; color: #d97706; border-color: #fde68a;
+    }
+    .btn-reschedule-sm.urgent-reschedule:hover { background: #d97706; color: #fff; border-color: #d97706; }
     .empty-state { text-align: center; padding: 2rem 1rem; color: #94a3b8; font-weight: 500; }
     .empty-state svg { margin-bottom: 0.5rem; opacity: 0.5; }
     .empty-state-btn {
@@ -1843,8 +1854,10 @@
               </div>
             </div>
             <div class="item-actions" style="flex-shrink:0;">
-              {% if next_b.is_holiday or next_b.is_doctor_on_leave %}
-              <a href="javascript:void(0);" onclick="handleRescheduleClick(event)" id="reschedBtn" class="btn btn-primary" style="border-radius:12px; padding:0.5rem 1rem;" title="Rescheduling is temporarily unavailable. Please cancel and rebook."><i data-lucide="calendar-plus" style="width:14px;height:14px;"></i> Reschedule</a>
+              {% if next_b.status != 'cancelled' %}
+              <button type="button" onclick="openRescheduleModal({{ next_b.id }}, '{{ next_b.doctor_name|escape }}', '{{ next_b.specialization|escape }}', '{{ next_b.date }}', '{{ next_b.token }}', '{{ next_b.patient_name|escape }}', '{{ next_b.doctor_id or '' }}')" class="btn btn-primary" style="border-radius:12px; padding:0.5rem 1rem; cursor:pointer;" title="Reschedule this appointment">
+                <i data-lucide="calendar-clock" style="width:14px;height:14px;"></i> Reschedule
+              </button>
               {% endif %}
             </div>
           </div>
@@ -1950,16 +1963,16 @@
                     </div>
                   </div>
                   <div class="item-actions">
-                    {% if (b.is_holiday or b.is_doctor_on_leave) and b.status != 'cancelled' %}
-                    <a href="javascript:void(0);" onclick="handleRescheduleClick(event)" id="reschedBtn" title="Rescheduling is temporarily unavailable. Please cancel and rebook."><i data-lucide="calendar-plus"></i>Reschedule</a>
-                    {% endif %}
-                    {% if b.status == 'cancelled' %}
-                    <button class="btn-danger-sm" disabled style="opacity:0.5; cursor:not-allowed; background:#e2e8f0; color:#94a3b8; border-color:#cbd5e1;">
-                      <i data-lucide="ban" style="width:14px;height:14px;"></i> Cancelled
+                    {% if b.status != 'cancelled' %}
+                    <button type="button" class="btn-reschedule-sm {% if b.is_holiday or b.is_doctor_on_leave %}urgent-reschedule{% endif %}" onclick="openRescheduleModal({{ b.id }}, '{{ b.doctor_name|escape }}', '{{ b.specialization|escape }}', '{{ b.date }}', '{{ b.token }}', '{{ b.patient_name|escape }}', '{{ b.doctor_id or '' }}')" title="Change appointment date">
+                      <i data-lucide="calendar-clock" style="width:14px;height:14px;"></i> Reschedule
+                    </button>
+                    <button type="button" class="btn-danger-sm" onclick="cancelBooking('{{ b.sheet_url }}', '{{ b.date }}', '{{ b.token }}', {{ b.id }})" aria-label="Cancel Booking">
+                      <i data-lucide="x" style="width:14px;height:14px;"></i> Cancel
                     </button>
                     {% else %}
-                    <button class="btn-danger-sm" onclick="cancelBooking('{{ b.sheet_url }}', '{{ b.date }}', '{{ b.token }}', {{ b.id }})" aria-label="Cancel Booking">
-                      <i data-lucide="x" style="width:14px;height:14px;"></i> Cancel
+                    <button class="btn-danger-sm" disabled style="opacity:0.5; cursor:not-allowed; background:#e2e8f0; color:#94a3b8; border-color:#cbd5e1;">
+                      <i data-lucide="ban" style="width:14px;height:14px;"></i> Cancelled
                     </button>
                     {% endif %}
                   </div>
@@ -2222,6 +2235,64 @@
         <button type="submit" class="btn btn-primary" id="patientModalSubmitBtn" style="width: 100%; background: #4f46e5; color: white; border: none; border-radius: 12px; padding: 0.75rem; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.5rem;">
           <i data-lucide="check" style="width: 16px; height: 16px;"></i> Save Profile
         </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- RESCHEDULE APPOINTMENT MODAL -->
+  <div class="modal-overlay" id="rescheduleModal" style="display: none;">
+    <div class="pres-modal-content" style="max-width: 440px; padding: 1.8rem 1.6rem; border-radius: 24px; width: 92%;">
+      <div class="pres-modal-header">
+        <div class="pres-modal-header-left">
+          <div class="icon-circle" style="background: rgba(37, 99, 235, 0.1); color: #2563eb;">
+            <i data-lucide="calendar-clock" style="width: 18px; height: 18px;"></i>
+          </div>
+          <div style="min-width: 0;">
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a;">Reschedule Appointment</h3>
+            <p style="margin: 0.15rem 0 0; font-size: 0.75rem; color: #64748b;">Move your consultation to a new date</p>
+          </div>
+        </div>
+        <button type="button" class="pres-close-btn" onclick="closeRescheduleModal()" title="Close">
+          <i data-lucide="x" style="width:13px;height:13px;stroke-width:2.5px;"></i>
+        </button>
+      </div>
+
+      <!-- Current Booking Summary Box -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 0.85rem 1rem; margin-bottom: 1rem; width: 100%; box-sizing: border-box;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+          <span style="font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Current Appointment</span>
+          <span id="reschedCurrentToken" style="background: #e0f2fe; color: #0284c7; font-weight: 800; font-size: 0.78rem; padding: 0.15rem 0.5rem; border-radius: 6px;">Token #--</span>
+        </div>
+        <div id="reschedDoctorName" style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">Dr. Name</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.8rem; font-size: 0.8rem; color: #64748b; margin-top: 0.35rem;">
+          <span id="reschedCurrentDate" style="display: inline-flex; align-items: center; gap: 0.25rem;"><i data-lucide="calendar" style="width: 13px; height: 13px;"></i> --</span>
+          <span id="reschedPatientName" style="display: inline-flex; align-items: center; gap: 0.25rem;"><i data-lucide="user" style="width: 13px; height: 13px;"></i> --</span>
+        </div>
+      </div>
+
+      <form id="rescheduleForm" onsubmit="handleRescheduleSubmit(event)" style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+        <input type="hidden" id="reschedBookingId" />
+
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 0.35rem; width: 100%; text-align: left;">
+          <label style="font-size: 0.82rem; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 0.35rem;">
+            <i data-lucide="calendar-plus" style="width: 14px; height: 14px; color: #2563eb;"></i> Select New Date
+          </label>
+          <input type="date" id="reschedNewDate" required style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 0.65rem 0.75rem; font-size: 0.95rem; font-weight: 600; color: #0f172a; background: white;" onchange="checkRescheduleDateAvailability()" />
+          <div id="reschedAvailabilityFeedback" style="font-size: 0.78rem; min-height: 1.1rem; margin-top: 0.1rem;"></div>
+        </div>
+
+        <div style="background: #eff6ff; border-left: 3px solid #2563eb; padding: 0.6rem 0.8rem; border-radius: 0 8px 8px 0; font-size: 0.76rem; color: #1e40af; line-height: 1.4;">
+          💡 <strong>Note:</strong> Your existing token will be automatically released, and a new token on the chosen date will be assigned.
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; margin-top: 0.3rem;">
+          <button type="button" onclick="closeRescheduleModal()" style="flex: 1; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.7rem; font-weight: 600; font-size: 0.88rem; cursor: pointer;">
+            Keep Current
+          </button>
+          <button type="submit" id="reschedSubmitBtn" style="flex: 2; background: #2563eb; color: white; border: none; border-radius: 12px; padding: 0.7rem; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
+            <i data-lucide="check" style="width: 15px; height: 15px;"></i> Confirm Reschedule
+          </button>
+        </div>
       </form>
     </div>
   </div>
@@ -2632,13 +2703,149 @@
       );
     }
 
-    // ── Reschedule Notice ──
-    function handleRescheduleClick(e) {
+    // ── Reschedule Appointment Modal Logic ──
+    let _activeRescheduleDoctorId = null;
+    let _activeRescheduleDoctorName = null;
+    let _activeRescheduleSpecialization = null;
+
+    function openRescheduleModal(bookingId, doctorName, specialization, dateStr, token, patientName, doctorId) {
+      const modal = document.getElementById('rescheduleModal');
+      if (!modal) return;
+
+      document.getElementById('reschedBookingId').value = bookingId || '';
+      document.getElementById('reschedDoctorName').textContent = doctorName + (specialization ? ' — ' + specialization : '');
+      document.getElementById('reschedCurrentToken').textContent = 'Token #' + token;
+      document.getElementById('reschedCurrentDate').innerHTML = `<i data-lucide="calendar" style="width:12px;height:12px;vertical-align:middle;margin-right:2px;"></i> ${dateStr}`;
+      document.getElementById('reschedPatientName').innerHTML = `<i data-lucide="user" style="width:12px;height:12px;vertical-align:middle;margin-right:2px;"></i> ${patientName}`;
+
+      _activeRescheduleDoctorId = doctorId || '';
+      _activeRescheduleDoctorName = doctorName || '';
+      _activeRescheduleSpecialization = specialization || '';
+
+      // Date limits: Today to 15 days ahead
+      const dateInput = document.getElementById('reschedNewDate');
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const maxDate = new Date();
+      maxDate.setDate(maxDate.getDate() + 15);
+      const maxDateStr = maxDate.toISOString().split('T')[0];
+
+      dateInput.min = todayStr;
+      dateInput.max = maxDateStr;
+      dateInput.value = '';
+
+      const feedback = document.getElementById('reschedAvailabilityFeedback');
+      if (feedback) feedback.innerHTML = '';
+
+      const submitBtn = document.getElementById('reschedSubmitBtn');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i data-lucide="check" style="width:15px;height:15px;"></i> Confirm Reschedule';
+      }
+
+      modal.style.display = 'flex';
+      if (window.lucide && typeof lucide.createIcons === 'function') {
+        lucide.createIcons(modal);
+      }
+    }
+
+    function closeRescheduleModal() {
+      const modal = document.getElementById('rescheduleModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    document.addEventListener('click', function(e) {
+      const reschedModal = document.getElementById('rescheduleModal');
+      if (reschedModal && e.target === reschedModal) {
+        closeRescheduleModal();
+      }
+    });
+
+    async function checkRescheduleDateAvailability() {
+      const dateInput = document.getElementById('reschedNewDate');
+      const feedback = document.getElementById('reschedAvailabilityFeedback');
+      if (!dateInput || !feedback) return;
+
+      const chosenDate = dateInput.value;
+      if (!chosenDate) {
+        feedback.innerHTML = '';
+        return;
+      }
+
+      feedback.innerHTML = '<span style="color:#64748b;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="loader" style="width:12px;height:12px;animation:spin 1s linear infinite;"></i> Checking availability...</span>';
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons(feedback);
+
+      try {
+        let url = `/api/check_doctor_availability?date=${encodeURIComponent(chosenDate)}`;
+        if (_activeRescheduleDoctorId) {
+          url += `&doctor_id=${encodeURIComponent(_activeRescheduleDoctorId)}`;
+        }
+        if (_activeRescheduleDoctorName) {
+          url += `&doctor_name=${encodeURIComponent(_activeRescheduleDoctorName)}`;
+        }
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.holiday) {
+          feedback.innerHTML = `<span style="color:#ef4444;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Clinic Holiday: ${data.reason || 'Closed'}</span>`;
+        } else if (data.available === false) {
+          feedback.innerHTML = `<span style="color:#ef4444;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Not available: ${data.reason || data.msg || 'Unavailable'}</span>`;
+        } else {
+          feedback.innerHTML = `<span style="color:#16a34a;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> Doctor available on this date!</span>`;
+        }
+        if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons(feedback);
+      } catch (err) {
+        feedback.innerHTML = '';
+      }
+    }
+
+    async function handleRescheduleSubmit(e) {
       if (e) e.preventDefault();
-      if (typeof showToast === 'function') {
-        showToast('Rescheduling is temporarily unavailable. Please cancel your booking and book a new appointment.', 'error');
-      } else {
-        alert('Rescheduling is temporarily unavailable. Please cancel your booking and book a new appointment.');
+      const bookingId = document.getElementById('reschedBookingId').value;
+      const newDate = document.getElementById('reschedNewDate').value;
+      const submitBtn = document.getElementById('reschedSubmitBtn');
+
+      if (!bookingId || !newDate) {
+        if (typeof showToast === 'function') showToast('Please select a valid new date.', 'error');
+        else alert('Please select a valid new date.');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i data-lucide="loader" style="width:15px;height:15px;animation:spin 1s linear infinite;"></i> Rescheduling...';
+        if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons(submitBtn);
+      }
+
+      try {
+        const res = await fetch('/reschedule_own_booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: parseInt(bookingId), new_date: newDate })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (typeof showToast === 'function') showToast(data.msg, 'success');
+          else alert(data.msg);
+          closeRescheduleModal();
+          setTimeout(() => window.location.reload(), 1200);
+        } else {
+          if (typeof showToast === 'function') showToast(data.msg || 'Rescheduling failed.', 'error');
+          else alert(data.msg || 'Rescheduling failed.');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i data-lucide="check" style="width:15px;height:15px;"></i> Confirm Reschedule';
+            if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons(submitBtn);
+          }
+        }
+      } catch (err) {
+        if (typeof showToast === 'function') showToast('Network error while rescheduling. Please try again.', 'error');
+        else alert('Network error while rescheduling. Please try again.');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i data-lucide="check" style="width:15px;height:15px;"></i> Confirm Reschedule';
+          if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons(submitBtn);
+        }
       }
     }
 

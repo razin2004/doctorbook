@@ -1072,3 +1072,68 @@ def notify_doctor_leave_removal_patients(
         return _execute()
 
 
+# =====================================================================
+# 7. AUTOMATED RESCHEDULE CONFIRMATION (WEB & WHATSAPP SYNC)
+# =====================================================================
+
+def send_reschedule_confirmation_whatsapp(
+    phone_number: str,
+    patient_name: str,
+    doctor_name: str,
+    specialization: str,
+    old_date: str,
+    old_token: int,
+    new_date: str,
+    new_token: int,
+    new_time: Optional[str] = None
+) -> bool:
+    """
+    Sends an automated bilingual WhatsApp confirmation when an appointment is rescheduled
+    (from web portal or any other channel).
+    """
+    try:
+        from phone_utils import normalize_phone_number
+        norm_phone = normalize_phone_number(phone_number)
+        if not norm_phone:
+            return False
+
+        user_lang = _get_user_lang_for_phone(norm_phone)
+        from services.kapso_client import KapsoClient
+        client = KapsoClient()
+        if not client.is_configured:
+            return False
+
+        doc_disp = f"Dr. {doctor_name}" if not doctor_name.startswith("Dr.") else doctor_name
+        spec_disp = f" ({specialization})" if specialization else ""
+
+        if user_lang == "ml":
+            msg = (
+                "✅ *അപ്പോയിന്റ്മെന്റ് തീയതി വിജയകരമായി മാറ്റി!*\n\n"
+                f"• *രോഗിയുടെ പേര്:* {patient_name}\n"
+                f"• *ഡോക്ടർ:* {doc_disp}{spec_disp}\n"
+                f"• *പുതിയ തീയതി:* {new_date}\n"
+                f"• *പുതിയ ടോക്കൺ നമ്പർ:* *#{new_token}*\n"
+                f"• *പഴയ തീയതി:* {old_date} (ടോക്കൺ #{old_token} റദ്ദാക്കി)\n\n"
+                "ക്ലിനിക്കിൽ എത്തുമ്പോൾ ഈ ടോക്കൺ നമ്പർ കാണിക്കുക.\n"
+                "സഹായത്തിന് വിളിക്കുക: +91 85920 31725."
+            )
+        else:
+            msg = (
+                "✅ *Appointment Rescheduled Successfully!*\n\n"
+                f"• *Patient:* {patient_name}\n"
+                f"• *Doctor:* {doc_disp}{spec_disp}\n"
+                f"• *New Date:* {new_date}\n"
+                f"• *New Token Number:* *#{new_token}*\n"
+                f"• *Previous Date:* {old_date} (Token #{old_token} released)\n\n"
+                "Please present this token number upon arrival at PrimeCare Clinic.\n"
+                "For any queries or further changes, reply here or call +91 85920 31725."
+            )
+
+        res = client.send_text_message(recipient_phone=norm_phone, text_body=msg)
+        return bool(res.get("success"))
+    except Exception as e:
+        logger.warning(f"Failed to dispatch reschedule WhatsApp alert to {phone_number}: {e}")
+        return False
+
+
+

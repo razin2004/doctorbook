@@ -4345,6 +4345,45 @@ def cancel_own_booking():
         return jsonify(success=False, msg=res.get("message"))
     return jsonify(success=True, msg=res.get("message"))
 
+@app.route('/reschedule_own_booking', methods=['POST'])
+def reschedule_own_booking():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify(success=False, msg="Unauthorized")
+
+    data = request.get_json() or {}
+    db_id = data.get('id') or data.get('booking_id')
+    new_date = data.get('new_date')
+
+    if not db_id or not new_date:
+        return jsonify(success=False, msg="Missing booking ID or replacement date.")
+
+    try:
+        booking_id = int(db_id)
+    except (ValueError, TypeError):
+        return jsonify(success=False, msg="Invalid booking ID format.")
+
+    from services.booking_services import reschedule_booking_service
+    res = reschedule_booking_service(
+        original_booking_id=booking_id,
+        new_date_str=str(new_date).strip(),
+        actor_user_id=user_id,
+        actor_role='patient',
+        booking_source='web'
+    )
+    if not res.get("success"):
+        return jsonify(success=False, msg=res.get("message", "Rescheduling failed."))
+
+    new_token = res.get("new_token")
+    target_date = res.get("new_date", new_date)
+    return jsonify(
+        success=True,
+        msg=f"Appointment successfully rescheduled to {target_date}! Your new token is #{new_token}.",
+        new_token=new_token,
+        new_booking_id=res.get("new_booking_id"),
+        new_date=target_date
+    )
+
 @app.route('/add_prescription', methods=['POST'])
 def add_prescription():
     user_id = session.get('user_id')
@@ -5985,23 +6024,32 @@ def check_doctor_availability():
         data = request.get_json() or {}
         doctor_ids = data.get("doctor_ids") or data.get("sheet_urls") or []
         doctor_id = data.get("doctor_id")
+        doctor_name = data.get("doctor_name")
         date_str = data.get("date")
     else:
         doc_arg = request.args.get("doctor_id") or request.args.get("sheet_url")
         doctor_ids = [doc_arg] if doc_arg else []
         doctor_id = request.args.get("doctor_id")
+        doctor_name = request.args.get("doctor_name")
         date_str = request.args.get("date")
 
-    if (not doctor_ids and not doctor_id) or not date_str:
+    if (not doctor_ids and not doctor_id and not doctor_name) or not date_str:
         return jsonify({"available": False, "msg": "Missing parameters"}), 400
 
     try:
         from services.booking_services import check_availability_service
-        res = check_availability_service(date_str=date_str, doctor_ids=doctor_ids, doctor_id=doctor_id, sheet_urls=doctor_ids)
+        res = check_availability_service(
+            date_str=date_str,
+            doctor_ids=doctor_ids,
+            doctor_id=doctor_id,
+            doctor_name=doctor_name,
+            sheet_urls=doctor_ids
+        )
         if res.get("holiday"):
             return jsonify({
                 "success": True,
                 "holiday": True,
+                "available": False,
                 "reason": res.get("reason"),
                 "results": res.get("results", {})
             })
@@ -6010,8 +6058,11 @@ def check_doctor_availability():
             return jsonify({"results": res.get("results", {})})
         else:
             output = res.get("results", {})
-            key = doctor_ids[0] if doctor_ids else str(doctor_id)
-            first_res = output.get(key, {"available": False, "reason": res.get("reason") or "Unknown error"})
+            key = doctor_ids[0] if doctor_ids else (str(doctor_id) if doctor_id else (doctor_name or "default"))
+            first_res = output.get(key, {
+                "available": res.get("available", False),
+                "reason": res.get("reason") or "Doctor is not available on this date"
+            })
             return jsonify(first_res)
     except Exception as e:
         return jsonify({"available": False, "msg": get_friendly_error_message(e)}), 500

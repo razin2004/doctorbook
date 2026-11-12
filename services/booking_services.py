@@ -1213,9 +1213,28 @@ def reschedule_booking_service(
             "error_code": "ORIGINAL_CANCEL_FAILED"
         }
 
+    # Dispatch automated WhatsApp reschedule confirmation if contact number exists
+    target_phone = original.phone_number or norm_phone
+    if target_phone:
+        try:
+            from services.whatsapp_notification_service import send_reschedule_confirmation_whatsapp
+            send_reschedule_confirmation_whatsapp(
+                phone_number=target_phone,
+                patient_name=original.patient_name,
+                doctor_name=original.doctor_name,
+                specialization=original.specialization,
+                old_date=orig_norm_date,
+                old_token=original.token,
+                new_date=target_new_date,
+                new_token=new_token,
+                new_time=create_res.get("time") or original.time
+            )
+        except Exception as n_err:
+            logger.warning(f"Could not dispatch reschedule WhatsApp notification: {n_err}")
+
     return {
         "success": True,
-        "message": "Appointment rescheduled successfully.",
+        "message": f"Appointment successfully rescheduled to {target_new_date}. Your new token is #{new_token}.",
         "original_booking_id": original.id,
         "original_token": original.token,
         "original_date": orig_norm_date,
