@@ -316,6 +316,11 @@ def build_main_menu_interactive_payload(lang: str = "en") -> Dict[str, Any]:
                             "id": "menu_cancel",
                             "title": "❌ ബുക്കിംഗ് റദ്ദാക്കുക",
                             "description": "നിലവിലുള്ള അപ്പോയിന്റ്മെന്റ് റദ്ദാക്കുക"
+                        },
+                        {
+                            "id": "menu_patients",
+                            "title": "👥 സേവ് ചെയ്ത രോഗികൾ",
+                            "description": "രോഗികളുടെ പ്രൊഫൈലുകൾ കാണുക / ചേർക്കുക"
                         }
                     ]
                 },
@@ -370,6 +375,11 @@ def build_main_menu_interactive_payload(lang: str = "en") -> Dict[str, Any]:
                         "id": "menu_cancel",
                         "title": "❌ Cancel Booking",
                         "description": "Cancel an existing appointment"
+                    },
+                    {
+                        "id": "menu_patients",
+                        "title": "👥 Saved Patients",
+                        "description": "View & manage your patient profiles"
                     }
                 ]
             },
@@ -410,6 +420,7 @@ def format_main_menu_text(lang: str = "en") -> str:
             "• 📋 *എന്റെ ബുക്കിംഗുകൾ* (മറുപടി *My Bookings*)\n"
             "• 🔄 *തീയതി മാറ്റുക* (മറുപടി *Reschedule*)\n"
             "• ❌ *ബുക്കിംഗ് റദ്ദാക്കുക* (മറുപടി *Cancel*)\n"
+            "• 👥 *സേവ് ചെയ്ത രോഗികൾ* (മറുപടി *Patients* അല്ലെങ്കിൽ *രോഗികൾ*)\n"
             "• 👨‍⚕️ *ഡോക്ടർമാരുടെ സമയം* (മറുപടി *Doctors*)\n"
             "• 📍 *ക്ലിനിക്ക് വിലാസം* (മറുപടി *Location*)\n"
             "• 🌐 *ഭാഷ മാറ്റുക* (മറുപടി *Language* അല്ലെങ്കിൽ *ഭാഷ*)\n\n"
@@ -423,6 +434,7 @@ def format_main_menu_text(lang: str = "en") -> str:
         "• 📋 *My Appointments* (reply *My Bookings*)\n"
         "• 🔄 *Reschedule Booking* (reply *Reschedule*)\n"
         "• ❌ *Cancel Booking* (reply *Cancel*)\n"
+        "• 👥 *Saved Patients* (reply *Patients*)\n"
         "• 👨‍⚕️ *Doctors & Timings* (reply *Doctors*)\n"
         "• 📍 *Location & Contact* (reply *Location*)\n"
         "• 🌐 *Change Language / ഭാഷ* (reply *Language*)\n\n"

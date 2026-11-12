@@ -435,12 +435,23 @@ def run_worker_loop(
 
     processed_count = 0
     iterations = 0
+    last_reminder_check = 0.0
 
     with app.app_context():
         while not _shutdown_requested:
             iterations += 1
             if max_iterations is not None and iterations > max_iterations:
                 break
+
+            # Periodic pre-consultation reminder check (every 60s)
+            now_time = time.time()
+            if now_time - last_reminder_check >= 60.0:
+                last_reminder_check = now_time
+                try:
+                    from services.whatsapp_notification_service import check_and_send_scheduled_pre_consultation_reminders
+                    check_and_send_scheduled_pre_consultation_reminders()
+                except Exception as rem_err:
+                    logger.warning(f"Error checking pre-consultation reminders: {rem_err}")
 
             had_work = False
             try:

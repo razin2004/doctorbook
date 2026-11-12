@@ -642,42 +642,29 @@ class WhatsAppBookingFlowTestSuite(unittest.TestCase):
         session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id).first()
         self.assertEqual(session.step, "PATIENT_DETAILS")
 
-        # Step 4: Patient enters a different name for a family member (e.g. "Aarav Varma, 8, Male")
-        res4 = handle_whatsapp_booking_flow(convo, "Aarav Varma, 8, Male", user_phone, "patient", user_id=user.id, display_name="Vikram Varma")
+        # Step 4: In Phase 4C, patient can book for family member (e.g. "Aarav Varma, 8, Male, SAME")
+        res4 = handle_whatsapp_booking_flow(convo, "Aarav Varma, 8, Male, SAME", user_phone, "patient", user_id=user.id, display_name="Vikram Varma")
         self.assertTrue(res4["handled"])
-        # Assert Phase 4C deferral message is returned
-        self.assertIn("Phase 4C", res4["reply"])
-        self.assertIn("Family-Member Booking Deferred", res4["reply"])
-        self.assertIn("Vikram Varma", res4["reply"])
+        self.assertIn("Appointment Summary", res4["reply"])
+        self.assertIn("Aarav Varma", res4["reply"])
 
-        # Ensure session remains at PATIENT_DETAILS and no confirmation/booking is created
-        session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id).first()
-        self.assertEqual(session.step, "PATIENT_DETAILS")
-        self.assertEqual(PatientBooking.query.count(), 0)
-
-        # Step 4b: Patient enters another dependent variation (e.g. "Book for my son, 8, Male")
-        res4b = handle_whatsapp_booking_flow(convo, "Book for my son, 8, Male", user_phone, "patient", user_id=user.id, display_name="Vikram Varma")
-        self.assertTrue(res4b["handled"])
-        self.assertIn("Phase 4C", res4b["reply"])
-        self.assertEqual(PatientBooking.query.count(), 0)
-
-        # Step 5: Patient complies and enters age & gender for themselves
-        res5 = handle_whatsapp_booking_flow(convo, "35, Male", user_phone, "patient", user_id=user.id, display_name="Vikram Varma")
-        self.assertTrue(res5["handled"])
-        self.assertIn("PrimeCare Clinic — Appointment Summary", res5["reply"])
         session = WhatsAppBookingSession.query.filter_by(conversation_id=convo.id).first()
         self.assertEqual(session.step, "CONFIRMATION")
-        self.assertEqual(session.patient_name, "Vikram Varma")
-        self.assertEqual(session.patient_age, "35")
+        self.assertEqual(session.patient_name, "Aarav Varma")
 
-        # Step 6: Confirm
-        res6 = handle_whatsapp_booking_flow(convo, "CONFIRM", user_phone, "patient", user_id=user.id, display_name="Vikram Varma")
-        self.assertTrue(res6["handled"])
-        self.assertIn("Appointment Confirmed", res6["reply"])
+        # Step 5: Confirm booking
+        res5 = handle_whatsapp_booking_flow(convo, "CONFIRM", user_phone, "patient", user_id=user.id, display_name="Vikram Varma")
+        self.assertTrue(res5["handled"])
+        self.assertIn("Appointment Confirmed", res5["reply"])
 
-        booking = PatientBooking.query.filter_by(patient_name="Vikram Varma").first()
+        booking = PatientBooking.query.filter_by(patient_name="Aarav Varma").first()
         self.assertIsNotNone(booking)
         self.assertEqual(booking.user_id, user.id)
+
+        # Verify profile auto-saved in SavedPatient for Web sync
+        from services.whatsapp_patient_mgmt import get_saved_patients_for_phone
+        saved = get_saved_patients_for_phone(user_phone)
+        self.assertTrue(any(p["name"] == "Aarav Varma" for p in saved))
 
     def test_19_guest_isolation_web_dashboard_and_login_protection(self):
         """19. Verified that guest placeholder account cannot be logged into or leak cross-guest bookings."""

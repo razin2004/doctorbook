@@ -838,58 +838,64 @@ def parse_patient_and_phone(
         gender = normalize_gender_to_english(gender_match.group(1))
 
     # 4. Name extraction (Normalized and transliterated to pure English)
-    if default_name:
-        name = default_name.strip()
+    remainder = text
+    # Remove phone digits and 'SAME' keywords
+    remainder = re.sub(r'(\+?\d{1,3}[-.\s]?)?(\d{10})\b', ' ', remainder)
+    remainder = re.sub(r'\b(same|this\s+number|my\s+number|same\s+number|whatsapp)\b|(?:ഇതേ\s*നമ്പർ|ഇതേ\s*ഫോൺ|ഇതേ\s*വാട്ട്‌സ്ആപ്പ്)', ' ', remainder, flags=re.IGNORECASE)
+    if age:
+        remainder = re.sub(rf'\b{re.escape(age)}\b', ' ', remainder, count=1)
+    if gender_match:
+        remainder = re.sub(re.escape(gender_match.group(0)), ' ', remainder, count=1, flags=re.IGNORECASE)
+    remainder = gender_pattern.sub(' ', remainder)
+
+    # Check explicit "patient name" / "name" label first
+    explicit_name_m = re.search(
+        r'\b(?:patient\s*name|name|രോഗിയുടെ\s*പേര്|പേര്)\s*[:=]?\s*([a-zA-Z\s\.\u0D00-\u0D7F]+?)(?=(?:,\s*|;|\n|\b(?:age|years|gender|phone|number|വയസ്സ്|ലിംഗം|ഫോൺ)\b|$))',
+        text,
+        re.IGNORECASE
+    )
+    clean = ""
+    if explicit_name_m and len(explicit_name_m.group(1).strip()) >= 2:
+        clean = explicit_name_m.group(1).strip()
     else:
-        remainder = text
-        # Remove phone digits and 'SAME' keywords
-        remainder = re.sub(r'(\+?\d{1,3}[-.\s]?)?(\d{10})\b', ' ', remainder)
-        remainder = re.sub(r'\b(same|this\s+number|my\s+number|same\s+number|whatsapp)\b|(?:ഇതേ\s*നമ്പർ|ഇതേ\s*ഫോൺ|ഇതേ\s*വാട്ട്‌സ്ആപ്പ്)', ' ', remainder, flags=re.IGNORECASE)
-        if age:
-            remainder = re.sub(rf'\b{re.escape(age)}\b', ' ', remainder, count=1)
-        if gender_match:
-            remainder = re.sub(re.escape(gender_match.group(0)), ' ', remainder, count=1, flags=re.IGNORECASE)
-        remainder = gender_pattern.sub(' ', remainder)
+        parts = [p.strip() for p in re.split(r'[,;|\n]', remainder) if p.strip()]
+        for p in parts:
+            p_cand = re.sub(
+                r'\b(age|years|gender|yrs|old|patient|name|phone|number|is|for|വയസ്സ്|രോഗി|പേര്|ഫോൺ|നമ്പർ)\b',
+                ' ',
+                p,
+                flags=re.IGNORECASE
+            ).strip()
+            if p_cand and not re.search(r'\b(dr|doctor|book|appointment)\b', p, re.IGNORECASE):
+                clean = p_cand
+                break
+        if not clean and parts:
+            clean = parts[0]
 
-        # Check explicit "patient name" / "name" label first
-        explicit_name_m = re.search(
-            r'\b(?:patient\s*name|name|രോഗിയുടെ\s*പേര്|പേര്)\s*[:=]?\s*([a-zA-Z\s\.\u0D00-\u0D7F]+?)(?=(?:,\s*|;|\n|\b(?:age|years|gender|phone|number|വയസ്സ്|ലിംഗം|ഫോൺ)\b|$))',
-            text,
-            re.IGNORECASE
-        )
-        if explicit_name_m and len(explicit_name_m.group(1).strip()) >= 2:
-            clean = explicit_name_m.group(1).strip()
-        else:
-            parts = [p.strip() for p in re.split(r'[,;|\n]', remainder) if p.strip()]
-            clean = remainder
-            for p in parts:
-                p_cand = re.sub(
-                    r'\b(age|years|gender|yrs|old|patient|name|phone|number|is|for|വയസ്സ്|രോഗി|പേര്|ഫോൺ|നമ്പർ)\b',
-                    ' ',
-                    p,
-                    flags=re.IGNORECASE
-                ).strip()
-                if p_cand and not re.search(r'\b(dr|doctor|book|appointment)\b', p, re.IGNORECASE):
-                    clean = p_cand
-                    break
-            else:
-                clean = parts[0] if parts else remainder
+    clean = re.sub(
+        r'\b(age|years|gender|yrs|old|patient|name|phone|number|is|for|വയസ്സ്|രോഗി|പേര്|ഫോൺ|നമ്പർ)\b',
+        ' ',
+        clean,
+        flags=re.IGNORECASE
+    ).strip()
 
-        clean = re.sub(
-            r'\b(age|years|gender|yrs|old|patient|name|phone|number|is|for|വയസ്സ്|രോഗി|പേര്|ഫോൺ|നമ്പർ)\b',
-            ' ',
-            clean,
-            flags=re.IGNORECASE
-        )
-
-        # Transliterate Malayalam script into standard English Latin alphabet
+    extracted_name = None
+    if clean:
         if re.search(r'[\u0D00-\u0D7F]', clean):
             transliterated = transliterate_malayalam_name_to_english(clean)
-            name = transliterated if len(transliterated) >= 2 else None
+            extracted_name = transliterated if len(transliterated) >= 2 else None
         else:
             clean = re.sub(r'[^a-zA-Z\s\.]', ' ', clean).strip()
             clean = re.sub(r'\s+', ' ', clean)
-            name = clean if len(clean) >= 2 else None
+            extracted_name = clean if len(clean) >= 2 else None
+
+    # Use extracted name if present; otherwise fallback to default_name (e.g. registered patient typing "32, Female")
+    if extracted_name and len(extracted_name) >= 2:
+        name = extracted_name
+    elif default_name:
+        name = default_name.strip()
+    else:
+        name = None
 
     return name, age, gender, phone
 
@@ -1526,7 +1532,7 @@ def handle_whatsapp_booking_flow(
         active_session.step = 'PATIENT_DETAILS'
         db.session.commit()
 
-        # Prompt for patient details
+        # Prompt for patient details (with Two-Way Saved Patients check)
         registered_phone = active_session.contact_phone or sender_phone or "+91 85920 31725"
         ml_day_map = {
             'Monday': 'തിങ്കൾ', 'Tuesday': 'ചൊവ്വ', 'Wednesday': 'ബുധൻ',
@@ -1534,28 +1540,18 @@ def handle_whatsapp_booking_flow(
         }
         ml_day = ml_day_map.get(weekday, weekday)
 
-        if sender_role == 'patient' and active_session.patient_user_id:
-            user_rec = User.query.get(active_session.patient_user_id)
-            registered_name = user_rec.name if user_rec else display_name or "Patient"
-            if user_lang == "ml":
-                reply = (
-                    f"✅ *തീയതി ഉറപ്പിച്ചു:* {norm_date} ({ml_day})\n"
-                    f"⏰ *കൺസൾട്ടേഷൻ സമയം:* {active_session.time_slot}\n\n"
-                    f"രോഗിയുടെ പേര്: *{registered_name}*.\n"
-                    "ദയവായി നിങ്ങളുടെ *പ്രായവും ലിംഗവും* നൽകുക (ഉദാ: *'32, സ്ത്രീ'* അല്ലെങ്കിൽ *'28, പുരുഷൻ'*).\n\n"
-                    f"💡 _രജിസ്റ്റർ ചെയ്ത ഫോൺ നമ്പർ ({registered_phone}) സ്വമേധയാ ഉപയോഗിക്കുന്നതാണ്._\n\n"
-                    "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
-                )
-            else:
-                reply = (
-                    f"✅ *Date Confirmed:* {norm_date} ({weekday})\n"
-                    f"⏰ *Consultation Hours:* {active_session.time_slot}\n\n"
-                    f"Booking appointment for: *{registered_name}*.\n"
-                    "Please reply with your *Age and Gender* (e.g., *'32, Female'*).\n\n"
-                    f"💡 _Your registered phone number ({registered_phone}) will be used automatically._\n\n"
-                    "_(Note: Dependent family member bookings will be available in Phase 4C.)_\n\n"
-                    "_Reply CANCEL to exit._"
-                )
+        from services.whatsapp_patient_mgmt import get_saved_patients_for_phone, format_patient_selection_prompt
+        target_phone = active_session.contact_phone or sender_phone
+        saved_patients = get_saved_patients_for_phone(target_phone)
+
+        if saved_patients:
+            reply = format_patient_selection_prompt(
+                saved_patients,
+                date_str=norm_date,
+                time_slot=active_session.time_slot,
+                doctor_name=active_session.doctor_name,
+                lang=user_lang
+            )
         else:
             if user_lang == "ml":
                 reply = (
@@ -1634,58 +1630,69 @@ def handle_whatsapp_booking_flow(
         db.session.commit()
 
         registered_phone = active_session.contact_phone or sender_phone or "+91 85920 31725"
-        if user_lang == "ml":
-            reply = (
-                f"✅ *സമയം ഉറപ്പിച്ചു:* {selected_slot['time_slot']}\n"
-                f"👨‍⚕️ *ഡോക്ടർ:* {selected_slot['doctor_name']} ({selected_slot['specialization']})\n\n"
-                "ദയവായി രോഗിയുടെ വിവരങ്ങൾ താഴെ പറയുന്ന രീതിയിൽ നൽകുക:\n"
-                "*പേര്, പ്രായം, ലിംഗം, ഫോൺ നമ്പർ*\n"
-                "(ഉദാ: *'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, 9876543210'*).\n\n"
-                f"💡 *ഇതേ വാട്ട്‌സ്ആപ്പ് നമ്പർ ഉപയോഗിക്കാൻ:* ഫോൺ നമ്പറിന് പകരം *SAME* എന്ന് നൽകാം:\n"
-                f"*'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, SAME'*\n\n"
-                "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+        from services.whatsapp_patient_mgmt import get_saved_patients_for_phone, format_patient_selection_prompt
+        target_phone = active_session.contact_phone or sender_phone
+        saved_patients = get_saved_patients_for_phone(target_phone)
+
+        if saved_patients:
+            reply = format_patient_selection_prompt(
+                saved_patients,
+                date_str=active_session.appointment_date,
+                time_slot=selected_slot["time_slot"],
+                doctor_name=selected_slot["doctor_name"],
+                lang=user_lang
             )
         else:
-            reply = (
-                f"✅ *Timing Confirmed:* {selected_slot['time_slot']}\n"
-                f"👨‍⚕️ *Doctor:* {selected_slot['doctor_name']} ({selected_slot['specialization']})\n\n"
-                "Please provide the patient details in format:\n"
-                "*Name, Age, Gender, Phone*\n"
-                "(e.g., *'Rahul Sharma, 28, Male, 9876543210'*).\n\n"
-                f"💡 *Same Number Shortcut:* To use this WhatsApp number ({registered_phone}), "
-                "you can reply *SAME* or:\n"
-                "*'Rahul Sharma, 28, Male, SAME'*\n\n"
-                "_Reply CANCEL to exit._"
-            )
+            if user_lang == "ml":
+                reply = (
+                    f"✅ *സമയം ഉറപ്പിച്ചു:* {selected_slot['time_slot']}\n"
+                    f"👨‍⚕️ *ഡോക്ടർ:* {selected_slot['doctor_name']} ({selected_slot['specialization']})\n\n"
+                    "ദയവായി രോഗിയുടെ വിവരങ്ങൾ താഴെ പറയുന്ന രീതിയിൽ നൽകുക:\n"
+                    "*പേര്, പ്രായം, ലിംഗം, ഫോൺ നമ്പർ*\n"
+                    "(ഉദാ: *'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, 9876543210'*).\n\n"
+                    f"💡 *ഇതേ വാട്ട്‌സ്ആപ്പ് നമ്പർ ഉപയോഗിക്കാൻ:* ഫോൺ നമ്പറിന് പകരം *SAME* എന്ന് നൽകാം:\n"
+                    f"*'രാഹുൽ ശർമ്മ, 28, പുരുഷൻ, SAME'*\n\n"
+                    "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                )
+            else:
+                reply = (
+                    f"✅ *Timing Confirmed:* {selected_slot['time_slot']}\n"
+                    f"👨‍⚕️ *Doctor:* {selected_slot['doctor_name']} ({selected_slot['specialization']})\n\n"
+                    "Please provide the patient details in format:\n"
+                    "*Name, Age, Gender, Phone*\n"
+                    "(e.g., *'Rahul Sharma, 28, Male, 9876543210'*).\n\n"
+                    f"💡 *Same Number Shortcut:* To use this WhatsApp number ({registered_phone}), "
+                    "you can reply *SAME* or:\n"
+                    "*'Rahul Sharma, 28, Male, SAME'*\n\n"
+                    "_Reply CANCEL to exit._"
+                )
         return {"handled": True, "reply": reply, "session": active_session}
 
     # --- STEP 3: PATIENT_DETAILS ---
     if current_step == 'PATIENT_DETAILS':
+        from services.whatsapp_patient_mgmt import get_saved_patients_for_phone, save_patient_for_phone
+        target_phone = active_session.contact_phone or sender_phone
+        saved_patients = get_saved_patients_for_phone(target_phone)
+
+        # 1. Quick selection from saved patient profiles (e.g. '1', '2')
+        if text.isdigit() and saved_patients:
+            idx = int(text)
+            if 1 <= idx <= len(saved_patients):
+                sel = saved_patients[idx - 1]
+                active_session.patient_name = sel["name"]
+                active_session.patient_age = str(sel["age"])
+                active_session.patient_gender = sel["gender"]
+                active_session.contact_phone = sel["phone_number"] or normalize_phone_number(sender_phone)
+                active_session.step = 'CONFIRMATION'
+                db.session.commit()
+
+                reply = format_booking_summary_card(active_session, lang=user_lang)
+                return {"handled": True, "reply": reply, "session": active_session}
+
         default_name = None
         if sender_role == 'patient' and active_session.patient_user_id:
             user_rec = User.query.get(active_session.patient_user_id)
             default_name = user_rec.name if user_rec else display_name
-
-        if default_name:
-            is_diff, cand_name = check_registered_patient_different_name(text, default_name)
-            if is_diff:
-                if user_lang == "ml":
-                    reply = (
-                        "⚠️ *മറ്റൊരാൾക്ക് വേണ്ടിയുള്ള ബുക്കിംഗ്:* മറ്റൊരാൾക്കോ കുടുംബാംഗങ്ങൾക്കോ വേണ്ടിയുള്ള ബുക്കിംഗ് ഉടൻ ലഭ്യമാകുന്നതാണ്.\n\n"
-                        f"നിലവിൽ രജിസ്റ്റർ ചെയ്ത അക്കൗണ്ടിലുള്ള രോഗിക്ക് (*{default_name}*) മാത്രമേ ബുക്ക് ചെയ്യാനാകൂ.\n\n"
-                        "ദയവായി നിങ്ങളുടെ *പ്രായവും ലിംഗവും* നൽകുക (ഉദാ: *'32, സ്ത്രീ'*), "
-                        "അല്ലെങ്കിൽ റദ്ദാക്കാൻ *CANCEL* എന്ന് അയക്കുക."
-                    )
-                else:
-                    reply = (
-                        "⚠️ *Notice: Family-Member Booking Deferred*\n"
-                        "Booking appointments for another person or dependent family members is not supported in Phase 4A. "
-                        "Family member booking will be available in Phase 4C.\n\n"
-                        f"Appointments can only be booked under your registered account (*{default_name}*).\n\n"
-                        "Please reply with your *Age and Gender* to proceed with booking for yourself (e.g., *'32, Female'*), "
-                        "or reply *CANCEL* to exit."
-                    )
-                return {"handled": True, "reply": reply, "session": active_session}
 
         p_name, p_age, p_gender, p_phone = parse_patient_and_phone(
             text,
@@ -1694,7 +1701,20 @@ def handle_whatsapp_booking_flow(
         )
 
         if not p_name or not p_age or not p_gender:
-            if default_name:
+            if saved_patients:
+                if user_lang == "ml":
+                    reply = (
+                        f"ദയവായി സേവ് ചെയ്ത രോഗിയെ തിരഞ്ഞെടുക്കാൻ *1* നും *{len(saved_patients)}* നും ഇടയിലുള്ള നമ്പർ നൽകുക, "
+                        "അല്ലെങ്കിൽ പുതിയ രോഗിയുടെ വിവരങ്ങൾ നൽകുക (*പേര്, പ്രായം, ലിംഗം*).\n\n"
+                        "_റദ്ദാക്കാൻ CANCEL എന്ന് അയക്കുക._"
+                    )
+                else:
+                    reply = (
+                        f"Please reply with a number (*1* to *{len(saved_patients)}*) to select a saved patient, "
+                        "or provide patient details in the format: *Name, Age, Gender*.\n\n"
+                        "_Reply CANCEL to exit._"
+                    )
+            elif default_name:
                 if user_lang == "ml":
                     reply = (
                         f"*{default_name}* എന്ന രോഗിയുടെ ബുക്കിംഗ് പൂർത്തിയാക്കാൻ ദയവായി പ്രായവും ലിംഗവും നൽകുക "
@@ -1735,6 +1755,20 @@ def handle_whatsapp_booking_flow(
                     "(e.g., *'Rahul Sharma, 28, Male, 9876543210'*), or reply *SAME* to use your WhatsApp number."
                 )
             return {"handled": True, "reply": reply, "session": active_session}
+
+        # Auto-save patient profile for future two-way synchronization
+        try:
+            rel = "Self" if (default_name and p_name.strip().lower() == default_name.strip().lower()) else "Family"
+            save_patient_for_phone(
+                phone_str=target_phone or sender_phone,
+                name=p_name,
+                age=str(p_age),
+                gender=p_gender,
+                patient_phone=contact_phone,
+                relationship=rel
+            )
+        except Exception as save_err:
+            logger.warning(f"Failed to auto-save patient profile during booking: {save_err}")
 
         active_session.patient_name = p_name
         active_session.patient_age = str(p_age)

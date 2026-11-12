@@ -227,6 +227,37 @@ class User(db.Model):
 def guest_user():
     return User.query.filter_by(email="guest@primecare.com").first()
 
+def get_or_create_whatsapp_patient_user(phone_str: str, name: Optional[str] = None):
+    """
+    Finds or provisions a verified patient User record for a WhatsApp sender phone number.
+    Ensures saved patients and bookings created via WhatsApp are linked to a persistent
+    user account that the patient can sign into on the web portal via OTP.
+    """
+    from phone_utils import normalize_phone_number
+    norm = normalize_phone_number(phone_str)
+    if not norm:
+        return None
+    user = User.query.filter_by(phone_number=norm).first()
+    if user:
+        if name and (not user.name or user.name == "WhatsApp Patient"):
+            user.name = name.strip()
+            db.session.commit()
+        return user
+
+    import secrets
+    from werkzeug.security import generate_password_hash
+    user = User(
+        name=name.strip() if name else "WhatsApp Patient",
+        phone_number=norm,
+        phone_verified=True,
+        phone_verified_at=datetime.utcnow(),
+        password_hash=generate_password_hash(secrets.token_urlsafe(32)),
+        role="patient"
+    )
+    db.session.add(user)
+    db.session.commit()
+    return user
+
 class DoctorSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     doctor_name = db.Column(db.String(100))
@@ -430,6 +461,21 @@ class SavedPatient(db.Model):
     phone_number = db.Column(db.String(20), nullable=False)
     relationship = db.Column(db.String(50), default="Self")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class BookingNotificationTracker(db.Model):
+    __tablename__ = 'booking_notification_tracker'
+    id = db.Column(db.Integer, primary_key=True)
+    booking_id = db.Column(db.Integer, db.ForeignKey('patient_booking.id', ondelete='CASCADE'), nullable=False, unique=True, index=True)
+    reminded_1h = db.Column(db.Boolean, default=False, nullable=False)
+    reminded_10m = db.Column(db.Boolean, default=False, nullable=False)
+    reminded_ahead = db.Column(db.Boolean, default=False, nullable=False)
+    reminded_called = db.Column(db.Boolean, default=False, nullable=False)
+    reminded_skipped = db.Column(db.Boolean, default=False, nullable=False)
+    reminded_completed = db.Column(db.Boolean, default=False, nullable=False)
+    custom_target_token = db.Column(db.Integer, nullable=True) # Token number patient wants to be alerted at
+    custom_reminded = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 class DailyTokenAllocation(db.Model):
     __tablename__ = 'daily_token_allocation'
@@ -1295,6 +1341,11 @@ try:
     else:
         safely_invalidate_legacy_otps(app, db)
         purge_demo_and_test_doctors(app, db)
+        try:
+            with app.app_context():
+                BookingNotificationTracker.__table__.create(db.engine, checkfirst=True)
+        except Exception as _bnt_err:
+            app.logger.warning(f"Note on BookingNotificationTracker table check: {_bnt_err}")
 except Exception as _startup_e:
     if is_production_environment():
         raise
@@ -7461,6 +7512,12 @@ def start_session():
         trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active", app, db, PatientBooking, PushSubscription)
     except Exception as e:
         print(f"Push Error: {e}")
+
+    try:
+        from services.whatsapp_notification_service import trigger_whatsapp_queue_movement
+        trigger_whatsapp_queue_movement(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active")
+    except Exception as e:
+        print(f"WhatsApp Queue Movement Error: {e}")
     
     return jsonify(success=True, current_token=1, start_time=doc_session.start_time)
 
@@ -7487,6 +7544,12 @@ def complete_session():
         trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "completed", app, db, PatientBooking, PushSubscription)
     except Exception as e:
         print(f"Push Error: {e}")
+
+    try:
+        from services.whatsapp_notification_service import trigger_whatsapp_queue_movement
+        trigger_whatsapp_queue_movement(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "completed")
+    except Exception as e:
+        print(f"WhatsApp Queue Movement Error: {e}")
         
     return jsonify(success=True, status="completed", end_time=doc_session.end_time)
 
@@ -7541,6 +7604,15 @@ def next_token():
             trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active", app, db, PatientBooking, PushSubscription)
     except Exception as e:
         print(f"Push Error: {e}")
+
+    try:
+        from services.whatsapp_notification_service import trigger_whatsapp_queue_movement
+        if doc_session.status == "active":
+            trigger_whatsapp_queue_movement(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active")
+        elif doc_session.status == "completed":
+            trigger_whatsapp_queue_movement(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "completed")
+    except Exception as e:
+        print(f"WhatsApp Queue Movement Error: {e}")
     
     return jsonify({
         "success": True, 
@@ -7610,6 +7682,18 @@ def skip_token():
             trigger_push(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active", app, db, PatientBooking, PushSubscription)
     except Exception as e:
         print(f"Push Error: {e}")
+
+    try:
+        from services.whatsapp_notification_service import trigger_whatsapp_queue_movement
+        # Send skipped notification for skipped token
+        trigger_whatsapp_queue_movement(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "skipped", skipped_token=skipped_tok)
+        # Send alert for new current token
+        if doc_session.status == "active":
+            trigger_whatsapp_queue_movement(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "active")
+        elif doc_session.status == "completed":
+            trigger_whatsapp_queue_movement(doc_session.doctor_name, doc_session.session_date, doc_session.current_token, "completed")
+    except Exception as e:
+        print(f"WhatsApp Queue Movement Error: {e}")
  
     return jsonify({
         "success": True, 
@@ -7656,6 +7740,15 @@ def consult_skipped():
             booking.consultation_end_time = datetime.utcnow()
             
         db.session.commit()
+
+        try:
+            from services.whatsapp_notification_service import notify_patient_called, notify_patient_consultation_completed
+            if booking:
+                notify_patient_called(booking, doc_session.doctor_name)
+                notify_patient_consultation_completed(booking, doc_session.doctor_name)
+        except Exception as e:
+            print(f"WhatsApp Consult Skipped Error: {e}")
+
         return jsonify(success=True, skipped_tokens=doc_session.skipped_tokens)
     
     return jsonify(success=False, msg="Token not found in skipped list")

@@ -1063,15 +1063,16 @@ def handle_whatsapp_appointment_mgmt(
             return {"handled": True, "reply": reply, "session": new_session}
 
     # 4C. Lookup Intent (Evaluated after cancel and reschedule intents)
-    if is_lookup_intent(text):
+    allow_bare = not (active_session and active_session.action == 'book')
+    specific_id = extract_specific_booking_id(text, allow_bare_number=allow_bare)
+
+    if specific_id is None and is_lookup_intent(text):
         appointments_res = _get_patient_appointments(user_id, sender_phone, sender_role)
         bookings = appointments_res.get("bookings", [])
         reply = _format_appointment_list(bookings, lang=user_lang)
         return {"handled": True, "reply": reply, "session": None}
 
     # 4D. Specific Booking Lookup by ID with Privacy & Ownership Verification
-    allow_bare = not (active_session and active_session.action == 'book')
-    specific_id = extract_specific_booking_id(text, allow_bare_number=allow_bare)
     if specific_id is not None:
         from app import PatientBooking
         booking = db.session.get(PatientBooking, specific_id) if hasattr(db.session, 'get') else PatientBooking.query.get(specific_id)

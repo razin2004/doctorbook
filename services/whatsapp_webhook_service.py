@@ -602,6 +602,92 @@ def dispatch_inbound_message_reply(
                     }
 
         # -------------------------------------------------------------
+        # Branch 3A-remind: Custom Token Queue Reminder (Phase 4C)
+        # e.g. 'REMIND 3', 'SET REMINDER', 'alert', 'ഓർമ്മപ്പെടുത്തുക'
+        # -------------------------------------------------------------
+        from services.whatsapp_notification_service import handle_custom_reminder_command
+        custom_remind_res = handle_custom_reminder_command(
+            message_body=inbound_body,
+            sender_phone=sender_phone,
+            user_lang=user_lang
+        )
+        if custom_remind_res.get("handled"):
+            reply_text = custom_remind_res.get("reply")
+            dispatch_res = active_client.send_text_message(
+                recipient_phone=sender_phone,
+                bsuid=scoped_user_id,
+                text_body=reply_text
+            )
+            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+            outbound_msg = WhatsAppMessage(
+                conversation_id=conversation.id,
+                wamid=out_wamid,
+                direction="outbound",
+                message_type="text",
+                content=reply_text,
+                status=out_status
+            )
+            db.session.add(outbound_msg)
+
+            if webhook_event:
+                webhook_event.status = "processed"
+                webhook_event.processed_at = datetime.utcnow()
+            db.session.commit()
+
+            return {
+                "conversation_uuid": conversation.conversation_uuid,
+                "sender_role": sender_role,
+                "reply": reply_text,
+                "reminder_handled": True,
+                "scoped_user_id": scoped_user_id
+            }
+
+        # -------------------------------------------------------------
+        # Branch 3A-patients: Two-Way Patient Profile Management (Phase 4C)
+        # e.g. 'Patients', 'My Patients', 'ADD PATIENT Name, Age, Gender...'
+        # -------------------------------------------------------------
+        from services.whatsapp_patient_mgmt import handle_whatsapp_patient_mgmt
+        patient_mgmt_res = handle_whatsapp_patient_mgmt(
+            message_body=inbound_body,
+            sender_phone=sender_phone,
+            user_lang=user_lang
+        )
+        if patient_mgmt_res.get("handled"):
+            reply_text = patient_mgmt_res.get("reply")
+            dispatch_res = active_client.send_text_message(
+                recipient_phone=sender_phone,
+                bsuid=scoped_user_id,
+                text_body=reply_text
+            )
+            out_status = "sent" if dispatch_res.get("success") else ("skipped" if dispatch_res.get("status") == "outbound_disabled" else "failed")
+            out_wamid = dispatch_res.get("message_id") if dispatch_res.get("success") else None
+
+            outbound_msg = WhatsAppMessage(
+                conversation_id=conversation.id,
+                wamid=out_wamid,
+                direction="outbound",
+                message_type="text",
+                content=reply_text,
+                status=out_status
+            )
+            db.session.add(outbound_msg)
+
+            if webhook_event:
+                webhook_event.status = "processed"
+                webhook_event.processed_at = datetime.utcnow()
+            db.session.commit()
+
+            return {
+                "conversation_uuid": conversation.conversation_uuid,
+                "sender_role": sender_role,
+                "reply": reply_text,
+                "patient_mgmt_handled": True,
+                "scoped_user_id": scoped_user_id
+            }
+
+        # -------------------------------------------------------------
         # Branch 3A-bis: WhatsApp Appointment Management (Phase 4B)
         # Runs BEFORE booking flow so cancel/reschedule intents are
         # intercepted before booking intent detection.
